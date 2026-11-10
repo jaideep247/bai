@@ -18,7 +18,7 @@ CLASS ltc_param_check DEFINITION FINAL FOR TESTING
     CONSTANTS:
       BEGIN OF gc_test,
         check_id   TYPE zif_cd_hck_types=>ty_check_id VALUE 'D_PARAM',
-        name       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
+        name       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
         bad_value  TYPE string VALUE `many`,
         extra      TYPE zif_ca_param_types=>ty_name VALUE 'HCK_LOCAL_EXTRA',
         bad_dflt   TYPE zif_ca_param_types=>ty_value VALUE 'x',
@@ -50,7 +50,7 @@ CLASS ltc_param_check DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -132,12 +132,12 @@ CLASS ltc_param_check IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( ls_result-findings ) exp = 1 msg = 'One finding' ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_result-findings[ 1 ]-object_key
-          exp = CONV zif_cd_ops_types=>ty_object_key( |{ zif_cd_ops_types=>gc_param_area-hck }/{ gc_test-name }| )
+          exp = CONV zif_ca_ops_types=>ty_object_key( |{ zif_cd_ops_types=>gc_param_area-hck }/{ gc_test-name }| )
           msg = 'Object key area/name' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-check_code
                                             exp = zif_cd_hck_types=>gc_code-param_invalid msg = 'PARAM_INVALID' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity
-                                            exp = zif_cd_ops_types=>gc_severity-error msg = 'Severity E' ).
+                                            exp = zif_ca_ops_types=>gc_severity-error msg = 'Severity E' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-value exp = 1 msg = 'Metric 1' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -153,7 +153,7 @@ CLASS ltc_param_check IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( ls_result-findings ) exp = 1 msg = 'One finding' ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_result-findings[ 1 ]-object_key
-          exp = CONV zif_cd_ops_types=>ty_object_key( |{ zif_cd_ops_types=>gc_param_area-hck }/{ gc_test-extra }| )
+          exp = CONV zif_ca_ops_types=>ty_object_key( |{ zif_cd_ops_types=>gc_param_area-hck }/{ gc_test-extra }| )
           msg = 'The extra definition is reported' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -169,7 +169,7 @@ CLASS ltc_param_check IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( ls_result-findings ) exp = 1 msg = 'One finding' ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_result-findings[ 1 ]-message
-          exp = CONV zif_cd_ops_types=>ty_message( zcx_ca_param=>create( VALUE #(
+          exp = CONV zif_ca_ops_types=>ty_message( zcx_ca_param=>create( VALUE #(
                   msgid = zif_ca_param_types=>gc_msgid
                   msgno = gc_test-msgno_name
                   v1    = zif_cd_ops_types=>gc_param_area-hck
@@ -188,7 +188,7 @@ CLASS ltc_param_check IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = lines( ls_result-findings ) exp = 1 msg = 'One finding' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-object_key
-                                            exp = CONV zif_cd_ops_types=>ty_object_key(
+                                            exp = CONV zif_ca_ops_types=>ty_object_key(
                                                     zif_cd_ops_types=>gc_param_area-hck )
                                             msg = 'The area is the object' ).
       CATCH cx_root INTO DATA(lx_error).

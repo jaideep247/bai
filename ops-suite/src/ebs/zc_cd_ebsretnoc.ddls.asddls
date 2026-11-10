@@ -1,7 +1,7 @@
 // Artifact: zc_cd_ebsretnoc.ddls.asddls
 // Purpose: Consumption view of returns (DFKKRP-RLGRD) and NOCs (DFKKNRP-FLGRD) behind the
 //          bank statement lines (service ZUI_CD_EBS_DASH): by reason, drill-down to the lot item.
-//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCA_PARAR = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'EBS validation dashboard - returns / NOC'

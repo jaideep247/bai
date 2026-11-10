@@ -70,10 +70,10 @@ CLASS ltc_prq_not_paid DEFINITION FINAL FOR TESTING
         fin3      TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009403',
         pclm      TYPE zif_cd_ops_trace_types=>ty_source VALUE 'PCLM',
         orci      TYPE zif_cd_ops_trace_types=>ty_source VALUE 'ORCI',
-        usd       TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
-        eur       TYPE zif_cd_ops_types=>ty_currency VALUE 'EUR',
-        amount    TYPE zif_cd_ops_types=>ty_amount VALUE '100.00',
-        requested TYPE zif_cd_ops_types=>ty_amount VALUE '75.00',
+        usd       TYPE zif_ca_ops_types=>ty_currency VALUE 'USD',
+        eur       TYPE zif_ca_ops_types=>ty_currency VALUE 'EUR',
+        amount    TYPE zif_ca_ops_types=>ty_amount VALUE '100.00',
+        requested TYPE zif_ca_ops_types=>ty_amount VALUE '75.00',
         cap       TYPE string VALUE `2`,
       END OF gc.
 
@@ -95,14 +95,14 @@ CLASS ltc_prq_not_paid DEFINITION FINAL FOR TESTING
         iv_fin      TYPE zif_cd_ops_trace_types=>ty_fin
         iv_source   TYPE zif_cd_ops_trace_types=>ty_source DEFAULT gc-pclm
         iv_stage    TYPE zif_cd_ops_payout_types=>ty_req_stage DEFAULT zif_cd_ops_payout_types=>gc_req_stage-not_in_run
-        iv_currency TYPE zif_cd_ops_types=>ty_currency DEFAULT gc-usd
-        iv_amount   TYPE zif_cd_ops_types=>ty_amount DEFAULT gc-amount.
+        iv_currency TYPE zif_ca_ops_types=>ty_currency DEFAULT gc-usd
+        iv_amount   TYPE zif_ca_ops_types=>ty_amount DEFAULT gc-amount.
 
     METHODS act
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -159,12 +159,12 @@ CLASS ltc_prq_not_paid IMPLEMENTATION.
         row( iv_fin = gc-fin3 iv_source = gc-orci iv_stage = zif_cd_ops_payout_types=>gc_req_stage-payment_block ).
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_before exp = gc-today msg = 'Due before today' ).
-        DATA(lt_findings) = VALUE zif_cd_ops_types=>tt_finding( FOR ls IN ls_result-findings
+        DATA(lt_findings) = VALUE zif_ca_ops_types=>tt_finding( FOR ls IN ls_result-findings
                                                                 WHERE ( check_code = zif_cd_ops_payout_types=>gc_code-request_not_paid )
                                                                 ( ls ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_findings ) exp = 2 msg = 'PCLM not in run, ORCI blocked' ).
         DATA(ls_pclm) = lt_findings[ group1 = gc-pclm ].
-        cl_abap_unit_assert=>assert_equals( act = ls_pclm-severity exp = zif_cd_ops_types=>gc_severity-error msg = 'RED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_pclm-severity exp = zif_ca_ops_types=>gc_severity-error msg = 'RED' ).
         cl_abap_unit_assert=>assert_equals( act = ls_pclm-amount exp = gc-amount + gc-amount msg = 'Sum in one currency' ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_pclm-object_key

@@ -117,8 +117,8 @@ CLASS ltd_rows IMPLEMENTATION.
 
   METHOD payment.
     DATA lv_from TYPE timestamp.
-    CONVERT DATE days_ago( 1 ) TIME zif_cd_ops_types=>gc_time-day_start
-      INTO TIME STAMP lv_from TIME ZONE zif_cd_ops_types=>gc_time_zone_utc.
+    CONVERT DATE days_ago( 1 ) TIME zif_ca_ops_types=>gc_time-day_start
+      INTO TIME STAMP lv_from TIME ZONE zif_ca_ops_types=>gc_time_zone_utc.
     rs_row-fin_id     = iv_fin.
     rs_row-source     = zcl_cd_ops_pay_fixture=>gc_source-pclm.
     rs_row-bukrs      = iv_company.
@@ -135,8 +135,8 @@ CLASS ltd_rows IMPLEMENTATION.
 
   METHOD request.
     DATA lv_from TYPE timestamp.
-    CONVERT DATE days_ago( 1 ) TIME zif_cd_ops_types=>gc_time-day_start
-      INTO TIME STAMP lv_from TIME ZONE zif_cd_ops_types=>gc_time_zone_utc.
+    CONVERT DATE days_ago( 1 ) TIME zif_ca_ops_types=>gc_time-day_start
+      INTO TIME STAMP lv_from TIME ZONE zif_ca_ops_types=>gc_time_zone_utc.
     rs_row-fin_id        = iv_fin.
     rs_row-source        = zcl_cd_ops_pay_fixture=>gc_source-pclm.
     rs_row-valid_from    = lv_from.
@@ -146,7 +146,7 @@ CLASS ltd_rows IMPLEMENTATION.
     rs_row-evidence_kind = iv_stage.
     rs_row-due_date      = iv_due.
     IF iv_finding IS NOT INITIAL.
-      rs_row-severity = zif_cd_ops_types=>gc_severity-error.
+      rs_row-severity = zif_ca_ops_types=>gc_severity-error.
     ENDIF.
   ENDMETHOD.
 
@@ -358,7 +358,7 @@ CLASS ltc_flow IMPLEMENTATION.
                                        iv_augbl        = gc_pay-late
                                        iv_outcome      = zif_cd_ops_payout_types=>gc_outcome-in_flight
                                        iv_finding      = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
-                                       iv_severity     = zif_cd_ops_types=>gc_severity-error
+                                       iv_severity     = zif_ca_ops_types=>gc_severity-error
                                        iv_run_days_ago = gc_days_late ).
     INSERT ls_late INTO TABLE lt_rows.
     INSERT ltd_rows=>run_of( ls_late ) INTO TABLE lt_runs.
@@ -417,8 +417,8 @@ CLASS ltc_flow IMPLEMENTATION.
     rs_scenario = mo_fixture->scenario( iv_id ).
     go_env->insert_test_data( i_data = mo_fixture->dfkkop_rows( rs_scenario ) ).
     go_env->insert_test_data( i_data = mo_fixture->dpayh_rows( rs_scenario ) ).
-    CONVERT DATE ltd_rows=>days_ago( 1 ) TIME zif_cd_ops_types=>gc_time-day_start
-      INTO TIME STAMP lv_from TIME ZONE zif_cd_ops_types=>gc_time_zone_utc.
+    CONVERT DATE ltd_rows=>days_ago( 1 ) TIME zif_ca_ops_types=>gc_time-day_start
+      INTO TIME STAMP lv_from TIME ZONE zif_ca_ops_types=>gc_time_zone_utc.
     DATA(lt_rows) = mo_fixture->outcome_rows( is_scenario = rs_scenario iv_valid_from = lv_from ).
     IF lt_rows IS NOT INITIAL.
       go_env->insert_test_data( i_data = lt_rows ).

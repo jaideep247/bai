@@ -32,7 +32,7 @@ CLASS zcl_cd_ebs_r_s01_continuity IMPLEMENTATION.
     DATA lv_best_date TYPE d.
     DATA lv_best_no TYPE zif_cd_ebs_types=>ty_statement-stmt_no.
     LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>) WHERE has_opening = abap_true.
-      DATA(lv_prior) = CONV zif_cd_ops_types=>ty_amount( 0 ).
+      DATA(lv_prior) = CONV zif_ca_ops_types=>ty_amount( 0 ).
       DATA(lv_found) = abap_false.
       CLEAR: lv_best_date, lv_best_no.
       " Nearest earlier statement of the same account and currency in the package:

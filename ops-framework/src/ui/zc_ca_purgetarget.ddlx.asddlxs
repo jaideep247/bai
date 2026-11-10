@@ -1,0 +1,39 @@
+// UI annotations: Alerting and purge targets - Purge targets of consumers
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Purge target',
+                     typeNamePlural: 'Purge targets of consumers',
+                     title: { type: #STANDARD, value: 'Target' } } }
+annotate entity ZC_CA_PurgeTarget with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Target;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  ClassName;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  ParamArea;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  ParamName;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Active;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

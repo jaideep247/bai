@@ -13,7 +13,7 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_hck_dao PARTIALLY IMPLEMENTED.
     DATA mt_stats TYPE zif_cd_hck_types=>tt_applog_stat.
     DATA mv_date TYPE d.
-    DATA mt_objects TYPE zif_cd_ops_types=>tt_pcre.
+    DATA mt_objects TYPE zif_ca_ops_types=>tt_pcre.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -66,7 +66,7 @@ CLASS ltc_applog DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -158,7 +158,7 @@ CLASS ltc_applog IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'Missing PARAM1 must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Configuration error raised' ).
     ENDTRY.
   ENDMETHOD.

@@ -29,7 +29,7 @@ CLASS zcl_cd_hck_budget DEFINITION
         iv_total          TYPE i
         is_context        TYPE zif_cd_hck_types=>ty_context
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
 ENDCLASS.
 
@@ -41,15 +41,15 @@ CLASS zcl_cd_hck_budget IMPLEMENTATION.
     IF is_context-deadline IS INITIAL.
       RETURN.
     ENDIF.
-    rv_passed = xsdbool( zcl_cd_ops_factory=>get_clock( )->now( ) > is_context-deadline ).
+    rv_passed = xsdbool( zcl_ca_ops_factory=>get_clock( )->now( ) > is_context-deadline ).
   ENDMETHOD.
 
 
   METHOD stop_finding.
     rs_finding-object_key = iv_check_id.
     rs_finding-check_code = zif_cd_hck_types=>gc_code-budget_exhausted.
-    rs_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-    rs_finding-action     = zif_cd_ops_types=>gc_action-notify.
+    rs_finding-severity   = zif_ca_ops_types=>gc_severity-warning.
+    rs_finding-action     = zif_ca_ops_types=>gc_action-notify.
     rs_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-budget_exhausted
                                                    iv_v1    = iv_check_id
                                                    iv_v2    = iv_done

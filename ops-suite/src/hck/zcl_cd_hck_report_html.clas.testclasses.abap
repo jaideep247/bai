@@ -42,16 +42,16 @@ CLASS ltc_report_html IMPLEMENTATION.
     CLEAR ms_report.
     ms_report-report_date = gc_report_date.
     ms_report-score       = 75.
-    ms_report-overall_rag = zif_cd_ops_types=>gc_rag-amber.
+    ms_report-overall_rag = zif_ca_ops_types=>gc_rag-amber.
     ls_category-category    = zif_cd_hck_types=>gc_category-financial.
-    ls_category-rag         = zif_cd_ops_types=>gc_rag-red.
+    ls_category-rag         = zif_ca_ops_types=>gc_rag-red.
     ls_category-check_count = 1.
     ls_category-red_count   = 1.
     INSERT ls_category INTO TABLE ms_report-categories.
     ls_result-check_id = gc_check.
     ls_result-category = zif_cd_hck_types=>gc_category-financial.
     ls_result-priority = zif_cd_hck_types=>gc_priority-high.
-    ls_result-rag      = zif_cd_ops_types=>gc_rag-red.
+    ls_result-rag      = zif_ca_ops_types=>gc_rag-red.
     ls_result-summary  = gc_hostile.
     INSERT ls_result INTO TABLE ms_report-results.
   ENDMETHOD.
@@ -77,7 +77,7 @@ CLASS ltc_report_html IMPLEMENTATION.
   METHOD red_chip_label_and_colour.
     TRY.
         cl_abap_unit_assert=>assert_equals(
-          act = zcl_cd_hck_report_html=>rag_chip( zif_cd_ops_types=>gc_rag-red )
+          act = zcl_cd_hck_report_html=>rag_chip( zif_ca_ops_types=>gc_rag-red )
           exp = |<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;|
              && |font-weight:bold;color:#ffffff;background:#c62828;">RED</span>|
           msg = 'Red chip markup' ).
@@ -91,7 +91,7 @@ CLASS ltc_report_html IMPLEMENTATION.
   METHOD green_chip_label_and_colour.
     TRY.
         " CP pattern: ## is a literal #
-        cl_abap_unit_assert=>assert_char_cp( act = zcl_cd_hck_report_html=>rag_chip( zif_cd_ops_types=>gc_rag-green )
+        cl_abap_unit_assert=>assert_char_cp( act = zcl_cd_hck_report_html=>rag_chip( zif_ca_ops_types=>gc_rag-green )
                                              exp = '*background:##2e7d32;">GREEN</span>'
                                              msg = 'Green chip markup' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -103,7 +103,7 @@ CLASS ltc_report_html IMPLEMENTATION.
   " Rule: a missing RAG is shown as grey N/A, never as green
   METHOD grey_chip_for_unknown_rag.
     TRY.
-        cl_abap_unit_assert=>assert_char_cp( act = zcl_cd_hck_report_html=>rag_chip( zif_cd_ops_types=>gc_rag-grey )
+        cl_abap_unit_assert=>assert_char_cp( act = zcl_cd_hck_report_html=>rag_chip( zif_ca_ops_types=>gc_rag-grey )
                                              exp = '*background:##6b7280;">N/A</span>'
                                              msg = 'Grey chip markup' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -139,7 +139,7 @@ CLASS ltc_report_html IMPLEMENTATION.
   " Rule (A102): a check in baseline warm-up carries its own grey WARM-UP chip, not N/A or GREEN
   METHOD warmup_check_shown_apart.
     TRY.
-        ms_report-results[ 1 ]-rag    = zif_cd_ops_types=>gc_rag-grey.
+        ms_report-results[ 1 ]-rag    = zif_ca_ops_types=>gc_rag-grey.
         ms_report-results[ 1 ]-warmup = abap_true.
         DATA(lv_html) = zcl_cd_hck_report_html=>render( ms_report ).
         cl_abap_unit_assert=>assert_char_cp( act = lv_html

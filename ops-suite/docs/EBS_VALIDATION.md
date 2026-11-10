@@ -73,7 +73,7 @@ For a POSTING_OPEN line these rules are **not evaluated** (a line rule does not 
 | A line with a blank or unparseable XBLNR | Same — the statement is not a payment engine statement |
 | No lines at all | Same (decision: nothing proves it is a payment engine statement) |
 | Exceptions of earlier runs for it or its lines | **Stay open** — not reconciled (as POSTING_OPEN entries: a statement that was not evaluated never resolves anything) |
-| Counting | `ZCL_CD_EBS_ENGINE=>TY_RESULT-OUT_OF_SCOPE` and the run message (ZCD_OPS 546 *n statements out of scope (lines not all payment engine accounts)*). `ZCD_OPS_RUN` has no field for it; the message carries it |
+| Counting | `ZCL_CD_EBS_ENGINE=>TY_RESULT-OUT_OF_SCOPE` and the run message (ZCD_OPS 546 *n statements out of scope (lines not all payment engine accounts)*). `ZCA_OPS_RUN` has no field for it; the message carries it |
 | NO_DATA | Only statements **in scope** count as evaluated. A run whose statements were **all out of scope** evaluated nothing: status **N (NO_DATA), RAG grey, never green**, with the out-of-scope count in the run message — an empty or wrong `ACCOUNT_NO` configuration therefore shows up instead of looking like a clean day. `EBS_EMPTY_FEED_OK` = X declares such a day as expected (as for an empty feed) |
 | Dashboard | Not shown (`Dashboard_EBS_Validation.md` §2: same rule in CDS) |
 
@@ -151,12 +151,12 @@ flowchart LR
   E0 --> E1[1. Resolver: account config, flow, posting area ZBTM → category / rule group; unmapped → R14 BLOCK]
   E1 --> E2[2. Statement rules S01–S12, R18]
   E2 --> E3[3. Line rules per rule group + '*' — blocked lines skipped]
-  E3 --> ST[(ZCD_OPS_RUN / ZCD_OPS_FINDING)]
+  E3 --> ST[(ZCA_OPS_RUN / ZCA_OPS_FINDING)]
   ST -->|reconcile package scope, commit per package| CB{Circuit breaker}
-  CB -->|end of run| AL[Alert router ZCD_OPS_ALRULE]
+  CB -->|end of run| AL[Alert router ZCA_OPS_ALRULE]
 ```
 
-Before anything runs the engine takes the **run lock** for its variant (`ZCD_OPS_LOCK` via `E_TABLE`, kept across the package commits, released at the end); a second run of the same variant is refused with RUN_LOCKED. After saving each package's findings the engine **reconciles** the package's lines and statements: open exceptions of earlier runs for these objects that were not raised again are resolved; an exception raised again keeps owner, due date and first-seen time (`ZCL_CD_OPS_STORE`). A package with a PLUGIN_ERROR resolves nothing.
+Before anything runs the engine takes the **run lock** for its variant (`ZCA_OPS_LOCK` via `E_TABLE`, kept across the package commits, released at the end); a second run of the same variant is refused with RUN_LOCKED. After saving each package's findings the engine **reconciles** the package's lines and statements: open exceptions of earlier runs for these objects that were not raised again are resolved; an exception raised again keeps owner, due date and first-seen time (`ZCL_CA_OPS_STORE`). A package with a PLUGIN_ERROR resolves nothing.
 
 Points of no return: the commit after each package (findings durable) and the alert hand-over after the run. A failure between packages leaves the run in status R (running) — the morning report's health-of-health check flags runs that never closed.
 

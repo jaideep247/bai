@@ -1,6 +1,0 @@
-@EndUserText.label: 'Owned exceptions'
-@ObjectModel.leadingEntity.name: 'ZC_CD_OPSEXCEPTION'
-define service ZUI_CD_OPS_EXC {
-  expose ZC_CD_OpsException as Exception;
-  expose ZC_CD_OpsExcHist as History;
-}

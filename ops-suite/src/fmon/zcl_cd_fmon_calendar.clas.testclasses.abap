@@ -105,7 +105,7 @@ CLASS ltc_calendar IMPLEMENTATION.
     TRY.
         mo_cut->is_month_end( iv_date = iv_date iv_calendar_id = gc_calendar ).
         cl_abap_unit_assert=>fail( msg = 'Calendar error must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_msgno_cal
                                             msg = 'Calendar error is message 206' ).

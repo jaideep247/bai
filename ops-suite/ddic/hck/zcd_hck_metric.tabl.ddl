@@ -20,4 +20,4 @@ define table zcd_hck_metric {
 // Secondary index HST: baseline history; TIM: dashboard trend, archiving / deletion
 // @index HST: MANDT, CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT
 // @index TIM: MANDT, MEASURED_AT
-// Retention: ZCD_OPS_PURGE deletes rows older than parameter RETENTION_DAYS_HCK_METRIC (ZCA_PARAM).
+// Retention: ZCA_OPS_RETENTION deletes rows older than parameter RETENTION_DAYS_HCK_METRIC (ZCA_PARAM).

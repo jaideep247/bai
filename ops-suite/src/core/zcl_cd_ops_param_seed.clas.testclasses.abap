@@ -18,9 +18,9 @@ CLASS ltc_param_seed DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_test,
-        name    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
+        name    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
         value   TYPE string VALUE `7`,
-        unknown TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_NOT_DELIVERED',
+        unknown TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_NOT_DELIVERED',
       END OF gc_test.
 
     DATA mo_cut TYPE REF TO zcl_cd_ops_param_seed.
@@ -59,7 +59,7 @@ CLASS ltc_param_seed IMPLEMENTATION.
   " Rule: the adapter finds every delivered definition in its area (prefix table)
   METHOD area_by_prefix_of_name.
     LOOP AT zcl_cd_ops_param_seed=>definitions( ) ASSIGNING FIELD-SYMBOL(<ls_definition>).
-      cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_params_ca=>area_of( <ls_definition>-name )
+      cl_abap_unit_assert=>assert_equals( act = zcl_ca_ops_params=>area_of( <ls_definition>-name )
                                           exp = <ls_definition>-area
                                           msg = |{ <ls_definition>-name } is read from its area| ).
     ENDLOOP.

@@ -110,7 +110,7 @@ CLASS ltc_lot_reader DEFINITION FINAL
       RETURNING
         VALUE(rt_status) TYPE zif_cd_fmon_types=>tt_lot_status
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS one_open_item_is_counted FOR TESTING.
     METHODS lot_items_read_by_lot_key FOR TESTING.
@@ -224,7 +224,7 @@ CLASS ltc_lot_reader IMPLEMENTATION.
     configure_scenario( VALUE #( no_status_field = abap_true ) ).
     TRY.
         act( ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         lv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
     cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '208'

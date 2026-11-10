@@ -23,7 +23,7 @@ class BpTestsTemplateTest(unittest.TestCase):
 
     def test_gate_doubles_injected_and_reset(self):
         for call in ('inject_client', 'inject_transport', 'inject_auth', 'reset( )'):
-            self.assertIn(f'zcl_cd_ops_cfg_injector=>{call}', self.text)
+            self.assertIn(f'zcl_ca_ops_cfg_injector=>{call}', self.text)
 
     def test_permission_read_on_root_entity(self):
         self.assertIn('GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_opscfgall', self.text)
@@ -97,9 +97,9 @@ class PcreCheckTemplateTest(unittest.TestCase):
     def test_every_pattern_field_is_validated(self):
         expected = {('ebs', 'zcd_ebs_flow_pat', 'pattern'), ('fmon', 'zcd_fmon_iface', 'name_pattern'),
                     ('hck', 'zcd_job_step', 'jobname'), ('hck', 'zcd_hck_seqout', 'seq_pattern'),
-                    ('core', 'zcd_ops_alrule', 'rule_pattern'),
-                    ('core', 'zcd_ops_alrule', 'check_pattern'), ('core', 'zcd_ops_alrule', 'group1_pattern'),
-                    ('core', 'zcd_ops_alrule', 'group2_pattern')}
+                    ('core', 'zca_ops_alrule', 'rule_pattern'),
+                    ('core', 'zca_ops_alrule', 'check_pattern'), ('core', 'zca_ops_alrule', 'group1_pattern'),
+                    ('core', 'zca_ops_alrule', 'group2_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
                  for c in t[6] if c[0] == 'pcre'}
         self.assertEqual(found, expected)

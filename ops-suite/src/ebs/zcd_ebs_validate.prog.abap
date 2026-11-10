@@ -11,13 +11,13 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area EBS replaces S_PROGRAM.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
-*& 2026-11-06 | Variant parameter typed with ZIF_CD_OPS_TYPES=>TY_VARIANT (audit A01).
+*& 2026-11-06 | Variant parameter typed with zif_ca_ops_types=>TY_VARIANT (audit A01).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A68: FEB date range validated (selection screen and source).
 *& 2026-11-06 | Audit A69: server file read rejects encoding and read errors, distinguishes end of file, always closes.
 *& 2026-11-06 | Modern-syntax sweep: CASE.
 *& 2026-11-10 | Server file: P_PATH is a file name only, resolved in logical path ZCD_OPS_EBS_IN (FILE),
-*&            | validated and checked with S_DATASET READ (ZCL_CD_OPS_FILE_PATH) - no directory from the
+*&            | validated and checked with S_DATASET READ (ZCL_CA_OPS_FILE_PATH) - no directory from the
 *&            | user. File not readable: own message 810 (was 012 'Read of table'). Line excerpts in
 *&            | parser findings (E150, UNKNOWN_RECORD) come only from files read this way.
 *&---------------------------------------------------------------------*
@@ -52,7 +52,7 @@ SELECTION-SCREEN BEGIN OF BLOCK b_fil WITH FRAME TITLE TEXT-b03.
 SELECTION-SCREEN END OF BLOCK b_fil.
 
 SELECTION-SCREEN BEGIN OF BLOCK b_run WITH FRAME TITLE TEXT-b04.
-  PARAMETERS p_var  TYPE zif_cd_ops_types=>ty_variant DEFAULT 'DAILY'.
+  PARAMETERS p_var  TYPE zif_ca_ops_types=>ty_variant DEFAULT 'DAILY'.
   PARAMETERS p_test AS CHECKBOX DEFAULT 'X'.
   PARAMETERS p_all  AS CHECKBOX.
 SELECTION-SCREEN END OF BLOCK b_run.
@@ -77,13 +77,13 @@ CLASS lcl_report DEFINITION FINAL.
       RETURNING
         VALUE(ro_source) TYPE REF TO zif_cd_ebs_source
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS read_file
       RETURNING
         VALUE(rv_content) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS file_format
       RETURNING
@@ -91,7 +91,7 @@ CLASS lcl_report DEFINITION FINAL.
 
     METHODS is_result_text
       IMPORTING
-        is_run         TYPE zif_cd_ops_types=>ty_run
+        is_run         TYPE zif_ca_ops_types=>ty_run
       RETURNING
         VALUE(rv_text) TYPE symsgv.
 
@@ -105,12 +105,12 @@ CLASS lcl_report IMPLEMENTATION.
 
   METHOD run.
     TRY.
-        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
+        zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
                                                 iv_pe_area   = zif_cd_ops_types=>gc_pe_area-ebs ).
         DATA(ls_result) = NEW zcl_cd_ebs_engine( )->run( io_source    = build_source( )
                                                          iv_variant   = p_var
                                                          iv_test_mode = p_test ).
-        IF zcl_cd_ops_run_guard=>was_refused( ls_result-findings ) = abap_true.
+        IF zcl_ca_ops_run_guard=>was_refused( ls_result-findings ) = abap_true.
           " Run lock held: background job ends in error so Control-M shows it
           IF sy-batch = abap_true.
             MESSAGE ls_result-run-message TYPE 'E'.
@@ -123,7 +123,7 @@ CLASS lcl_report IMPLEMENTATION.
         ELSE.
           display( ls_result ).
         ENDIF.
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         MESSAGE lx_error TYPE 'E'.
     ENDTRY.
   ENDMETHOD.
@@ -170,9 +170,9 @@ CLASS lcl_report IMPLEMENTATION.
     ELSE.
       " Directory traversal: only a file name, resolved in the logical path of the EBS input
       " file, validated and authorised for READ - the user never names a directory
-      DATA(lv_file) = zcl_cd_ops_file_path=>physical( is_logical   = zif_cd_ops_types=>gc_logical_file-ebs_input
+      DATA(lv_file) = zcl_ca_ops_file_path=>physical( is_logical   = zif_cd_ops_types=>gc_logical_file-ebs_input
                                                       iv_file_name = p_path
-                                                      iv_activity  = zif_cd_ops_types=>gc_dataset_activity-read ).
+                                                      iv_activity  = zif_ca_ops_types=>gc_dataset_activity-read ).
       " A69: no IGNORING CONVERSION ERRORS - a file that is not UTF-8 is rejected, not
       " validated with replaced characters; only end of file ends the read; the dataset is
       " closed on every path
@@ -229,10 +229,10 @@ CLASS lcl_report IMPLEMENTATION.
 
 
   METHOD display.
-    DATA lt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_findings TYPE zif_ca_ops_types=>tt_finding.
     lt_findings = is_result-findings.
     IF p_all = abap_false.
-      DELETE lt_findings WHERE severity = zif_cd_ops_types=>gc_severity-info.
+      DELETE lt_findings WHERE severity = zif_ca_ops_types=>gc_severity-info.
     ENDIF.
     TRY.
         cl_salv_table=>factory( IMPORTING r_salv_table = DATA(lo_alv)

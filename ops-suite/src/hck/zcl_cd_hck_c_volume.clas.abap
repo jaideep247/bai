@@ -52,11 +52,11 @@ CLASS zcl_cd_hck_c_volume IMPLEMENTATION.
                                                            iv_ref_date = is_context-report_date
                                                            io_dao      = lo_dao
                                                            it_expected = lt_expected ) INTO TABLE rs_result-metrics.
-          CATCH zcx_cd_ops_error INTO DATA(lx_config).
+          CATCH zcx_ca_ops_error INTO DATA(lx_config).
             INSERT VALUE #( object_key = |{ is_def-check_id }/{ ls_agg-agg_id }|
                             check_code = zif_cd_hck_types=>gc_code-agg_invalid
-                            severity   = zif_cd_ops_types=>gc_severity-error
-                            action     = zif_cd_ops_types=>gc_action-notify
+                            severity   = zif_ca_ops_types=>gc_severity-error
+                            action     = zif_ca_ops_types=>gc_action-notify
                             reference  = ls_agg-tabname
                             message    = lx_config->get_text( ) ) INTO TABLE rs_result-findings.
             EXIT.

@@ -67,7 +67,7 @@ CLASS ltc_volume DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -132,7 +132,7 @@ CLASS ltc_volume IMPLEMENTATION.
                                             exp = zif_cd_hck_types=>gc_code-agg_invalid
                                             msg = 'Failure is AGG_INVALID' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity
-                                            exp = zif_cd_ops_types=>gc_severity-error
+                                            exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Failure is an error' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

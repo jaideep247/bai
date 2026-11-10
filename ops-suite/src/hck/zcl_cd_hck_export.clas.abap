@@ -7,7 +7,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A61: no truncated report export).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
-*& 2026-11-10 | IV_FILE is a path resolved by ZCL_CD_OPS_FILE_PATH: the temp file and a delete stay in it.
+*& 2026-11-10 | IV_FILE is a path resolved by ZCL_CA_OPS_FILE_PATH: the temp file and a delete stay in it.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - complete-or-nothing file export</p>
 "! ABAP cannot rename a dataset atomically. Instead the full content is proven
@@ -21,14 +21,14 @@ CLASS zcl_cd_hck_export DEFINITION
   PUBLIC SECTION.
     CONSTANTS gc_temp_suffix TYPE string VALUE `.tmp`.
 
-    "! @raising zcx_cd_ops_error | 316 open / 368 write failed - nothing partial is left
+    "! @raising zcx_ca_ops_error | 316 open / 368 write failed - nothing partial is left
     CLASS-METHODS write
       IMPORTING
         iv_file  TYPE string
         it_lines TYPE string_table
         io_file  TYPE REF TO zif_cd_hck_file
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
   PRIVATE SECTION.
     CLASS-METHODS write_all
@@ -37,7 +37,7 @@ CLASS zcl_cd_hck_export DEFINITION
         it_lines TYPE string_table
         io_file  TYPE REF TO zif_cd_hck_file
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 
@@ -52,7 +52,7 @@ CLASS zcl_cd_hck_export IMPLEMENTATION.
         write_all( iv_file = lv_temp it_lines = it_lines io_file = io_file ).
         lv_target_opened = abap_true.
         write_all( iv_file = iv_file it_lines = it_lines io_file = io_file ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         io_file->close( lv_temp ).
         io_file->delete( lv_temp ).
         io_file->close( iv_file ).

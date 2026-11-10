@@ -59,6 +59,6 @@ INTERFACE zif_cd_ebs_stmt_evidence
     RETURNING
       VALUE(rt_evidence) TYPE tt_evidence
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

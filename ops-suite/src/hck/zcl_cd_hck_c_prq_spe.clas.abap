@@ -24,7 +24,7 @@ CLASS zcl_cd_hck_c_prq_spe DEFINITION
     INTERFACES zif_cd_hck_check.
 
     CONSTANTS gc_metric TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PRQ_FAILED_NO_SPE'.
-    CONSTANTS gc_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRQ_FAILED_NO_SPE'.
+    CONSTANTS gc_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRQ_FAILED_NO_SPE'.
 ENDCLASS.
 
 
@@ -89,8 +89,8 @@ CLASS zcl_cd_hck_c_prq_spe IMPLEMENTATION.
     LOOP AT lt_missing ASSIGNING FIELD-SYMBOL(<lv_request>) FROM 1 TO lv_max.
       INSERT VALUE #( object_key = <lv_request>
                       check_code = gc_code
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-exception
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-exception
                       reference  = <lv_request>
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-payment_request_failed_with
                                                           iv_v1    = <lv_request> ) )

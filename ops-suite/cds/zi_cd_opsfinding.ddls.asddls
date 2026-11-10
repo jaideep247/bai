@@ -1,5 +1,5 @@
 // Artifact: zi_cd_opsfinding.ddls.asddls
-// Purpose: Basic interface view over ZCD_OPS_FINDING (findings / owned exceptions
+// Purpose: Basic interface view over ZCA_OPS_FINDING (findings / owned exceptions
 //          of all payment engine areas) with aging. Release-dependent annotations: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 //                   2026-11-06 | Amount with currency reference (DECFLOAT34, no TCURX shift);
@@ -11,12 +11,12 @@
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #L, dataClass: #TRANSACTIONAL }
 @VDM.viewType: #BASIC
 define view entity ZI_CD_OpsFinding
-  as select from zcd_ops_finding
+  as select from zca_ops_finding
   association [1..1] to ZI_CD_OpsRun as _Run on $projection.RunId = _Run.RunId
 {
   key run_id                                              as RunId,
   key finding_no                                          as FindingNo,
-      pe_area                                              as PaymentEngineArea,
+      area                                              as PaymentEngineArea,
       object_type                                         as ObjectType,
       object_key                                          as ObjectKey,
       // HCK: category A-E / check id; EBS, FMON: their own grouping

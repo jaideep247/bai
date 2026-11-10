@@ -60,7 +60,7 @@ CLASS zcl_cd_fmon_chk_missing IMPLEMENTATION.
                                                                    iv_date     = is_ctx-business_date )
                    is_check      = is_check
                    iv_code       = lv_code
-                   iv_severity   = zif_cd_ops_types=>gc_severity-warning
+                   iv_severity   = zif_ca_ops_types=>gc_severity-warning
                    iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-file_s_on_a_day
                                                           iv_v1    = <ls_expect>-iface_id
                                                           iv_v2    = lv_received

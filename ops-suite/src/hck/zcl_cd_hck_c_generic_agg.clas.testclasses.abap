@@ -43,21 +43,21 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
     CONSTANTS gc_now TYPE timestampl VALUE '20261106070000.0000000'.
     CONSTANTS gc_today TYPE d VALUE '20261106'.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = gc_now.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = gc_today.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     CLEAR rv_time.
   ENDMETHOD.
 ENDCLASS.
@@ -107,7 +107,7 @@ CLASS ltc_generic_agg DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -119,7 +119,7 @@ CLASS ltc_generic_agg IMPLEMENTATION.
     CLEAR ms_context.
     ms_context-report_date = gc_today.
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.
 
 
@@ -232,7 +232,7 @@ CLASS ltc_generic_agg IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'No aggregate definition must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Configuration error raised' ).
     ENDTRY.
   ENDMETHOD.

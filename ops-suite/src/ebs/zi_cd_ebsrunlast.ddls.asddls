@@ -14,11 +14,11 @@
 @VDM.viewType: #COMPOSITE
 // VERIFY-ADT: aggregate without GROUP BY next to a literal element (as ZI_CD_FmonRunLast)
 define view entity ZI_CD_EbsRunLast
-  as select from zcd_ops_run
+  as select from zca_ops_run
 {
-      cast( 'EBS' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_EBS' as abap.char( 16 ) )                       as PaymentEngineArea,
       max( ended_at )                                       as LastEndedAt
 }
-where pe_area   = 'EBS'
+where area   = 'CD_EBS'
   and test_mode = ' '
   and ( status = 'S' or status = 'W' or status = 'E' or status = 'N' )

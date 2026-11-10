@@ -2,7 +2,7 @@
 // Purpose: Consumption view of the EBS findings (service ZUI_CD_EBS_DASH): findings by rule and severity
 //          (analytical list page "EBS findings"), leaf of every drill-down. Account numbers
 //          are masked; statement messages of the file source are not exposed.
-//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCA_PARAR = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'EBS validation dashboard - finding'

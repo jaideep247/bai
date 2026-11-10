@@ -1,4 +1,4 @@
-@EndUserText.label : 'Draft: Alerting and approved tables (singleton)'
+@EndUserText.label : 'Draft: Approved tables (singleton)'
 @AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #A

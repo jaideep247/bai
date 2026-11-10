@@ -18,7 +18,7 @@ define view entity ZI_CD_HckMetric
   key dim1                                                as Dimension1,
   key dim2                                                as Dimension2,
       // constant payment engine area for the DCL (same authorization object as findings)
-      cast( 'HCK' as abap.char(4) )                       as PaymentEngineArea,
+      cast( 'CD_HCK' as abap.char(16) )                       as PaymentEngineArea,
       value                                               as MetricValue,
       // A88: V volume (SUM), L level - duration / age / size (MAX, AVG), R rate (weighted);
       // rows written before the field existed count as volumes

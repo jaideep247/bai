@@ -3,7 +3,7 @@
 *& Purpose:
 *& One-off migration of the configured CP wildcard patterns to PCRE (user
 *& decision 2026-11-06). Reads every pattern of the suite's own configuration
-*& tables (ZCD_EBS_FLOW_PAT, ZCD_FMON_IFACE, ZCD_JOB_STEP, ZCD_OPS_ALRULE,
+*& tables (ZCD_EBS_FLOW_PAT, ZCD_FMON_IFACE, ZCD_JOB_STEP, ZCA_OPS_ALRULE,
 *& the pattern-list parameters of ZCD_HCK_DEF, ZCD_HCK_SUPPRESS), shows old ->
 *& new per row (ZCL_CD_OPS_PATTERN_CHECK=>PLAN_MIGRATION). Test mode (default)
 *& writes nothing. Update mode writes only rows with status CONVERT - never a
@@ -11,7 +11,7 @@
 *& policy of the configuration apps (changeable client, customizing request
 *& where changes are recorded) and authorisation ZCD_OPS change (02) per
 *& payment engine area; change stamps set, customizing rows recorded on the
-*& request (VERIFY-ADT: ZCL_CD_OPS_CFG_TRANSPORT), one commit through the store.
+*& request (VERIFY-ADT: ZCL_CA_OPS_CFG_TRANSPORT), one commit through the store.
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: migration of existing rows).
 *& 2026-11-10 | ZCD_OPS display (03) checked per payment engine area before its rows are read (B7);
@@ -54,7 +54,7 @@ CLASS lcl_app DEFINITION FINAL.
 
     METHODS write_rows
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS count
       IMPORTING
@@ -76,17 +76,17 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD main.
     DATA lt_areas TYPE zif_cd_ops_pattern_types=>tt_pe_area.
     " B7: rows of an area are read only with display authorisation for it (as ZCD_OPS_PATTERN_CHECK)
-    DATA(lo_auth) = zcl_cd_ops_factory=>get_auth( ).
+    DATA(lo_auth) = zcl_ca_ops_factory=>get_auth( ).
     LOOP AT VALUE zif_cd_ops_pattern_types=>tt_pe_area( ( zif_cd_ops_types=>gc_pe_area-core )
                                                         ( zif_cd_ops_types=>gc_pe_area-ebs )
                                                         ( zif_cd_ops_types=>gc_pe_area-file_monitor )
                                                         ( zif_cd_ops_types=>gc_pe_area-health_check ) )
          INTO DATA(lv_area).
-      IF lo_auth->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-display
+      IF lo_auth->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-display
                               iv_pe_area  = lv_area ) = abap_true.
         INSERT lv_area INTO TABLE lt_areas.
       ELSE.
-        MESSAGE s041(zcd_ops) WITH |{ zif_cd_ops_auth=>gc_object } { lv_area }| zif_cd_ops_auth=>gc_activity-display
+        MESSAGE s041(zcd_ops) WITH |{ zif_ca_ops_auth=>gc_object } { lv_area }| zif_ca_ops_auth=>gc_activity-display
                 DISPLAY LIKE 'W'.
       ENDIF.
     ENDLOOP.
@@ -101,11 +101,11 @@ CLASS lcl_app IMPLEMENTATION.
       IF may_write( ) = abap_false.
         RETURN.
       ENDIF.
-      DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
+      DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
       TRY.
           write_rows( ).
           lo_store->commit( ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        CATCH zcx_ca_ops_error INTO DATA(lx_error).
           lo_store->rollback( ).
           MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
           RETURN.
@@ -126,8 +126,8 @@ CLASS lcl_app IMPLEMENTATION.
 
 
   METHOD may_write.
-    DATA lt_areas TYPE SORTED TABLE OF zif_cd_ops_types=>ty_pe_area WITH UNIQUE KEY table_line.
-    DATA(lo_gate) = zcl_cd_ops_cfg_factory=>get_gate( ).
+    DATA lt_areas TYPE SORTED TABLE OF zif_ca_ops_types=>ty_area WITH UNIQUE KEY table_line.
+    DATA(lo_gate) = zcl_ca_ops_cfg_factory=>get_gate( ).
     IF lo_gate->decision( )-update_allowed = abap_false.
       MESSAGE s748(zcd_ops) DISPLAY LIKE 'E'.
       RETURN.
@@ -143,8 +143,8 @@ CLASS lcl_app IMPLEMENTATION.
     ENDLOOP.
     LOOP AT lt_areas ASSIGNING FIELD-SYMBOL(<lv_area>).
       IF lo_gate->is_authorized( iv_pe_area = <lv_area>
-                                 iv_actvt   = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_false.
-        MESSAGE s407(zcd_ops) WITH zif_cd_ops_cfg_types=>gc_actvt-change <lv_area> DISPLAY LIKE 'E'.
+                                 iv_actvt   = zif_ca_ops_cfg_types=>gc_actvt-change ) = abap_false.
+        MESSAGE s407(zcd_ops) WITH zif_ca_ops_cfg_types=>gc_actvt-change <lv_area> DISPLAY LIKE 'E'.
         RETURN.
       ENDIF.
     ENDLOOP.
@@ -153,7 +153,7 @@ CLASS lcl_app IMPLEMENTATION.
 
 
   METHOD write_rows.
-    DATA(lo_gate) = zcl_cd_ops_cfg_factory=>get_gate( ).
+    DATA(lo_gate) = zcl_ca_ops_cfg_factory=>get_gate( ).
     DATA(lt_written) = zcl_cd_ops_factory=>get_pattern_dao( )->write_migration( mt_rows ).
     " Customizing rows on the request (no-op where the client does not record changes);
     " suppressions are application data and are not transported

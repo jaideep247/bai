@@ -85,13 +85,13 @@ CLASS ltc_numrange DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS finding
       IMPORTING
         is_result         TYPE zif_cd_hck_types=>ty_check_result
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 ENDCLASS.
 
 
@@ -209,7 +209,7 @@ CLASS ltc_numrange IMPLEMENTATION.
         configure_scenario( VALUE #( level = '00000000000000000086' ) ).
         DATA(ls_result) = act( iv_objects = CONV #( gc_object ) ).
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-nr_usage_high ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = '85 % = amber: warning' ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_finding-message
@@ -232,7 +232,7 @@ CLASS ltc_numrange IMPLEMENTATION.
         DATA(ls_result) = act( iv_objects = CONV #( gc_object ) ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-nr_usage_high )-severity
-          exp = zif_cd_ops_types=>gc_severity-error
+          exp = zif_ca_ops_types=>gc_severity-error
           msg = '95 % = red: error' ).
         CLEAR mo_dao->mt_intervals.
         configure_scenario( VALUE #( level = '00000000000000000999' ) ).
@@ -267,7 +267,7 @@ CLASS ltc_numrange IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial( act = ls_result-metrics msg = 'No usage measured' ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-nr_not_numeric )-severity
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Not numeric: warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -281,9 +281,9 @@ CLASS ltc_numrange IMPLEMENTATION.
         DATA(ls_result) = act( iv_objects = CONV #( gc_other ) ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-metrics msg = 'No data: no metric' ).
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-nr_no_interval ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'No interval: warning' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_other )
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-reference exp = CONV zif_ca_ops_types=>ty_reference( gc_other )
                                             msg = 'Object named' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -296,7 +296,7 @@ CLASS ltc_numrange IMPLEMENTATION.
     TRY.
         act( iv_objects = space ).
         cl_abap_unit_assert=>fail( msg = 'Missing objects must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Configuration error raised' ).
     ENDTRY.
   ENDMETHOD.
@@ -309,7 +309,7 @@ CLASS ltc_numrange IMPLEMENTATION.
         DATA(ls_result) = act( iv_objects = CONV #( gc_object ) ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-limits_missing )-severity
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Limits missing: warning' ).
         cl_abap_unit_assert=>assert_initial(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-nr_usage_high )
@@ -329,7 +329,7 @@ CLASS ltc_numrange IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_max_rows exp = gc_cap msg = 'Cap passed to the read' ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-read_capped )-severity
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Cap reached: warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

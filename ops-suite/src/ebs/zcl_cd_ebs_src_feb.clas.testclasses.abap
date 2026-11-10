@@ -14,7 +14,7 @@
 *& 2026-11-06 | Return reason correction: FEBEP carries no return reason - the line reason stays blank.
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
-*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*&            | instead of a hand-written store double: the semantics of ZCL_CA_OPS_STORE.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *&---------------------------------------------------------------------*
@@ -303,7 +303,7 @@ CLASS ltc_src_feb IMPLEMENTATION.
     TRY.
         zcl_cd_ebs_src_feb=>check_selection( VALUE #( date_from = '20261106' date_to = '20261105' ) ).
         cl_abap_unit_assert=>fail( msg = 'An inverted date range must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = zif_cd_ebs_types=>gc_msg-date_range
                                             msg = 'Message 527 expected for an inverted date range' ).

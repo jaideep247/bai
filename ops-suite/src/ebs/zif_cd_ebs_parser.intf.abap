@@ -21,6 +21,6 @@ INTERFACE zif_cd_ebs_parser
     RETURNING
       VALUE(rs_file) TYPE zif_cd_ebs_types=>ty_file
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

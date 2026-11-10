@@ -234,10 +234,10 @@ CLASS ltc_pattern_check IMPLEMENTATION.
   METHOD converted_matches_same_value.
     DATA(lv_pcre) = zcl_cd_ops_pattern_check=>from_wildcard( 'ach_pnc_*.txt' ).
     cl_abap_unit_assert=>assert_true(
-      act = zcl_cd_ops_util=>pcre_match( iv_value = 'ACH_PNC_20261106_01.TXT' iv_pattern = lv_pcre )
+      act = zcl_ca_ops_util=>pcre_match( iv_value = 'ACH_PNC_20261106_01.TXT' iv_pattern = lv_pcre )
       msg = 'The converted pattern captures the file' ).
     cl_abap_unit_assert=>assert_false(
-      act = zcl_cd_ops_util=>pcre_match( iv_value = 'ACH_PNC_20261106_01XTXT' iv_pattern = lv_pcre )
+      act = zcl_ca_ops_util=>pcre_match( iv_value = 'ACH_PNC_20261106_01XTXT' iv_pattern = lv_pcre )
       msg = 'The literal dot is not any character' ).
   ENDMETHOD.
 

@@ -3,7 +3,7 @@
 *& Purpose:
 *& Behaviour pool of ZR_CD_HckSuppress (health-check suppression, design
 *& 6.3). Handlers in the local implementations; rules in
-*& ZCL_CD_HCK_SUPPRESSION, authorisation by ZCL_CD_OPS_AUTH.
+*& ZCL_CD_HCK_SUPPRESSION, authorisation by ZCL_CA_OPS_AUTH.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *&---------------------------------------------------------------------*

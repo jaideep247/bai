@@ -38,7 +38,7 @@ CLASS zcl_cd_hck_pay_ageing DEFINITION
         "! Business days (VALUE_DATE) or calendar days (ISSUE_DATE)
         age      TYPE i,
         "! AMBER = late, RED = critical, initial = within the limits or no limits maintained
-        rag      TYPE zif_cd_ops_types=>ty_rag,
+        rag      TYPE zif_ca_ops_types=>ty_rag,
       END OF ty_age.
 
     METHODS constructor
@@ -89,7 +89,7 @@ CLASS zcl_cd_hck_pay_ageing DEFINITION
         iv_key        TYPE zif_cd_hck_runtime_types=>ty_flow_class
         iv_age        TYPE i
       RETURNING
-        VALUE(rv_rag) TYPE zif_cd_ops_types=>ty_rag.
+        VALUE(rv_rag) TYPE zif_ca_ops_types=>ty_rag.
 
     "! AMBER or RED of AGE_OLDEST is maintained for the watched flow + class
     METHODS limits_set

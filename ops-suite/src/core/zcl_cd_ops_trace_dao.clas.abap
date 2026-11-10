@@ -48,7 +48,7 @@ CLASS zcl_cd_ops_trace_dao DEFINITION
       RETURNING
         VALUE(rt_rows) TYPE zif_cd_fmon_types=>tt_raw_row
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Request log fields of a set / watermark read: date, time, requested payment date, amount
     CLASS-METHODS add_request_fields

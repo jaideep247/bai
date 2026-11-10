@@ -53,7 +53,7 @@ CLASS ltc_postarea DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -99,7 +99,7 @@ CLASS ltc_postarea IMPLEMENTATION.
                                             msg = 'Object key = posting area / entry key' ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-check_code exp = zif_cd_hck_types=>gc_code-postarea_invalid
                                             msg = 'Check code POSTAREA_INVALID' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'An unusable entry is an error' ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_finding-message
@@ -124,7 +124,7 @@ CLASS ltc_postarea IMPLEMENTATION.
         DATA(ls_finding) = VALUE #( ls_result-findings[ group1 = gc_test-pmc ] OPTIONAL ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-object_key exp = CONV string( gc_test-pmc )
                                             msg = 'Object key = posting area' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'An empty posting area is a warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

@@ -44,4 +44,4 @@ define table zcd_fmon_prism {
 // @index UNP: MANDT, PROCESSED_AT, RECEIVED_AT
 // @index REF: MANDT, FILE_REF
 // @index BDT: MANDT, BUSINESS_DATE
-// Retention: 400 days (purge target to be added to ZCL_CD_OPS_PURGE, see docs/PRISM_Status_API.md)
+// Retention: 400 days (purge target to be added to ZCL_CA_OPS_PURGE, see docs/PRISM_Status_API.md)

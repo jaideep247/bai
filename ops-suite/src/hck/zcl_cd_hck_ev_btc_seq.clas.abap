@@ -72,7 +72,7 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
         esnum   TYPE n LENGTH 5,
         role    TYPE zif_cd_hck_runtime_types=>ty_btc_role,
         code    TYPE zif_cd_hck_runtime_types=>ty_btc_code,
-        amount  TYPE zif_cd_ops_types=>ty_amount,
+        amount  TYPE zif_ca_ops_types=>ty_amount,
         compare TYPE c LENGTH 1,
       END OF ty_step.
     TYPES tt_step TYPE STANDARD TABLE OF ty_step WITH EMPTY KEY.
@@ -82,7 +82,7 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
       BEGIN OF ty_lot,
         doc1r  TYPE zif_cd_hck_runtime_types=>ty_docno,
         items  TYPE i,
-        amount TYPE zif_cd_ops_types=>ty_amount,
+        amount TYPE zif_ca_ops_types=>ty_amount,
       END OF ty_lot.
     TYPES tt_lot TYPE HASHED TABLE OF ty_lot WITH UNIQUE KEY doc1r.
 
@@ -152,7 +152,7 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
     "! Configuration of the collection (read once; an invalid pattern raises every time)
     CLASS-METHODS prepare
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Lifecycles of payments not yet evaluated for the link (one read each of lines and lots)
     CLASS-METHODS evaluate_batch
@@ -215,7 +215,7 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
     CLASS-METHODS register_mismatch
       IMPORTING
         it_steps       TYPE tt_step
-        iv_amount      TYPE zif_cd_ops_types=>ty_amount
+        iv_amount      TYPE zif_ca_ops_types=>ty_amount
       RETURNING
         VALUE(rv_text) TYPE string.
 
@@ -293,7 +293,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     DATA(lo_dao) = zcl_cd_hck_factory=>get_runtime_dao( ).
     " An invalid pattern is never 'no match': the kind is unusable (CLEARING_RULE_INVALID)
     LOOP AT lo_dao->get_seq_outcomes( ) ASSIGNING FIELD-SYMBOL(<ls_outcome>).
-      IF zcl_cd_ops_util=>pcre_valid( <ls_outcome>-seq_pattern ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_valid( <ls_outcome>-seq_pattern ) = abap_false.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
           MESSAGE e666(zcd_ops) WITH <ls_outcome>-seq_pattern
                                      |{ <ls_outcome>-flow }{ <ls_outcome>-method_class }/{ <ls_outcome>-seq }|.
@@ -307,7 +307,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     gt_outcomes = lt_outcomes.
     gt_roles = lo_dao->get_btc_roles( ).
     CLEAR: gt_info, gt_memo, gt_capped.
-    gv_today = zcl_cd_ops_factory=>get_clock( )->today( ).
+    gv_today = zcl_ca_ops_factory=>get_clock( )->today( ).
     gv_generation = zcl_cd_hck_ev_support=>generation( ).
   ENDMETHOD.
 
@@ -356,7 +356,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
         ls_life-blocked  = abap_true.
         ls_life-evidence = VALUE #( doc1r    = <ls_payment>-doc1r
                                     anomaly  = zif_cd_hck_runtime_types=>gc_code-cheque_ambiguous
-                                    severity = zif_cd_ops_types=>gc_severity-error
+                                    severity = zif_ca_ops_types=>gc_severity-error
                                     detail   = <ls_ambiguous>-detail ).
       ELSEIF iv_cheque = abap_false.
         CLEAR lt_doc_lines.
@@ -481,7 +481,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
       rs_life-evidence = VALUE #( doc1r    = is_payment-doc1r
                                   hits     = lines( it_steps )
                                   anomaly  = zif_cd_hck_runtime_types=>gc_code-btc_role_missing
-                                  severity = zif_cd_ops_types=>gc_severity-error
+                                  severity = zif_ca_ops_types=>gc_severity-error
                                   detail   = |{ lv_indeterminate } | &&
                                              concat_lines_of( table = it_unmapped sep = zif_cd_hck_runtime_types=>gc_role_sep ) ).
       RETURN.
@@ -491,7 +491,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
       IF is_lot-items > 0.
         rs_life-evidence = VALUE #( doc1r    = is_payment-doc1r
                                     anomaly  = zif_cd_hck_runtime_types=>gc_code-return_inconsist
-                                    severity = zif_cd_ops_types=>gc_severity-error
+                                    severity = zif_ca_ops_types=>gc_severity-error
                                     detail   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_lot_no_line
                                                                       iv_v1    = is_lot-items ) ).
       ENDIF.
@@ -521,7 +521,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
       " The matching row needs the register state, but the payment has no register row for the link
       rs_life-blocked           = abap_true.
       rs_life-evidence-anomaly  = zif_cd_hck_runtime_types=>gc_code-register_missing.
-      rs_life-evidence-severity = zif_cd_ops_types=>gc_severity-error.
+      rs_life-evidence-severity = zif_ca_ops_types=>gc_severity-error.
       rs_life-evidence-detail   = |{ lv_detail } | &&
                                   |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_register_missing
                                                             iv_v1    = ls_match-row-seq ) }|.
@@ -529,7 +529,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     ENDIF.
     IF ls_match-found = abap_false.
       rs_life-evidence-anomaly  = zif_cd_hck_runtime_types=>gc_code-unexpected_seq.
-      rs_life-evidence-severity = zif_cd_ops_types=>gc_severity-error.
+      rs_life-evidence-severity = zif_ca_ops_types=>gc_severity-error.
       rs_life-evidence-detail   = |{ lv_detail } { zcl_cd_ops_util=>text( zif_cd_hck_runtime_types=>gc_msg-ev_no_pattern ) }|.
       RETURN.
     ENDIF.
@@ -539,8 +539,8 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
                                           iv_v1    = ls_outcome-outcome
                                           iv_v2    = ls_outcome-seq ) }|.
     rs_life-outcome = ls_outcome-outcome.
-    DATA(lv_severity) = COND zif_cd_ops_types=>ty_severity( WHEN ls_outcome-severity IS INITIAL
-                                                            THEN zif_cd_ops_types=>gc_severity-error
+    DATA(lv_severity) = COND zif_ca_ops_types=>ty_severity( WHEN ls_outcome-severity IS INITIAL
+                                                            THEN zif_ca_ops_types=>gc_severity-error
                                                             ELSE ls_outcome-severity ).
     rs_life-evidence-severity = lv_severity.
 
@@ -559,7 +559,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
       IF lv_mismatch IS NOT INITIAL.
         rs_life-blocked = abap_true.
         INSERT VALUE #( code     = zif_cd_hck_runtime_types=>gc_code-cheque_amount
-                        severity = zif_cd_ops_types=>gc_severity-error
+                        severity = zif_ca_ops_types=>gc_severity-error
                         detail   = lv_mismatch ) INTO TABLE lt_anomalies.
       ENDIF.
     ENDIF.
@@ -612,7 +612,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
   METHOD match.
     LOOP AT gt_outcomes ASSIGNING FIELD-SYMBOL(<ls_outcome>)
          WHERE flow = is_payment-flow AND method_class = is_payment-class.
-      IF zcl_cd_ops_util=>pcre_match( iv_value = iv_sequence iv_pattern = <ls_outcome>-row-seq_pattern ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_match( iv_value = iv_sequence iv_pattern = <ls_outcome>-row-seq_pattern ) = abap_false.
         CONTINUE.
       ENDIF.
       IF <ls_outcome>-states IS NOT INITIAL.

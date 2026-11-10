@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_c_overdue_exc.clas.abap
 *& Purpose:
-*& Exception queues: owned exceptions of every suite payment engine area (ZCD_OPS_FINDING)
+*& Exception queues: owned exceptions of every suite payment engine area (ZCA_OPS_FINDING)
 *& that are still open or assigned after their SLA due date.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).

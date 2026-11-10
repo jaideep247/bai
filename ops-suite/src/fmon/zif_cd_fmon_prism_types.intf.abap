@@ -148,20 +148,20 @@ INTERFACE zif_cd_fmon_prism_types
     END OF gc_utc.
 
   "! Request body limit in ZCA_PARAM [16384 bytes]
-  CONSTANTS gc_param_max_bytes TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_MAX_BYTES'.
+  CONSTANTS gc_param_max_bytes TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_PRISM_MAX_BYTES'.
   CONSTANTS gc_default_max_bytes TYPE i VALUE 16384.
   "! A call that could not be stored: recorded server-side as a run of this variant with one
   "! finding (exception trace in DETAILS) - the caller sees only the error code and the event ID
-  CONSTANTS gc_api_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'PRISM_API'.
-  CONSTANTS gc_check_store_failed TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_STORE_FAILED'.
-  CONSTANTS gc_object_type_event TYPE zif_cd_ops_types=>ty_object_type VALUE 'PRISM_EVT'.
+  CONSTANTS gc_api_variant TYPE zif_ca_ops_types=>ty_variant VALUE 'PRISM_API'.
+  CONSTANTS gc_check_store_failed TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRISM_STORE_FAILED'.
+  CONSTANTS gc_object_type_event TYPE zif_ca_ops_types=>ty_object_type VALUE 'PRISM_EVT'.
   "! Instant processing (BOOL in ZCA_PARAM): the unit saves findings and hands them to the alert
   "! router (X, default), or only updates the registry and leaves findings and alerts to the
   "! 5-minute run (a value row with blank value)
-  CONSTANTS gc_param_instant TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_INSTANT'.
+  CONSTANTS gc_param_instant TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_PRISM_INSTANT'.
   CONSTANTS gc_default_instant TYPE string VALUE `X`.
   "! Adapter of the configured ZCD_FMON_SRC row that reads ZCD_FMON_PRISM (batch and unit)
-  CONSTANTS gc_adapter_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_ADAPTER_PRISM'.
+  CONSTANTS gc_adapter_class TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_ADAPTER_PRISM'.
   "! Attempts of one unit when another process changed the file meanwhile (audit A04)
   CONSTANTS gc_unit_attempts TYPE i VALUE 2.
   "! Name of the background process (bgPF, SBGRFCMON)
@@ -197,21 +197,21 @@ INTERFACE zif_cd_fmon_prism_types
   "! Message numbers (class ZCD_OPS) of the API texts
   CONSTANTS:
     BEGIN OF gc_msg,
-      field_missing       TYPE zif_cd_ops_types=>ty_msgno VALUE '250',
-      field_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '251',
-      field_too_long      TYPE zif_cd_ops_types=>ty_msgno VALUE '252',
-      field_duplicate     TYPE zif_cd_ops_types=>ty_msgno VALUE '253',
-      field_not_scalar    TYPE zif_cd_ops_types=>ty_msgno VALUE '254',
-      malformed_json      TYPE zif_cd_ops_types=>ty_msgno VALUE '255',
-      not_an_object       TYPE zif_cd_ops_types=>ty_msgno VALUE '256',
-      method_not_allowed  TYPE zif_cd_ops_types=>ty_msgno VALUE '257',
-      unsupported_media   TYPE zif_cd_ops_types=>ty_msgno VALUE '258',
-      payload_too_large   TYPE zif_cd_ops_types=>ty_msgno VALUE '259',
-      not_authorized      TYPE zif_cd_ops_types=>ty_msgno VALUE '260',
-      event_id_conflict   TYPE zif_cd_ops_types=>ty_msgno VALUE '261',
-      store_failed        TYPE zif_cd_ops_types=>ty_msgno VALUE '262',
-      occurred_in_future  TYPE zif_cd_ops_types=>ty_msgno VALUE '263',
-      total_needs_ccy     TYPE zif_cd_ops_types=>ty_msgno VALUE '264',
+      field_missing       TYPE zif_ca_ops_types=>ty_msgno VALUE '250',
+      field_invalid       TYPE zif_ca_ops_types=>ty_msgno VALUE '251',
+      field_too_long      TYPE zif_ca_ops_types=>ty_msgno VALUE '252',
+      field_duplicate     TYPE zif_ca_ops_types=>ty_msgno VALUE '253',
+      field_not_scalar    TYPE zif_ca_ops_types=>ty_msgno VALUE '254',
+      malformed_json      TYPE zif_ca_ops_types=>ty_msgno VALUE '255',
+      not_an_object       TYPE zif_ca_ops_types=>ty_msgno VALUE '256',
+      method_not_allowed  TYPE zif_ca_ops_types=>ty_msgno VALUE '257',
+      unsupported_media   TYPE zif_ca_ops_types=>ty_msgno VALUE '258',
+      payload_too_large   TYPE zif_ca_ops_types=>ty_msgno VALUE '259',
+      not_authorized      TYPE zif_ca_ops_types=>ty_msgno VALUE '260',
+      event_id_conflict   TYPE zif_ca_ops_types=>ty_msgno VALUE '261',
+      store_failed        TYPE zif_ca_ops_types=>ty_msgno VALUE '262',
+      occurred_in_future  TYPE zif_ca_ops_types=>ty_msgno VALUE '263',
+      total_needs_ccy     TYPE zif_ca_ops_types=>ty_msgno VALUE '264',
     END OF gc_msg.
 
   " ---------------------------------------------------------------- stored event
@@ -229,7 +229,7 @@ INTERFACE zif_cd_fmon_prism_types
       record_count  TYPE i,
       "! recordCount was sent (X) - blank = not reported, not zero
       count_sent    TYPE abap_bool,
-      control_total TYPE zif_cd_ops_types=>ty_amount,
+      control_total TYPE zif_ca_ops_types=>ty_amount,
       currency      TYPE waers,
       error_code    TYPE ty_error_code,
       error_text    TYPE ty_error_text,

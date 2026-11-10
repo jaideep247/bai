@@ -1,6 +1,6 @@
 // Artifact: zc_cd_fmonflow.dcls.asdcls
 // Purpose: Read access to the file monitoring dashboard (service ZUI_CD_FMON_FLOW): authorization
-//          object ZCD_OPS with ZCD_PE_AREA = FMON and ACTVT 03 (display), as the ops analytics
+//          object ZCD_OPS with ZCA_PARAR = FMON and ACTVT 03 (display), as the ops analytics
 //          DCL ZI_CD_OpsAnalytics. Every entity carries PaymentEngineArea (FMON on every row).
 // Modification log: 2026-11-06 | Initial version (FMON file monitoring dashboard).
 // VERIFY-ADT: aspect pfcg_auth on a literal-valued element of a projection view (7.58).
@@ -8,15 +8,15 @@
 @MappingRole: true
 define role ZC_CD_FmonFlow {
   grant select on ZC_CD_FmonFlow
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_FmonFlowEvt
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_FmonFlowFind
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_FmonAsOf
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_FmonFlowKpi
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_FmonFlowFail
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
 }

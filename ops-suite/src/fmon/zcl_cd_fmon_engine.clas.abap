@@ -24,7 +24,7 @@
 *&              (PRISM_* stages in both directions; inbound PRISM evidence opens the instance).
 *& 2026-11-06 | run_event( ): single-event entry point of the instant PRISM unit (bgPF); the
 *&              batch path run( ) is unchanged.
-*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | PRISM throttle (user 2026-11-06): throttle settings and PRISM queue in the check
 *&              context for the batch run and run_event alike (same rule, no copy).
 *& 2026-11-06 | Configuration load: an interface name pattern that is not valid PCRE is a PATTERN_INVALID
@@ -47,7 +47,7 @@
 *& 2026-11-08 | Table consolidation: stage deadlines are ZCD_FMON_SLA rows of kind DEADLINE in the context's
 *&            | SLAs (ZCD_FMON_DEADL merged).
 *& 2026-11-10 | Run boundary: a ZCX_CD_OPS_ERROR after the run started is rolled back, the run closed as aborted
-*&            | (ZCL_CD_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and re-raised - never
+*&            | (ZCL_CA_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and re-raised - never
 *&            | left in status R. Engine findings of a caught exception (source, lot reader, check, registry,
 *&            | database, alert) keep the exception trace (DETAILS) and error class: ENGINE_FINDING IX_ERROR.
 *& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): every ACK finding (no / late ACK, ACK count
@@ -81,7 +81,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
       RETURNING
         VALUE(rs_result) TYPE zif_cd_fmon_types=>ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Instant processing of one PRISM event (bgPF unit). Business date = the records' date.
     "! @parameter ev_deferred | an observation needs a file FMON does not know yet: nothing was
@@ -95,20 +95,20 @@ CLASS zcl_cd_fmon_engine DEFINITION
       RETURNING
         VALUE(rs_result) TYPE zif_cd_fmon_types=>ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
   PRIVATE SECTION.
     CONSTANTS gc_seconds_per_minute TYPE i VALUE 60.
     "! Run variant of the instant PRISM unit (run history; no lock is taken)
-    CONSTANTS gc_event_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'PRISM'.
+    CONSTANTS gc_event_variant TYPE zif_ca_ops_types=>ty_variant VALUE 'PRISM'.
     "! Checks an event can open or close for its file (the others need the batch context)
     CONSTANTS:
       BEGIN OF gc_event_check,
-        sla        TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_SLA',
-        reject     TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_REJECT',
-        prism_file TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_PRISM_FILE',
+        sla        TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_SLA',
+        reject     TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_REJECT',
+        prism_file TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_PRISM_FILE',
         "! Regenerated file while the earlier generation did not fail (duplicate risk: alert at once)
-        regen      TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_REGEN',
+        regen      TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_REGEN',
       END OF gc_event_check.
     "! Single-event mode (run_event): source and records given, no adapter read
     DATA mv_single TYPE abap_bool.
@@ -118,7 +118,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
 
     "! Lock variant: one monitor run at a time for all interfaces - the registry,
     "! event numbering and lots are shared (design: payment engine area + variant; FMON uses '*')
-    CONSTANTS gc_lock_variant TYPE zif_cd_ops_types=>ty_variant VALUE '*'.
+    CONSTANTS gc_lock_variant TYPE zif_ca_ops_types=>ty_variant VALUE '*'.
 
     "! The run itself, under the run lock taken by run( )
     METHODS execute
@@ -129,7 +129,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
       RETURNING
         VALUE(rs_result) TYPE zif_cd_fmon_types=>ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS release_lock
       IMPORTING
@@ -139,9 +139,9 @@ CLASS zcl_cd_fmon_engine DEFINITION
     "! now. Skipped when a check, source or the registry save failed.
     METHODS reconcile_files
       IMPORTING
-        is_run TYPE zif_cd_ops_types=>ty_run
+        is_run TYPE zif_ca_ops_types=>ty_run
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     TYPES tt_file_map TYPE HASHED TABLE OF zif_cd_fmon_types=>ty_file
       WITH UNIQUE KEY file_id
@@ -159,7 +159,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
         rows          TYPE i,
         rec_count     TYPE i,
         count_known   TYPE abap_bool,
-        amount        TYPE zif_cd_ops_types=>ty_amount,
+        amount        TYPE zif_ca_ops_types=>ty_amount,
         event_at      TYPE timestampl,
         last_at       TYPE timestampl,
         business_date TYPE d,
@@ -192,9 +192,9 @@ CLASS zcl_cd_fmon_engine DEFINITION
     TYPES tt_malformed TYPE HASHED TABLE OF ty_malformed WITH UNIQUE KEY src_id role.
 
     DATA mo_dao TYPE REF TO zif_cd_fmon_dao.
-    DATA mo_store TYPE REF TO zif_cd_ops_store.
-    DATA mo_params TYPE REF TO zif_cd_ops_params.
-    DATA mo_clock TYPE REF TO zif_cd_ops_clock.
+    DATA mo_store TYPE REF TO zif_ca_ops_store.
+    DATA mo_params TYPE REF TO zif_ca_ops_params.
+    DATA mo_clock TYPE REF TO zif_ca_ops_clock.
     DATA mo_calendar TYPE REF TO zif_cd_fmon_calendar.
 
     DATA mv_date TYPE d.
@@ -224,16 +224,16 @@ CLASS zcl_cd_fmon_engine DEFINITION
     DATA mt_generations TYPE zif_cd_fmon_types=>tt_file.
     DATA mt_lots TYPE zif_cd_fmon_types=>tt_lot_status.
     DATA mt_expects TYPE zif_cd_fmon_types=>tt_expect.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
 
     "! Sweep: findings of one file reference - number, worst severity rank and the message of
     "! the first finding of that rank (one pass instead of a scan per file)
     TYPES:
       BEGIN OF ty_ref_summary,
-        reference   TYPE zif_cd_ops_types=>ty_finding-reference,
+        reference   TYPE zif_ca_ops_types=>ty_finding-reference,
         count       TYPE i,
         worst       TYPE i,
-        top_message TYPE zif_cd_ops_types=>ty_finding-message,
+        top_message TYPE zif_ca_ops_types=>ty_finding-message,
       END OF ty_ref_summary.
     TYPES tt_ref_summary TYPE HASHED TABLE OF ty_ref_summary WITH UNIQUE KEY reference.
 
@@ -251,7 +251,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
 
     METHODS sync_sources
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS aggregate
       IMPORTING
@@ -277,7 +277,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
         ev_file_id    TYPE zif_cd_fmon_types=>ty_file_id
         ev_ambiguous  TYPE abap_bool
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS get_or_create
       IMPORTING
@@ -286,7 +286,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
       RETURNING
         VALUE(rv_file_id) TYPE zif_cd_fmon_types=>ty_file_id
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! ACK / NACK counts (audit A39): per-payment rows count distinct payment identities,
     "! file-level rows the reported count; counts are cumulative (never lowered by a later
@@ -381,9 +381,9 @@ CLASS zcl_cd_fmon_engine DEFINITION
 
     METHODS finish
       CHANGING
-        cs_run TYPE zif_cd_ops_types=>ty_run
+        cs_run TYPE zif_ca_ops_types=>ty_run
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Missing bank ACK alert: DETAILS (labelled evidence per file), AMOUNT and CURRENCY of every
     "! ACK finding; one grouped payment-run read for all files whose counts are not known
@@ -393,16 +393,16 @@ CLASS zcl_cd_fmon_engine DEFINITION
     "! the interface and business date without ACK / NACK for a missed ACK deadline
     METHODS ack_files
       IMPORTING
-        is_finding      TYPE zif_cd_ops_types=>ty_finding
+        is_finding      TYPE zif_ca_ops_types=>ty_finding
       RETURNING
         VALUE(rt_files) TYPE zif_cd_fmon_types=>tt_file.
 
     METHODS ack_input
       IMPORTING
         is_file         TYPE zif_cd_fmon_types=>ty_file
-        is_finding      TYPE zif_cd_ops_types=>ty_finding
+        is_finding      TYPE zif_ca_ops_types=>ty_finding
         it_totals       TYPE zif_cd_fmon_types=>tt_payrun_total
-        iv_currency     TYPE zif_cd_ops_types=>ty_currency
+        iv_currency     TYPE zif_ca_ops_types=>ty_currency
       RETURNING
         VALUE(rs_input) TYPE zcl_cd_fmon_ack_alert=>ty_input.
 
@@ -420,11 +420,11 @@ CLASS zcl_cd_fmon_engine DEFINITION
 
     METHODS engine_finding
       IMPORTING
-        iv_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_code     TYPE zif_ca_ops_types=>ty_check_code
         iv_key      TYPE clike
         iv_message  TYPE clike
         iv_iface_id TYPE zif_cd_fmon_types=>ty_iface_id OPTIONAL
-        iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error
+        iv_severity TYPE zif_ca_ops_types=>ty_severity DEFAULT zif_ca_ops_types=>gc_severity-error
         "! Caught exception: its trace goes to DETAILS, its error class to ERROR_CLASS
         ix_error    TYPE REF TO cx_root OPTIONAL.
 
@@ -443,10 +443,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF iv_test_mode = abap_false.
-      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                              iv_variant = gc_lock_variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                          iv_variant = gc_lock_variant
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -472,7 +472,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       lv_date = nmax( val1 = lv_date val2 = <ls_record>-business_date ).
     ENDLOOP.
     IF lv_date IS INITIAL.
-      lv_date = zcl_cd_ops_factory=>get_clock( )->today( ).
+      lv_date = zcl_ca_ops_factory=>get_clock( )->today( ).
     ENDIF.
     mv_single         = abap_true.
     ms_single_src     = is_src.
@@ -486,7 +486,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD reconcile_files.
-    DATA lt_scope TYPE zif_cd_ops_types=>tt_object_key.
+    DATA lt_scope TYPE zif_ca_ops_types=>tt_object_key.
 
     IF line_exists( mt_findings[ check_code = zif_cd_fmon_types=>gc_check_code-plugin_error ] )
        OR line_exists( mt_findings[ check_code = zif_cd_fmon_types=>gc_check_code-persist_error ] ).
@@ -494,7 +494,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ENDIF.
     " Same object key as ZCL_CD_FMON_UTIL=>NEW_FINDING: file name, else file reference
     LOOP AT mt_files INTO DATA(ls_file).
-      INSERT CONV zif_cd_ops_types=>ty_object_key( COND string( WHEN ls_file-file_name IS NOT INITIAL
+      INSERT CONV zif_ca_ops_types=>ty_object_key( COND string( WHEN ls_file-file_name IS NOT INITIAL
                                                                 THEN ls_file-file_name
                                                                 ELSE ls_file-file_ref ) ) INTO TABLE lt_scope.
     ENDLOOP.
@@ -511,7 +511,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF iv_test_mode = abap_false.
-      zcl_cd_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
+      zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                 iv_variant = gc_lock_variant ).
     ENDIF.
   ENDMETHOD.
@@ -563,8 +563,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
         rs_result-board = build_board( ).
         finish( CHANGING cs_run = ls_run ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
-        mt_findings = zcl_cd_ops_run_guard=>abort( EXPORTING ix_error = lx_error
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
+        mt_findings = zcl_ca_ops_run_guard=>abort( EXPORTING ix_error = lx_error
                                                    CHANGING  cs_run   = ls_run ).
         RAISE EXCEPTION lx_error.
     ENDTRY.
@@ -576,9 +576,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD init.
     mo_dao      = zcl_cd_fmon_factory=>get_dao( ).
     mo_calendar = zcl_cd_fmon_factory=>get_calendar( ).
-    mo_store    = zcl_cd_ops_factory=>get_store( ).
+    mo_store    = zcl_ca_ops_factory=>get_store( ).
     mo_params   = zcl_cd_ops_factory=>get_params( ).
-    mo_clock    = zcl_cd_ops_factory=>get_clock( ).
+    mo_clock    = zcl_ca_ops_factory=>get_clock( ).
 
     CLEAR: mt_files, mt_changed, mt_events, mt_new_events, mt_ref_events, mt_lots, mt_expects, mt_findings,
            mt_statements, mt_generations.
@@ -587,7 +587,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mv_test_mode = iv_test_mode.
     mv_now       = mo_clock->now( ).
     mv_tz        = mo_params->get_param( iv_name    = zif_cd_fmon_types=>gc_param-time_zone
-                                         iv_default = CONV #( zif_cd_ops_types=>gc_time_zone_utc ) ).
+                                         iv_default = CONV #( zif_ca_ops_types=>gc_time_zone_utc ) ).
   ENDMETHOD.
 
 
@@ -595,7 +595,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mt_ifaces  = mo_dao->get_ifaces( ).
     " PCRE name patterns: an invalid one would silently resolve no file - reported instead
     LOOP AT mt_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WHERE active = abap_true AND name_pattern IS NOT INITIAL.
-      IF zcl_cd_ops_util=>pcre_valid( <ls_iface>-name_pattern ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_valid( <ls_iface>-name_pattern ) = abap_false.
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-pattern_invalid
                         iv_key      = zif_cd_fmon_types=>gc_engine_key-iface && <ls_iface>-iface_id
                         iv_iface_id = <ls_iface>-iface_id
@@ -618,12 +618,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lt_records TYPE zif_cd_fmon_types=>tt_src_record.
     DATA lt_groups TYPE tt_group.
 
-    ls_request-date_from = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_params
+    ls_request-date_from = mv_date - zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                                  iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
                                                                  iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days ).
     ls_request-date_to   = mv_date.
     ls_request-time_zone = mv_tz.
-    ls_request-max_rows  = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    ls_request-max_rows  = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                        iv_name    = zif_cd_fmon_types=>gc_param-max_rows
                                                        iv_default = zif_cd_fmon_types=>gc_param_default-max_rows ).
 
@@ -643,7 +643,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ls_request-maps = VALUE #( FOR ls_map IN mt_maps WHERE ( src_id = ls_src-src_id ) ( ls_map ) ).
       TRY.
           lt_records = zcl_cd_fmon_factory=>get_adapter( ls_src-adapter_class )->read( ls_request ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+        CATCH zcx_ca_ops_error INTO DATA(lx_ops).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                           iv_key     = zif_cd_fmon_types=>gc_engine_key-source && ls_src-src_id
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source
@@ -689,7 +689,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-ref_ambiguous
                         iv_key      = |{ ls_group-src_id }:{ ls_group-file_ref }|
                         iv_iface_id = ls_group-iface_id
-                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_severity = zif_ca_ops_types=>gc_severity-warning
                         iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-reference_ambiguous
                                                              iv_v1    = ls_group-file_ref
                                                              iv_v2    = ls_group-iface_id ) ).
@@ -736,7 +736,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       IF ls_iface IS INITIAL.
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-unmapped_file
                         iv_key      = |{ is_src-src_id }:{ ls_record-file_ref }|
-                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_severity = zif_ca_ops_types=>gc_severity-warning
                         iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source_no_interface_matches
                                                              iv_v1    = is_src-src_id
                                                              iv_v2    = ls_record-file_name ) ).
@@ -752,7 +752,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-unmapped_status
                         iv_key      = |{ is_src-src_id }:{ ls_record-raw_status }|
                         iv_iface_id = ls_iface-iface_id
-                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_severity = zif_ca_ops_types=>gc_severity-warning
                         iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source_status_has_no_stage
                                                              iv_v1    = is_src-src_id
                                                              iv_v2    = ls_record-raw_status
@@ -821,7 +821,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     LOOP AT lt_malformed ASSIGNING FIELD-SYMBOL(<ls_malformed>).
       engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-malformed_row
                       iv_key      = |{ <ls_malformed>-src_id }:{ <ls_malformed>-role }|
-                      iv_severity = zif_cd_ops_types=>gc_severity-warning
+                      iv_severity = zif_ca_ops_types=>gc_severity-warning
                       iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-malformed_rows
                                                            iv_v1    = <ls_malformed>-src_id
                                                            iv_v2    = <ls_malformed>-rows
@@ -1051,10 +1051,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD load_registry.
     DATA lv_from TYPE d.
     DATA lv_open_since TYPE d.
-    lv_from       = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_params
+    lv_from       = mv_date - zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                           iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
                                                           iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days ).
-    lv_open_since = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_params
+    lv_open_since = mv_date - zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                           iv_name    = zif_cd_fmon_types=>gc_param-open_days
                                                           iv_default = zif_cd_fmon_types=>gc_param_default-open_days ).
     DATA lt_db TYPE zif_cd_fmon_types=>tt_file.
@@ -1113,10 +1113,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD watch_since.
-    rv_since = mv_date - nmax( val1 = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rv_since = mv_date - nmax( val1 = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                                   iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
                                                                   iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days )
-                               val2 = zcl_cd_ops_util=>param_int( io_params  = mo_params
+                               val2 = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                                   iv_name    = zif_cd_fmon_types=>gc_param-open_days
                                                                   iv_default = zif_cd_fmon_types=>gc_param_default-open_days ) ).
   ENDMETHOD.
@@ -1124,7 +1124,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD prism_failures.
     DATA lt_codes TYPE zif_cd_fmon_prism_types=>tt_error_code.
-    LOOP AT zcl_cd_ops_util=>split_list( iv_codes ) ASSIGNING FIELD-SYMBOL(<lv_code>).
+    LOOP AT zcl_ca_ops_util=>split_list( iv_codes ) ASSIGNING FIELD-SYMBOL(<lv_code>).
       INSERT CONV #( to_upper( <lv_code> ) ) INTO TABLE lt_codes.
     ENDLOOP.
     IF lt_codes IS INITIAL.
@@ -1145,10 +1145,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lt_batch TYPE zif_cd_fmon_types=>tt_file.
     DATA lt_status TYPE zif_cd_fmon_types=>tt_lot_status.
 
-    DATA(lv_default_sla) = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    DATA(lv_default_sla) = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                        iv_name    = zif_cd_fmon_types=>gc_param-noc_sla_days
                                                        iv_default = zif_cd_fmon_types=>gc_param_default-noc_sla_days ).
-    DATA(lv_max_rows) = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    DATA(lv_max_rows) = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                     iv_name    = zif_cd_fmon_types=>gc_param-max_rows
                                                     iv_default = zif_cd_fmon_types=>gc_param_default-max_rows ).
 
@@ -1186,7 +1186,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       IF line_exists( lt_status[ truncated = abap_true ] ).
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-lot_truncated
                         iv_key      = zif_cd_fmon_types=>gc_engine_key-lot && |{ ls_cfg-iface_id }:{ ls_cfg-lot_type }|
-                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_severity = zif_ca_ops_types=>gc_severity-warning
                         iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_scan_truncated
                                                              iv_v1    = ls_cfg-lot_type
                                                              iv_v2    = lv_max_rows ) ).
@@ -1254,7 +1254,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                     iv_basis       = CONV #( mo_params->get_param(
                                                iv_name    = zif_cd_fmon_types=>gc_param-age_basis
                                                iv_default = CONV #( zif_cd_fmon_types=>gc_age_basis-after_receipt ) ) ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_cal).
+      CATCH zcx_ca_ops_error INTO DATA(lx_cal).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                         iv_key     = zif_cd_fmon_types=>gc_engine_key-calendar && lv_cal
                         iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-factory_calendar_age_unknwn
@@ -1314,7 +1314,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                         iv_month_end    = lv_month_end
                         iv_date         = mv_date
                         iv_returns_days = mo_params->get_param( zif_cd_fmon_types=>gc_param-returns_days ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_cal).
+      CATCH zcx_ca_ops_error INTO DATA(lx_cal).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                         iv_key     = zif_cd_fmon_types=>gc_engine_key-calendar && iv_calendar_id
                         iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-factory_calendar_normal_day
@@ -1356,7 +1356,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       INSERT <ls_grouped> INTO TABLE rs_ctx-generations.
     ENDLOOP.
     INSERT LINES OF mt_generations INTO TABLE rs_ctx-generations.
-    rs_ctx-regen-wait_min  = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_ctx-regen-wait_min  = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                          iv_name    = zif_cd_fmon_types=>gc_param-regen_wait_min
                                                          iv_default = zif_cd_fmon_types=>gc_param_default-regen_wait_min ).
     rs_ctx-regen-dup_codes = mo_params->get_param( zif_cd_fmon_types=>gc_param-dup_name_codes ).
@@ -1375,7 +1375,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     SORT lt_checksums BY table_line.
     DELETE ADJACENT DUPLICATES FROM lt_checksums COMPARING table_line.
     DATA lv_since TYPE d.
-    lv_since = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_params
+    lv_since = mv_date - zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                      iv_name    = zif_cd_fmon_types=>gc_param-dup_days
                                                      iv_default = zif_cd_fmon_types=>gc_param_default-dup_days ).
     rs_ctx-history = mo_dao->get_history( it_names     = lt_names
@@ -1385,7 +1385,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD throttle_settings.
-    rs_throttle-minutes   = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_throttle-minutes   = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                         iv_name    = zif_cd_fmon_types=>gc_param-throttle_min
                                                         iv_default = zif_cd_fmon_types=>gc_param_default-throttle_min ).
     rs_throttle-scope     = to_upper( mo_params->get_param(
@@ -1393,7 +1393,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                               iv_default = CONV #( zif_cd_fmon_types=>gc_param_default-throttle_scope ) ) ).
     rs_throttle-methods   = mo_params->get_param( iv_name    = zif_cd_fmon_types=>gc_param-throttle_methods
                                                   iv_default = zif_cd_fmon_types=>gc_param_default-throttle_methods ).
-    rs_throttle-queue_max = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_throttle-queue_max = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                         iv_name    = zif_cd_fmon_types=>gc_param-queue_max
                                                         iv_default = zif_cd_fmon_types=>gc_param_default-queue_max ).
   ENDMETHOD.
@@ -1424,7 +1424,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
     " The full batch run holds every file of its lookback window in memory
     IF mv_single = abap_false AND mv_iface IS INITIAL.
-      lv_covered_from = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_params
+      lv_covered_from = mv_date - zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                               iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
                                                               iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days ).
     ENDIF.
@@ -1458,7 +1458,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD run_checks.
-    DATA lt_found TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_found TYPE zif_ca_ops_types=>tt_finding.
     DATA(ls_ctx) = build_context( ).
 
     LOOP AT mt_checks INTO DATA(ls_check) WHERE active = abap_true.
@@ -1504,7 +1504,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         LOOP AT mt_new_events ASSIGNING FIELD-SYMBOL(<ls_event>).
           mo_dao->insert_event( <ls_event> ).
         ENDLOOP.
-      CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+      CATCH zcx_ca_ops_error INTO DATA(lx_ops).
         " Never commit a half-written registry (files without their events or vice versa)
         mo_store->rollback( ).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
@@ -1533,7 +1533,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                         iv_key      = COND string( WHEN ls_conflict-file_name IS NOT INITIAL THEN ls_conflict-file_name
                                                    ELSE ls_conflict-file_ref )
                         iv_iface_id = ls_conflict-iface_id
-                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_severity = zif_ca_ops_types=>gc_severity-warning
                         iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-newer_registry_state
                                                              iv_v1    = ls_conflict-file_name ) ).
       ENDIF.
@@ -1559,9 +1559,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         ls_row-top_message   = <ls_ref>-top_message.
         lv_worst             = <ls_ref>-worst.
       ENDIF.
-      ls_row-sla_status = COND #( WHEN lv_worst >= 3 THEN zif_cd_ops_types=>gc_rag-red
-                                  WHEN lv_worst = 2 THEN zif_cd_ops_types=>gc_rag-amber
-                                  ELSE zif_cd_ops_types=>gc_rag-green ).
+      ls_row-sla_status = COND #( WHEN lv_worst >= 3 THEN zif_ca_ops_types=>gc_rag-red
+                                  WHEN lv_worst = 2 THEN zif_ca_ops_types=>gc_rag-amber
+                                  ELSE zif_ca_ops_types=>gc_rag-green ).
       INSERT ls_row INTO TABLE rt_board.
       CLEAR ls_row.
     ENDLOOP.
@@ -1574,15 +1574,15 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ls_row-file_name     = <ls_finding>-object_key.
       ls_row-finding_count = 1.
       ls_row-top_message   = <ls_finding>-message.
-      ls_row-sla_status    = zcl_cd_ops_util=>rag_from_findings( VALUE #( ( <ls_finding> ) ) ).
+      ls_row-sla_status    = zcl_ca_ops_util=>rag_from_findings( VALUE #( ( <ls_finding> ) ) ).
       INSERT ls_row INTO TABLE rt_board.
     ENDLOOP.
 
     LOOP AT rt_board ASSIGNING FIELD-SYMBOL(<ls_board>).
       <ls_board>-sla_light = SWITCH #( <ls_board>-sla_status
-                                       WHEN zif_cd_ops_types=>gc_rag-red   THEN zif_cd_ops_types=>gc_light-red
-                                       WHEN zif_cd_ops_types=>gc_rag-amber THEN zif_cd_ops_types=>gc_light-yellow
-                                       ELSE zif_cd_ops_types=>gc_light-green ).
+                                       WHEN zif_ca_ops_types=>gc_rag-red   THEN zif_ca_ops_types=>gc_light-red
+                                       WHEN zif_ca_ops_types=>gc_rag-amber THEN zif_ca_ops_types=>gc_light-yellow
+                                       ELSE zif_ca_ops_types=>gc_light-green ).
     ENDLOOP.
     SORT rt_board BY iface_id business_date file_name.
   ENDMETHOD.
@@ -1607,13 +1607,13 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ENDCASE.
     ENDLOOP.
 
-    lv_worst_run = zcl_cd_ops_util=>severity_rank( zcl_cd_ops_util=>worst_severity( mt_findings ) ).
-    cs_run-rag      = zcl_cd_ops_util=>rag_from_findings( mt_findings ).
-    cs_run-status   = COND #( WHEN lv_worst_run >= 3 THEN zif_cd_ops_types=>gc_run_status-error
-                              WHEN lv_worst_run = 2 THEN zif_cd_ops_types=>gc_run_status-warning
-                              ELSE zif_cd_ops_types=>gc_run_status-success ).
+    lv_worst_run = zcl_ca_ops_util=>severity_rank( zcl_ca_ops_util=>worst_severity( mt_findings ) ).
+    cs_run-rag      = zcl_ca_ops_util=>rag_from_findings( mt_findings ).
+    cs_run-status   = COND #( WHEN lv_worst_run >= 3 THEN zif_ca_ops_types=>gc_run_status-error
+                              WHEN lv_worst_run = 2 THEN zif_ca_ops_types=>gc_run_status-warning
+                              ELSE zif_ca_ops_types=>gc_run_status-success ).
     cs_run-ended_at   = mo_clock->now( ).
-    cs_run-runtime_ms = zcl_cd_ops_util=>elapsed_ms( iv_from = cs_run-started_at
+    cs_run-runtime_ms = zcl_ca_ops_util=>elapsed_ms( iv_from = cs_run-started_at
                                                      iv_to   = cs_run-ended_at ).
     cs_run-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-file_s_finding_s
                                                iv_v1    = |{ mv_date DATE = ISO }|
@@ -1645,20 +1645,20 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ENDIF.
       " Results are durable before anyone is told (a channel may COMMIT WORK itself)
       mo_store->commit( ).
-      " Alert thresholds, recipients, channels and throttling live in ZCD_OPS_ALRULE
+      " Alert thresholds, recipients, channels and throttling live in ZCA_OPS_ALRULE
       TRY.
-          zcl_cd_ops_factory=>get_alert( )->dispatch( is_run      = cs_run
+          zcl_ca_ops_factory=>get_alert( )->dispatch( is_run      = cs_run
                                                       it_findings = mt_findings ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_alert).
-          DATA(lt_alert_error) = VALUE zif_cd_ops_types=>tt_finding(
+        CATCH zcx_ca_ops_error INTO DATA(lx_alert).
+          DATA(lt_alert_error) = VALUE zif_ca_ops_types=>tt_finding(
             ( zcl_cd_fmon_util=>new_key_finding(
                 iv_object_key = 'ALERT'
                 is_check      = VALUE #( check_id = zif_cd_fmon_types=>gc_engine_rule )
                 iv_code       = zif_cd_fmon_types=>gc_check_code-alert_failed
                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-alert_dispatch_failed
                                                        iv_tail  = lx_alert->get_text( ) ) ) ) ).
-          lt_alert_error[ 1 ]-details     = zcl_cd_ops_util=>exception_trace( lx_alert ).
-          lt_alert_error[ 1 ]-error_class = zcl_cd_ops_util=>error_class( lx_alert ).
+          lt_alert_error[ 1 ]-details     = zcl_ca_ops_util=>exception_trace( lx_alert ).
+          lt_alert_error[ 1 ]-error_class = zcl_ca_ops_util=>error_class( lx_alert ).
           mo_store->save_findings( EXPORTING it_findings = lt_alert_error
                                    CHANGING  cs_run      = cs_run ).
           INSERT LINES OF lt_alert_error INTO TABLE mt_findings.
@@ -1712,15 +1712,15 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           ix_error   = lx_sql ).
       ENDTRY.
     ENDIF.
-    DATA(lv_currency) = CONV zif_cd_ops_types=>ty_currency(
+    DATA(lv_currency) = CONV zif_ca_ops_types=>ty_currency(
                           mo_params->get_param( iv_name    = zif_cd_fmon_types=>gc_param-default_currency
                                                 iv_default = CONV #( zif_cd_fmon_types=>gc_param_default-default_currency ) ) ).
 
     LOOP AT lt_targets ASSIGNING FIELD-SYMBOL(<ls_target>).
       ASSIGN mt_findings[ <ls_target>-index ] TO <ls_finding>.
       DATA(lv_details) = zcl_cd_ops_ack_mail=>marker( ).
-      DATA(lv_amount) = VALUE zif_cd_ops_types=>ty_amount( ).
-      DATA(lv_ccy) = VALUE zif_cd_ops_types=>ty_currency( ).
+      DATA(lv_amount) = VALUE zif_ca_ops_types=>ty_amount( ).
+      DATA(lv_ccy) = VALUE zif_ca_ops_types=>ty_currency( ).
       DATA(lv_blocks) = 0.
       LOOP AT <ls_target>-files ASSIGNING <ls_file>.
         lv_blocks += 1.
@@ -1872,7 +1872,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         INSERT VALUE #( reference = <ls_finding>-reference ) INTO TABLE rt_summary ASSIGNING <ls_summary>.
       ENDIF.
       <ls_summary>-count += 1.
-      DATA(lv_rank) = zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ).
+      DATA(lv_rank) = zcl_ca_ops_util=>severity_rank( <ls_finding>-severity ).
       IF lv_rank > <ls_summary>-worst.
         <ls_summary>-worst       = lv_rank.
         <ls_summary>-top_message = <ls_finding>-message.
@@ -1894,8 +1894,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF ix_error IS BOUND.
-      ls_finding-details     = zcl_cd_ops_util=>exception_trace( ix_error ).
-      ls_finding-error_class = zcl_cd_ops_util=>error_class( ix_error ).
+      ls_finding-details     = zcl_ca_ops_util=>exception_trace( ix_error ).
+      ls_finding-error_class = zcl_ca_ops_util=>error_class( ix_error ).
     ENDIF.
     INSERT ls_finding INTO TABLE mt_findings.
   ENDMETHOD.

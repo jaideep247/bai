@@ -1,6 +1,6 @@
 // Artifact: zc_cd_ebsdash.dcls.asdcls
 // Purpose: Read access to the EBS validation dashboard (service ZUI_CD_EBS_DASH): authorization
-//          object ZCD_OPS with ZCD_PE_AREA = EBS and ACTVT 03 (display), as the file monitoring
+//          object ZCD_OPS with ZCA_PARAR = EBS and ACTVT 03 (display), as the file monitoring
 //          dashboard role ZC_CD_FMONFLOW. Every entity carries PaymentEngineArea (EBS on every row).
 //          Company code (BUKRS) is not checked here: the EBS validation run and the
 //          exceptions app are area-wide as well (config/auth_zcd_ops.md); restrict per company
@@ -11,19 +11,19 @@
 @MappingRole: true
 define role ZC_CD_EbsDash {
   grant select on ZC_CD_EbsStmt
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsLine
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsFind
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsRetNoc
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsRun
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsAsOf
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsKpi
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsProblem
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
 }

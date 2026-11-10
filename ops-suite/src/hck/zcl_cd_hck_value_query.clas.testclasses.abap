@@ -26,7 +26,7 @@ CLASS ltc_value_query DEFINITION FINAL
       RETURNING
         VALUE(rs_query) TYPE zif_cd_hck_value_types=>ty_value_query
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS parameter_pairs_are_parsed   FOR TESTING.
     METHODS query_has_conditions_and_day FOR TESTING.
@@ -98,7 +98,7 @@ CLASS ltc_value_query IMPLEMENTATION.
     TRY.
         build( VALUE #( ( `NO_SUCH_FIELD` ) ) ).
         cl_abap_unit_assert=>fail( msg = 'An unknown field must be rejected' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '304'
                                             msg = 'Unknown field must raise 304' ).
     ENDTRY.
@@ -110,7 +110,7 @@ CLASS ltc_value_query IMPLEMENTATION.
     TRY.
         build( VALUE #( ( `AMOUNT` ) ) ).
         cl_abap_unit_assert=>fail( msg = 'A numeric result field must be rejected' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '203'
                                             msg = 'A numeric result field must raise 203' ).
     ENDTRY.
@@ -122,7 +122,7 @@ CLASS ltc_value_query IMPLEMENTATION.
     TRY.
         build( it_return = VALUE #( ( `REQ_ID` ) ) iv_date_field = space ).
         cl_abap_unit_assert=>fail( msg = 'A query without date restriction must be rejected' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '323'
                                             msg = 'A missing date restriction must raise 323' ).
     ENDTRY.
@@ -134,7 +134,7 @@ CLASS ltc_value_query IMPLEMENTATION.
     TRY.
         build( it_return = VALUE #( ( `REQ_ID` ) ) iv_whitelisted = abap_false ).
         cl_abap_unit_assert=>fail( msg = 'A table off the whitelist must be rejected' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '302'
                                             msg = 'A table off the whitelist must raise 302' ).
     ENDTRY.

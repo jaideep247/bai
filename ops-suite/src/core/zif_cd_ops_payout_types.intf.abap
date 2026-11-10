@@ -100,8 +100,8 @@ INTERFACE zif_cd_ops_payout_types
   "! A payment listed in a finding of the evaluator (anomaly, inconsistency, undetermined)
   TYPES:
     BEGIN OF ty_listing,
-      code     TYPE zif_cd_ops_types=>ty_check_code,
-      severity TYPE zif_cd_ops_types=>ty_severity,
+      code     TYPE zif_ca_ops_types=>ty_check_code,
+      severity TYPE zif_ca_ops_types=>ty_severity,
       line     TYPE string,
     END OF ty_listing.
   TYPES tt_listing TYPE STANDARD TABLE OF ty_listing WITH EMPTY KEY.
@@ -124,11 +124,11 @@ INTERFACE zif_cd_ops_payout_types
       "! Purpose of the rules that decided (blank: none)
       purpose       TYPE zif_cd_hck_runtime_types=>ty_purpose,
       "! Deciding evidence kind (ZCD_HCK_CLRRULE-EVIDENCE_CLASS) and its short reference
-      evidence_kind TYPE zif_cd_ops_types=>ty_class_name,
+      evidence_kind TYPE zif_ca_ops_types=>ty_class_name,
       evidence_ref  TYPE ty_evidence_ref,
       "! Primary finding code of the payment (blank: none)
-      finding       TYPE zif_cd_ops_types=>ty_check_code,
-      severity      TYPE zif_cd_ops_types=>ty_severity,
+      finding       TYPE zif_ca_ops_types=>ty_check_code,
+      severity      TYPE zif_ca_ops_types=>ty_severity,
       "! Every listing of the payment (anomalies first, then the purpose), for the findings
       listings      TYPE tt_listing,
       "! The evidence of the purpose holds but a mandatory payment status row waits for the hourly
@@ -162,14 +162,14 @@ INTERFACE zif_cd_ops_payout_types
       rules    TYPE zif_cd_hck_runtime_types=>tt_clr_rule,
       methods  TYPE tt_method,
       watched  TYPE tt_flow_class,
-      findings TYPE zif_cd_ops_types=>tt_finding,
+      findings TYPE zif_ca_ops_types=>tt_finding,
     END OF ty_config.
 
   TYPES:
     BEGIN OF ty_evaluation,
       verdicts         TYPE tt_verdict,
       "! Configuration, unusable-kind and capped-read findings of the evaluation
-      findings         TYPE zif_cd_ops_types=>tt_finding,
+      findings         TYPE zif_ca_ops_types=>tt_finding,
       "! An evidence kind of a mandatory row could not be used (persisted verdict: PARTIAL)
       evidence_partial TYPE abap_bool,
     END OF ty_evaluation.
@@ -283,8 +283,8 @@ INTERFACE zif_cd_ops_payout_types
       augbl         TYPE zif_cd_ops_trace_types=>ty_docno,
       bukrs         TYPE zif_cd_ops_trace_types=>ty_bukrs,
       "! Item amount (DFKKOP-BETRW of the FIN) or, without item, the request amount (AMOUNT=, VERIFY-SE11)
-      amount        TYPE zif_cd_ops_types=>ty_amount,
-      currency      TYPE zif_cd_ops_types=>ty_currency,
+      amount        TYPE zif_ca_ops_types=>ty_amount,
+      currency      TYPE zif_ca_ops_types=>ty_currency,
       "! Finished: paid on time or cancelled after SUCCESS (no worklist row); overdue: due date passed
       "! without payment (exception)
       finished      TYPE abap_bool,
@@ -305,8 +305,8 @@ INTERFACE zif_cd_ops_payout_types
       augbl    TYPE zif_cd_ops_trace_types=>ty_docno,
       "! Payment block of the item (DFKKOP-SPZAH, VERIFY-SE11)
       spzah    TYPE c LENGTH 1,
-      amount   TYPE zif_cd_ops_types=>ty_amount,
-      currency TYPE zif_cd_ops_types=>ty_currency,
+      amount   TYPE zif_ca_ops_types=>ty_amount,
+      currency TYPE zif_ca_ops_types=>ty_currency,
       "! Run date of the payment run of AUGBL (initial: cleared without payment run, or open)
       laufd    TYPE d,
     END OF ty_req_item.
@@ -323,8 +323,8 @@ INTERFACE zif_cd_ops_payout_types
       stage        TYPE ty_req_stage,
       due_date     TYPE d,
       evidence_ref TYPE ty_evidence_ref,
-      currency     TYPE zif_cd_ops_types=>ty_currency,
-      amount       TYPE zif_cd_ops_types=>ty_amount,
+      currency     TYPE zif_ca_ops_types=>ty_currency,
+      amount       TYPE zif_ca_ops_types=>ty_amount,
     END OF ty_due_request.
   TYPES tt_due_request TYPE STANDARD TABLE OF ty_due_request WITH EMPTY KEY.
 
@@ -387,11 +387,11 @@ INTERFACE zif_cd_ops_payout_types
       valid_from    TYPE ty_timestamp,
       valid_to      TYPE ty_timestamp,
       outcome       TYPE ty_outcome,
-      evidence_kind TYPE zif_cd_ops_types=>ty_class_name,
+      evidence_kind TYPE zif_ca_ops_types=>ty_class_name,
       evidence_ref  TYPE ty_evidence_ref,
-      finding       TYPE zif_cd_ops_types=>ty_check_code,
+      finding       TYPE zif_ca_ops_types=>ty_check_code,
       "! Severity of the primary finding as the evaluator listed it (blank: no finding)
-      severity      TYPE zif_cd_ops_types=>ty_severity,
+      severity      TYPE zif_ca_ops_types=>ty_severity,
       evaluated_at  TYPE ty_timestamp,
       "! Flow + method class of the payment (e.g. DWIR; blank for a payment request) and the due date of a
       "! payment request (2026-11-08: worklist filters of the transactions dashboard)
@@ -423,12 +423,12 @@ INTERFACE zif_cd_ops_payout_types
     END OF gc_table.
 
   "! Run lock variant and evaluation context of the snapshot (object keys of its findings)
-  CONSTANTS gc_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'PAY_OUTCOME'.
+  CONSTANTS gc_variant TYPE zif_ca_ops_types=>ty_variant VALUE 'PAY_OUTCOME'.
   "! Run lock variants of the NIGHTLY and SWEEP modes (own locks: the 5-minute FAST run is never
   "! refused while a nightly or sweep run works; a duplicate current row of a race is closed by the
   "! next evaluation of the payment - PLAN_WORKLIST keeps the newest)
-  CONSTANTS gc_variant_nightly TYPE zif_cd_ops_types=>ty_variant VALUE 'PAY_OUTCOME_NIGHTLY'.
-  CONSTANTS gc_variant_sweep TYPE zif_cd_ops_types=>ty_variant VALUE 'PAY_OUTCOME_SWEEP'.
+  CONSTANTS gc_variant_nightly TYPE zif_ca_ops_types=>ty_variant VALUE 'PAY_OUTCOME_NIGHTLY'.
+  CONSTANTS gc_variant_sweep TYPE zif_ca_ops_types=>ty_variant VALUE 'PAY_OUTCOME_SWEEP'.
   "! Morning report checks whose configuration the worklist reuses (one definition): A_INFLIGHT - the
   "! AGE_OLDEST limits (late payments) and PARAM1, the payment engine's factory calendar (due dates of
   "! requests); C_PRQ_CANCEL - its PARAM2 (cancelled status value and sources) decides that a request
@@ -439,37 +439,37 @@ INTERFACE zif_cd_ops_payout_types
       prq_cancel TYPE zif_cd_hck_types=>ty_check_id VALUE 'C_PRQ_CANCEL',
     END OF gc_check.
   CONSTANTS gc_context TYPE zif_cd_hck_types=>ty_check_id VALUE 'PAY_OUTCOME'.
-  "! Object type of the snapshot's findings (ZCD_OPS_FINDING-OBJECT_TYPE)
-  CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'PAYMENT'.
+  "! Object type of the snapshot's findings (ZCA_OPS_FINDING-OBJECT_TYPE)
+  CONSTANTS gc_object_type TYPE zif_ca_ops_types=>ty_object_type VALUE 'PAYMENT'.
 
   " ------------------------------------------------------------ check codes
   CONSTANTS:
     BEGIN OF gc_code,
       "! The FIN number is in two or more sources: outcome AMBIGUOUS, never attributed to one
-      source_ambiguous TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_SOURCE_AMBIGUOUS',
+      source_ambiguous TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_SOURCE_AMBIGUOUS',
       "! A snapshot package could not be evaluated (configuration, read): nothing written for it
-      snapshot_failed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_FAILED',
+      snapshot_failed  TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_FAILED',
       "! Marker of a version (ZCD_PAY_OUTCOME-FINDING, outcome IN_FLIGHT), not a finding of its own:
       "! the bank evidence decides the purpose but the payment status job has not followed yet; the
       "! morning report reports PAY_STATUS_LAG once HCK_PAY_STATUS_LAG_MIN has passed since VALID_FROM
-      status_pending   TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_STATUS_PENDING',
+      status_pending   TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_STATUS_PENDING',
       "! Parallel packages could not be dispatched (bgPF): the packages of the run were judged one by one
-      parallel_off     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_SERIAL',
+      parallel_off     TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_SERIAL',
       "! Payment request not paid in a payment run by the end of its due date (worklist row, morning
       "! report check A_PRQ_NOT_PAID: one finding per source + stage + due date)
-      request_not_paid TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRQ_NOT_PAID',
+      request_not_paid TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRQ_NOT_PAID',
       "! A NIGHTLY or SWEEP run stopped at PAYOUT_BATCH_MAX_PACKAGES: the next run continues (NIGHTLY from
       "! its cursor)
-      batch_incomplete TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_BATCH_INCOMPLETE',
+      batch_incomplete TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_BATCH_INCOMPLETE',
       "! The nightly re-evaluation of the worklist has not completed since the start of the day: requests
       "! due yesterday may not be judged yet (A_PRQ_NOT_PAID evidence PARTIAL)
-      nightly_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_NIGHTLY_MISSING',
+      nightly_missing  TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_NIGHTLY_MISSING',
       "! A snapshot package failed on a configuration error (GC_CONFIG_MSG): nothing written, the source
       "! waits for a fix by transport - a retry alone never helps (2026-11-10)
-      config_failed    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_CONFIG',
+      config_failed    TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_CONFIG',
       "! An evidence kind could not be read for a technical reason (not a configuration error): its purposes
       "! are not judged, the payments stay in flight (fail closed, 2026-11-10)
-      evidence_failed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_EVIDENCE_FAILED',
+      evidence_failed  TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_EVIDENCE_FAILED',
     END OF gc_code.
 
   "! ZCD_OPS messages that mean a configuration error (fix by transport, a retry never helps): plug-in
@@ -479,21 +479,21 @@ INTERFACE zif_cd_ops_payout_types
   "! classes of a payment method, request source not configured
   CONSTANTS:
     BEGIN OF gc_config_msg,
-      class_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '030',
-      class_no_plugin  TYPE zif_cd_ops_types=>ty_msgno VALUE '031',
-      class_no_intf    TYPE zif_cd_ops_types=>ty_msgno VALUE '032',
-      intf_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '033',
-      config_missing   TYPE zif_cd_ops_types=>ty_msgno VALUE '050',
-      config_invalid   TYPE zif_cd_ops_types=>ty_msgno VALUE '051',
-      table_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '303',
-      param_pcre       TYPE zif_cd_ops_types=>ty_msgno VALUE '373',
-      no_method_class  TYPE zif_cd_ops_types=>ty_msgno VALUE '384',
-      two_classes      TYPE zif_cd_ops_types=>ty_msgno VALUE '385',
-      evidence_param   TYPE zif_cd_ops_types=>ty_msgno VALUE '665',
-      seqout_pcre      TYPE zif_cd_ops_types=>ty_msgno VALUE '666',
-      expectation      TYPE zif_cd_ops_types=>ty_msgno VALUE '671',
-      source_unconfig  TYPE zif_cd_ops_types=>ty_msgno VALUE '703',
-      pattern_pcre     TYPE zif_cd_ops_types=>ty_msgno VALUE '743',
+      class_missing    TYPE zif_ca_ops_types=>ty_msgno VALUE '030',
+      class_no_plugin  TYPE zif_ca_ops_types=>ty_msgno VALUE '031',
+      class_no_intf    TYPE zif_ca_ops_types=>ty_msgno VALUE '032',
+      intf_missing     TYPE zif_ca_ops_types=>ty_msgno VALUE '033',
+      config_missing   TYPE zif_ca_ops_types=>ty_msgno VALUE '050',
+      config_invalid   TYPE zif_ca_ops_types=>ty_msgno VALUE '051',
+      table_missing    TYPE zif_ca_ops_types=>ty_msgno VALUE '303',
+      param_pcre       TYPE zif_ca_ops_types=>ty_msgno VALUE '373',
+      no_method_class  TYPE zif_ca_ops_types=>ty_msgno VALUE '384',
+      two_classes      TYPE zif_ca_ops_types=>ty_msgno VALUE '385',
+      evidence_param   TYPE zif_ca_ops_types=>ty_msgno VALUE '665',
+      seqout_pcre      TYPE zif_ca_ops_types=>ty_msgno VALUE '666',
+      expectation      TYPE zif_ca_ops_types=>ty_msgno VALUE '671',
+      source_unconfig  TYPE zif_ca_ops_types=>ty_msgno VALUE '703',
+      pattern_pcre     TYPE zif_ca_ops_types=>ty_msgno VALUE '743',
     END OF gc_config_msg.
 
   " ------------------------------------------------------------ parallel packages (ZCD_PAY_OUTPKG)
@@ -515,7 +515,7 @@ INTERFACE zif_cd_ops_payout_types
   "! status and counts (ZCD_PAY_OUTPKG). The watermark after the package stays with the run
   TYPES:
     BEGIN OF ty_package,
-      run_id    TYPE zif_cd_ops_types=>ty_run_id,
+      run_id    TYPE zif_ca_ops_types=>ty_run_id,
       source    TYPE ty_source_id,
       pkg_no    TYPE i,
       "! Mode of the run that planned the package (its rows are deleted by the next run of that mode)
@@ -530,7 +530,7 @@ INTERFACE zif_cd_ops_payout_types
       evaluated TYPE i,
       inserted  TYPE i,
       closed    TYPE i,
-      message   TYPE zif_cd_ops_types=>ty_message,
+      message   TYPE zif_ca_ops_types=>ty_message,
     END OF ty_package.
   TYPES tt_package TYPE STANDARD TABLE OF ty_package WITH EMPTY KEY.
 
@@ -538,7 +538,7 @@ INTERFACE zif_cd_ops_payout_types
   "! unit re-reads the documents and requests of the package (ZCD_PAY_OUTPKGM), never a payload
   TYPES:
     BEGIN OF ty_pkg_key,
-      run_id TYPE zif_cd_ops_types=>ty_run_id,
+      run_id TYPE zif_ca_ops_types=>ty_run_id,
       source TYPE ty_source_id,
       pkg_no TYPE i,
       run_at TYPE ty_timestamp,
@@ -571,7 +571,7 @@ INTERFACE zif_cd_ops_payout_types
   "! RETURNED, RETRIEVED, STOPPED; field length VERIFY-SE11)
   TYPES ty_pay_status TYPE c LENGTH 20.
   TYPES tt_pay_status_range TYPE RANGE OF ty_pay_status.
-  TYPES tt_check_code_range TYPE RANGE OF zif_cd_ops_types=>ty_check_code.
+  TYPES tt_check_code_range TYPE RANGE OF zif_ca_ops_types=>ty_check_code.
   TYPES tt_date_range TYPE RANGE OF d.
   TYPES tt_pymet_range TYPE RANGE OF zif_cd_hck_runtime_types=>ty_pymet.
   "! FINAL_FROM of a query that counts no final outcome (no run date reaches it)
@@ -604,15 +604,15 @@ INTERFACE zif_cd_ops_payout_types
       laufd      TYPE d,
       laufi      TYPE c LENGTH 6,
       valut      TYPE d,
-      currency   TYPE zif_cd_ops_types=>ty_currency,
+      currency   TYPE zif_ca_ops_types=>ty_currency,
       outcome    TYPE ty_outcome,
-      finding    TYPE zif_cd_ops_types=>ty_check_code,
-      severity   TYPE zif_cd_ops_types=>ty_severity,
+      finding    TYPE zif_ca_ops_types=>ty_check_code,
+      severity   TYPE zif_ca_ops_types=>ty_severity,
       pay_status TYPE ty_pay_status,
       due        TYPE abap_bool,
       payments   TYPE i,
       "! Sum of the absolute payment amounts (DPAYH-RWBTR) in the currency
-      amount     TYPE zif_cd_ops_types=>ty_amount,
+      amount     TYPE zif_ca_ops_types=>ty_amount,
     END OF ty_outcome_group.
   TYPES tt_outcome_group TYPE STANDARD TABLE OF ty_outcome_group WITH EMPTY KEY.
 
@@ -627,11 +627,11 @@ INTERFACE zif_cd_ops_payout_types
       pymet        TYPE zif_cd_hck_runtime_types=>ty_pymet,
       hbkid        TYPE zif_cd_hck_runtime_types=>ty_hbkid,
       valut        TYPE d,
-      currency     TYPE zif_cd_ops_types=>ty_currency,
-      amount       TYPE zif_cd_ops_types=>ty_amount,
+      currency     TYPE zif_ca_ops_types=>ty_currency,
+      amount       TYPE zif_ca_ops_types=>ty_amount,
       outcome      TYPE ty_outcome,
-      finding      TYPE zif_cd_ops_types=>ty_check_code,
-      severity     TYPE zif_cd_ops_types=>ty_severity,
+      finding      TYPE zif_ca_ops_types=>ty_check_code,
+      severity     TYPE zif_ca_ops_types=>ty_severity,
       pay_status   TYPE ty_pay_status,
       due          TYPE abap_bool,
       evidence_ref TYPE ty_evidence_ref,
@@ -642,27 +642,27 @@ INTERFACE zif_cd_ops_payout_types
   CONSTANTS:
     BEGIN OF gc_param,
       "! Payment documents per package of the snapshot [5000]
-      package_size TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_PACKAGE_SIZE',
+      package_size TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_PACKAGE_SIZE',
       "! Packages per source and run (bounds the 5-minute step) [20]
-      max_packages TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_MAX_PACKAGES',
+      max_packages TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_MAX_PACKAGES',
       "! First run (no watermark): days before today read once [10]
-      initial_days TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_INITIAL_DAYS',
+      initial_days TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_INITIAL_DAYS',
       "! Packages judged at the same time as bgPF units [4]; 1 = one by one in the job step, as before
-      parallel     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_PARALLEL',
+      parallel     TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_PARALLEL',
       "! Seconds a wave of parallel packages may take before its unfinished packages are abandoned [600]
-      wait_sec     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_PARALLEL_WAIT_SEC',
+      wait_sec     TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_PARALLEL_WAIT_SEC',
       "! Payment documents listed as examples in an aggregated finding (oldest first) [10]; also read
       "! by A_INFLIGHT
-      examples     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_EXAMPLES',
+      examples     TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_EXAMPLES',
       "! Consecutive runs with a failed package of a source after which its failure finding is an error [3];
       "! before, a warning (the next run retries) - FAST / NIGHTLY (2026-11-10)
-      fail_escalate TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_FAIL_ESCALATE',
+      fail_escalate TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_FAIL_ESCALATE',
       "! Packages per run of the NIGHTLY and SWEEP modes [1000]; NIGHTLY continues from its cursor
-      batch_max_packages TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_BATCH_MAX_PACKAGES',
+      batch_max_packages TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_BATCH_MAX_PACKAGES',
       "! Cut-off of a payment request per source (LIST SOURCE=HHMMSS, * = every other source) in the
       "! time zone FMON_TIME_ZONE [*=190000 - the last hourly disbursement run]: received after it on its
       "! due date = due the next business day
-      req_cutoff   TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_REQ_CUTOFF',
+      req_cutoff   TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_REQ_CUTOFF',
     END OF gc_param.
 
   CONSTANTS:
@@ -703,77 +703,77 @@ INTERFACE zif_cd_ops_payout_types
   CONSTANTS:
     BEGIN OF gc_msg,
       "! &1 is in &2 sources (&3): outcome AMBIGUOUS, evaluated &4
-      source_ambiguous TYPE zif_cd_ops_types=>ty_msgno VALUE '750',
+      source_ambiguous TYPE zif_ca_ops_types=>ty_msgno VALUE '750',
       "! Payment outcome snapshot: source &1 package failed: &2
-      snapshot_failed  TYPE zif_cd_ops_types=>ty_msgno VALUE '751',
+      snapshot_failed  TYPE zif_ca_ops_types=>ty_msgno VALUE '751',
       "! Source &1: &2 documents, &3 evaluated, &4 versions
-      source_result    TYPE zif_cd_ops_types=>ty_msgno VALUE '752',
+      source_result    TYPE zif_ca_ops_types=>ty_msgno VALUE '752',
       "! Outcome &1 of payment &2 run &3 &4
-      trace_outcome    TYPE zif_cd_ops_types=>ty_msgno VALUE '753',
+      trace_outcome    TYPE zif_ca_ops_types=>ty_msgno VALUE '753',
       "! Payment &1: method not in a watched method class - no outcome
-      trace_not_watched TYPE zif_cd_ops_types=>ty_msgno VALUE '754',
+      trace_not_watched TYPE zif_ca_ops_types=>ty_msgno VALUE '754',
       "! Outcome of payment &1 could not be evaluated:
-      trace_unavailable TYPE zif_cd_ops_types=>ty_msgno VALUE '755',
+      trace_unavailable TYPE zif_ca_ops_types=>ty_msgno VALUE '755',
       "! evidence &1: &2
-      evidence_text    TYPE zif_cd_ops_types=>ty_msgno VALUE '756',
+      evidence_text    TYPE zif_ca_ops_types=>ty_msgno VALUE '756',
       "! &1 run date &2: &3 payment(s) - &4
-      aggregated       TYPE zif_cd_ops_types=>ty_msgno VALUE '757',
+      aggregated       TYPE zif_ca_ops_types=>ty_msgno VALUE '757',
       "! Amount &1 &2
-      amount_currency  TYPE zif_cd_ops_types=>ty_msgno VALUE '758',
+      amount_currency  TYPE zif_ca_ops_types=>ty_msgno VALUE '758',
       "! First &1 of &2 payment(s), oldest first:
-      examples_head    TYPE zif_cd_ops_types=>ty_msgno VALUE '759',
+      examples_head    TYPE zif_ca_ops_types=>ty_msgno VALUE '759',
       "! Full list: transactions dashboard or ZCD_PAY_OUTCOME current versions, finding &1, run date &2
-      drill_down       TYPE zif_cd_ops_types=>ty_msgno VALUE '760',
+      drill_down       TYPE zif_ca_ops_types=>ty_msgno VALUE '760',
       "! Payment outcome snapshot &1 minute(s) behind (limit &2): &3 processed up to &4
-      snapshot_lag     TYPE zif_cd_ops_types=>ty_msgno VALUE '761',
+      snapshot_lag     TYPE zif_ca_ops_types=>ty_msgno VALUE '761',
       "! Payment outcome snapshot has not run yet: no outcome of &1 is current
-      snapshot_never   TYPE zif_cd_ops_types=>ty_msgno VALUE '762',
+      snapshot_never   TYPE zif_ca_ops_types=>ty_msgno VALUE '762',
       "! Package &1 / &2 not finished within &3 seconds: abandoned, the watermark stays before it
-      pkg_abandoned    TYPE zif_cd_ops_types=>ty_msgno VALUE '763',
+      pkg_abandoned    TYPE zif_ca_ops_types=>ty_msgno VALUE '763',
       "! Parallel packages not available (bgPF), judged one by one:
-      parallel_off     TYPE zif_cd_ops_types=>ty_msgno VALUE '764',
+      parallel_off     TYPE zif_ca_ops_types=>ty_msgno VALUE '764',
       "! FIN &1 source &2 payment &3: &4
-      ambiguous_line   TYPE zif_cd_ops_types=>ty_msgno VALUE '765',
+      ambiguous_line   TYPE zif_ca_ops_types=>ty_msgno VALUE '765',
       "! Requested &1, received &2 &3, due &4:
-      req_evidence     TYPE zif_cd_ops_types=>ty_msgno VALUE '766',
+      req_evidence     TYPE zif_ca_ops_types=>ty_msgno VALUE '766',
       "! No payment engine item for the FIN
-      req_no_item      TYPE zif_cd_ops_types=>ty_msgno VALUE '767',
+      req_no_item      TYPE zif_ca_ops_types=>ty_msgno VALUE '767',
       "! Item &1 has payment block &2
-      req_block        TYPE zif_cd_ops_types=>ty_msgno VALUE '768',
+      req_block        TYPE zif_ca_ops_types=>ty_msgno VALUE '768',
       "! Item &1 open, not in a payment run
-      req_not_in_run   TYPE zif_cd_ops_types=>ty_msgno VALUE '769',
+      req_not_in_run   TYPE zif_ca_ops_types=>ty_msgno VALUE '769',
       "! Item &1 cleared by &2 without payment run
-      req_cleared      TYPE zif_cd_ops_types=>ty_msgno VALUE '770',
+      req_cleared      TYPE zif_ca_ops_types=>ty_msgno VALUE '770',
       "! Paid by &1 in the payment run of &2
-      req_paid         TYPE zif_cd_ops_types=>ty_msgno VALUE '771',
+      req_paid         TYPE zif_ca_ops_types=>ty_msgno VALUE '771',
       "! &1 &2 due &3: &4 request(s) not paid in a payment run
-      req_not_paid     TYPE zif_cd_ops_types=>ty_msgno VALUE '772',
+      req_not_paid     TYPE zif_ca_ops_types=>ty_msgno VALUE '772',
       "! FIN &1 source &2 due &3:
-      req_example      TYPE zif_cd_ops_types=>ty_msgno VALUE '773',
+      req_example      TYPE zif_ca_ops_types=>ty_msgno VALUE '773',
       "! Full list: transactions dashboard, request &1 &2 due &3
-      req_drill_down   TYPE zif_cd_ops_types=>ty_msgno VALUE '774',
+      req_drill_down   TYPE zif_ca_ops_types=>ty_msgno VALUE '774',
       "! Sweep needs a date range and evidence sources of: &1
-      sweep_selection  TYPE zif_cd_ops_types=>ty_msgno VALUE '775',
+      sweep_selection  TYPE zif_ca_ops_types=>ty_msgno VALUE '775',
       "! &1 stopped after &2 package(s); the next run continues
-      batch_stopped    TYPE zif_cd_ops_types=>ty_msgno VALUE '776',
+      batch_stopped    TYPE zif_ca_ops_types=>ty_msgno VALUE '776',
       "! Worklist re-check &1 not completed today (&2): requests unchecked
-      nightly_missing  TYPE zif_cd_ops_types=>ty_msgno VALUE '777',
+      nightly_missing  TYPE zif_ca_ops_types=>ty_msgno VALUE '777',
       "! Cancelled after SUCCESS (&1): not expected to be paid
-      req_cancelled    TYPE zif_cd_ops_types=>ty_msgno VALUE '778',
+      req_cancelled    TYPE zif_ca_ops_types=>ty_msgno VALUE '778',
       "! Request &1 &2: stage &3, &4
-      trace_request    TYPE zif_cd_ops_types=>ty_msgno VALUE '779',
+      trace_request    TYPE zif_ca_ops_types=>ty_msgno VALUE '779',
       "! &1 worklist entities changed by a concurrent run since judged (first &2)
-      worklist_changed TYPE zif_cd_ops_types=>ty_msgno VALUE '780',
+      worklist_changed TYPE zif_ca_ops_types=>ty_msgno VALUE '780',
       "! A second current worklist row of &1 prevented
-      second_current   TYPE zif_cd_ops_types=>ty_msgno VALUE '781',
+      second_current   TYPE zif_ca_ops_types=>ty_msgno VALUE '781',
       "! Database error in source &1 - package rolled back:
-      db_error         TYPE zif_cd_ops_types=>ty_msgno VALUE '782',
+      db_error         TYPE zif_ca_ops_types=>ty_msgno VALUE '782',
       "! Source &1 not judged in &2 runs in a row (limit &3):
-      failed_escalated TYPE zif_cd_ops_types=>ty_msgno VALUE '783',
+      failed_escalated TYPE zif_ca_ops_types=>ty_msgno VALUE '783',
       "! Source &1 stopped by a configuration error (&2 runs) - fix by transport:
-      config_failed    TYPE zif_cd_ops_types=>ty_msgno VALUE '784',
+      config_failed    TYPE zif_ca_ops_types=>ty_msgno VALUE '784',
       "! Evidence &1 (&2) could not be read - its purposes are not judged:
-      evidence_failed  TYPE zif_cd_ops_types=>ty_msgno VALUE '785',
+      evidence_failed  TYPE zif_ca_ops_types=>ty_msgno VALUE '785',
     END OF gc_msg.
 
 ENDINTERFACE.

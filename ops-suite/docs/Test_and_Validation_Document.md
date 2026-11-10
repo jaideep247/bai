@@ -29,8 +29,8 @@ Out of scope: transport import, activation, syntax and ATC (build hygiene); post
 | Flow (collection/disbursement) | Configured but not applied | XBLNR pattern or account default; map rows per flow |
 | Statement checks | None | S01–S12 (balances, sequence, account, date, duplicates, counts, coverage, completeness) |
 | File formats | FEBEP only | BAI2 and CAMT.053/054 files before import, plus FEBKO/FEBEP after import |
-| Results | Failed records only, ZBAI_* tables | Every run counted; owned exceptions with SLA in ZCD_OPS_FINDING |
-| Alerts | Hard-coded e-mail on failure rate | ZCD_OPS_ALRULE: channels, throttling, quiet hours, escalation, log |
+| Results | Failed records only, ZBAI_* tables | Every run counted; owned exceptions with SLA in ZCA_OPS_FINDING |
+| Alerts | Hard-coded e-mail on failure rate | ZCA_OPS_ALRULE: channels, throttling, quiet hours, escalation, log |
 | Morning report | Free-text SQL rules, WRITE list | Whitelisted, DDIC-validated checks A–E, baselines, ALV + HTML e-mail |
 
 ## 3. Test approach
@@ -44,7 +44,7 @@ Two real inputs instead of the population: one configured case (positive) and an
 | House bank accounts | One disbursement (JPMC), one collection (BOA) in `ZCD_EBS_ACCT`, each with ACCOUNT_NO = its 10-character payment engine account from FEBEP-XBLNR, plus one inactive row |
 | Statements | One BAI2 file per bank (`config/samples/bai2_sample.txt` as layout reference), one CAMT.053 and one CAMT.054 returns file |
 | Customizing | `config/*.csv`, `config/*_seed.md` loaded per `Implementation_Order.md` step 3 |
-| Reset | Delete test runs from ZCD_OPS_RUN / _FINDING / ZCD_OPS_ALLOG by RUN_ID after each case |
+| Reset | Delete test runs from ZCA_OPS_RUN / _FINDING / ZCA_OPS_ALLOG by RUN_ID after each case |
 
 Production data never leaves the system; extracts for evidence are anonymised.
 
@@ -78,7 +78,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-11 | Same statement file delivered twice | — | S07 STMT_ALREADY_IMPORTED (B) | pending |
 | EBS-13 | Circuit breaker (A104): **FEB source** (`P_FEB`) over ≥ 3 imported statements, each a controlled package, every package > 50 % of its lines unmapped (the statements were imported, posted and cleared before the run — post-posting detective control) | `P_PACK` = 1 (one statement per package); `EBS_CB_MIN_LINES` = 1, `EBS_CB_FAIL_PCT` = 50, `EBS_CB_PACKAGES` = 3; ≥ 3 test statements selected by `S_KUKEY` / date range | Package 3 trips the breaker: run status A (aborted), one CIRCUIT_BREAKER finding (rule CB, E), no further package read, alert per the ON_ABORT rule; with only 2 bad packages followed by a good one: no breaker (counter resets) | pending |
 | EBS-13a | Oversized or invalid single file through the **file source** (`P_FILE`) — one file is always one package, so the breaker cannot trip | (a) file not UTF-8; (b) BAI2 file cut off before the 98/99 trailers; (c) production-size file (largest observed day, `<line count, VERIFY with operations>`) | (a) read rejected, message 012, no run results (A69); (b) structural findings S00 / S06 TRAILER missing (B), lines not reported as validated (A86/A95); (c) one package, run completes or fails visibly; record runtime and memory — no size limit exists in code (`VERIFY` in QA1 whether one is needed) | pending |
-| EBS-14 | Test mode | P_TEST = X | Findings shown; ZCD_OPS_RUN / ZCD_OPS_FINDING / ZCD_OPS_ALLOG unchanged | pending |
+| EBS-14 | Test mode | P_TEST = X | Findings shown; ZCA_OPS_RUN / ZCA_OPS_FINDING / ZCA_OPS_ALLOG unchanged | pending |
 | EBS-16 | Payment engine account scope (user decision 2026-11-06), FEB source: statement A whose lines all carry XBLNRs of the active account (e.g. `JPMC8XX1174412334`, `…335`); statement B with one line of another account; statement C with a line whose XBLNR is blank; statement D of an inactive account; earlier open exception on statement B | ZCD_EBS_ACCT: account active, second account inactive | A validated as before; B, C, D: no rule, no finding (no S04, no R14), not counted as entries, not on the dashboard; run message "3 statements out of scope (lines not all payment engine accounts)"; B's earlier exception stays open; activate D's account and re-run → D validated and shown | pending |
 | EBS-17 | XBLNR derivation on production samples (SE16 FEBEP, one statement per bank JPMC / BOA / PNC) | — | Letters removed + first 10 characters = the account Treasury lists for that house bank account (`ZCL_CD_EBS_PE_SCOPE=>PE_ACCOUNT_FROM_XBLNR` and dashboard `PeAccount` agree) | pending |
 | EBS-15 | POSTING_INCOMPLETE (operating model 2026-11-06): import a statement with a 466 (BAI466D, R19) and a 275 sweep line; run `ZCD_EBS_VALIDATE` (FEB source) **before** FEBP; then run FEBP and the clearing job and re-run the same variant | SE11 check of FEBEP-VB1OK / VB2OK done; `EBS_FEB_POSTED_FIELDS` default; seed S13 / NEEDS_POSTING | Run 1: one POSTING_INCOMPLETE (S13, W) on the statement counting the 466 line only (the 275 NOT_POSTED line is not counted); no R19 / R18 / S10 finding; run message "1 entries not evaluated (posting not complete)"; RAG amber, not green. Run 2: no POSTING_INCOMPLETE, R19 / R18 / S10 evaluated, the POSTING_INCOMPLETE exception resolved "Passed on re-run"; nothing posted, cleared or changed by either run (ST05 / table compare) | pending |
@@ -114,7 +114,7 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 plus HCK-QA-18 … 20 (2026-11-07: number
 | CORE-04 | Same EBS file validated twice with the same unmapped code | Exception assigned to a user after run 1 | Run 2 row: disposition A, same owner and due date, OCCURRENCES 2; run 1 row disposition S | pending |
 | CORE-05 | Fix the map entry from CORE-04 and re-run | +1 ZBTM entry | Exception resolved "Passed on re-run"; open list on the morning report no longer shows it | pending |
 | CORE-06 | Waived exception raised again | Disposition W, WAIVER_UNTIL in the future | New row stays W | pending |
-| CORE-07 | `ZCD_OPS_PURGE` test mode, then productive with RETENTION_DAYS_RUN 30 on a copy of QA1 data | — | Test mode counts only; productive deletes old closed runs with findings, keeps runs with open / assigned / validly waived exceptions; target PAY_OUTCOME listed (POC-11) | pending |
+| CORE-07 | `ZCA_OPS_RETENTION` test mode, then productive with RETENTION_DAYS_RUN 30 on a copy of QA1 data | — | Test mode counts only; productive deletes old closed runs with findings, keeps runs with open / assigned / validly waived exceptions; target PAY_OUTCOME listed (POC-11) | pending |
 | OPS-01 … OPS-08 | Operations apps: assign / resolve, waiver four-eyes, suppression (short / long), manual file status forward / backward, PRISM request handled manually | `RAP_Ops_Apps.md` §5 | As listed in `RAP_Ops_Apps.md` §5 | pending |
 | HCK-QA-15 | `C_PRQ_NO_SPE` with one failed request without SPE row and one with SUCCESS after the failure | `config/hck_seed.md` rows, SE11 names filled | One finding (the first request); the second is not failed | pending |
 | HCK-QA-16 | `C_CHQ_STATUS` with a cheque history 10 → 2 and one 10 → 9 | — | One finding (10 → 2); 10 → 9 allowed | pending |
@@ -181,7 +181,7 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 | FMD-07 | Open NO_BANK_ACK, resolve, re-run | SLA BREACHED → NO_FINDINGS |
 | FMD-08 | User with ZCD_OPS FMON missing (HCK only) | No rows in any entity; with FMON 03 rows visible |
 | FMD-09 | Filters source / LOB / method / bank / date | Totals equal SE16 sums on ZCD_FMON_FILE for the same filter |
-| FMD-10 | Drill-down file → events → open exceptions | Equal to ZCD_FMON_EVENT / open ZCD_OPS_FINDING rows of the file |
+| FMD-10 | Drill-down file → events → open exceptions | Equal to ZCD_FMON_EVENT / open ZCA_OPS_FINDING rows of the file |
 | FMD-11 | Expected file not received | Tile *Missing files* = 1; no file row |
 | FMD-12 | ST05 during use | SELECT only on the FMON / ops store tables; no write, lock or job |
 | FMD-14 | Monitor freshness: value row `MON_STALE_AFTER_MIN_FMON` = 600 (ZCA_PARAM area CD_OPS, app *Parameter areas*; was `ZCD_OPS_MONCFG`), stop the SM36 job for 30 min | Dashboard, overview row and morning report self-check all **not** stale (600 min); delete the value row → definition default 15 → all three stale; value `ABC` refused by the framework (`D_PARAM_INVALID`), self-check falls back to `HCK_MAX_AGE_H_FMON` |
@@ -219,12 +219,12 @@ Own approved change (switch S-PRISM); QA1 with the SICF node active for the test
 | PRISM-23 | **Spring forward** (second Sunday of March): PRISM `DELIVERED` 01:50 CST, SAP receipt 03:15 CDT; SLA FILE_RECEIVED 30 P | One row of that Sunday; no FILE_RECEIVED_LATE (25 UTC minutes, the local clock shows 85) — `dst_spring_forward_one_inst`, `sla_utc_minutes_spring` |
 | PRISM-24 | **Same name, consecutive days**: an inbound file whose name does not change (`…_DAILY.TXT`) on two business days, each with PRISM `RECEIVED` and SAP receipt | **Two** rows, one per business date, each with its own receipt; no FILE_REF_AMBIGUOUS — `same_name_two_days_two_files`, `next_day_file_is_new`; outbound counterpart `same_name_next_day_new_file`, `next_day_generation_is_new` |
 | PRISM-25 | PRISM `FAILED` at 23:58 CST, retry `DELIVERED` at 00:03 CST | The failed file's row: PRISM_FAILED superseded, the exception resolved by the next 5-minute run — `retry_after_failure_joins` |
-| PRISM-26 | **Regenerated file to the bank** (user 2026-11-07): `ZCD_FMON_SRC` row REGUT with `GROUP_FIELDS` (payment run fields, SE11); PRISM `FAILED` for ACH file 1; SAP regenerates the payment run (file 2, new name); PRISM `RECEIVED` / `DELIVERED` file 2 | File 1: FILE_REPLACED (information, names file 2) and its PRISM_FAILED exception resolved by the next 5-minute run (`ZCD_OPS_FINDING` disposition R); file 2 with its own SLA; SE16 `ZCD_FMON_FILE`: both rows carry the same `GEN_GROUP`, nothing else copied — `regen_replaces_failed_file`, `unit_failure_replaced_is_info` |
+| PRISM-26 | **Regenerated file to the bank** (user 2026-11-07): `ZCD_FMON_SRC` row REGUT with `GROUP_FIELDS` (payment run fields, SE11); PRISM `FAILED` for ACH file 1; SAP regenerates the payment run (file 2, new name); PRISM `RECEIVED` / `DELIVERED` file 2 | File 1: FILE_REPLACED (information, names file 2) and its PRISM_FAILED exception resolved by the next 5-minute run (`ZCA_OPS_FINDING` disposition R); file 2 with its own SLA; SE16 `ZCD_FMON_FILE`: both rows carry the same `GEN_GROUP`, nothing else copied — `regen_replaces_failed_file`, `unit_failure_replaced_is_info` |
 | PRISM-27 | **Regenerated cheque print file to IRIS**: PRISM `FAILED` (counterparty IRIS, the PRISM → IRIS call failed); SAP regenerates the print file | As PRISM-26 for the IRIS print-file interface (`CHECK_PRINT_IRIS_OUT`) |
 | PRISM-28 | **Regeneration overdue**: PRISM `FAILED`, no regeneration for `FMON_REGEN_WAIT_MIN` (60) minutes | At minute 60 nothing new; at minute 61 REGENERATION_MISSING (E) next to the open PRISM_FAILED, alerted once (rule `FMON_REGEN`); after the regeneration both are resolved — `wait_end_not_missing`, `wait_passed_is_missing` |
 | PRISM-29 | **Regeneration although the first file did not fail**: file 1 `DELIVERED` (or still in flight), SAP regenerates the run (file 2); PRISM `RECEIVED` file 2 | FILE_REGENERATED_NOT_FAILED (B) on file 2 from the instant unit within seconds, naming file 1 and its state; alert `FMON_REGEN` — `unit_flags_regen_not_failed`, `regen_peer_in_registry_found` |
 | PRISM-30 | **Re-send of a known name**: `FMON_PRISM_DUP_NAME_CODES` = PRISM's code (to confirm with PRISM); file 1 `FAILED`; SAP re-sends file 1; PRISM `FAILED` with the duplicate-name code | PRISM_DUPLICATE_NAME instead of PRISM_FAILED; after the regeneration FILE_REPLACED; with the parameter empty PRISM_FAILED as before — `unit_dup_name_not_failed`, `empty_code_list_stays_failed` |
-| PRISM-15 | ST05 / SAT during PRISM-01 | Writes only `ZCD_FMON_PRISM`, `ZCD_FMON_FILE`, `ZCD_FMON_EVENT`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING`, alert log; no business table, file, job or routing touched |
+| PRISM-15 | ST05 / SAT during PRISM-01 | Writes only `ZCD_FMON_PRISM`, `ZCD_FMON_FILE`, `ZCD_FMON_EVENT`, `ZCA_OPS_RUN`, `ZCA_OPS_FINDING`, alert log; no business table, file, job or routing touched |
 
 ### 6.9 EBS validation dashboard (`ZUI_CD_EBS_DASH_O4`, `Dashboard_EBS_Validation.md`)
 
@@ -245,7 +245,7 @@ ABAP Unit: `ZCL_CD_OPS_PAY_SNAPSHOT` (29 tests: clean payment deletes its open r
 | ID | Scenario | Configuration | Expected | Result |
 |---|---|---|---|---|
 | WL-01 | Wire paid, status CLEARED after the statement | FAST | Row IN_FLIGHT after the run, row deleted after CLEARED (SE16 `ZCD_PAY_OUTCOME` by AUGBL: none); trace shows CLEARED | pending |
-| WL-02 | Wire on the statement, status still CONFIRMED (inconsistent), then CLEARED | FAST | INCONSISTENT row (exception), then closed history + closing version CLEARED; purged by `ZCD_OPS_PURGE` 90 days after it closed | pending |
+| WL-02 | Wire on the statement, status still CONFIRMED (inconsistent), then CLEARED | FAST | INCONSISTENT row (exception), then closed history + closing version CLEARED; purged by `ZCA_OPS_RETENTION` 90 days after it closed | pending |
 | WL-03 | ACH beyond AMBER, then RED, without new evidence | NIGHTLY job | `PAYMENT_NOT_CLEARED` W, next night E (A_INFLIGHT `AGE_OLDEST`); morning report and dashboard agree | pending |
 | WL-04 | Cleared payment returned later (returns lot) | FAST | Payment re-enters through RETURNS: IN_FLIGHT / status pending row, then deleted when RETURNED | pending |
 | WL-05 | Request received 18:59 and 19:01 CST on its due day; due date a Saturday | `PAYOUT_REQ_CUTOFF` `*=190000`, PARAM1 calendar | 18:59: due that day (rolled to Monday); 19:01: next business day | pending |
@@ -259,7 +259,7 @@ ABAP Unit: `ZCL_CD_OPS_PAY_SNAPSHOT` (29 tests: clean payment deletes its open r
 
 #### 6.11a Canonical payment outcome and the 5-minute snapshot (2026-11-07)
 
-ABAP Unit: `ZCL_CD_OPS_PAY_OUTCOME` (16 tests on the shared fixtures with the delivered evidence plug-ins: retrieval is not a return, line without clearing, latest run decides, FIN in two sources, old SUCCESS one source, every fixture as expected (with the pending status), reversed document, unwatched method no verdict, request source fails closed; 2026-11-08: returned with status RETURNED, return whose status is not updated yet in flight, status RETURNED without the line, cheque voided without stop / stopped with state blank / stopped and voided = VOIDED, stopped cheque cashed = INCONSISTENT); `ZCL_CD_HCK_C_INFLIGHT` (every earlier test unchanged + `fixture_retrieval_not_return`, `fixture_line_not_cleared`, `fixture_two_runs_cleared`, `fixture_agrees_with_outcome`); `ZCL_CD_OPS_TRACE_ENGINE` (`ltc_outcome`, 5 tests); `ZCL_CD_OPS_PAY_SNAPSHOT` (7 tests: outcome change creates a version, no change writes nothing, watermark picks up only new evidence, newer run closes the older run's version, FIN in two sources AMBIGUOUS for both with findings, test mode writes nothing, capped read fails closed); `ZCL_CD_OPS_PAY_OUTCOME_DAO` (OSQL, 10 tests: each source after its watermark, package size, recheck only open not final, cheque of a statement reference, versions closed / inserted, watermark round trip); `ZCL_CD_HCK_RUNTIME_DAO` (`payments_by_document_all_runs`); `ZCL_CD_OPS_PURGE_DAO` (`old_outcome_version_deleted`).
+ABAP Unit: `ZCL_CD_OPS_PAY_OUTCOME` (16 tests on the shared fixtures with the delivered evidence plug-ins: retrieval is not a return, line without clearing, latest run decides, FIN in two sources, old SUCCESS one source, every fixture as expected (with the pending status), reversed document, unwatched method no verdict, request source fails closed; 2026-11-08: returned with status RETURNED, return whose status is not updated yet in flight, status RETURNED without the line, cheque voided without stop / stopped with state blank / stopped and voided = VOIDED, stopped cheque cashed = INCONSISTENT); `ZCL_CD_HCK_C_INFLIGHT` (every earlier test unchanged + `fixture_retrieval_not_return`, `fixture_line_not_cleared`, `fixture_two_runs_cleared`, `fixture_agrees_with_outcome`); `ZCL_CD_OPS_TRACE_ENGINE` (`ltc_outcome`, 5 tests); `ZCL_CD_OPS_PAY_SNAPSHOT` (7 tests: outcome change creates a version, no change writes nothing, watermark picks up only new evidence, newer run closes the older run's version, FIN in two sources AMBIGUOUS for both with findings, test mode writes nothing, capped read fails closed); `ZCL_CD_OPS_PAY_OUTCOME_DAO` (OSQL, 10 tests: each source after its watermark, package size, recheck only open not final, cheque of a statement reference, versions closed / inserted, watermark round trip); `ZCL_CD_HCK_RUNTIME_DAO` (`payments_by_document_all_runs`); `ZCL_CA_OPS_PURGE_DAO` (`old_outcome_version_deleted`).
 
 | ID | Scenario | Configuration | Expected | Result |
 |---|---|---|---|---|
@@ -353,7 +353,7 @@ Two `ZCD_FMON_MONITOR` jobs started together: the second is refused (run lock fo
 | Aggregate health check runtime | < 2 min | ST12 / SAT | pending |
 | Detail check runtime | < 10 min | ST12 | pending |
 | DB load during peak (FPY1 window) | < 5 % | ST04 / DBACOCKPIT | pending |
-| EBS validation of 50k statement lines | to be baselined | Run runtime in ZCD_OPS_RUN | pending |
+| EBS validation of 50k statement lines | to be baselined | Run runtime in ZCA_OPS_RUN | pending |
 
 ### 11a. QA1 volume test — a 2 000 000-payment day (2026-11-08)
 
@@ -367,18 +367,18 @@ Volume confirmed by the user: about 200 000 payments a normal day, two peak days
 | VOL-04 | Stale snapshot: stop step 2 for 45 minutes during the peak, run the morning report | `PAY_SNAPSHOT_STALE` W, evidence PARTIAL, freshness row CORE red, dashboard header red; live evaluation capped (`TECH_READ_CAPPED`) | Never GREEN on stale data; after the restart the lag is green within the VOL-01 time | pending |
 | VOL-01b | NIGHTLY run over the worklist after the 2 million day (`PAYOUT_PARALLEL` 4) | Runtime, packages, rows written | Done before the morning report (< **3 hours**), no `PAY_BATCH_INCOMPLETE` | pending |
 | VOL-05 | Size of `ZCD_PAY_OUTCOME` at ≈ 2-5 million worklist rows (after the peak) | Memory (M_CS_TABLES), indexes OUT / DOC / FIN / DAT | Within the sizing of `Performance_Review.md` §10a or partitioning decided | pending |
-| VOL-06 | Purge of PAY_OUTCOME with `RETENTION_DAYS_PAY_OUTCOME` 90 (exception history closed > 90 days) | Runtime of `ZCD_OPS_PURGE` target PAY_OUTCOME, rows deleted, locks / log volume | The monthly purge < **30 minutes**; no current version of a payment not final deleted (SQL check before / after) | pending |
+| VOL-06 | Purge of PAY_OUTCOME with `RETENTION_DAYS_PAY_OUTCOME` 90 (exception history closed > 90 days) | Runtime of `ZCA_OPS_RETENTION` target PAY_OUTCOME, rows deleted, locks / log volume | The monthly purge < **30 minutes**; no current version of a payment not final deleted (SQL check before / after) | pending |
 | VOL-07 | Failed middle package: cancel the bgRFC unit of package 2 of a source (SBGRFCMON) during VOL-01 | `ZCD_PAY_OUTPKG` statuses, `ZCD_PAY_OUTWM` of the source | Watermark stops at the end of package 1; the next run judges packages 2 … again; no duplicate current version (SQL: one row per FIN / source / company code / payment with VALID_TO open) | pending |
 | VOL-08 | Concurrency of the modes (review 2026-11-10): during VOL-01 (`PAYOUT_PARALLEL` 8) start a NIGHTLY run (`ZCD_PAY_NIGHTLY`) and a SWEEP of the same day | Findings 780 / 781 (`PAY_OUTCOME_FAILED` W), lock waits on the guard row `ZCD_PAY_OUTWM` / `WORKLIST` (DBACOCKPIT), package write time, `ZCD_PAY_OUTPKG` rows of each mode | No payment with two current rows of one key and no cleared payment with an open exception (SE16H on `ZCD_PAY_OUTCOME`); a 780 heals with the next run (FAIL_COUNT back to 0); FAST runtime within its 5 minutes; the SWEEP rows survive the FAST runs | pending |
 | VOL-09 | Exceptions app while a run carries forward (review 2026-11-10): open the exception, start the morning report, approve a waiver while the run works; then act on a row the run superseded after the screen was loaded | Disposition and LAST_CHANGED_AT of both rows, run findings, app message | The waiver is kept (new row W, or the earlier row W and `EXC_CHANGED_DEFERRED` I); the stale action is refused by the ETag; never a waived row superseded without the new row inheriting the waiver | pending |
-| VOL-10 | PRISM handled manually while the exception changes (review 2026-11-10): record a request whose FMON exception is assigned in the exceptions app between opening and saving | Record, exception, history (ZCD_OPS_EXC_HIST), ST22 | Either record + resolved exception + history, or nothing (short dump 787) - never a record without its closure | pending |
+| VOL-10 | PRISM handled manually while the exception changes (review 2026-11-10): record a request whose FMON exception is assigned in the exceptions app between opening and saving | Record, exception, history (ZCA_OPS_EXC_HIST), ST22 | Either record + resolved exception + history, or nothing (short dump 787) - never a record without its closure | pending |
 
 ## 12. Operations and recovery
 Runbook `Operations_Runbook.md` walked through by IT support on QA1 findings (one per triage row).
 
 ## 13. Defensive checks with no executable test
 - `ZCL_CD_EBS_ENGINE=>READ_MODE` fallback to monitor when TVARVC cannot be read — requires a database error.
-- `ZCL_CD_OPS_ALERT_ROUTER=>NEW_ID` UUID failure branch — `cl_system_uuid` does not fail in practice.
+- `ZCL_CA_OPS_ALERT_ROUTER=>NEW_ID` UUID failure branch — `cl_system_uuid` does not fail in practice.
 - `ZCL_CD_OPS_UTIL=>ELAPSED_MS` invalid-time-stamp branch — inputs come from `GET TIME STAMP`.
 
 ## 14. Evidence index

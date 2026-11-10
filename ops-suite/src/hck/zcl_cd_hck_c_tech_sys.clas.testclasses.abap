@@ -71,7 +71,7 @@ CLASS ltc_tech_sys DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -139,7 +139,7 @@ CLASS ltc_tech_sys IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'Lock read error must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Read error raised' ).
     ENDTRY.
   ENDMETHOD.

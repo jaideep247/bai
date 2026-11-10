@@ -13,7 +13,7 @@ define root view entity ZR_CD_FmonFlowEvt
 {
   key file_id                                               as FileId,
   key event_no                                              as EventNo,
-      cast( 'FMON' as abap.char( 4 ) )                      as PaymentEngineArea,
+      cast( 'CD_FMON' as abap.char( 16 ) )                      as PaymentEngineArea,
       // Stage as reported by the source (also when the state machine capped or ignored it)
       stage                                                 as Stage,
       event_at                                              as EventAt,

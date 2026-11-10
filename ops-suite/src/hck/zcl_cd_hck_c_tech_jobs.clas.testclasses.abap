@@ -92,7 +92,7 @@ CLASS ltc_tech_jobs DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS metric_value
       IMPORTING
         is_result       TYPE zif_cd_hck_types=>ty_check_result
@@ -194,7 +194,7 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
                                             exp = zif_cd_hck_types=>gc_code-job_cancelled
                                             msg = 'JOB_CANCELLED reported' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity
-                                            exp = zif_cd_ops_types=>gc_severity-error
+                                            exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Cancelled job is an error' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-object_key
                                             exp = |{ gc_job }/{ gc_count_1 }|
@@ -310,7 +310,7 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'Missing PARAM1 must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Configuration error raised' ).
     ENDTRY.
   ENDMETHOD.
@@ -323,7 +323,7 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'An invalid PARAM1 pattern must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '373'
                                             msg = 'Message 373 names the invalid pattern' ).
     ENDTRY.

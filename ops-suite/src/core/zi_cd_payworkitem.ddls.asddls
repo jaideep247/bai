@@ -32,7 +32,7 @@ define view entity ZI_CD_PayWorkItem
   key Work.ClearingDoc,
   key Work.RunDate,
   key Work.RunId,
-      cast( 'CORE' as abap.char( 4 ) )                      as PaymentEngineArea,
+      cast( 'CD_OPS' as abap.char( 16 ) )                      as PaymentEngineArea,
       cast( case when Work.ClearingDoc = ' ' then 'REQUEST'
                  else 'PAYMENT' end as abap.char( 7 ) )     as WorkKind,
       cast( case when Work.Finding <> ' ' then 'X'

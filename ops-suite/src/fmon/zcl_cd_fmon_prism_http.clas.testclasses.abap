@@ -80,12 +80,12 @@ ENDCLASS.
 
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
     DATA mv_allowed TYPE abap_bool.
 ENDCLASS.
 
 CLASS ltd_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_auth~is_allowed.
+  METHOD zif_ca_ops_auth~is_allowed.
     rv_allowed = mv_allowed.
   ENDMETHOD.
 ENDCLASS.
@@ -124,7 +124,7 @@ CLASS ltc_prism_http IMPLEMENTATION.
     mo_request  = NEW #( ).
     mo_response = NEW #( ).
     " the API is never authorised here: only answers decided before any read are reached
-    zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
+    zcl_ca_ops_injector=>inject_auth( NEW ltd_auth( ) ).
   ENDMETHOD.
 
 

@@ -50,7 +50,7 @@ CLASS zcl_cd_fmon_adapter_feb DEFINITION
       RETURNING
         VALUE(rt_targets) TYPE tt_target
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! The iv_offset-th working day before iv_date (iv_offset 0 = iv_date); initial when none
     "! is found within GC_FEB_MAX_BACK_DAYS calendar days
@@ -62,7 +62,7 @@ CLASS zcl_cd_fmon_adapter_feb DEFINITION
       RETURNING
         VALUE(rv_date) TYPE d
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Registered instance of the interface and business date (exactly one) or the own reference
     CLASS-METHODS file_ref
@@ -112,7 +112,7 @@ CLASS zcl_cd_fmon_adapter_feb IMPLEMENTATION.
                                                                         iv_date_to    = lv_to
                                                                         iv_open_since = lv_from
                                                                         iv_iface_id   = is_request-src-iface_id ).
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
 
     LOOP AT lt_targets ASSIGNING <ls_target>.
       READ TABLE lt_evidence ASSIGNING FIELD-SYMBOL(<ls_evidence>)
@@ -138,7 +138,7 @@ CLASS zcl_cd_fmon_adapter_feb IMPLEMENTATION.
     DATA(lo_dao) = zcl_cd_fmon_factory=>get_dao( ).
     DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
     DATA(lo_calendar) = zcl_cd_fmon_factory=>get_calendar( ).
-    DATA(lv_offset) = zcl_cd_ops_util=>param_int( io_params  = lo_params
+    DATA(lv_offset) = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                   iv_name    = zif_cd_fmon_types=>gc_param-feb_stmt_offset
                                                   iv_default = zif_cd_fmon_types=>gc_param_default-feb_stmt_offset ).
     DATA(lv_default_cal) = CONV zif_cd_fmon_types=>ty_fcal_id( lo_params->get_param(

@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_ops_ovw_cds_test.clas.testclasses.abap
 *& Purpose:
 *& CDS tests of the production-support overview page on
-*& cl_cds_test_environment doubles of ZCD_OPS_RUN and ZCD_OPS_FINDING:
+*& cl_cds_test_environment doubles of ZCA_OPS_RUN and ZCA_OPS_FINDING:
 *& monitor freshness per area with the area's own stale threshold (FMON 15
 *& minutes and full runs only, EBS and HCK 26 hours, no completed run =
 *& stale), open critical exceptions across areas (B / E, open or assigned
@@ -22,12 +22,12 @@ CLASS ltc_freshness DEFINITION FINAL
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_run,
-        fmon      TYPE zif_cd_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000001',
-        fmon_one  TYPE zif_cd_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000002',
-        ebs       TYPE zif_cd_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000003',
+        fmon      TYPE zif_ca_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000001',
+        fmon_one  TYPE zif_ca_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000002',
+        ebs       TYPE zif_ca_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000003',
       END OF gc_run.
-    CONSTANTS gc_variant_all TYPE zif_cd_ops_types=>ty_variant VALUE 'ALL'.
-    CONSTANTS gc_variant_iface TYPE zif_cd_ops_types=>ty_variant VALUE 'ACH_PNC_OUT'.
+    CONSTANTS gc_variant_all TYPE zif_ca_ops_types=>ty_variant VALUE 'ALL'.
+    CONSTANTS gc_variant_iface TYPE zif_ca_ops_types=>ty_variant VALUE 'ACH_PNC_OUT'.
     CONSTANTS gc_seconds_fresh TYPE i VALUE 600.
     CONSTANTS gc_seconds_old TYPE i VALUE 108000.
     CONSTANTS gc_fmon_minutes TYPE i VALUE 15.
@@ -51,12 +51,12 @@ CLASS ltc_freshness DEFINITION FINAL
 
     METHODS run
       IMPORTING
-        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
-        iv_pe_area    TYPE zif_cd_ops_types=>ty_pe_area
-        iv_variant    TYPE zif_cd_ops_types=>ty_variant
+        iv_run_id     TYPE zif_ca_ops_types=>ty_run_id
+        iv_pe_area    TYPE zif_ca_ops_types=>ty_area
+        iv_variant    TYPE zif_ca_ops_types=>ty_variant
         iv_seconds    TYPE i
       RETURNING
-        VALUE(rs_run) TYPE zcd_ops_run.
+        VALUE(rs_run) TYPE zca_ops_run.
 ENDCLASS.
 
 
@@ -74,7 +74,7 @@ CLASS ltc_freshness IMPLEMENTATION.
 
 
   METHOD setup.
-    DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+    DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
 
     go_env->clear_doubles( ).
     " FMON: a full run 10 minutes ago (fresh); a single-interface run just now does not count
@@ -94,7 +94,7 @@ CLASS ltc_freshness IMPLEMENTATION.
     rs_run-run_id     = iv_run_id.
     rs_run-pe_area    = iv_pe_area.
     rs_run-variant    = iv_variant.
-    rs_run-status     = zif_cd_ops_types=>gc_run_status-success.
+    rs_run-status     = zif_ca_ops_types=>gc_run_status-success.
     rs_run-ended_at   = cl_abap_tstmp=>subtract_secs( tstmp = CONV timestamp( lv_now ) secs = iv_seconds ).
     rs_run-started_at = rs_run-ended_at.
   ENDMETHOD.
@@ -179,12 +179,12 @@ CLASS ltc_critical DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_run TYPE zif_cd_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000011'.
-    CONSTANTS gc_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'BALANCE_MISMATCH'.
+    CONSTANTS gc_run TYPE zif_ca_ops_types=>ty_run_id VALUE 'F0000000000000000000000000000011'.
+    CONSTANTS gc_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'BALANCE_MISMATCH'.
     CONSTANTS gc_message TYPE c LENGTH 40 VALUE 'Account 123456789012: balance mismatch'.
-    CONSTANTS gc_file_stmt TYPE zif_cd_ops_types=>ty_object_key VALUE 'S0001'.
-    CONSTANTS gc_feb_stmt TYPE zif_cd_ops_types=>ty_object_key VALUE 'FEB00000501'.
-    CONSTANTS gc_object TYPE zif_cd_ops_types=>ty_object_key VALUE 'ACH_PNC_OUT'.
+    CONSTANTS gc_file_stmt TYPE zif_ca_ops_types=>ty_object_key VALUE 'S0001'.
+    CONSTANTS gc_feb_stmt TYPE zif_ca_ops_types=>ty_object_key VALUE 'FEB00000501'.
+    CONSTANTS gc_object TYPE zif_ca_ops_types=>ty_object_key VALUE 'ACH_PNC_OUT'.
     CONSTANTS gc_days_overdue TYPE i VALUE 2.
     CONSTANTS:
       BEGIN OF gc_no,
@@ -208,13 +208,13 @@ CLASS ltc_critical DEFINITION FINAL
     METHODS finding
       IMPORTING
         iv_no             TYPE i
-        iv_pe_area        TYPE zif_cd_ops_types=>ty_pe_area
-        iv_object_type    TYPE zif_cd_ops_types=>ty_object_type
-        iv_object_key     TYPE zif_cd_ops_types=>ty_object_key
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity
-        iv_disposition    TYPE zif_cd_ops_types=>ty_disposition DEFAULT zif_cd_ops_types=>gc_disposition-open
+        iv_pe_area        TYPE zif_ca_ops_types=>ty_area
+        iv_object_type    TYPE zif_ca_ops_types=>ty_object_type
+        iv_object_key     TYPE zif_ca_ops_types=>ty_object_key
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity
+        iv_disposition    TYPE zif_ca_ops_types=>ty_disposition DEFAULT zif_ca_ops_types=>gc_disposition-open
       RETURNING
-        VALUE(rs_finding) TYPE zcd_ops_finding.
+        VALUE(rs_finding) TYPE zca_ops_finding.
 ENDCLASS.
 
 
@@ -245,38 +245,38 @@ CLASS ltc_critical IMPLEMENTATION.
 
 
   METHOD setup.
-    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
 
     go_env->clear_doubles( ).
     DATA(ls_fmon) = finding( iv_no          = gc_no-fmon_error
                              iv_pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor
                              iv_object_type = zif_cd_fmon_types=>gc_object_type
                              iv_object_key  = gc_object
-                             iv_severity    = zif_cd_ops_types=>gc_severity-error ).
+                             iv_severity    = zif_ca_ops_types=>gc_severity-error ).
     ls_fmon-due_date = cl_abap_context_info=>get_system_date( ) - gc_days_overdue.
     INSERT ls_fmon INTO TABLE lt_findings.
     INSERT finding( iv_no          = gc_no-ebs_block
                     iv_pe_area     = zif_cd_ops_types=>gc_pe_area-ebs
                     iv_object_type = zcl_cd_ebs_finding=>gc_object_type-statement
                     iv_object_key  = gc_feb_stmt
-                    iv_severity    = zif_cd_ops_types=>gc_severity-block
-                    iv_disposition = zif_cd_ops_types=>gc_disposition-assigned ) INTO TABLE lt_findings.
+                    iv_severity    = zif_ca_ops_types=>gc_severity-block
+                    iv_disposition = zif_ca_ops_types=>gc_disposition-assigned ) INTO TABLE lt_findings.
     INSERT finding( iv_no          = gc_no-hck_warning
                     iv_pe_area     = zif_cd_ops_types=>gc_pe_area-health_check
                     iv_object_type = zif_cd_hck_types=>gc_object_type
                     iv_object_key  = gc_object
-                    iv_severity    = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
+                    iv_severity    = zif_ca_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
     INSERT finding( iv_no          = gc_no-core_closed
                     iv_pe_area     = zif_cd_ops_types=>gc_pe_area-core
                     iv_object_type = zif_cd_hck_types=>gc_object_type
                     iv_object_key  = gc_object
-                    iv_severity    = zif_cd_ops_types=>gc_severity-error
-                    iv_disposition = zif_cd_ops_types=>gc_disposition-resolved ) INTO TABLE lt_findings.
+                    iv_severity    = zif_ca_ops_types=>gc_severity-error
+                    iv_disposition = zif_ca_ops_types=>gc_disposition-resolved ) INTO TABLE lt_findings.
     INSERT finding( iv_no          = gc_no-ebs_file
                     iv_pe_area     = zif_cd_ops_types=>gc_pe_area-ebs
                     iv_object_type = zcl_cd_ebs_finding=>gc_object_type-statement
                     iv_object_key  = gc_file_stmt
-                    iv_severity    = zif_cd_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
+                    iv_severity    = zif_ca_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
     go_env->insert_test_data( i_data = lt_findings ).
   ENDMETHOD.
 

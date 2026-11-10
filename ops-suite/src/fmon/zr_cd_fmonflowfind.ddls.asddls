@@ -1,5 +1,5 @@
 // Artifact: zr_cd_fmonflowfind.ddls.asddls
-// Purpose: Drill-down of the file monitoring dashboard: open FMON exceptions (ZCD_OPS_FINDING,
+// Purpose: Drill-down of the file monitoring dashboard: open FMON exceptions (ZCA_OPS_FINDING,
 //          area FMON, object FILE, disposition O open / A assigned). File findings carry the
 //          file ID in hex in REFERENCE (link to the file row); an expected file that never
 //          arrived (FILE_MISSING, key <interface>/<date>) has no reference and is listed here
@@ -10,11 +10,11 @@
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #M, dataClass: #TRANSACTIONAL }
 define root view entity ZR_CD_FmonFlowFind
-  as select from zcd_ops_finding
+  as select from zca_ops_finding
 {
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
-      pe_area                                               as PaymentEngineArea,
+      area                                               as PaymentEngineArea,
       reference                                             as FileIdHex,
       object_key                                            as ObjectKey,
       group1                                                as IfaceId,
@@ -39,6 +39,6 @@ define root view entity ZR_CD_FmonFlowFind
       occurrences                                           as Occurrences,
       created_at                                            as CreatedAt
 }
-where pe_area     = 'FMON'
+where area     = 'CD_FMON'
   and object_type = 'FILE'
   and ( disposition = 'O' or disposition = 'A' )

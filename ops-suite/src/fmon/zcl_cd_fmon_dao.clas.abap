@@ -54,7 +54,7 @@ CLASS zcl_cd_fmon_dao DEFINITION
       IMPORTING
         is_query TYPE zif_cd_fmon_types=>ty_query
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Attempts at a free EVENT_NO when a parallel writer took the same number
     CONSTANTS gc_insert_attempts TYPE i VALUE 3.
@@ -79,7 +79,7 @@ CLASS zcl_cd_fmon_dao DEFINITION
       RETURNING
         VALUE(rt_counts) TYPE zif_cd_fmon_types=>tt_raw_count
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Fix 8: result table of the grouped read - the query fields with their DDIC types plus
     "! ROW_COUNT (INT8)
@@ -90,7 +90,7 @@ CLASS zcl_cd_fmon_dao DEFINITION
       RETURNING
         VALUE(rr_rows) TYPE REF TO data
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! De-duplicated, comma-separated field list (strict mode) for the dynamic SELECT
     METHODS field_list
@@ -99,7 +99,7 @@ CLASS zcl_cd_fmon_dao DEFINITION
       RETURNING
         VALUE(rv_fields) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 
@@ -230,11 +230,11 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
     ENDIF.
     LOOP AT it_keys ASSIGNING FIELD-SYMBOL(<ls_key>).
       IF NOT line_exists( lr_laufd[ low = <ls_key>-laufd ] ).
-        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
+        INSERT VALUE #( sign = zif_ca_ops_types=>gc_range-sign_include option = zif_ca_ops_types=>gc_range-option_equal
                         low = <ls_key>-laufd ) INTO TABLE lr_laufd.
       ENDIF.
       IF NOT line_exists( lr_laufi[ low = <ls_key>-laufi ] ).
-        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
+        INSERT VALUE #( sign = zif_ca_ops_types=>gc_range-sign_include option = zif_ca_ops_types=>gc_range-option_equal
                         low = <ls_key>-laufi ) INTO TABLE lr_laufi.
       ENDIF.
     ENDLOOP.
@@ -388,7 +388,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
     ls_db = CORRESPONDING #( is_event ).
     ls_db-created_by = sy-uname.
-    ls_db-created_at = zcl_cd_ops_factory=>get_clock( )->now( ).
+    ls_db-created_at = zcl_ca_ops_factory=>get_clock( )->now( ).
 
     " EVENT_NO is MAX + 1 per file, so a parallel writer can take the same number and
     " the primary key rejects the insert (sy-subrc 4). sy-subrc 4 alone does not say

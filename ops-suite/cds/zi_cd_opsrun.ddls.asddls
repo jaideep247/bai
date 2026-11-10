@@ -1,5 +1,5 @@
 // Artifact: zi_cd_opsrun.ddls.asddls
-// Purpose: Basic interface view over ZCD_OPS_RUN (run headers of HCK, FMON, EBS)
+// Purpose: Basic interface view over ZCA_OPS_RUN (run headers of HCK, FMON, EBS)
 //          for the operations dashboard. Release-dependent annotations: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
@@ -9,10 +9,10 @@
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #M, dataClass: #TRANSACTIONAL }
 @VDM.viewType: #BASIC
 define view entity ZI_CD_OpsRun
-  as select from zcd_ops_run
+  as select from zca_ops_run
 {
   key run_id                                              as RunId,
-      pe_area                                              as PaymentEngineArea,
+      area                                              as PaymentEngineArea,
       variant                                             as Variant,
       test_mode                                           as IsTestMode,
       started_at                                          as StartedAt,

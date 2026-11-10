@@ -133,31 +133,31 @@ ENDCLASS.
 
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
-    DATA mt_saved_findings TYPE zif_cd_ops_types=>tt_finding.
-    DATA mv_variant TYPE zif_cd_ops_types=>ty_variant.
+    INTERFACES zif_ca_ops_store PARTIALLY IMPLEMENTED.
+    DATA mt_saved_findings TYPE zif_ca_ops_types=>tt_finding.
+    DATA mv_variant TYPE zif_ca_ops_types=>ty_variant.
     DATA mv_commits TYPE i.
     DATA mv_reconciles TYPE i.
 ENDCLASS.
 
 
 CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~start_run.
+  METHOD zif_ca_ops_store~start_run.
     mv_variant      = iv_variant.
     rs_run-pe_area  = iv_pe_area.
     rs_run-variant  = iv_variant.
-    rs_run-status   = zif_cd_ops_types=>gc_run_status-running.
+    rs_run-status   = zif_ca_ops_types=>gc_run_status-running.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~save_findings.
+  METHOD zif_ca_ops_store~save_findings.
     INSERT LINES OF it_findings INTO TABLE mt_saved_findings.
     cs_run-finding_count += lines( it_findings ).
   ENDMETHOD.
-  METHOD zif_cd_ops_store~finish_run.
+  METHOD zif_ca_ops_store~finish_run.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~commit.
+  METHOD zif_ca_ops_store~commit.
     mv_commits += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~reconcile.
+  METHOD zif_ca_ops_store~reconcile.
     mv_reconciles += 1.
   ENDMETHOD.
 ENDCLASS.
@@ -165,16 +165,16 @@ ENDCLASS.
 
 CLASS ltd_alert DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_alert.
-    DATA mt_dispatched TYPE zif_cd_ops_types=>tt_finding.
+    INTERFACES zif_ca_ops_alert.
+    DATA mt_dispatched TYPE zif_ca_ops_types=>tt_finding.
     DATA mv_dispatches TYPE i.
 ENDCLASS.
 
 
 CLASS ltd_alert IMPLEMENTATION.
-  METHOD zif_cd_ops_alert~send.
+  METHOD zif_ca_ops_alert~send.
   ENDMETHOD.
-  METHOD zif_cd_ops_alert~dispatch.
+  METHOD zif_ca_ops_alert~dispatch.
     mv_dispatches += 1.
     mt_dispatched = it_findings.
   ENDMETHOD.
@@ -183,18 +183,18 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
 ENDCLASS.
 
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = '20261106145000'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = '20261106'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     rv_time = '145000'.
   ENDMETHOD.
 ENDCLASS.
@@ -292,7 +292,7 @@ CLASS ltc_proc DEFINITION FINAL
     METHODS add_check
       IMPORTING
         iv_check_id TYPE zif_cd_fmon_types=>ty_check_id
-        iv_class    TYPE zif_cd_ops_types=>ty_class_name
+        iv_class    TYPE zif_ca_ops_types=>ty_class_name
         iv_params   TYPE zif_cd_fmon_types=>ty_params OPTIONAL.
 
     METHODS add_map
@@ -302,7 +302,7 @@ CLASS ltc_proc DEFINITION FINAL
 
     METHODS codes
       IMPORTING
-        it_findings     TYPE zif_cd_ops_types=>tt_finding
+        it_findings     TYPE zif_ca_ops_types=>tt_finding
       RETURNING
         VALUE(rt_codes) TYPE string_table.
 
@@ -349,11 +349,11 @@ CLASS ltc_proc IMPLEMENTATION.
     mo_alert = NEW #( ).
     zcl_cd_fmon_injector=>inject_dao( mo_dao ).
     zcl_cd_fmon_injector=>inject_prism_dao( mo_prism ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
     mo_params = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_alert( mo_alert ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_alert( mo_alert ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.
 
 
@@ -368,7 +368,7 @@ CLASS ltc_proc IMPLEMENTATION.
     DATA ls_check TYPE zif_cd_fmon_types=>ty_chk.
     ls_check-check_id   = iv_check_id.
     ls_check-class_name = iv_class.
-    ls_check-severity   = zif_cd_ops_types=>gc_severity-error.
+    ls_check-severity   = zif_ca_ops_types=>gc_severity-error.
     ls_check-active     = abap_true.
     ls_check-params     = iv_params.
     INSERT ls_check INTO TABLE mo_dao->mt_checks.
@@ -407,7 +407,7 @@ CLASS ltc_proc IMPLEMENTATION.
     ls_sla-stage       = zif_cd_fmon_types=>gc_stage-prism_received.
     ls_sla-max_minutes = gc_test-sla_min.
     ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
-    ls_sla-severity    = zif_cd_ops_types=>gc_severity-error.
+    ls_sla-severity    = zif_ca_ops_types=>gc_severity-error.
     INSERT ls_sla INTO TABLE mo_dao->mt_slas.
 
     " The configured PRISM source (fmon_seed.md) with its stage map
@@ -537,7 +537,7 @@ CLASS ltc_proc IMPLEMENTATION.
     ls_sla-stage       = zif_cd_fmon_types=>gc_stage-prism_delivered.
     ls_sla-max_minutes = gc_queue-base_min.
     ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
-    ls_sla-severity    = zif_cd_ops_types=>gc_severity-error.
+    ls_sla-severity    = zif_ca_ops_types=>gc_severity-error.
     INSERT ls_sla INTO TABLE mo_dao->mt_slas.
     add_check( iv_check_id = 'F_PRISMDLV' iv_class = 'ZCL_CD_FMON_CHK_SLA' iv_params = 'STAGE=PRISM_DELIVERED' ).
 
@@ -848,7 +848,7 @@ CLASS ltc_proc IMPLEMENTATION.
                                             exp = VALUE string_table( ( `PRISM_QUEUE_LONG` ) )
                                             msg = 'The long queue must be visible' ).
         cl_abap_unit_assert=>assert_equals( act = ls_outcome-result-findings[ 1 ]-severity
-                                            exp = zif_cd_ops_types=>gc_severity-warning
+                                            exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'PRISM_QUEUE_LONG is a warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).

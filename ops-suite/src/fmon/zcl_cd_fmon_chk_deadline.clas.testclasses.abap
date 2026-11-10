@@ -48,7 +48,7 @@ CLASS ltc_deadline DEFINITION FINAL FOR TESTING
         "! Deadline rows: day type of the FULLY_PROCESSED row, an extra FILE_RECEIVED row
         row_day_type TYPE zif_cd_fmon_types=>ty_day_type,
         receipt_row  TYPE abap_bool,
-        row_severity TYPE zif_cd_ops_types=>ty_severity,
+        row_severity TYPE zif_ca_ops_types=>ty_severity,
         before_due   TYPE abap_bool,
         "! The FULLY_PROCESSED row is a DURATION row of ZCD_FMON_SLA (no deadline of this stage)
         duration_row TYPE abap_bool,
@@ -65,17 +65,17 @@ CLASS ltc_deadline DEFINITION FINAL FOR TESTING
         iv_stage    TYPE zif_cd_fmon_types=>ty_stage
         iv_day_type TYPE zif_cd_fmon_types=>ty_day_type
         iv_due      TYPE t
-        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_severity TYPE zif_ca_ops_types=>ty_severity
         iv_kind     TYPE zif_cd_fmon_types=>ty_sla_kind DEFAULT zif_cd_fmon_types=>gc_sla_kind-deadline.
     METHODS run_check
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS assert_condition
       IMPORTING
-        it_findings TYPE zif_cd_ops_types=>tt_finding
-        iv_cond     TYPE zif_cd_ops_types=>ty_group.
+        it_findings TYPE zif_ca_ops_types=>tt_finding
+        iv_cond     TYPE zif_ca_ops_types=>ty_group.
 
     METHODS not_received_is_condition_1 FOR TESTING.
     METHODS no_import_is_condition_2     FOR TESTING.
@@ -107,7 +107,7 @@ CLASS ltc_deadline IMPLEMENTATION.
     ms_ctx-now           = COND #( WHEN is_flags-before_due = abap_true THEN gc_test-before_due
                                    ELSE gc_test-after_due ).
     ms_check-check_id = gc_test-check_id.
-    ms_check-severity = zif_cd_ops_types=>gc_severity-warning.
+    ms_check-severity = zif_ca_ops_types=>gc_severity-warning.
 
     ls_iface-iface_id  = gc_test-iface.
     ls_iface-direction = zif_cd_fmon_types=>gc_direction-inbound.
@@ -127,7 +127,7 @@ CLASS ltc_deadline IMPLEMENTATION.
                                         ELSE CONV #( zif_cd_fmon_types=>gc_wildcard ) )
                   iv_due      = gc_test-due
                   iv_severity = COND #( WHEN is_flags-row_severity IS NOT INITIAL THEN is_flags-row_severity
-                                        ELSE zif_cd_ops_types=>gc_severity-error )
+                                        ELSE zif_ca_ops_types=>gc_severity-error )
                   iv_kind     = COND #( WHEN is_flags-duration_row = abap_true
                                         THEN zif_cd_fmon_types=>gc_sla_kind-duration
                                         ELSE zif_cd_fmon_types=>gc_sla_kind-deadline ) ).
@@ -135,7 +135,7 @@ CLASS ltc_deadline IMPLEMENTATION.
       add_deadline( iv_stage    = zif_cd_fmon_types=>gc_stage-received
                     iv_day_type = CONV #( zif_cd_fmon_types=>gc_wildcard )
                     iv_due      = gc_test-early_due
-                    iv_severity = zif_cd_ops_types=>gc_severity-block ).
+                    iv_severity = zif_ca_ops_types=>gc_severity-block ).
     ENDIF.
 
     IF is_flags-stage IS NOT INITIAL.
@@ -214,7 +214,7 @@ CLASS ltc_deadline IMPLEMENTATION.
         configure_scenario( VALUE #( evidence = abap_true ) ).
         DATA(lt_findings) = run_check( ).
         assert_condition( it_findings = lt_findings iv_cond = zif_cd_fmon_types=>gc_deadline_cond-not_received ).
-        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Severity from the deadline row, not the check row' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -334,7 +334,7 @@ CLASS ltc_deadline IMPLEMENTATION.
         configure_scenario( VALUE #( receipt_row = abap_true ) ).
         DATA(lt_findings) = run_check( ).
         assert_condition( it_findings = lt_findings iv_cond = zif_cd_fmon_types=>gc_deadline_cond-not_received ).
-        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-block
+        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-block
                                             msg = 'Worst severity of the missed rows' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

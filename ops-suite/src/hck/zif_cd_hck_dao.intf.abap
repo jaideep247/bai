@@ -12,7 +12,7 @@
 *& 2026-11-06 | G/L transfer gaps per company code and reference type; total count (audit A43).
 *& 2026-11-06 | get_metric_history at the persisted grain incl. DIM2 (audit A101).
 *& 2026-11-06 | get_agg_groups (expected groups); row cap public (audit A103).
-*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | PCRE patterns: job names, application-log objects / subobjects and cycle ids are lists of
 *&              PCRE patterns (complete value, case ignored); job reads raise message 747 at the name cap.
 *& 2026-11-07 | GC_MAX_AGG_ROWS is the hard ceiling (50,000) of parameter HCK_MAX_AGG_ROWS (default 5,000).
@@ -66,24 +66,24 @@ INTERFACE zif_cd_hck_dao
       VALUE(rv_allowed) TYPE abap_bool.
 
   "! Fields of a DDIC table from the runtime DDIC
-  "! @raising zcx_cd_ops_error | table unknown (303)
+  "! @raising zcx_ca_ops_error | table unknown (303)
   METHODS get_table_fields
     IMPORTING
       iv_tabname       TYPE zif_cd_hck_types=>ty_tabname
     RETURNING
       VALUE(rt_fields) TYPE zif_cd_hck_types=>tt_field
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Run a validated aggregate (COUNT/SUM, optional GROUP BY)
-  "! @raising zcx_cd_ops_error | dynamic SQL error (308)
+  "! @raising zcx_ca_ops_error | dynamic SQL error (308)
   METHODS aggregate
     IMPORTING
       is_query       TYPE zif_cd_hck_types=>ty_agg_query
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_hck_types=>tt_agg_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Baseline history: the latest value of each of the last iv_max_rows COMPLETED runs
   "! (status S / W / E, not test mode), newest run first, measured up to iv_as_of
@@ -105,7 +105,7 @@ INTERFACE zif_cd_hck_dao
     IMPORTING
       it_metrics TYPE zif_cd_hck_types=>tt_metric_hist
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Verdict of checks of a run (ZCD_HCK_RESULT, one row per run and check; a repeated row of the
   "! same run and check replaces the earlier one)
@@ -113,7 +113,7 @@ INTERFACE zif_cd_hck_dao
     IMPORTING
       it_results TYPE zif_cd_hck_types=>tt_result_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Tables under configuration-drift control (ZCD_OPS_TABWL HCK / DRIFT, active)
   METHODS get_drift_tables
@@ -126,27 +126,27 @@ INTERFACE zif_cd_hck_dao
       VALUE(rt_baselines) TYPE zif_cd_hck_types=>tt_baseline.
 
   "! SHA-256 over the full content of a table, ordered by primary key
-  "! @raising zcx_cd_ops_error | table unknown (303) or hash error (311)
+  "! @raising zcx_ca_ops_error | table unknown (303) or hash error (311)
   METHODS compute_table_hash
     IMPORTING
       iv_tabname     TYPE zif_cd_hck_types=>ty_tabname
     RETURNING
       VALUE(rs_hash) TYPE zif_cd_hck_types=>ty_baseline
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Replace the stored baselines of the given tables
   METHODS save_baselines
     IMPORTING
       it_baselines TYPE zif_cd_hck_types=>tt_baseline
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Steps of active job cycles (ZCD_JOB_CYCLE + ZCD_JOB_STEP), by cycle and step;
   "! it_cycle_ids: PCRE patterns on the cycle id (empty = every active cycle)
   METHODS get_cycle_steps
     IMPORTING
-      it_cycle_ids    TYPE zif_cd_ops_types=>tt_pcre OPTIONAL
+      it_cycle_ids    TYPE zif_ca_ops_types=>tt_pcre OPTIONAL
     RETURNING
       VALUE(rt_steps) TYPE zif_cd_hck_types=>tt_cycle_step.
 
@@ -164,36 +164,36 @@ INTERFACE zif_cd_hck_dao
   "! the distinct job names of the window (capped at GC_MAX_JOB_NAMES: message 747)
   METHODS get_job_runs
     IMPORTING
-      it_jobnames    TYPE zif_cd_ops_types=>tt_pcre
+      it_jobnames    TYPE zif_ca_ops_types=>tt_pcre
       iv_from        TYPE d
       iv_to          TYPE d
     RETURNING
       VALUE(rt_runs) TYPE zif_cd_hck_types=>tt_job_run
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Jobs not finished (running, ready, released, active) regardless of their date -
   "! an old stuck job never drops out of a date window (audit A44); capped at
   "! ZIF_CD_HCK_TYPES=>GC_MAX_JOB_ROWS, oldest planned start first
   METHODS get_unresolved_jobs DEFAULT IGNORE
     IMPORTING
-      it_jobnames    TYPE zif_cd_ops_types=>tt_pcre
+      it_jobnames    TYPE zif_ca_ops_types=>tt_pcre
     RETURNING
       VALUE(rt_runs) TYPE zif_cd_hck_types=>tt_job_run
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
   "! Application-log message counters (BALHDR) per object / subobject for a day;
   "! it_objects / it_subobjects: PCRE patterns (complete value, case ignored), applied in
   "! ABAP to the grouped counters of the day; no object pattern = nothing read
   METHODS get_applog_stats
     IMPORTING
-      it_objects     TYPE zif_cd_ops_types=>tt_pcre
-      it_subobjects  TYPE zif_cd_ops_types=>tt_pcre OPTIONAL
+      it_objects     TYPE zif_ca_ops_types=>tt_pcre
+      it_subobjects  TYPE zif_ca_ops_types=>tt_pcre OPTIONAL
       iv_date        TYPE d
     RETURNING
       VALUE(rt_stat) TYPE zif_cd_hck_types=>tt_applog_stat.
 
-  "! Owned exceptions past their due date, per payment engine area (ZCD_OPS_FINDING)
+  "! Owned exceptions past their due date, per payment engine area (ZCA_OPS_FINDING)
   METHODS get_overdue_exceptions
     IMPORTING
       iv_today          TYPE d
@@ -241,7 +241,7 @@ INTERFACE zif_cd_hck_dao
       VALUE(rv_count) TYPE i.
 
   "! Lock entries of this client and age of the oldest one
-  "! @raising zcx_cd_ops_error | lock table could not be read (313)
+  "! @raising zcx_ca_ops_error | lock table could not be read (313)
   METHODS read_lock_stats
     IMPORTING
       iv_now_date    TYPE d
@@ -249,9 +249,9 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rs_stat) TYPE zif_cd_hck_types=>ty_tech_stat
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
-  "! Alert deliveries (ZCD_OPS_ALLOG) per channel and status in a window
+  "! Alert deliveries (ZCA_OPS_ALLOG) per channel and status in a window
   METHODS get_alert_stats
     IMPORTING
       iv_from        TYPE timestampl
@@ -268,7 +268,7 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_hck_value_types=>tt_value_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Active suppressions (status A, today within the period) - design 6.3
   METHODS get_suppressions DEFAULT IGNORE

@@ -23,7 +23,7 @@ CLASS zcl_cd_hck_c_chq_status DEFINITION
     INTERFACES zif_cd_hck_check.
 
     CONSTANTS gc_metric TYPE zif_cd_hck_types=>ty_metric_name VALUE 'CHEQUE_REGRESSION'.
-    CONSTANTS gc_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_STATUS_REGRESSION'.
+    CONSTANTS gc_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHEQUE_STATUS_REGRESSION'.
 ENDCLASS.
 
 
@@ -57,17 +57,17 @@ CLASS zcl_cd_hck_c_chq_status IMPLEMENTATION.
 
     DATA(lt_found) = zcl_cd_hck_payreq_rules=>cheque_regressions(
                        it_events   = lt_events
-                       it_terminal = zcl_cd_ops_util=>split_list(
+                       it_terminal = zcl_ca_ops_util=>split_list(
                                        zcl_cd_hck_value_query=>value( it_spec = lt_opt iv_name = 'TERMINAL' iv_default = `3,4,9` ) )
-                       it_allowed  = zcl_cd_ops_util=>split_list(
+                       it_allowed  = zcl_ca_ops_util=>split_list(
                                        zcl_cd_hck_value_query=>value( it_spec = lt_opt iv_name = 'ALLOWED' iv_default = `10>9` ) ) ).
     INSERT VALUE #( metric = gc_metric dim1 = zif_cd_hck_types=>gc_default_key value = lines( lt_found ) )
       INTO TABLE rs_result-metrics.
     LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<ls_found>) FROM 1 TO lv_max.
       INSERT VALUE #( object_key = <ls_found>-key
                       check_code = gc_code
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-exception
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-exception
                       reference  = <ls_found>-key
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-cheque_status_is_not_allowe
                                                           iv_v1    = <ls_found>-key

@@ -18,7 +18,7 @@ INTERFACE zif_cd_fmon_calendar
     RETURNING
       VALUE(rv_working) TYPE abap_bool
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! iv_date is the last working day of its month
   METHODS is_month_end
@@ -28,7 +28,7 @@ INTERFACE zif_cd_fmon_calendar
     RETURNING
       VALUE(rv_month_end) TYPE abap_bool
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Banking days elapsed from iv_from (receipt) to iv_to; never negative.
   "! iv_basis A (default) = working days strictly after receipt (a non-working receipt
@@ -42,6 +42,6 @@ INTERFACE zif_cd_fmon_calendar
     RETURNING
       VALUE(rv_days) TYPE i
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

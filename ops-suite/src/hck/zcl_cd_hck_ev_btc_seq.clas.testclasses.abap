@@ -77,11 +77,11 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_clock PARTIALLY IMPLEMENTED.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = '20261111'.
   ENDMETHOD.
 ENDCLASS.
@@ -97,7 +97,7 @@ CLASS ltc_ev_btc_seq DEFINITION FINAL FOR TESTING
       gc_ref    TYPE zif_cd_ops_trace_types=>ty_ref VALUE '300001',
       gc_bai    TYPE zif_cd_hck_runtime_types=>ty_scheme VALUE 'BAI2',
       gc_iso    TYPE zif_cd_hck_runtime_types=>ty_scheme VALUE 'ISO',
-      gc_amount TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
+      gc_amount TYPE zif_ca_ops_types=>ty_amount VALUE '250.00',
       gc_first  TYPE d VALUE '20261102',
       gc_d      TYPE zif_cd_hck_runtime_types=>ty_flow VALUE 'D',
       gc_c      TYPE zif_cd_hck_runtime_types=>ty_flow VALUE 'C',
@@ -145,13 +145,13 @@ CLASS ltc_ev_btc_seq DEFINITION FINAL FOR TESTING
         iv_class           TYPE zif_cd_hck_runtime_types=>ty_method_class
         iv_codes           TYPE clike
         iv_lots            TYPE i DEFAULT 0
-        iv_lot_amount      TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_amount
+        iv_lot_amount      TYPE zif_ca_ops_types=>ty_amount DEFAULT gc_amount
         iv_target          TYPE clike
         iv_first           TYPE d DEFAULT gc_first
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS collect
       IMPORTING
         iv_flow            TYPE zif_cd_hck_runtime_types=>ty_flow
@@ -160,7 +160,7 @@ CLASS ltc_ev_btc_seq DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS every_seeded_sequence      FOR TESTING.
     METHODS redeposit_inside_max_age   FOR TESTING.
@@ -189,7 +189,7 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
     zcl_cd_hck_injector=>inject_runtime_dao( mo_dao ).
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     mo_params = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     " Seed (config/hck_seed.md): collections ACH
@@ -484,7 +484,7 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly
                                             exp = zif_cd_hck_runtime_types=>gc_code-btc_role_missing
                                             msg = 'Role missing' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_evidence-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Error' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( find( val = ls_evidence-detail sub = zif_cd_hck_runtime_types=>gc_outcome-indeterminate ) >= 0
@@ -540,7 +540,7 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
     TRY.
         evaluate( iv_flow = gc_d iv_class = gc_wire iv_codes = `495` iv_target = `CLEARED` ).
         cl_abap_unit_assert=>fail( msg = 'Invalid pattern must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Raised' ).
     ENDTRY.
   ENDMETHOD.
@@ -620,12 +620,12 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
       gc_bukrs  TYPE zif_cd_ops_trace_types=>ty_bukrs VALUE 'US01',
       gc_hbkid  TYPE c LENGTH 5 VALUE 'JPMC1',
       gc_hktid  TYPE c LENGTH 5 VALUE 'CHK01',
-      gc_amount TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
+      gc_amount TYPE zif_ca_ops_types=>ty_amount VALUE '250.00',
       gc_d      TYPE zif_cd_hck_runtime_types=>ty_flow VALUE 'D',
       gc_chq    TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'CHQ',
       gc_blank  TYPE zif_cd_hck_runtime_types=>ty_rule_param VALUE 'BLANK',
-      gc_clarify TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_CLARIFICATION',
-      gc_manual TYPE zif_cd_ops_types=>ty_check_code VALUE 'MANUAL_CLEARING_REQUIRED',
+      gc_clarify TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHEQUE_CLARIFICATION',
+      gc_manual TYPE zif_ca_ops_types=>ty_check_code VALUE 'MANUAL_CLEARING_REQUIRED',
       gc_fpchr  TYPE zif_cd_hck_types=>ty_text VALUE 'Correction on the statement - clear manually in FPCHR'.
 
     DATA mo_dao TYPE REF TO ltd_runtime_dao.
@@ -651,7 +651,7 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
       IMPORTING
         iv_codes           TYPE clike
         iv_state           TYPE clike DEFAULT space
-        iv_payment_amount  TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_amount
+        iv_payment_amount  TYPE zif_ca_ops_types=>ty_amount DEFAULT gc_amount
         iv_target          TYPE clike
         iv_chect           TYPE zif_cd_ops_trace_types=>ty_ref DEFAULT gc_chect
         "! A second cheque of the same account with the same last 13 characters
@@ -659,7 +659,7 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS cashed_and_returned       FOR TESTING.
     METHODS returned_still_cashed     FOR TESTING.
@@ -682,7 +682,7 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -693,7 +693,7 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
     zcl_cd_hck_injector=>inject_runtime_dao( mo_dao ).
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     " Seed (config/hck_seed.md section 8e / 8f): disbursement cheques
     role( iv_code = '581' iv_role = 'CASHED' iv_compare = zif_cd_hck_runtime_types=>gc_compare-register ).
@@ -840,7 +840,7 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
     TRY.
         DATA(ls_evidence) = evaluate( iv_codes = `581,581` iv_state = 'B' iv_target = `CLEARED` ).
         cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly exp = gc_clarify msg = 'Clarification' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_evidence-severity exp = zif_cd_ops_types=>gc_severity-error msg = 'Error' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-severity exp = zif_ca_ops_types=>gc_severity-error msg = 'Error' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = `clarification worklist` ) >= 0 )
                                           msg = 'Says where to look' ).
       CATCH cx_root INTO DATA(lx_error).

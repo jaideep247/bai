@@ -25,7 +25,7 @@ define root view entity ZR_CD_EbsLine
   key Line.Esnum,
       Line.StmtObjectKey,
       Line.LineObjectKey,
-      cast( 'EBS' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_EBS' as abap.char( 16 ) )                       as PaymentEngineArea,
       Line.CompanyCode,
       Line.HouseBank,
       Line.HouseBankAccount,

@@ -1,0 +1,149 @@
+managed implementation in class zbp_r_ca_opscfgall unique;
+strict ( 2 );
+with draft;
+
+// Alerting and purge targets: singleton root (virtual, nothing persisted) - lock, total ETag,
+// draft and the customizing request; every customizing table is a child.
+define behavior for ZR_CA_OpsCfgAll alias OpsCfgAll
+with unmanaged save
+draft table zca_d_opscfg
+lock master
+total etag LastChangedAtMax
+authorization master ( global )
+##DRAFT_OP_NOT_REQUIRED
+{
+  update;
+  field ( readonly ) SingletonID, LastChangedAtMax;
+
+  association _AlertRule { create ( features : global ); with draft; }
+  association _AlertChannel { create ( features : global ); with draft; }
+  association _PurgeTarget { create ( features : global ); with draft; }
+
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare
+  {
+    validation AlertRule ~ validateFields;
+    validation AlertRule ~ validateTransport;
+    validation AlertChannel ~ validateFields;
+    validation AlertChannel ~ validateTransport;
+    validation PurgeTarget ~ validateFields;
+    validation PurgeTarget ~ validateTransport;
+  }
+}
+
+define behavior for ZR_CA_AlertRule alias AlertRule
+persistent table zca_ops_alrule
+with additional save
+draft table zca_d_alrule
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) RuleId;
+  field ( mandatory : create ) RuleId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_alrule
+  {
+    RuleId = rule_id;
+    Area = area;
+    MinSeverity = min_severity;
+    RulePattern = rule_pattern;
+    CheckPattern = check_pattern;
+    Group1Pattern = group1_pattern;
+    Group2Pattern = group2_pattern;
+    MinRag = min_rag;
+    OnAbort = on_abort;
+    Channel = channel;
+    Destination = destination;
+    Digest = digest;
+    MaxItems = max_items;
+    ThrottleMin = throttle_min;
+    QuietFrom = quiet_from;
+    QuietTo = quiet_to;
+    EscalateAfter = escalate_after;
+    EscalationDest = escalation_dest;
+    EscOverride = esc_override;
+    Active = active;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_AlertChannel alias AlertChannel
+persistent table zca_ops_alchn
+with additional save
+draft table zca_d_alchn
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Channel;
+  field ( mandatory : create ) Channel;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_alchn
+  {
+    Channel = channel;
+    ClassName = class_name;
+    Destination = destination;
+    Active = active;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_PurgeTarget alias PurgeTarget
+persistent table zca_ops_purge
+with additional save
+draft table zca_d_purge
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Target;
+  field ( mandatory : create ) Target;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_purge
+  {
+    Target = target;
+    ClassName = class_name;
+    ParamArea = param_area;
+    ParamName = param_name;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

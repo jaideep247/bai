@@ -118,8 +118,8 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
   PRIVATE SECTION.
     TYPES:
       BEGIN OF ty_amount,
-        currency TYPE zif_cd_ops_types=>ty_currency,
-        amount   TYPE zif_cd_ops_types=>ty_amount,
+        currency TYPE zif_ca_ops_types=>ty_currency,
+        amount   TYPE zif_ca_ops_types=>ty_amount,
       END OF ty_amount.
     TYPES tt_amount TYPE SORTED TABLE OF ty_amount WITH UNIQUE KEY currency.
 
@@ -137,8 +137,8 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
       BEGIN OF ty_cell,
         key      TYPE zif_cd_hck_runtime_types=>ty_flow_class,
         day      TYPE d,
-        code     TYPE zif_cd_ops_types=>ty_check_code,
-        severity TYPE zif_cd_ops_types=>ty_severity,
+        code     TYPE zif_ca_ops_types=>ty_check_code,
+        severity TYPE zif_ca_ops_types=>ty_severity,
         payments TYPE i,
         "! Late payments: critical ones and the oldest age
         crit     TYPE i,
@@ -166,7 +166,7 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
     TYPES:
       BEGIN OF ty_late_amount,
         key      TYPE zif_cd_hck_runtime_types=>ty_flow_class,
-        currency TYPE zif_cd_ops_types=>ty_currency,
+        currency TYPE zif_ca_ops_types=>ty_currency,
         warn     TYPE zif_cd_hck_types=>ty_value,
         crit     TYPE zif_cd_hck_types=>ty_value,
       END OF ty_late_amount.
@@ -212,9 +212,9 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         laufd     TYPE d,
         laufi     TYPE c LENGTH 6,
         hbkid     TYPE zif_cd_hck_runtime_types=>ty_hbkid,
-        currency  TYPE zif_cd_ops_types=>ty_currency,
+        currency  TYPE zif_ca_ops_types=>ty_currency,
         payments  TYPE i,
-        amount    TYPE zif_cd_ops_types=>ty_amount,
+        amount    TYPE zif_ca_ops_types=>ty_amount,
         "! A live payment (its example line is written here)
         payment   TYPE zif_cd_hck_runtime_types=>ty_issued_payment,
         status    TYPE string,
@@ -237,7 +237,7 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
     DATA mt_stats TYPE tt_stat.
     DATA mt_late_amounts TYPE tt_late_amount.
     DATA mt_run_parts TYPE tt_run_part.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
     DATA ms_link TYPE ty_file_link.
     DATA mt_file_classes TYPE string_table.
     DATA mt_ack_open TYPE string_table.
@@ -259,7 +259,7 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
       CHANGING
         cs_result TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Parameters of the run: examples, status-lag grace and ACK lists, windows, AGE_OLDEST limits
     METHODS read_settings
@@ -309,8 +309,8 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         iv_no_valut    TYPE abap_bool
         iv_calendar    TYPE zif_cd_hck_types=>ty_calendar
         iv_payments    TYPE i
-        iv_amount      TYPE zif_cd_ops_types=>ty_amount
-        iv_currency    TYPE zif_cd_ops_types=>ty_currency
+        iv_amount      TYPE zif_ca_ops_types=>ty_amount
+        iv_currency    TYPE zif_ca_ops_types=>ty_currency
       RETURNING
         VALUE(rv_age)  TYPE i.
 
@@ -318,18 +318,18 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
       IMPORTING
         iv_key      TYPE zif_cd_hck_runtime_types=>ty_flow_class
         iv_day      TYPE d
-        iv_code     TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_code     TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity TYPE zif_ca_ops_types=>ty_severity
         iv_payments TYPE i
-        iv_amount   TYPE zif_cd_ops_types=>ty_amount
-        iv_currency TYPE zif_cd_ops_types=>ty_currency.
+        iv_amount   TYPE zif_ca_ops_types=>ty_amount
+        iv_currency TYPE zif_ca_ops_types=>ty_currency.
 
     "! An example of an existing cell, kept when it is among the first PAYOUT_EXAMPLES (oldest first)
     METHODS add_example
       IMPORTING
         iv_key      TYPE zif_cd_hck_runtime_types=>ty_flow_class
         iv_day      TYPE d
-        iv_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_code     TYPE zif_ca_ops_types=>ty_check_code
         iv_ref_date TYPE d
         iv_doc1r    TYPE zif_cd_hck_runtime_types=>ty_docno
         iv_line     TYPE string.
@@ -357,8 +357,8 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         iv_ref_date    TYPE d
         iv_no_valut    TYPE abap_bool
         iv_age         TYPE i
-        iv_amount      TYPE zif_cd_ops_types=>ty_amount
-        iv_currency    TYPE zif_cd_ops_types=>ty_currency
+        iv_amount      TYPE zif_ca_ops_types=>ty_amount
+        iv_currency    TYPE zif_ca_ops_types=>ty_currency
       RETURNING
         VALUE(rv_line) TYPE string.
 
@@ -484,8 +484,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     IF mv_calendar IS INITIAL AND lv_calendar_missing = abap_true.
       INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-inflight_config }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-no_calendar
                                                           iv_v1    = ms_def-check_id ) ) INTO TABLE cs_result-findings.
     ENDIF.
@@ -496,7 +496,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     DATA lv_now TYPE timestamp.
     DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
     mv_examples = nmax( val1 = 1
-                        val2 = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                        val2 = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                            iv_name    = zif_cd_ops_payout_types=>gc_param-examples
                                                            iv_default = zif_cd_ops_payout_types=>gc_param_default-examples ) ).
     " Look-back windows of the live evaluation before the snapshot's first run
@@ -508,7 +508,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     mv_issue_from = mv_today - nmax( val1 = 1 val2 = lv_issue_days ).
     " Status lag: grace after the bank evidence / ACK, statuses that must have changed, ACK level
     mv_grace = nmax( val1 = 0
-                     val2 = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                     val2 = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                         iv_name    = zif_cd_hck_runtime_types=>gc_param-status_lag_min
                                                         iv_default = zif_cd_hck_runtime_types=>gc_param_default-status_lag_min ) ).
     CONVERT DATE is_context-now_date TIME is_context-now_time INTO TIME STAMP lv_now TIME ZONE sy-zonlo.
@@ -546,7 +546,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     CONVERT DATE is_context-now_date TIME is_context-now_time INTO TIME STAMP lv_now TIME ZONE sy-zonlo.
     DATA(ls_lag) = zcl_cd_ops_pay_snapshot=>lag( it_watermarks = lt_watermarks
                                                  iv_now        = lv_now ).
-    DATA(lv_limit) = zcl_cd_ops_util=>param_int(
+    DATA(lv_limit) = zcl_ca_ops_util=>param_int(
                        io_params  = zcl_cd_ops_factory=>get_params( )
                        iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-stale_after_min }| &&
                                             |{ zif_cd_ops_types=>gc_pe_area-core }| )
@@ -558,8 +558,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     mv_partial = abap_true.
     INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-snapshot_stale }|
                     check_code = zif_cd_hck_runtime_types=>gc_code-snapshot_stale
-                    severity   = zif_cd_ops_types=>gc_severity-warning
-                    action     = zif_cd_ops_types=>gc_action-notify
+                    severity   = zif_ca_ops_types=>gc_severity-warning
+                    action     = zif_ca_ops_types=>gc_action-notify
                     message    = COND #( WHEN ls_lag-known = abap_true
                                          THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-snapshot_lag
                                                                      iv_v1    = ls_lag-minutes
@@ -576,8 +576,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     LOOP AT mt_methods ASSIGNING FIELD-SYMBOL(<ls_method>).
       INSERT <ls_method>-pymet INTO TABLE rs_query-methods.
     ENDLOOP.
-    rs_query-all_ages = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                 option = zif_cd_ops_types=>gc_range-option_equal
+    rs_query-all_ages = VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                 option = zif_ca_ops_types=>gc_range-option_equal
                                  ( low = zif_cd_ops_payout_types=>gc_outcome-in_flight )
                                  ( low = zif_cd_ops_payout_types=>gc_outcome-undetermined )
                                  ( low = zif_cd_ops_payout_types=>gc_outcome-inconsistent ) ).
@@ -615,7 +615,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
             add_cell( iv_key      = lv_key
                       iv_day      = <ls_group>-laufd
                       iv_code     = zif_cd_hck_runtime_types=>gc_code-undetermined
-                      iv_severity = zif_cd_ops_types=>gc_severity-warning
+                      iv_severity = zif_ca_ops_types=>gc_severity-warning
                       iv_payments = <ls_group>-payments
                       iv_amount   = <ls_group>-amount
                       iv_currency = <ls_group>-currency ).
@@ -625,7 +625,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
               add_cell( iv_key      = lv_key
                         iv_day      = <ls_group>-laufd
                         iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
-                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_severity = zif_ca_ops_types=>gc_severity-warning
                         iv_payments = <ls_group>-payments
                         iv_amount   = <ls_group>-amount
                         iv_currency = <ls_group>-currency ).
@@ -656,7 +656,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                                           THEN zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
                                           ELSE <ls_group>-finding )
                     iv_severity = COND #( WHEN <ls_group>-severity IS INITIAL
-                                          THEN zif_cd_ops_types=>gc_severity-error
+                                          THEN zif_ca_ops_types=>gc_severity-error
                                           ELSE <ls_group>-severity )
                     iv_payments = <ls_group>-payments
                     iv_amount   = <ls_group>-amount
@@ -732,7 +732,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       ELSE.
         mv_ambiguous_live = mv_ambiguous_live + 1.
       ENDIF.
-      DATA(lv_amount) = CONV zif_cd_ops_types=>ty_amount( abs( <ls_payment>-amount ) ).
+      DATA(lv_amount) = CONV zif_ca_ops_types=>ty_amount( abs( <ls_payment>-amount ) ).
       " Every listing of the payment under its code (inconsistency, anomaly, undetermined)
       LOOP AT ls_verdict-listings ASSIGNING FIELD-SYMBOL(<ls_listing>).
         add_cell( iv_key      = lv_key
@@ -794,7 +794,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
           add_cell( iv_key      = lv_key
                     iv_day      = <ls_payment>-laufd
                     iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
-                    iv_severity = zif_cd_ops_types=>gc_severity-warning
+                    iv_severity = zif_ca_ops_types=>gc_severity-warning
                     iv_payments = 1
                     iv_amount   = lv_amount
                     iv_currency = <ls_payment>-currency ).
@@ -858,15 +858,15 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
           INSERT <ls_method>-pymet INTO TABLE ls_query-methods.
         ENDIF.
       ENDLOOP.
-      ls_query-all_ages = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                   option = zif_cd_ops_types=>gc_range-option_equal
+      ls_query-all_ages = VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                   option = zif_ca_ops_types=>gc_range-option_equal
                                    ( low = zif_cd_ops_payout_types=>gc_outcome-in_flight )
                                    ( low = zif_cd_ops_payout_types=>gc_outcome-undetermined ) ).
-      ls_query-findings = VALUE #( ( sign   = zif_cd_ops_types=>gc_range-sign_exclude
-                                     option = zif_cd_ops_types=>gc_range-option_equal
+      ls_query-findings = VALUE #( ( sign   = zif_ca_ops_types=>gc_range-sign_exclude
+                                     option = zif_ca_ops_types=>gc_range-option_equal
                                      low    = zif_cd_ops_payout_types=>gc_code-status_pending ) ).
-      ls_query-statuses = VALUE #( FOR lv_open IN mt_ack_open ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                                option = zif_cd_ops_types=>gc_range-option_equal
+      ls_query-statuses = VALUE #( FOR lv_open IN mt_ack_open ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                                option = zif_ca_ops_types=>gc_range-option_equal
                                                                 low    = lv_open ) ).
       DATA(lt_rows) = COND zif_cd_ops_payout_types=>tt_outcome_example(
                         WHEN ls_query-methods IS NOT INITIAL
@@ -913,7 +913,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         add_cell( iv_key      = lv_key
                   iv_day      = <ls_payment>-laufd
                   iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
-                  iv_severity = zif_cd_ops_types=>gc_severity-warning
+                  iv_severity = zif_ca_ops_types=>gc_severity-warning
                   iv_payments = 1
                   iv_amount   = abs( <ls_payment>-amount )
                   iv_currency = <ls_payment>-currency ).
@@ -946,7 +946,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       add_cell( iv_key      = <ls_part>-key
                 iv_day      = <ls_part>-laufd
                 iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
-                iv_severity = zif_cd_ops_types=>gc_severity-warning
+                iv_severity = zif_ca_ops_types=>gc_severity-warning
                 iv_payments = <ls_part>-payments
                 iv_amount   = <ls_part>-amount
                 iv_currency = <ls_part>-currency ).
@@ -987,8 +987,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     DATA lt_days TYPE zif_cd_ops_payout_types=>tt_date_range.
     LOOP AT mt_cells ASSIGNING FIELD-SYMBOL(<ls_cell>).
       IF NOT line_exists( lt_days[ low = <ls_cell>-day ] ).
-        INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                        option = zif_cd_ops_types=>gc_range-option_equal
+        INSERT VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                        option = zif_ca_ops_types=>gc_range-option_equal
                         low    = <ls_cell>-day ) INTO TABLE lt_days.
       ENDIF.
     ENDLOOP.
@@ -1032,7 +1032,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       ENDIF.
       " In flight: late, undetermined, status lag
       DATA(lv_rag) = mo_ageing->rag_of( iv_key = lv_key iv_age = lv_age ).
-      IF lv_rag = zif_cd_ops_types=>gc_rag-red OR lv_rag = zif_cd_ops_types=>gc_rag-amber.
+      IF lv_rag = zif_ca_ops_types=>gc_rag-red OR lv_rag = zif_ca_ops_types=>gc_rag-amber.
         add_example( iv_key      = lv_key
                      iv_day      = <ls_example>-laufd
                      iv_code     = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
@@ -1084,10 +1084,10 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       mv_no_valut = mv_no_valut + iv_payments.
     ENDIF.
     DATA(lv_rag) = mo_ageing->rag_of( iv_key = iv_key iv_age = rv_age ).
-    IF lv_rag <> zif_cd_ops_types=>gc_rag-red AND lv_rag <> zif_cd_ops_types=>gc_rag-amber.
+    IF lv_rag <> zif_ca_ops_types=>gc_rag-red AND lv_rag <> zif_ca_ops_types=>gc_rag-amber.
       RETURN.
     ENDIF.
-    DATA(lv_crit) = COND i( WHEN lv_rag = zif_cd_ops_types=>gc_rag-red THEN iv_payments ).
+    DATA(lv_crit) = COND i( WHEN lv_rag = zif_ca_ops_types=>gc_rag-red THEN iv_payments ).
     lr_stat->warn = lr_stat->warn + iv_payments.
     lr_stat->crit = lr_stat->crit + lv_crit.
     " Amounts per currency (EUR / GBP alongside USD): never summed across currencies
@@ -1102,8 +1102,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     add_cell( iv_key      = iv_key
               iv_day      = iv_day
               iv_code     = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
-              iv_severity = COND #( WHEN lv_crit > 0 THEN zif_cd_ops_types=>gc_severity-error
-                                    ELSE zif_cd_ops_types=>gc_severity-warning )
+              iv_severity = COND #( WHEN lv_crit > 0 THEN zif_ca_ops_types=>gc_severity-error
+                                    ELSE zif_ca_ops_types=>gc_severity-warning )
               iv_payments = iv_payments
               iv_amount   = iv_amount
               iv_currency = iv_currency ).
@@ -1122,7 +1122,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       INSERT VALUE #( key = iv_key day = iv_day code = iv_code ) INTO TABLE mt_cells ASSIGNING <ls_cell>.
     ENDIF.
     <ls_cell>-payments = <ls_cell>-payments + iv_payments.
-    IF zcl_cd_ops_util=>severity_rank( iv_severity ) > zcl_cd_ops_util=>severity_rank( <ls_cell>-severity ).
+    IF zcl_ca_ops_util=>severity_rank( iv_severity ) > zcl_ca_ops_util=>severity_rank( <ls_cell>-severity ).
       <ls_cell>-severity = iv_severity.
     ENDIF.
     READ TABLE <ls_cell>-amounts ASSIGNING FIELD-SYMBOL(<ls_amount>) WITH TABLE KEY currency = iv_currency.
@@ -1213,8 +1213,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       IF mo_ageing->limits_set( <lv_key> ) = abap_false.
         INSERT VALUE #( object_key = |{ ms_def-check_id }/{ <lv_key> }|
                         check_code = zif_cd_hck_runtime_types=>gc_code-limits_missing
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-warning
+                        action     = zif_ca_ops_types=>gc_action-notify
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-limits_missing
                                                             iv_v1    = ms_def-check_id
                                                             iv_v2    = |{ gc_metric-age_oldest }/{ <lv_key> }| ) )
@@ -1226,8 +1226,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     IF mv_no_valut > 0.
       INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-value_date_missing }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-value_date_missing
-                      severity   = zif_cd_ops_types=>gc_severity-info
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-info
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-value_date_missing
                                                           iv_v1    = mv_no_valut
                                                           iv_v2    = ms_def-check_id ) ) INTO TABLE cs_result-findings.
@@ -1238,8 +1238,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     IF mv_ambiguous_live > 0.
       INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-evaluated_live }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-evaluated_live
-                      severity   = zif_cd_ops_types=>gc_severity-info
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-info
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evaluated_live
                                                           iv_v1    = lv_live
                                                           iv_v2    = mv_ambiguous_live ) ) INTO TABLE cs_result-findings.
@@ -1279,7 +1279,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                       group1     = <ls_cell>-key
                       check_code = <ls_cell>-code
                       severity   = <ls_cell>-severity
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      action     = zif_ca_ops_types=>gc_action-notify
                       amount     = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-amount )
                       currency   = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-currency )
                       reference  = <ls_cell>-key
@@ -1311,8 +1311,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
                                    |{ zif_cd_ops_trace_types=>gc_param-src_ack }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                      severity   = zif_cd_ops_types=>gc_severity-info
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-info
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_ack_unconfig
                                                           iv_v1    = zif_cd_ops_trace_types=>gc_param-src_ack ) )
              INTO TABLE mt_findings.
@@ -1330,11 +1330,11 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         DATA(lt_rows) = zcl_cd_ops_factory=>get_trace_dao( )->read_configured_set( is_source   = ls_source
                                                                                   it_keys     = lt_keys
                                                                                   iv_max_rows = mv_cap ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/{ ls_source-table_name }|
                         check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-warning
+                        action     = zif_ca_ops_types=>gc_action-notify
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_ack_failed
                                                             iv_v1    = ls_source-table_name
                                                             iv_tail  = lx_error->get_text( ) ) )
@@ -1387,7 +1387,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       RETURN.
     ENDIF.
     " Each group field must be a DPAYH payment run field: the payment's value of the same name
-    LOOP AT zcl_cd_ops_util=>split_list( ls_src-group_fields ) ASSIGNING FIELD-SYMBOL(<lv_field>).
+    LOOP AT zcl_ca_ops_util=>split_list( ls_src-group_fields ) ASSIGNING FIELD-SYMBOL(<lv_field>).
       DATA(lv_field) = to_upper( condense( <lv_field> ) ).
       IF lv_field <> zif_cd_hck_runtime_types=>gc_run_field-laufd
          AND lv_field <> zif_cd_hck_runtime_types=>gc_run_field-laufi
@@ -1425,8 +1425,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
                                  |{ zif_cd_hck_runtime_types=>gc_param-ack_file_src }|
                     check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                    severity   = zif_cd_ops_types=>gc_severity-warning
-                    action     = zif_cd_ops_types=>gc_action-notify
+                    severity   = zif_ca_ops_types=>gc_severity-warning
+                    action     = zif_ca_ops_types=>gc_action-notify
                     message    = iv_message ) INTO TABLE mt_findings.
   ENDMETHOD.
 
@@ -1542,8 +1542,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     ENDIF.
     INSERT VALUE #( object_key = |{ ms_def-check_id }/{ iv_table }|
                     check_code = zif_cd_hck_runtime_types=>gc_code-read_capped
-                    severity   = zif_cd_ops_types=>gc_severity-warning
-                    action     = zif_cd_ops_types=>gc_action-notify
+                    severity   = zif_ca_ops_types=>gc_severity-warning
+                    action     = zif_ca_ops_types=>gc_action-notify
                     message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-read_capped
                                                         iv_v1    = iv_table
                                                         iv_v2    = mv_cap

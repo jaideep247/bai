@@ -233,13 +233,13 @@ CLASS zcl_cd_ebs_stmt_evidence IMPLEMENTATION.
   METHOD selection.
     LOOP AT it_accounts ASSIGNING FIELD-SYMBOL(<ls_account>).
       IF NOT line_exists( rs_selection-bukrs[ low = <ls_account>-bukrs ] ).
-        INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                        option = zif_cd_ops_types=>gc_range-option_equal
+        INSERT VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                        option = zif_ca_ops_types=>gc_range-option_equal
                         low    = <ls_account>-bukrs ) INTO TABLE rs_selection-bukrs.
       ENDIF.
       IF NOT line_exists( rs_selection-hbkid[ low = <ls_account>-hbkid ] ).
-        INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                        option = zif_cd_ops_types=>gc_range-option_equal
+        INSERT VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                        option = zif_ca_ops_types=>gc_range-option_equal
                         low    = <ls_account>-hbkid ) INTO TABLE rs_selection-hbkid.
       ENDIF.
     ENDLOOP.

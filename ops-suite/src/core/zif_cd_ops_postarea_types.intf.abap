@@ -86,13 +86,13 @@ INTERFACE zif_cd_ops_postarea_types
   CONSTANTS:
     BEGIN OF gc_param,
       "! TFK033D-APPLK of the payment engine (FS-CD); VERIFY-SE11 in DV1 (FQC0 header)
-      applk    TYPE zif_cd_ops_types=>ty_param_name VALUE 'POSTAREA_APPLK',
+      applk    TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_APPLK',
       "! TFK033D-KTOPL of the entries; blank = posting areas defined without chart of accounts
-      ktopl    TYPE zif_cd_ops_types=>ty_param_name VALUE 'POSTAREA_KTOPL',
-      reason   TYPE zif_cd_ops_types=>ty_param_name VALUE 'POSTAREA_RSN',
-      pm_class TYPE zif_cd_ops_types=>ty_param_name VALUE 'POSTAREA_PMC',
-      btc_map  TYPE zif_cd_ops_types=>ty_param_name VALUE 'POSTAREA_BTM',
-      btc_role TYPE zif_cd_ops_types=>ty_param_name VALUE 'POSTAREA_BTR',
+      ktopl    TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_KTOPL',
+      reason   TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_RSN',
+      pm_class TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_PMC',
+      btc_map  TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_BTM',
+      btc_role TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_BTR',
     END OF gc_param.
 
   "! Delivered defaults of the parameters (names fixed by the user 2026-11-08)
@@ -110,30 +110,30 @@ INTERFACE zif_cd_ops_postarea_types
   "! guide, Implementation_Order.md; named in the messages of the configuration check)
   CONSTANTS:
     BEGIN OF gc_field,
-      reason         TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'REASON',
-      fica_reason    TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'FICA_REASON',
-      is_noc         TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'IS_NOC',
-      flow           TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'FLOW',
-      pay_method     TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'PAY_METHOD',
-      house_bank     TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'HOUSE_BANK',
-      method_class   TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'METHOD_CLASS',
-      age_basis      TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'AGE_BASIS',
-      calendar       TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'CALENDAR',
-      scheme         TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'SCHEME',
-      code           TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'CODE',
-      family         TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'FAMILY',
-      sub_family     TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'SUB_FAMILY',
-      bank_key       TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'BANK_KEY',
-      category       TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'CATEGORY',
-      rule_group     TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'RULE_GROUP',
-      exp_cdi        TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'EXP_CDI',
-      posting_rule   TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'POSTING_RULE',
-      action         TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'ACTION',
-      disposition    TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'DISPOSITION',
-      usage          TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'USAGE',
-      scope          TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'SCOPE',
-      role           TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'ROLE',
-      compare_amount TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'COMPARE_AMOUNT',
+      reason         TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'REASON',
+      fica_reason    TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'FICA_REASON',
+      is_noc         TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'IS_NOC',
+      flow           TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'FLOW',
+      pay_method     TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'PAY_METHOD',
+      house_bank     TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'HOUSE_BANK',
+      method_class   TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'METHOD_CLASS',
+      age_basis      TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'AGE_BASIS',
+      calendar       TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'CALENDAR',
+      scheme         TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'SCHEME',
+      code           TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'CODE',
+      family         TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'FAMILY',
+      sub_family     TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'SUB_FAMILY',
+      bank_key       TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'BANK_KEY',
+      category       TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'CATEGORY',
+      rule_group     TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'RULE_GROUP',
+      exp_cdi        TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'EXP_CDI',
+      posting_rule   TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'POSTING_RULE',
+      action         TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ACTION',
+      disposition    TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'DISPOSITION',
+      usage          TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'USAGE',
+      scope          TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'SCOPE',
+      role           TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ROLE',
+      compare_amount TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'COMPARE_AMOUNT',
     END OF gc_field.
 
   "! Separator of the allowed values the configuration check names (comma list)
@@ -148,11 +148,11 @@ INTERFACE zif_cd_ops_postarea_types
       area     TYPE ty_area,
       "! Key values of the entry, separated by GC_KEY_SEPARATOR (blank: the whole area)
       entry    TYPE string,
-      severity TYPE zif_cd_ops_types=>ty_severity,
-      number   TYPE zif_cd_ops_cfg_types=>ty_msg_number,
-      v1       TYPE zif_cd_ops_cfg_types=>ty_msg_var,
-      v2       TYPE zif_cd_ops_cfg_types=>ty_msg_var,
-      v3       TYPE zif_cd_ops_cfg_types=>ty_msg_var,
+      severity TYPE zif_ca_ops_types=>ty_severity,
+      number   TYPE zif_ca_ops_cfg_types=>ty_msg_number,
+      v1       TYPE zif_ca_ops_cfg_types=>ty_msg_var,
+      v2       TYPE zif_ca_ops_cfg_types=>ty_msg_var,
+      v3       TYPE zif_ca_ops_cfg_types=>ty_msg_var,
     END OF ty_check_message.
   TYPES tt_check_message TYPE STANDARD TABLE OF ty_check_message WITH EMPTY KEY.
 

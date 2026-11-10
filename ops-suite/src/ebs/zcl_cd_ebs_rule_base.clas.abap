@@ -14,7 +14,7 @@
 *& 2026-11-06 | FS-CD review: in-flight grace - not found within EBS_INFLIGHT_HOURS is AWAITING_LOT_TRANSFER (W, NOTIFY).
 *& 2026-11-06 | Perf fix 1: DFKKCR read once per package (memo for R07C/R08/R12), rows canonicalised once (sorted index).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
-*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CA_OPS_PARAMS).
 *& 2026-11-07 | EBS_ZTNUM_IGNORE_ZEROS is BOOL in ZCA_PARAM (blank value row = off); default from
 *&            | GC_PARAM_DEFAULT.
 *&---------------------------------------------------------------------*
@@ -88,7 +88,7 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
 
     METHODS param
       IMPORTING
-        iv_name         TYPE zif_cd_ops_types=>ty_param_name
+        iv_name         TYPE zif_ca_ops_types=>ty_param_name
         iv_default      TYPE string OPTIONAL
       RETURNING
         VALUE(rv_value) TYPE string.
@@ -131,7 +131,7 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         iv_width             TYPE i
         iv_alphanumeric      TYPE abap_bool DEFAULT abap_false
       RETURNING
-        VALUE(rv_check_code) TYPE zif_cd_ops_types=>ty_check_code.
+        VALUE(rv_check_code) TYPE zif_ca_ops_types=>ty_check_code.
 
     "! A65: finding of the rule for a line whose reference cannot become the key; initial if it can
     METHODS key_rejection
@@ -142,7 +142,7 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         iv_width          TYPE i
         iv_alphanumeric   TYPE abap_bool DEFAULT abap_false
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! A65: key_rejection for the payment engine document number (OPBEL / AUGBL / DOC1R)
     METHODS docno_rejection
@@ -150,7 +150,7 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
         is_line           TYPE zif_cd_ebs_types=>ty_line
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! FS-CD review: the finding for a lookup that found nothing. While the statement is
     "! younger than EBS_INFLIGHT_HOURS (default 0 = off) the payment / returns lot can
@@ -161,10 +161,10 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
         is_line           TYPE zif_cd_ebs_types=>ty_line
         it_statements     TYPE zif_cd_ebs_types=>tt_statement
-        iv_check_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code     TYPE zif_ca_ops_types=>ty_check_code
         iv_message        TYPE clike
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! Age of the line's statement in seconds: from its creation date/time, else from the
     "! start of its statement date (the longest possible age); -1 = unknown
@@ -256,7 +256,7 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       IMPORTING
         is_rule             TYPE zif_cd_ebs_types=>ty_rule_cfg
       RETURNING
-        VALUE(rv_tolerance) TYPE zif_cd_ops_types=>ty_amount.
+        VALUE(rv_tolerance) TYPE zif_ca_ops_types=>ty_amount.
 
     METHODS line_reference
       IMPORTING
@@ -352,14 +352,14 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
 
   METHOD docno_length.
-    rv_length = CONV i( zcl_cd_ops_util=>to_decimal(
+    rv_length = CONV i( zcl_ca_ops_util=>to_decimal(
       iv_value   = param( iv_name = zif_cd_ebs_types=>gc_param-keylen_docno iv_default = |{ gc_default_docno_length }| )
       iv_default = gc_default_docno_length ) ).
   ENDMETHOD.
 
 
   METHOD ztnum_length.
-    rv_length = CONV i( zcl_cd_ops_util=>to_decimal(
+    rv_length = CONV i( zcl_ca_ops_util=>to_decimal(
       iv_value = param( iv_name = zif_cd_ebs_types=>gc_param-keylen_ztnum iv_default = |{ gc_default_ztnum_length }| ) ) ).
   ENDMETHOD.
 
@@ -418,7 +418,7 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
 
   METHOD not_found_finding.
-    DATA(lv_hours) = CONV i( zcl_cd_ops_util=>to_decimal(
+    DATA(lv_hours) = CONV i( zcl_ca_ops_util=>to_decimal(
       iv_value   = param( iv_name = zif_cd_ebs_types=>gc_param-inflight_hours iv_default = |{ gc_default_inflight_hours }| )
       iv_default = gc_default_inflight_hours ) ).
     DATA(lv_age) = COND i( WHEN lv_hours > 0 THEN statement_age( is_line = is_line it_statements = it_statements )
@@ -439,8 +439,8 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
                                                           iv_v2    = iv_check_code
                                                           iv_v3    = lv_hours )
                    iv_details    = CONV #( iv_message ) ).
-    rs_finding-severity = zif_cd_ops_types=>gc_severity-warning.
-    rs_finding-action   = zif_cd_ops_types=>gc_action-notify.
+    rs_finding-severity = zif_ca_ops_types=>gc_severity-warning.
+    rs_finding-action   = zif_ca_ops_types=>gc_action-notify.
   ENDMETHOD.
 
 
@@ -454,7 +454,7 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
     ENDIF.
     " VERIFY: FEBKO / bank file creation times are system local time, like the clock's today/time
     DATA(lv_time) = COND t( WHEN ls_statement-created_date IS NOT INITIAL THEN ls_statement-created_time ).
-    DATA(lo_clock) = zcl_cd_ops_factory=>get_clock( ).
+    DATA(lo_clock) = zcl_ca_ops_factory=>get_clock( ).
     rv_age = ( lo_clock->today( ) - lv_date ) * gc_seconds_per_day + ( lo_clock->time( ) - lv_time ).
     " A creation time in the future is treated as just created
     rv_age = nmax( val1 = rv_age val2 = 0 ).
@@ -572,7 +572,7 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
   METHOD value_list.
     DATA(lv_values) = condense( CONV string( iv_values ) ).
-    rt_list = zcl_cd_ops_util=>split_list( COND string( WHEN lv_values IS INITIAL THEN iv_default
+    rt_list = zcl_ca_ops_util=>split_list( COND string( WHEN lv_values IS INITIAL THEN iv_default
                                                          ELSE lv_values ) ).
   ENDMETHOD.
 
@@ -584,7 +584,7 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
 
   METHOD amount_param.
-    rv_amount = zcl_cd_ops_util=>to_decimal( iv_value = iv_value iv_default = iv_default ).
+    rv_amount = zcl_ca_ops_util=>to_decimal( iv_value = iv_value iv_default = iv_default ).
   ENDMETHOD.
 
 

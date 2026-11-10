@@ -41,7 +41,7 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     DATA mt_accounts TYPE zif_cd_ebs_types=>tt_account_cfg.
     DATA mt_stmts    TYPE zif_cd_ebs_types=>tt_statement.
     DATA mt_lines    TYPE zif_cd_ebs_types=>tt_line.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
 
     METHODS setup.
     METHODS add_map_row
@@ -52,7 +52,7 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
         iv_flow     TYPE zif_cd_ebs_types=>ty_flow DEFAULT zif_cd_ebs_types=>gc_flow-any
         iv_category TYPE zif_cd_ebs_types=>ty_category
         iv_group    TYPE zif_cd_ebs_types=>ty_rule_group OPTIONAL
-        iv_action   TYPE zif_cd_ops_types=>ty_action OPTIONAL
+        iv_action   TYPE zif_ca_ops_types=>ty_action OPTIONAL
         iv_active   TYPE abap_bool DEFAULT abap_true.
     METHODS add_line
       IMPORTING
@@ -252,10 +252,10 @@ CLASS ltc_resolver IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_finding-rule_id exp = 'R14'
                                             msg = 'Unmapped code is rule R14' ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-severity
-                                            exp = zif_cd_ops_types=>gc_severity-block
+                                            exp = zif_ca_ops_types=>gc_severity-block
                                             msg = 'Unmapped code must have severity B' ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-action
-                                            exp = zif_cd_ops_types=>gc_action-block
+                                            exp = zif_ca_ops_types=>gc_action-block
                                             msg = 'Unmapped code must have action BLOCK' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -402,7 +402,7 @@ CLASS ltc_resolver IMPLEMENTATION.
                                             exp = zif_cd_ebs_types=>gc_check_code-flow_pattern_invalid
                                             msg = 'The finding names the invalid flow pattern' ).
         cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-action
-                                            exp = zif_cd_ops_types=>gc_action-block
+                                            exp = zif_ca_ops_types=>gc_action-block
                                             msg = 'Fail closed: the line is not posted' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -450,7 +450,7 @@ CLASS ltc_resolver IMPLEMENTATION.
   METHOD block_action_blocks_noc_line.
     TRY.
         add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
-                     iv_category = gc_test-cat_n01 iv_action = zif_cd_ops_types=>gc_action-block ).
+                     iv_category = gc_test-cat_n01 iv_action = zif_ca_ops_types=>gc_action-block ).
         add_line( iv_code = gc_test-code_168 ).
 
         run_resolver( ).
@@ -458,7 +458,7 @@ CLASS ltc_resolver IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = first_line( )-blocked
                                           msg = 'Map action BLOCK must block the line' ).
         cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity
-                                            exp = zif_cd_ops_types=>gc_severity-info
+                                            exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'A configured block is information, not an error' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -615,9 +615,9 @@ CLASS ltc_resolver IMPLEMENTATION.
   METHOD blank_and_star_conflict.
     TRY.
         add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
-                     iv_flow = space iv_category = gc_test-cat_d02 iv_action = zif_cd_ops_types=>gc_action-auto_post ).
+                     iv_flow = space iv_category = gc_test-cat_d02 iv_action = zif_ca_ops_types=>gc_action-auto_post ).
         add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
-                     iv_category = gc_test-cat_d02 iv_action = zif_cd_ops_types=>gc_action-exception ).
+                     iv_category = gc_test-cat_d02 iv_action = zif_ca_ops_types=>gc_action-exception ).
         add_line( iv_code = gc_test-code_168 ).
         run_resolver( ).
         cl_abap_unit_assert=>assert_true( act = first_line( )-blocked msg = 'A contradictory mapping must block the line' ).

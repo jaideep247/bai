@@ -1,6 +1,6 @@
 // Artifact: zr_cd_opscritexc.ddls.asddls
 // Purpose: "Open critical exceptions" card of the production-support overview page: open or
-//          assigned findings (ZCD_OPS_FINDING disposition O / A) of severity B (block) or E (error)
+//          assigned findings (ZCA_OPS_FINDING disposition O / A) of severity B (block) or E (error)
 //          across all payment engine areas (FMON, EBS, HCK, CORE), with owner, due date, overdue
 //          flag and days overdue. GROUP1 is never exposed (EBS statement findings hold the bank
 //          account number there); the message of EBS statement / file findings of the bank-file
@@ -12,11 +12,11 @@
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #M, dataClass: #TRANSACTIONAL }
 define root view entity ZR_CD_OpsCritExc
-  as select from zcd_ops_finding
+  as select from zca_ops_finding
 {
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
-      pe_area                                               as PaymentEngineArea,
+      area                                               as PaymentEngineArea,
       object_type                                           as ObjectType,
       object_key                                            as ObjectKey,
       // Interface / payment method (FMON), category / bank key (EBS), check id (HCK)
@@ -25,7 +25,7 @@ define root view entity ZR_CD_OpsCritExc
       check_code                                            as CheckCode,
       severity                                              as Severity,
       cast( 1 as abap.int1 )                                as SeverityCriticality,
-      cast( case when pe_area = 'EBS' and ( object_type = 'STMT' or object_type = 'FILE' )
+      cast( case when area = 'CD_EBS' and ( object_type = 'STMT' or object_type = 'FILE' )
                   and left( object_key, 3 ) <> 'FEB'
                  then ' ' else message end as abap.char( 255 ) ) as FindingMessage,
       disposition                                           as Disposition,

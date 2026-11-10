@@ -77,22 +77,22 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
        OR lines( lt_unresolved ) >= zcl_cd_hck_param=>job_rows_cap( ).
       INSERT VALUE #( object_key = is_def-check_id
                       check_code = zif_cd_hck_types=>gc_code-job_read_capped
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_read_capped
                                                           iv_v1    = zcl_cd_hck_param=>job_rows_cap( )
                                                           iv_v2    = is_def-check_id ) )
         INTO TABLE rs_result-findings.
     ENDIF.
     LOOP AT lt_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
-      DATA(ls_finding) = VALUE zif_cd_ops_types=>ty_finding( object_key = |{ <ls_run>-jobname }/{ <ls_run>-jobcount }|
+      DATA(ls_finding) = VALUE zif_ca_ops_types=>ty_finding( object_key = |{ <ls_run>-jobname }/{ <ls_run>-jobcount }|
                                                              reference  = <ls_run>-jobname
-                                                             action     = zif_cd_ops_types=>gc_action-notify ).
+                                                             action     = zif_ca_ops_types=>gc_action-notify ).
       CASE <ls_run>-status.
         WHEN zif_cd_hck_types=>gc_job_status-aborted.
           lv_cancelled = lv_cancelled + 1.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-job_cancelled.
-          ls_finding-severity   = zif_cd_ops_types=>gc_severity-error.
+          ls_finding-severity   = zif_ca_ops_types=>gc_severity-error.
           ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_cancelled_started
                                                          iv_v1    = <ls_run>-jobname
                                                          iv_v2    = |{ <ls_run>-strtdate DATE = ISO }|
@@ -107,7 +107,7 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
           ENDIF.
           lv_long = lv_long + 1.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-job_long_running.
-          ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
+          ls_finding-severity   = zif_ca_ops_types=>gc_severity-warning.
           ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_active_for_min_limit
                                                          iv_v1    = <ls_run>-jobname
                                                          iv_v2    = lv_minutes
@@ -122,7 +122,7 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
           ENDIF.
           lv_late = lv_late + 1.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-job_late_start.
-          ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
+          ls_finding-severity   = zif_ca_ops_types=>gc_severity-warning.
           ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_planned_has_not_started
                                                          iv_v1    = <ls_run>-jobname
                                                          iv_v2    = |{ <ls_run>-sdlstrtdt DATE = ISO }|

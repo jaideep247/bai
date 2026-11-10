@@ -43,35 +43,35 @@ flowchart LR
   EBS[EBS engine] --> R
   FMON[FMON engine] --> R
   HCK[HCK engine] --> R
-  R[ZCL_CD_OPS_ALERT_ROUTER.dispatch] --> P[ZCL_CD_OPS_ALERT_POLICY: match, quiet, throttle, escalate, build]
-  P --> C{Channel plug-in ZCD_OPS_ALCHN}
-  C --> M[ZCL_CD_OPS_CHN_EMAIL - BCS]
-  C --> L[ZCL_CD_OPS_CHN_APPLOG - SLG1]
-  R --> LOG[(ZCD_OPS_ALLOG)]
+  R[ZCL_CA_OPS_ALERT_ROUTER.dispatch] --> P[ZCL_CA_OPS_ALERT_POLICY: match, quiet, throttle, escalate, build]
+  P --> C{Channel plug-in ZCA_OPS_ALCHN}
+  C --> M[ZCL_CA_OPS_CHN_EMAIL - BCS]
+  C --> L[ZCL_CA_OPS_CHN_APPLOG - SLG1]
+  R --> LOG[(ZCA_OPS_ALLOG)]
 ```
 
 | Object | Role | Test level |
 |---|---|---|
-| ZIF_CD_OPS_ALERT | Port: `dispatch( run, findings )`, `send( route, subject, html )` | — |
-| ZCL_CD_OPS_ALERT_POLICY | Pure decisions (severity floor, PCRE patterns (complete value, case ignored), run-level RAG/abort, quiet hours incl. midnight wrap, throttle, escalation, digest/per-finding with cap, HTML escaping) | Domain, 14 tests |
-| ZCL_CD_OPS_ALERT_ROUTER | Orchestration, logging, failure isolation | Application with doubles, 8 tests |
-| ZCL_CD_OPS_ALERT_DAO | ZCD_OPS_ALRULE / _CHN / _LOG | OSQL (QA1) |
-| ZCL_CD_OPS_CHN_EMAIL / _APPLOG | Thin wrappers over BCS, BAL | Integration (QA1); own unit tests of the message build |
+| ZIF_CA_OPS_ALERT | Port: `dispatch( run, findings )`, `send( route, subject, html )` | — |
+| ZCL_CA_OPS_ALERT_POLICY | Pure decisions (severity floor, PCRE patterns (complete value, case ignored), run-level RAG/abort, quiet hours incl. midnight wrap, throttle, escalation, digest/per-finding with cap, HTML escaping) | Domain, 14 tests |
+| ZCL_CA_OPS_ALERT_ROUTER | Orchestration, logging, failure isolation | Application with doubles, 8 tests |
+| ZCL_CA_OPS_ALERT_DAO | ZCA_OPS_ALRULE / _CHN / _LOG | OSQL (QA1) |
+| ZCL_CA_OPS_CHN_EMAIL / _APPLOG | Thin wrappers over BCS, BAL | Integration (QA1); own unit tests of the message build |
 
 ### LUW rule
 The router and its channels commit (BCS sends on commit, BAL saves to the database). They run at the end of a report run in its own LUW. **Never call `dispatch( )` or `send( )` from a RAP behaviour handler or inside an update task** — hand the request to bgPF instead.
 
 ### Customizing
 
-`ZCD_OPS_ALRULE` (key RULE_ID): PE_AREA (`*` = all), MIN_SEVERITY, RULE/CHECK/GROUP1/GROUP2 patterns, MIN_RAG, ON_ABORT, CHANNEL, DESTINATION, DIGEST, MAX_ITEMS, THROTTLE_MIN, QUIET_FROM/TO, ESCALATE_AFTER, ESCALATION_DEST, ACTIVE.
-`ZCD_OPS_ALCHN` (key CHANNEL): CLASS_NAME, default DESTINATION, ACTIVE — a new channel is a class implementing `ZIF_CD_OPS_ALERT_CHANNEL` plus one row.
+`ZCA_OPS_ALRULE` (key RULE_ID): PE_AREA (`*` = all), MIN_SEVERITY, RULE/CHECK/GROUP1/GROUP2 patterns, MIN_RAG, ON_ABORT, CHANNEL, DESTINATION, DIGEST, MAX_ITEMS, THROTTLE_MIN, QUIET_FROM/TO, ESCALATE_AFTER, ESCALATION_DEST, ACTIVE.
+`ZCA_OPS_ALCHN` (key CHANNEL): CLASS_NAME, default DESTINATION, ACTIVE — a new channel is a class implementing `ZIF_CA_OPS_ALERT_CHANNEL` plus one row.
 Parameters (framework `ZCA_PARAM`, area `CD_OPS` — maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`); definitions and delivered defaults: `config/param_definitions.csv`): `ALERT_<route>` and `ALERT_DEFAULT` recipient lists (LIST) for `send( )` — one definition per route in use (`ALERT_MORNING`; a new route in `HCK_MAIL_ROUTE` needs its own definition); `ALERT_ESCALATION_WINDOW_H` (INT, default 24).
 
 Example rows: `config/alert_seed.md`.
 
 ### Rule patterns (PCRE, user decision 2026-11-06)
 
-RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched to the **complete** rule ID / check code / group of the finding, case ignored; blank = any. `.*SLA.*` = every check code containing SLA; `NOC_AGING` = only that code (a partial pattern is no match). The alerting app refuses a pattern that does not compile (message 418). A rule whose stored pattern does not compile is **not applied and logged FAILED** in ZCD_OPS_ALLOG with message 742 — it shows in the morning report's alert-delivery check, never as a silent no-match. Check a pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, areas ALERT_RULE / ALERT_CHK / ALERT_GRP1 / ALERT_GRP2 (values of the findings of the window).
+RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched to the **complete** rule ID / check code / group of the finding, case ignored; blank = any. `.*SLA.*` = every check code containing SLA; `NOC_AGING` = only that code (a partial pattern is no match). The alerting app refuses a pattern that does not compile (message 418). A rule whose stored pattern does not compile is **not applied and logged FAILED** in ZCA_OPS_ALLOG with message 742 — it shows in the morning report's alert-delivery check, never as a silent no-match. Check a pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, areas ALERT_RULE / ALERT_CHK / ALERT_GRP1 / ALERT_GRP2 (values of the findings of the window).
 
 ### Extension guide
 
@@ -83,11 +83,11 @@ RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched 
 | Stop night e-mails for warnings | QUIET_FROM 22:00, QUIET_TO 06:00 on the rule (blocks still go out) |
 | Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = SO23 lead list (`ZCD_RTBLEAD`) |
 | Alert when a file is not processed by a clock time (e.g. BAI by 10:00, 2026-11-07) | DEADLINE row in ZCD_FMON_SLA (`FMON_FILE_MONITORING.md` §A3b) + rule: PE_AREA FMON, MIN_SEVERITY E, CHECK_PATTERN `STAGE_DEADLINE_MISSED`, GROUP1_PATTERN = interface(s), EMAIL to an SO23 list, ESCALATE_AFTER in 5-minute runs — seed `FMON_BAIDL`. New rows of both tables by customizing transport from DV1; in PS4 only existing rows are edited (`Operations_Runbook.md` §5h). GROUP2 of the finding = `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED` (a second rule may send one condition to another list) |
-| Add a new channel type (later phase) | One class implementing ZIF_CD_OPS_ALERT_CHANNEL + ZCD_OPS_ALCHN row |
+| Add a new channel type (later phase) | One class implementing ZIF_CA_OPS_ALERT_CHANNEL + ZCA_OPS_ALCHN row |
 
 ### Deadline alerts and repeat suppression (2026-11-07)
 
-A deadline finding (`STAGE_DEADLINE_MISSED`) has the stable object key `<interface>/<business date>`: the 5-minute FMON runs after the due time raise the same key and check code, the store carries the open exception forward (same owner, due date, occurrences + 1) and the router logs such a carried-forward finding as **R (repeat)** without sending — one e-mail per interface and day, not one every 5 minutes. The rule's `ESCALATE_AFTER` (consecutive alerting runs) still sends the escalation to `ESCALATION_DEST`; `THROTTLE_MIN` 0 so the first raise is never held back. When the stage is reached the engine reconciles the key and the exception is resolved. No application-log rule is delivered for deadlines (SLG1 kept to a minimum, user rule 2026-11-07): findings are in ZCD_OPS_FINDING, mail goes to SO23 lists.
+A deadline finding (`STAGE_DEADLINE_MISSED`) has the stable object key `<interface>/<business date>`: the 5-minute FMON runs after the due time raise the same key and check code, the store carries the open exception forward (same owner, due date, occurrences + 1) and the router logs such a carried-forward finding as **R (repeat)** without sending — one e-mail per interface and day, not one every 5 minutes. The rule's `ESCALATE_AFTER` (consecutive alerting runs) still sends the escalation to `ESCALATION_DEST`; `THROTTLE_MIN` 0 so the first raise is never held back. When the stage is reached the engine reconciles the key and the exception is resolved. No application-log rule is delivered for deadlines (SLG1 kept to a minimum, user rule 2026-11-07): findings are in ZCA_OPS_FINDING, mail goes to SO23 lists.
 
 ### Delivery guarantees (Phase 6 audit)
 
@@ -99,7 +99,7 @@ A deadline finding (`STAGE_DEADLINE_MISSED`) has the stable object key `<interfa
 | Recipients maintained once | E-mail destinations are SO23 shared lists; the configuration app refuses a name that is not one (419), the channel refuses the route before sending if the list is gone (027) | User decision 2026-11-07 |
 | Escalation means "N runs in a row" | Counted over the area's run history; ESC_OVERRIDE passes the throttle | A46 |
 | A blocker is never cut by the cap | Severity-ordered cap, digest severity from the full selection, held-back count shown | A63 |
-| A misconfigured channel class never runs | Factory checks ZIF_CD_OPS_ALERT_CHANNEL by RTTI before CREATE OBJECT | A62 |
+| A misconfigured channel class never runs | Factory checks ZIF_CA_OPS_ALERT_CHANNEL by RTTI before CREATE OBJECT | A62 |
 | SLG1 entries are findable | External ID `<area>/<run>/<rule>`; BAL_LOG_REFRESH after save | SLG1 |
 | SLG1 kept to a minimum | No delivered rule uses the APPLOG channel; findings, alert attempts and parameter errors live in the suite's tables and the morning report. A rule that needs SLG1 should be E or higher, digest, small MAX_ITEMS | User decision 2026-11-07 |
 

@@ -12,7 +12,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
-*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*&            | instead of a hand-written store double: the semantics of ZCL_CA_OPS_STORE.
 *& 2026-11-07 | Release DAO slot removed (read-only scope).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED); A62 proved with a reader double
 *&            | (ltd_params), the framework refusal of a non-parser class (013) proved separately.
@@ -57,12 +57,12 @@ ENDCLASS.
 "! A reader that delivers a configured class name as it is (no framework validation)
 CLASS ltd_params DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_params PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_params PARTIALLY IMPLEMENTED.
     DATA mv_class TYPE string.
 ENDCLASS.
 
 CLASS ltd_params IMPLEMENTATION.
-  METHOD zif_cd_ops_params~get_param.
+  METHOD zif_ca_ops_params~get_param.
     rv_value = mv_class.
   ENDMETHOD.
 ENDCLASS.
@@ -74,8 +74,8 @@ CLASS ltc_ebs_factory DEFINITION FINAL FOR TESTING
 
   PRIVATE SECTION.
     CONSTANTS:
-      gc_param_bai2  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_PARSER_BAI2',
-      gc_not_parser  TYPE string VALUE `ZCL_CD_OPS_CLOCK`,
+      gc_param_bai2  TYPE zif_ca_ops_types=>ty_param_name VALUE 'EBS_PARSER_BAI2',
+      gc_not_parser  TYPE string VALUE `ZCL_CA_OPS_CLOCK`,
       gc_msgno_kind  TYPE symsgno VALUE '032',
       gc_msgno_intf  TYPE symsgno VALUE '013'.
 
@@ -206,7 +206,7 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
     TRY.
         zcl_cd_ebs_factory=>get_parser( zif_cd_ebs_types=>gc_format-bai2 ).
         cl_abap_unit_assert=>fail( msg = 'A class that is no parser must be refused' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_msgno_kind
                                             msg = 'Refused with message 032' ).

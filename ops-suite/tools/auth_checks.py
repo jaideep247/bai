@@ -3,7 +3,7 @@
 only the fields that config/auth_zcd_ops.md defines for it (section 1 field table and the
 field list of the object in section 2).
 
-Scanned: AUTHORITY-CHECK OBJECT 'ZCD_OPS' / zif_cd_ops_auth=>gc_object in ABAP sources and
+Scanned: AUTHORITY-CHECK OBJECT 'ZCD_OPS' / zif_ca_ops_auth=>gc_object in ABAP sources and
 aspect pfcg_auth( ZCD_OPS, ... ) in DCL sources (src/ and the ADT-only cds/ folder).
 A field name that SU21 does not know makes every kernel check fail (sy-subrc 12) and every
 DCL deny; abaplint cannot see it because the object is not in the SAP stubs.
@@ -14,7 +14,7 @@ import re
 OBJECT = 'ZCD_OPS'
 _AUTH_DOC = os.path.join('config', 'auth_zcd_ops.md')
 _ABAP_CHECK = re.compile(
-    r"AUTHORITY-CHECK\s+OBJECT\s+('\w+'|zif_cd_ops_auth=>gc_object)(.*?)\.(?:\s|$)", re.I | re.S)
+    r"AUTHORITY-CHECK\s+OBJECT\s+('\w+'|zif_ca_ops_auth=>gc_object)(.*?)\.(?:\s|$)", re.I | re.S)
 _ABAP_ID = re.compile(r"\bID\s+'([^']+)'", re.I)
 _DCL_AUTH = re.compile(r'pfcg_auth\s*\(\s*ZCD_OPS\s*,(.*?)\)', re.I | re.S)
 

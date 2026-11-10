@@ -41,7 +41,7 @@ CLASS zcl_cd_fmon_chk_sla IMPLEMENTATION.
 
     DATA(lv_stage) = CONV zif_cd_fmon_types=>ty_stage( to_upper( zcl_cd_fmon_util=>param(
                        iv_params = is_check-params iv_name = 'STAGE' ) ) ).
-    DATA(lv_late_severity) = CONV zif_cd_ops_types=>ty_severity( zcl_cd_fmon_util=>param(
+    DATA(lv_late_severity) = CONV zif_ca_ops_types=>ty_severity( zcl_cd_fmon_util=>param(
                                iv_params = is_check-params iv_name = 'LATE_SEVERITY' iv_default = `W` ) ).
 
     LOOP AT is_ctx-files ASSIGNING FIELD-SYMBOL(<ls_file>).
@@ -70,7 +70,7 @@ CLASS zcl_cd_fmon_chk_sla IMPLEMENTATION.
                    is_file     = <ls_file>
                    is_check    = is_check
                    iv_code     = zif_cd_fmon_types=>gc_check_code-prism_queue_long
-                   iv_severity = zif_cd_ops_types=>gc_severity-warning
+                   iv_severity = zif_ca_ops_types=>gc_severity-warning
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-prism_queue_long
                                                         iv_v1    = <ls_file>-file_name
                                                         iv_v2    = lv_queue_length
@@ -92,7 +92,7 @@ CLASS zcl_cd_fmon_chk_sla IMPLEMENTATION.
                                        THEN lv_late_severity
                                        " Audit A40: a stage passed without its own evidence - visible, not an error
                                        WHEN ls_verdict-state = zif_cd_fmon_types=>gc_sla_state-inferred
-                                       THEN zif_cd_ops_types=>gc_severity-info
+                                       THEN zif_ca_ops_types=>gc_severity-info
                                        ELSE <ls_sla>-severity )
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = COND #( WHEN ls_verdict-queue_min > 0
                                                                         THEN zif_cd_fmon_types=>gc_msg-after_min_sla_queue_min

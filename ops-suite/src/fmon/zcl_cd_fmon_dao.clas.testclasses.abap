@@ -24,19 +24,19 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
     CONSTANTS gc_now TYPE timestampl VALUE '20261102080000'.
 ENDCLASS.
 
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = gc_now.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = '20261102'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     rv_time = '080000'.
   ENDMETHOD.
 ENDCLASS.
@@ -86,7 +86,7 @@ CLASS ltc_dao DEFINITION FINAL
     "! A row of the approved-table list for ZCD_FMON_FILE (default: FMON / SOURCE, whole table)
     METHODS approve_file_table
       IMPORTING
-        iv_pe_area TYPE zif_cd_ops_types=>ty_pe_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor
+        iv_pe_area TYPE zif_ca_ops_types=>ty_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor
         iv_purpose TYPE zif_cd_ops_types=>ty_tabwl_purpose DEFAULT zif_cd_ops_types=>gc_tabwl_purpose-source.
 
     CLASS-METHODS class_setup.
@@ -150,7 +150,7 @@ CLASS ltc_dao IMPLEMENTATION.
 
   METHOD setup.
     go_env->clear_doubles( ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     mo_ddic = NEW #( ).
     zcl_cd_fmon_injector=>inject_ddic( mo_ddic ).
     mo_cut = NEW zcl_cd_fmon_dao( ).
@@ -409,7 +409,7 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD msgno_of_read.
     TRY.
         mo_cut->read_legacy( legacy_query( ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         rv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
   ENDMETHOD.
@@ -631,7 +631,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA lv_msgno TYPE symsgno.
     TRY.
         mo_cut->count_legacy( legacy_query( ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         lv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
     cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '244'
@@ -953,7 +953,7 @@ CLASS ltc_payrun_totals DEFINITION FINAL
       IMPORTING
         iv_laufi  TYPE clike
         iv_hbkid  TYPE clike
-        VALUE(iv_amount) TYPE zif_cd_ops_types=>ty_amount
+        VALUE(iv_amount) TYPE zif_ca_ops_types=>ty_amount
         iv_keyno  TYPE i.
 ENDCLASS.
 

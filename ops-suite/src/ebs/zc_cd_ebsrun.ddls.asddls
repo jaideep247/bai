@@ -2,7 +2,7 @@
 // Purpose: Consumption view of the EBS validation runs (service ZUI_CD_EBS_DASH): run history with line
 //          counters and finding counts, default aggregation of every measure, drill-down to
 //          the findings of the run.
-//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCA_PARAR = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'EBS validation dashboard - run'

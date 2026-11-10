@@ -23,8 +23,8 @@ INTERFACE zif_cd_ebs_rule
       it_statements      TYPE zif_cd_ebs_types=>tt_statement
       it_lines           TYPE zif_cd_ebs_types=>tt_line
     RETURNING
-      VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding
+      VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

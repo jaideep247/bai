@@ -19,7 +19,7 @@
 define root view entity ZR_CD_FmonAsOf
   as select from    ZI_CD_FmonRunLast as Last
     // FMON runs never overlap (core lock, variant *), so the end time identifies one run
-    left outer join zcd_ops_run       as Run on  Run.pe_area   = Last.PaymentEngineArea
+    left outer join zca_ops_run       as Run on  Run.area   = Last.PaymentEngineArea
                                              and Run.ended_at  = Last.LastEndedAt
                                              and Run.variant   = 'ALL'
                                              and Run.test_mode = ' '

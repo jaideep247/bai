@@ -46,8 +46,8 @@ class NameChecksFixture(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp()
         self.put(os.path.join('src', 'core', 'zcl_cd_fixture.clas.abap'), GOOD_CLASS)
-        self.put(os.path.join('ddic', 'core', 'zcd_ops_alchn.tabl.ddl'),
-                 TABLE.format(name='zcd_ops_alchn', field='channel_id'))
+        self.put(os.path.join('ddic', 'core', 'zca_ops_alchn.tabl.ddl'),
+                 TABLE.format(name='zca_ops_alchn', field='channel_id'))
 
     def tearDown(self):
         shutil.rmtree(self.root)
@@ -70,8 +70,8 @@ class NameChecksFixture(unittest.TestCase):
         self.assertIn('transparent table zcd_ops_long_table (18 > 16)', failures[0])
 
     def test_long_field_method_and_attribute_fail(self):
-        self.put(os.path.join('ddic', 'core', 'zcd_ops_alrule.tabl.ddl'),
-                 TABLE.format(name='zcd_ops_alrule', field='a_field_name_longer_than_thirty_c'))
+        self.put(os.path.join('ddic', 'core', 'zca_ops_alrule.tabl.ddl'),
+                 TABLE.format(name='zca_ops_alrule', field='a_field_name_longer_than_thirty_c'))
         self.put(os.path.join('src', 'core', 'zcl_cd_long.clas.abap'),
                  "CLASS zcl_cd_long DEFINITION PUBLIC FINAL.\n  PUBLIC SECTION.\n"
                  "    METHODS a_method_name_that_is_far_too_long.\n"
@@ -90,7 +90,7 @@ class NameChecksFixture(unittest.TestCase):
 
     def test_long_cds_entity_fails(self):
         self.put(os.path.join('src', 'fmon', 'zc_cd_x.ddls.asddls'),
-                 'define view entity ZC_CD_A_VIEW_ENTITY_NAME_TOO_LONG as select from zcd_ops_alchn { key mandt }')
+                 'define view entity ZC_CD_A_VIEW_ENTITY_NAME_TOO_LONG as select from zca_ops_alchn { key mandt }')
         self.assertIn('CDS name ZC_CD_A_VIEW_ENTITY_NAME_TOO_LONG', '\n'.join(name_checks.name_length_failures(self.root)))
 
     def test_method_with_data_prefix_or_camel_case_fails(self):

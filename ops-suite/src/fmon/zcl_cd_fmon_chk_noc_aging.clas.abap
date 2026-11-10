@@ -41,7 +41,7 @@ CLASS zcl_cd_fmon_chk_noc_aging IMPLEMENTATION.
                is_check    = is_check
                iv_code     = lv_code
                iv_severity = COND #( WHEN lv_code = zif_cd_fmon_types=>gc_check_code-noc_due_today
-                                     THEN zif_cd_ops_types=>gc_severity-warning )
+                                     THEN zif_ca_ops_types=>gc_severity-warning )
                iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-noc_entr_ies_open_after
                                                     iv_v1    = ls_file-file_name
                                                     iv_v2    = <ls_lot>-open_items

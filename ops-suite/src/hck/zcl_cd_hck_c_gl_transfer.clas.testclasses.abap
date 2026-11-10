@@ -79,7 +79,7 @@ CLASS ltc_gl_transfer DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -141,7 +141,7 @@ CLASS ltc_gl_transfer IMPLEMENTATION.
                                             exp = zif_cd_hck_types=>gc_code-gl_gap
                                             msg = 'Check code GL_TRANSFER_GAP' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-action
-                                            exp = zif_cd_ops_types=>gc_action-exception
+                                            exp = zif_ca_ops_types=>gc_action-exception
                                             msg = 'A gap is an owned exception' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-value exp = 1 msg = 'Metric counts 1' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_count_calls exp = 0

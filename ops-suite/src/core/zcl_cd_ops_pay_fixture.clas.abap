@@ -75,8 +75,8 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
 
     CONSTANTS gc_bukrs TYPE c LENGTH 4 VALUE 'US01'.
     CONSTANTS gc_country TYPE c LENGTH 3 VALUE 'US'.
-    CONSTANTS gc_currency TYPE zif_cd_ops_types=>ty_currency VALUE 'USD'.
-    CONSTANTS gc_amount TYPE zif_cd_ops_types=>ty_amount VALUE '-250.00'.
+    CONSTANTS gc_currency TYPE zif_ca_ops_types=>ty_currency VALUE 'USD'.
+    CONSTANTS gc_amount TYPE zif_ca_ops_types=>ty_amount VALUE '-250.00'.
     CONSTANTS gc_wire TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'E'.
     CONSTANTS gc_ach TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'G'.
     CONSTANTS gc_cheque TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'C'.
@@ -1049,13 +1049,13 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
       CASE is_scenario-expected.
         WHEN zif_cd_ops_payout_types=>gc_outcome-ambiguous.
           ls_row-finding  = zif_cd_ops_payout_types=>gc_code-source_ambiguous.
-          ls_row-severity = zif_cd_ops_types=>gc_severity-warning.
+          ls_row-severity = zif_ca_ops_types=>gc_severity-warning.
         WHEN zif_cd_ops_payout_types=>gc_outcome-inconsistent.
           ls_row-finding  = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
-          ls_row-severity = zif_cd_ops_types=>gc_severity-error.
+          ls_row-severity = zif_ca_ops_types=>gc_severity-error.
         WHEN zif_cd_ops_payout_types=>gc_outcome-undetermined.
           ls_row-finding  = zif_cd_hck_runtime_types=>gc_code-undetermined.
-          ls_row-severity = zif_cd_ops_types=>gc_severity-warning.
+          ls_row-severity = zif_ca_ops_types=>gc_severity-warning.
         WHEN OTHERS.
           IF is_scenario-status_pending = abap_true.
             ls_row-finding = zif_cd_ops_payout_types=>gc_code-status_pending.

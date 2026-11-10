@@ -1,5 +1,5 @@
 // Artifact: zi_cd_hckfinding.ddls.asddls
-// Purpose: Basic view of morning report findings (ZCD_OPS_FINDING, area HCK, OBJECT_TYPE CHECK:
+// Purpose: Basic view of morning report findings (ZCA_OPS_FINDING, area HCK, OBJECT_TYPE CHECK:
 //          GROUP1 = category A-E, GROUP2 = check id, OBJECT_KEY = <check>/<metric>/<DIM1>,
 //          REFERENCE = DIM2 for metric findings, HCK_MORNING_REPORT.md section 6) for the health
 //          check dashboard: every open / assigned finding plus every finding created in the last
@@ -13,11 +13,11 @@
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #L, dataClass: #TRANSACTIONAL }
 @VDM.viewType: #BASIC
 define view entity ZI_CD_HckFinding
-  as select from zcd_ops_finding
+  as select from zca_ops_finding
 {
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
-      cast( 'HCK' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_HCK' as abap.char( 16 ) )                       as PaymentEngineArea,
       // Check id (CHAR 20 in ZCD_HCK_DEF) from GROUP2 (CHAR 35). VERIFY-ADT: CHAR cast to a shorter length
       cast( group2 as abap.char( 20 ) )                     as CheckId,
       cast( group1 as abap.char( 1 ) )                      as Category,
@@ -49,7 +49,7 @@ define view entity ZI_CD_HckFinding
       created_at                                            as CreatedAt,
       tstmp_to_dats( cast( created_at as timestamp ), 'UTC', $session.client, 'NULL' ) as CreatedDate
 }
-where pe_area     = 'HCK'
+where area     = 'CD_HCK'
   and object_type = 'CHECK'
   and ( disposition = 'O' or disposition = 'A'
      or tstmp_to_dats( cast( created_at as timestamp ), 'UTC', $session.client, 'NULL' )

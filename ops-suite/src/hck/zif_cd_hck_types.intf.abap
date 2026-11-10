@@ -17,9 +17,9 @@
 *& 2026-11-06 | BASELINE_WARMUP code, warm-up flag and counts (audit A102).
 *& 2026-11-06 | Expected group set of an aggregate, ZCD_HCK_AGGGRP (audit A103).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
-*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | PCRE patterns: object / subobject / cycle / pattern ranges removed (patterns are lists of PCRE,
-*&              zif_cd_ops_types=>tt_pcre); PATTERN_INVALID, SUPPRESSION_PATTERN_INVALID, messages 371-373,
+*&              zif_ca_ops_types=>tt_pcre); PATTERN_INVALID, SUPPRESSION_PATTERN_INVALID, messages 371-373,
 *&              gc_max_job_names.
 *& 2026-11-07 | GC_PARAM_DEFAULT-MAX_AGE_HOURS (was inline in the engine), GC_DASHBOARD-WINDOW_DAYS
 *&            | (single source of the CDS literals, cds_abap_parity).
@@ -104,9 +104,9 @@ INTERFACE zif_cd_hck_types
   TYPES ty_bal_subobject TYPE c LENGTH 20.
   TYPES ty_score         TYPE i.
   TYPES ty_channel       TYPE c LENGTH 10.
-  "! ZCD_OPS_FINDING-DISPOSITION: O open, A assigned, I information, R resolved, W waived
+  "! ZCA_OPS_FINDING-DISPOSITION: O open, A assigned, I information, R resolved, W waived
   TYPES ty_disposition   TYPE c LENGTH 1.
-  "! ZCD_OPS_ALLOG-STATUS: S sent, F failed, T throttled
+  "! ZCA_OPS_ALLOG-STATUS: S sent, F failed, T throttled
   TYPES ty_alert_status  TYPE c LENGTH 1.
 
   TYPES tt_category_range TYPE RANGE OF ty_category.
@@ -186,43 +186,43 @@ INTERFACE zif_cd_hck_types
   "! Finding check codes written by the engine and the delivered checks
   CONSTANTS:
     BEGIN OF gc_code,
-      plugin_error     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
-      threshold_red    TYPE zif_cd_ops_types=>ty_check_code VALUE 'THRESHOLD_RED',
-      threshold_amber  TYPE zif_cd_ops_types=>ty_check_code VALUE 'THRESHOLD_AMBER',
-      baseline_outlier TYPE zif_cd_ops_types=>ty_check_code VALUE 'BASELINE_OUTLIER',
-      timeout          TYPE zif_cd_ops_types=>ty_check_code VALUE 'TIMEOUT_OVERRUN',
-      pe_area_stale     TYPE zif_cd_ops_types=>ty_check_code VALUE 'MODULE_STALE',
-      alert_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'ALERT_FAILED',
-      gl_gap           TYPE zif_cd_ops_types=>ty_check_code VALUE 'GL_TRANSFER_GAP',
-      job_cancelled    TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_CANCELLED',
-      job_long_running TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_LONG_RUNNING',
-      job_late_start   TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_LATE_START',
-      step_missed      TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_MISSED',
-      step_failed      TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_FAILED',
-      step_stuck       TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_STUCK',
-      step_overrun     TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_OVERRUN',
-      step_blocked     TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_BLOCKED',
-      config_drift     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_DRIFT',
-      agg_invalid      TYPE zif_cd_ops_types=>ty_check_code VALUE 'AGG_CONFIG_INVALID',
-      no_baseline      TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_NO_BASELINE',
-      run_hung         TYPE zif_cd_ops_types=>ty_check_code VALUE 'RUN_HUNG',
-      no_checks        TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECKS_NOT_CONFIGURED',
-      step_retried     TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_RETRIED',
-      step_late        TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_LATE',
-      job_read_capped  TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_READ_CAPPED',
-      baseline_outdated TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_BASELINE_OUTDATED',
-      budget_exhausted TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_BUDGET_EXHAUSTED',
+      plugin_error     TYPE zif_ca_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
+      threshold_red    TYPE zif_ca_ops_types=>ty_check_code VALUE 'THRESHOLD_RED',
+      threshold_amber  TYPE zif_ca_ops_types=>ty_check_code VALUE 'THRESHOLD_AMBER',
+      baseline_outlier TYPE zif_ca_ops_types=>ty_check_code VALUE 'BASELINE_OUTLIER',
+      timeout          TYPE zif_ca_ops_types=>ty_check_code VALUE 'TIMEOUT_OVERRUN',
+      pe_area_stale     TYPE zif_ca_ops_types=>ty_check_code VALUE 'MODULE_STALE',
+      alert_failed     TYPE zif_ca_ops_types=>ty_check_code VALUE 'ALERT_FAILED',
+      gl_gap           TYPE zif_ca_ops_types=>ty_check_code VALUE 'GL_TRANSFER_GAP',
+      job_cancelled    TYPE zif_ca_ops_types=>ty_check_code VALUE 'JOB_CANCELLED',
+      job_long_running TYPE zif_ca_ops_types=>ty_check_code VALUE 'JOB_LONG_RUNNING',
+      job_late_start   TYPE zif_ca_ops_types=>ty_check_code VALUE 'JOB_LATE_START',
+      step_missed      TYPE zif_ca_ops_types=>ty_check_code VALUE 'STEP_MISSED',
+      step_failed      TYPE zif_ca_ops_types=>ty_check_code VALUE 'STEP_FAILED',
+      step_stuck       TYPE zif_ca_ops_types=>ty_check_code VALUE 'STEP_STUCK',
+      step_overrun     TYPE zif_ca_ops_types=>ty_check_code VALUE 'STEP_OVERRUN',
+      step_blocked     TYPE zif_ca_ops_types=>ty_check_code VALUE 'STEP_BLOCKED',
+      config_drift     TYPE zif_ca_ops_types=>ty_check_code VALUE 'CONFIG_DRIFT',
+      agg_invalid      TYPE zif_ca_ops_types=>ty_check_code VALUE 'AGG_CONFIG_INVALID',
+      no_baseline      TYPE zif_ca_ops_types=>ty_check_code VALUE 'CONFIG_NO_BASELINE',
+      run_hung         TYPE zif_ca_ops_types=>ty_check_code VALUE 'RUN_HUNG',
+      no_checks        TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHECKS_NOT_CONFIGURED',
+      step_retried     TYPE zif_ca_ops_types=>ty_check_code VALUE 'STEP_RETRIED',
+      step_late        TYPE zif_ca_ops_types=>ty_check_code VALUE 'STEP_LATE',
+      job_read_capped  TYPE zif_ca_ops_types=>ty_check_code VALUE 'JOB_READ_CAPPED',
+      baseline_outdated TYPE zif_ca_ops_types=>ty_check_code VALUE 'CONFIG_BASELINE_OUTDATED',
+      budget_exhausted TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHECK_BUDGET_EXHAUSTED',
       "! Baseline has fewer than the minimum history runs: no baseline verdict yet (A102)
-      baseline_warmup  TYPE zif_cd_ops_types=>ty_check_code VALUE 'BASELINE_WARMUP',
+      baseline_warmup  TYPE zif_ca_ops_types=>ty_check_code VALUE 'BASELINE_WARMUP',
       "! A job-step job name (ZCD_JOB_STEP-JOBNAME) is not valid PCRE - step not evaluated
-      pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
+      pattern_invalid  TYPE zif_ca_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
       "! A suppression key pattern is not valid PCRE - suppression not applied
-      suppression_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'SUPPRESSION_PATTERN_INVALID',
+      suppression_invalid TYPE zif_ca_ops_types=>ty_check_code VALUE 'SUPPRESSION_PATTERN_INVALID',
       "! A parameter of the suite that ZCA_PARAM refuses (ZCL_CD_HCK_C_PARAM)
-      param_invalid    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PARAM_INVALID',
+      param_invalid    TYPE zif_ca_ops_types=>ty_check_code VALUE 'PARAM_INVALID',
       "! An entry of a customer posting area ZRSN / ZPMC / ZBTM / ZBTR its reader cannot use
       "! (ZCL_CD_HCK_C_POSTAREA, ZCL_CD_OPS_CFG_CHECKS=>CHECK_POSTING_AREAS)
-      postarea_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTAREA_INVALID',
+      postarea_invalid TYPE zif_ca_ops_types=>ty_check_code VALUE 'POSTAREA_INVALID',
     END OF gc_code.
 
   CONSTANTS:
@@ -253,13 +253,13 @@ INTERFACE zif_cd_hck_types
       amber_min     TYPE i,
     END OF ty_score_rules.
 
-  CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'CHECK'.
+  CONSTANTS gc_object_type TYPE zif_ca_ops_types=>ty_object_type VALUE 'CHECK'.
   CONSTANTS gc_default_key TYPE ty_thresh_key VALUE '*'.
   CONSTANTS gc_self_check  TYPE ty_check_id VALUE 'HCK_SELF'.
   "! Result row raised when no business check is selected / active (audit A60)
   CONSTANTS gc_config_check TYPE ty_check_id VALUE 'HCK_CONFIG'.
   "! Plug-in interface every configured check class implements (factory check, A62)
-  CONSTANTS gc_check_intf TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_CHECK'.
+  CONSTANTS gc_check_intf TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_CHECK'.
   "! Row cap of one job read (TBTCO); a read that reaches it is reported (audit A44)
   CONSTANTS gc_max_job_rows TYPE i VALUE 50000.
   "! Cap of the distinct job names read for the PCRE filter (TBTCO, date window or open
@@ -272,7 +272,7 @@ INTERFACE zif_cd_hck_types
       check_id     TYPE ty_check_id,
       description  TYPE ty_text,
       category     TYPE ty_category,
-      class_name   TYPE zif_cd_ops_types=>ty_class_name,
+      class_name   TYPE zif_ca_ops_types=>ty_class_name,
       active       TYPE abap_bool,
       seq          TYPE i,
       priority     TYPE ty_priority,
@@ -380,7 +380,7 @@ INTERFACE zif_cd_hck_types
   "! ZCD_HCK_METRIC
   TYPES:
     BEGIN OF ty_metric_hist,
-      run_id      TYPE zif_cd_ops_types=>ty_run_id,
+      run_id      TYPE zif_ca_ops_types=>ty_run_id,
       check_id    TYPE ty_check_id,
       metric      TYPE ty_metric_name,
       dim1        TYPE ty_dim,
@@ -432,16 +432,16 @@ INTERFACE zif_cd_hck_types
   "! ZCD_HCK_RESULT: the verdict of one check in one run, from the same decision the report uses
   TYPES:
     BEGIN OF ty_result_row,
-      run_id        TYPE zif_cd_ops_types=>ty_run_id,
+      run_id        TYPE zif_ca_ops_types=>ty_run_id,
       check_id      TYPE ty_check_id,
       executed_at   TYPE timestampl,
       category      TYPE ty_category,
       priority      TYPE ty_priority,
-      verdict       TYPE zif_cd_ops_types=>ty_rag,
+      verdict       TYPE zif_ca_ops_types=>ty_rag,
       check_status  TYPE ty_check_status,
       completion    TYPE ty_completion,
       evidence      TYPE ty_completion,
-      run_scope     TYPE zif_cd_ops_types=>ty_message,
+      run_scope     TYPE zif_ca_ops_types=>ty_message,
       metric_count  TYPE i,
       finding_count TYPE i,
       error_count   TYPE i,
@@ -449,15 +449,15 @@ INTERFACE zif_cd_hck_types
       baseline_mode TYPE ty_baseline_mode,
       warmup        TYPE abap_bool,
       runtime_ms    TYPE i,
-      message       TYPE zif_cd_ops_types=>ty_message,
+      message       TYPE zif_ca_ops_types=>ty_message,
     END OF ty_result_row.
   TYPES tt_result_row TYPE STANDARD TABLE OF ty_result_row WITH EMPTY KEY.
 
   "! Result of evaluating one metric against its threshold / baseline
   TYPES:
     BEGIN OF ty_evaluation,
-      rag        TYPE zif_cd_ops_types=>ty_rag,
-      check_code TYPE zif_cd_ops_types=>ty_check_code,
+      rag        TYPE zif_ca_ops_types=>ty_rag,
+      check_code TYPE zif_ca_ops_types=>ty_check_code,
       z_score    TYPE ty_value,
       mean       TYPE ty_value,
       points     TYPE i,
@@ -536,10 +536,10 @@ INTERFACE zif_cd_hck_types
     END OF ty_applog_stat.
   TYPES tt_applog_stat TYPE STANDARD TABLE OF ty_applog_stat WITH EMPTY KEY.
 
-  "! Overdue owned exceptions per payment engine area (ZCD_OPS_FINDING)
+  "! Overdue owned exceptions per payment engine area (ZCA_OPS_FINDING)
   TYPES:
     BEGIN OF ty_overdue,
-      pe_area     TYPE zif_cd_ops_types=>ty_pe_area,
+      pe_area     TYPE zif_ca_ops_types=>ty_area,
       item_count TYPE int8,
       oldest_due TYPE d,
     END OF ty_overdue.
@@ -548,13 +548,13 @@ INTERFACE zif_cd_hck_types
   "! Open owned exception for the morning report (top N)
   TYPES:
     BEGIN OF ty_open_exception,
-      pe_area       TYPE zif_cd_ops_types=>ty_pe_area,
-      group1       TYPE zif_cd_ops_types=>ty_group,
-      group2       TYPE zif_cd_ops_types=>ty_group,
-      object_key   TYPE zif_cd_ops_types=>ty_object_key,
-      check_code   TYPE zif_cd_ops_types=>ty_check_code,
-      severity     TYPE zif_cd_ops_types=>ty_severity,
-      message      TYPE zif_cd_ops_types=>ty_message,
+      pe_area       TYPE zif_ca_ops_types=>ty_area,
+      group1       TYPE zif_ca_ops_types=>ty_group,
+      group2       TYPE zif_ca_ops_types=>ty_group,
+      object_key   TYPE zif_ca_ops_types=>ty_object_key,
+      check_code   TYPE zif_ca_ops_types=>ty_check_code,
+      severity     TYPE zif_ca_ops_types=>ty_severity,
+      message      TYPE zif_ca_ops_types=>ty_message,
       disposition  TYPE ty_disposition,
       owner        TYPE syuname,
       due_date     TYPE d,
@@ -595,7 +595,7 @@ INTERFACE zif_cd_hck_types
   TYPES tt_baseline TYPE STANDARD TABLE OF ty_baseline WITH EMPTY KEY
                     WITH NON-UNIQUE SORTED KEY by_table COMPONENTS tabname.
 
-  "! ZCD_OPS_ALLOG deliveries aggregated per channel and status
+  "! ZCA_OPS_ALLOG deliveries aggregated per channel and status
   TYPES:
     BEGIN OF ty_alert_stat,
       channel    TYPE ty_channel,
@@ -618,7 +618,7 @@ INTERFACE zif_cd_hck_types
       report_date TYPE d,
       now_date    TYPE d,
       now_time    TYPE t,
-      run_id      TYPE zif_cd_ops_types=>ty_run_id,
+      run_id      TYPE zif_ca_ops_types=>ty_run_id,
       test_mode   TYPE abap_bool,
       "! Time budget of the running check (start + TIMEOUT_SEC); checks that work in
       "! items stop between items once it has passed (audit A18)
@@ -633,13 +633,13 @@ INTERFACE zif_cd_hck_types
       description  TYPE ty_text,
       category     TYPE ty_category,
       priority     TYPE ty_priority,
-      rag          TYPE zif_cd_ops_types=>ty_rag,
+      rag          TYPE zif_ca_ops_types=>ty_rag,
       runtime_ms   TYPE i,
       timed_out    TYPE abap_bool,
       plugin_error TYPE abap_bool,
-      summary      TYPE zif_cd_ops_types=>ty_message,
+      summary      TYPE zif_ca_ops_types=>ty_message,
       metrics      TYPE tt_metric,
-      findings     TYPE zif_cd_ops_types=>tt_finding,
+      findings     TYPE zif_ca_ops_types=>tt_finding,
       step_status  TYPE tt_step_status,
       "! A baseline-only metric is still warming up: the check is grey, not GREEN (A102)
       warmup       TYPE abap_bool,
@@ -657,7 +657,7 @@ INTERFACE zif_cd_hck_types
   TYPES:
     BEGIN OF ty_category_status,
       category    TYPE ty_category,
-      rag         TYPE zif_cd_ops_types=>ty_rag,
+      rag         TYPE zif_ca_ops_types=>ty_rag,
       check_count TYPE i,
       red_count   TYPE i,
       amber_count TYPE i,
@@ -670,7 +670,7 @@ INTERFACE zif_cd_hck_types
   TYPES:
     BEGIN OF ty_summary,
       score          TYPE ty_score,
-      overall_rag    TYPE zif_cd_ops_types=>ty_rag,
+      overall_rag    TYPE zif_ca_ops_types=>ty_rag,
       critical_count TYPE i,
       high_count     TYPE i,
       "! Checks in baseline warm-up: listed, not scored (A102)
@@ -681,10 +681,10 @@ INTERFACE zif_cd_hck_types
   "! Last-run status of a suite payment engine area (EBS, FMON, HCK) - health of the health check
   TYPES:
     BEGIN OF ty_pe_area_status,
-      pe_area        TYPE zif_cd_ops_types=>ty_pe_area,
+      pe_area        TYPE zif_ca_ops_types=>ty_area,
       last_run_at   TYPE timestampl,
-      status        TYPE zif_cd_ops_types=>ty_run_status,
-      rag           TYPE zif_cd_ops_types=>ty_rag,
+      status        TYPE zif_ca_ops_types=>ty_run_status,
+      rag           TYPE zif_ca_ops_types=>ty_rag,
       finding_count TYPE i,
       error_count   TYPE i,
       warning_count TYPE i,
@@ -710,16 +710,16 @@ INTERFACE zif_cd_hck_types
       include_pe_areas TYPE abap_bool,
       send_mail       TYPE abap_bool,
       test_mode       TYPE abap_bool,
-      variant         TYPE zif_cd_ops_types=>ty_variant,
+      variant         TYPE zif_ca_ops_types=>ty_variant,
     END OF ty_selection.
 
   "! Morning report: scorecard + results + payment engine areas + open exceptions
   TYPES:
     BEGIN OF ty_report,
-      run            TYPE zif_cd_ops_types=>ty_run,
+      run            TYPE zif_ca_ops_types=>ty_run,
       report_date    TYPE d,
       score          TYPE ty_score,
-      overall_rag    TYPE zif_cd_ops_types=>ty_rag,
+      overall_rag    TYPE zif_ca_ops_types=>ty_rag,
       critical_count TYPE i,
       high_count     TYPE i,
       warmup_count   TYPE i,
@@ -750,8 +750,8 @@ INTERFACE zif_cd_hck_types
       timeout_sec    TYPE i VALUE 300,
       lookback       TYPE i VALUE 8,
       top_n          TYPE i VALUE 20,
-      watch_pe_areas TYPE string VALUE `EBS,FMON,HCK`,
-      mail_route     TYPE zif_cd_ops_types=>ty_param_name VALUE 'MORNING',
+      watch_pe_areas TYPE string VALUE `CD_EBS,CD_FMON,CD_HCK`,
+      mail_route     TYPE zif_ca_ops_types=>ty_param_name VALUE 'MORNING',
       "! Row caps (HCK_MAX_JOB_ROWS / _JOB_NAMES / _AGG_ROWS); a larger value is cut to the
       "! hard ceiling GC_MAX_JOB_ROWS / GC_MAX_JOB_NAMES / ZIF_CD_HCK_DAO=>GC_MAX_AGG_ROWS
       max_job_rows   TYPE i VALUE 5000,
@@ -764,23 +764,23 @@ INTERFACE zif_cd_hck_types
   "! Parameters (ZCA_PARAM) of the health check engine and of its row caps
   CONSTANTS:
     BEGIN OF gc_param,
-      watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS',
-      max_age_hours  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_HOURS',
-      timeout_sec    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TIMEOUT_SEC',
-      lookback       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS',
-      top_n          TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
-      mail_route     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAIL_ROUTE',
-      green_min      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SCORE_GREEN_MIN',
-      amber_min      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SCORE_AMBER_MIN',
-      weight_high    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_H',
-      weight_medium  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_M',
-      weight_low     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_L',
-      max_run_min    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_RUN_MIN',
-      flat_tol_pct   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_FLAT_TOL_PCT',
-      max_job_rows   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_ROWS',
-      max_job_names  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_NAMES',
-      max_agg_rows   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGG_ROWS',
-      alert_claim_min TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_ALERT_CLAIM_MIN',
+      watch_pe_areas TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS',
+      max_age_hours  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_HOURS',
+      timeout_sec    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_TIMEOUT_SEC',
+      lookback       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS',
+      top_n          TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
+      mail_route     TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAIL_ROUTE',
+      green_min      TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_SCORE_GREEN_MIN',
+      amber_min      TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_SCORE_AMBER_MIN',
+      weight_high    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_H',
+      weight_medium  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_M',
+      weight_low     TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_L',
+      max_run_min    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAX_RUN_MIN',
+      flat_tol_pct   TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_FLAT_TOL_PCT',
+      max_job_rows   TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_ROWS',
+      max_job_names  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_NAMES',
+      max_agg_rows   TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAX_AGG_ROWS',
+      alert_claim_min TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_ALERT_CLAIM_MIN',
     END OF gc_param.
 
   "! Health check dashboard (CDS, docs/Dashboard_Health_Check.md): runs, findings and metrics of
@@ -794,51 +794,51 @@ INTERFACE zif_cd_hck_types
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
     BEGIN OF gc_msg,
-      cheque_status_is_not_allowe TYPE zif_cd_ops_types=>ty_msgno VALUE '319',
-      table_has_no_configuration  TYPE zif_cd_ops_types=>ty_msgno VALUE '324',
-      reconciliation_key_has_tota TYPE zif_cd_ops_types=>ty_msgno VALUE '325',
-      payment_request_is_cancelle TYPE zif_cd_ops_types=>ty_msgno VALUE '326',
-      payment_request_failed_with TYPE zif_cd_ops_types=>ty_msgno VALUE '327',
-      job_cancelled_started       TYPE zif_cd_ops_types=>ty_msgno VALUE '328',
-      job_active_for_min_limit    TYPE zif_cd_ops_types=>ty_msgno VALUE '329',
-      job_planned_has_not_started TYPE zif_cd_ops_types=>ty_msgno VALUE '330',
-      cycle_step                  TYPE zif_cd_ops_types=>ty_msgno VALUE '331',
-      after_min_max               TYPE zif_cd_ops_types=>ty_msgno VALUE '332',
-      in_min_max                  TYPE zif_cd_ops_types=>ty_msgno VALUE '333',
-      blocked_by_predecessor      TYPE zif_cd_ops_types=>ty_msgno VALUE '334',
-      check_ran_ms_timeout_s      TYPE zif_cd_ops_types=>ty_msgno VALUE '335',
-      health_score_100_red_amber  TYPE zif_cd_ops_types=>ty_msgno VALUE '336',
-      suppressed_until_by         TYPE zif_cd_ops_types=>ty_msgno VALUE '337',
-      config_drift                TYPE zif_cd_ops_types=>ty_msgno VALUE '338',
-      html_report_meta            TYPE zif_cd_ops_types=>ty_msgno VALUE '339',
-      html_score_counts           TYPE zif_cd_ops_types=>ty_msgno VALUE '340',
-      mail_subject_1              TYPE zif_cd_ops_types=>ty_msgno VALUE '341',
-      mail_subject_2              TYPE zif_cd_ops_types=>ty_msgno VALUE '342',
-      stale_age                   TYPE zif_cd_ops_types=>ty_msgno VALUE '343',
-      no_job_cycle                TYPE zif_cd_ops_types=>ty_msgno VALUE '347',
-      summary_ok                  TYPE zif_cd_ops_types=>ty_msgno VALUE '348',
-      summary_more                TYPE zif_cd_ops_types=>ty_msgno VALUE '349',
-      self_check_text             TYPE zif_cd_ops_types=>ty_msgno VALUE '350',
-      area_never_ran              TYPE zif_cd_ops_types=>ty_msgno VALUE '351',
-      area_last_ran               TYPE zif_cd_ops_types=>ty_msgno VALUE '352',
-      report_list_header          TYPE zif_cd_ops_types=>ty_msgno VALUE '356',
-      report_category             TYPE zif_cd_ops_types=>ty_msgno VALUE '357',
-      report_area                 TYPE zif_cd_ops_types=>ty_msgno VALUE '358',
-      report_last_run             TYPE zif_cd_ops_types=>ty_msgno VALUE '359',
-      area_runs_hung              TYPE zif_cd_ops_types=>ty_msgno VALUE '360',
-      no_business_checks          TYPE zif_cd_ops_types=>ty_msgno VALUE '361',
-      config_check_text           TYPE zif_cd_ops_types=>ty_msgno VALUE '362',
-      step_retried                TYPE zif_cd_ops_types=>ty_msgno VALUE '363',
-      step_started_late           TYPE zif_cd_ops_types=>ty_msgno VALUE '364',
-      job_read_capped             TYPE zif_cd_ops_types=>ty_msgno VALUE '365',
-      gl_gaps_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '366',
-      baseline_outdated           TYPE zif_cd_ops_types=>ty_msgno VALUE '367',
-      budget_exhausted            TYPE zif_cd_ops_types=>ty_msgno VALUE '369',
-      baseline_warmup             TYPE zif_cd_ops_types=>ty_msgno VALUE '370',
-      step_pattern_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '371',
-      suppression_invalid         TYPE zif_cd_ops_types=>ty_msgno VALUE '372',
+      cheque_status_is_not_allowe TYPE zif_ca_ops_types=>ty_msgno VALUE '319',
+      table_has_no_configuration  TYPE zif_ca_ops_types=>ty_msgno VALUE '324',
+      reconciliation_key_has_tota TYPE zif_ca_ops_types=>ty_msgno VALUE '325',
+      payment_request_is_cancelle TYPE zif_ca_ops_types=>ty_msgno VALUE '326',
+      payment_request_failed_with TYPE zif_ca_ops_types=>ty_msgno VALUE '327',
+      job_cancelled_started       TYPE zif_ca_ops_types=>ty_msgno VALUE '328',
+      job_active_for_min_limit    TYPE zif_ca_ops_types=>ty_msgno VALUE '329',
+      job_planned_has_not_started TYPE zif_ca_ops_types=>ty_msgno VALUE '330',
+      cycle_step                  TYPE zif_ca_ops_types=>ty_msgno VALUE '331',
+      after_min_max               TYPE zif_ca_ops_types=>ty_msgno VALUE '332',
+      in_min_max                  TYPE zif_ca_ops_types=>ty_msgno VALUE '333',
+      blocked_by_predecessor      TYPE zif_ca_ops_types=>ty_msgno VALUE '334',
+      check_ran_ms_timeout_s      TYPE zif_ca_ops_types=>ty_msgno VALUE '335',
+      health_score_100_red_amber  TYPE zif_ca_ops_types=>ty_msgno VALUE '336',
+      suppressed_until_by         TYPE zif_ca_ops_types=>ty_msgno VALUE '337',
+      config_drift                TYPE zif_ca_ops_types=>ty_msgno VALUE '338',
+      html_report_meta            TYPE zif_ca_ops_types=>ty_msgno VALUE '339',
+      html_score_counts           TYPE zif_ca_ops_types=>ty_msgno VALUE '340',
+      mail_subject_1              TYPE zif_ca_ops_types=>ty_msgno VALUE '341',
+      mail_subject_2              TYPE zif_ca_ops_types=>ty_msgno VALUE '342',
+      stale_age                   TYPE zif_ca_ops_types=>ty_msgno VALUE '343',
+      no_job_cycle                TYPE zif_ca_ops_types=>ty_msgno VALUE '347',
+      summary_ok                  TYPE zif_ca_ops_types=>ty_msgno VALUE '348',
+      summary_more                TYPE zif_ca_ops_types=>ty_msgno VALUE '349',
+      self_check_text             TYPE zif_ca_ops_types=>ty_msgno VALUE '350',
+      area_never_ran              TYPE zif_ca_ops_types=>ty_msgno VALUE '351',
+      area_last_ran               TYPE zif_ca_ops_types=>ty_msgno VALUE '352',
+      report_list_header          TYPE zif_ca_ops_types=>ty_msgno VALUE '356',
+      report_category             TYPE zif_ca_ops_types=>ty_msgno VALUE '357',
+      report_area                 TYPE zif_ca_ops_types=>ty_msgno VALUE '358',
+      report_last_run             TYPE zif_ca_ops_types=>ty_msgno VALUE '359',
+      area_runs_hung              TYPE zif_ca_ops_types=>ty_msgno VALUE '360',
+      no_business_checks          TYPE zif_ca_ops_types=>ty_msgno VALUE '361',
+      config_check_text           TYPE zif_ca_ops_types=>ty_msgno VALUE '362',
+      step_retried                TYPE zif_ca_ops_types=>ty_msgno VALUE '363',
+      step_started_late           TYPE zif_ca_ops_types=>ty_msgno VALUE '364',
+      job_read_capped             TYPE zif_ca_ops_types=>ty_msgno VALUE '365',
+      gl_gaps_total               TYPE zif_ca_ops_types=>ty_msgno VALUE '366',
+      baseline_outdated           TYPE zif_ca_ops_types=>ty_msgno VALUE '367',
+      budget_exhausted            TYPE zif_ca_ops_types=>ty_msgno VALUE '369',
+      baseline_warmup             TYPE zif_ca_ops_types=>ty_msgno VALUE '370',
+      step_pattern_invalid        TYPE zif_ca_ops_types=>ty_msgno VALUE '371',
+      suppression_invalid         TYPE zif_ca_ops_types=>ty_msgno VALUE '372',
       "! Scope of a run in ZCD_HCK_RESULT-RUN_SCOPE (variant and the selection ranges)
-      run_scope                   TYPE zif_cd_ops_types=>ty_msgno VALUE '300',
+      run_scope                   TYPE zif_ca_ops_types=>ty_msgno VALUE '300',
     END OF gc_msg.
 
   "! Usage of a bank code role, key USAGE of the customer posting area ZBTR (was ZCD_HCK_BTCROLE-USAGE,

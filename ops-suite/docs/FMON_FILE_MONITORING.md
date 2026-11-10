@@ -17,7 +17,7 @@ Status: built and lint-clean (abaplint, v758 stubs). **Not activated, ABAP Unit 
 - **Outbound** (payment engine → PRISM → bank): payment files (ACH, wire, cheque/positive pay), collections files, BlackLine / GL feeds.
 - **Inbound** (bank → payment engine): BAI/CAMT statements, ACH returns files, NOC (Notification of Change) files, Stripe payouts.
 - Status comes from the existing custom tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST, ZCD_ACH_RTRV_LOG, ZCD_STRP_POUT_LOG) through configuration only, plus returns/NOC lot completeness from the payment engine's lot tables.
-- Every result lands in the shared exception store (`ZCD_OPS_FINDING`) with an owner and an SLA due date; alerts go through the shared alert router.
+- Every result lands in the shared exception store (`ZCA_OPS_FINDING`) with an owner and an SLA due date; alerts go through the shared alert router.
 
 ## A2. Status model
 
@@ -150,7 +150,7 @@ Example (seed SLA `PRISM_DELIVERED` 5 P): five ACH files received by PRISM at 17
 | (3) Every account imported, n of m in-scope FEBEP lines not posted | `NOT_POSTED` | 274 + 276 / 279 + 275 |
 | A non-inbound stage (GENERATED_IN_SAP, ACK_RECEIVED) | `STAGE_NOT_REACHED` | 278 |
 
-The message names the bank and statement date (277). **One finding per interface and business date** (object key `<iface>/<date>`, `ZCL_CD_FMON_UTIL=>IFACE_DAY_KEY`): several missed stages are one finding with the latest due time and the worst severity. **No repeat spam:** the next 5-minute runs raise the same object key + check code; the core store carries the open exception forward (occurrences + 1, same owner / due date) and the alert router does **not** alert a carried-forward finding again (status R in ZCD_OPS_ALLOG) — only the rule's escalation (`ESCALATE_AFTER`) re-sends; when the stage is met the engine reconciles the interface-day key and the exception is resolved ("passed on rerun"). The engine reconciles the interface-day keys of every expectation of the run, so a FILE_MISSING of the day is closed the same way once the file is there.
+The message names the bank and statement date (277). **One finding per interface and business date** (object key `<iface>/<date>`, `ZCL_CD_FMON_UTIL=>IFACE_DAY_KEY`): several missed stages are one finding with the latest due time and the worst severity. **No repeat spam:** the next 5-minute runs raise the same object key + check code; the core store carries the open exception forward (occurrences + 1, same owner / due date) and the alert router does **not** alert a carried-forward finding again (status R in ZCA_OPS_ALLOG) — only the rule's escalation (`ESCALATE_AFTER`) re-sends; when the stage is met the engine reconciles the interface-day key and the exception is resolved ("passed on rerun"). The engine reconciles the interface-day keys of every expectation of the run, so a FILE_MISSING of the day is closed the same way once the file is there.
 
 **Time zone — business times are US Central (user decision 2026-11-07).** `FMON_TIME_ZONE` (ZCA_PARAM area CD_FMON, definition default UTC) has the value row `CST` (`config/param_values.csv`). It governs every clock time of FMON: (1) deadlines — `DUE_TIME` of the business date (`ZCL_CD_FMON_CHK_DEADLINE`); (2) calendar windows `ZCD_FMON_CAL-WINDOW_FROM / WINDOW_TO` (engine, expected-file window); (3) the business date of a UTC timestamp — legacy `TS_FIELD` and PRISM `occurredAt` (`ZCL_CD_FMON_ADAPTER_GENERIC`, `ZCL_CD_FMON_PRISM_EVENT`) — and the read window of the generic and PRISM adapters; (4) **legacy date / time fields**: a source with `DATE_FIELD` + `TIME_FIELD` (no timestamp) is read as Central local time and converted to UTC (`ZCL_CD_FMON_ADAPTER_GENERIC`). Consequences and checks:
 - **VERIFY-STZAC:** SAP time zone `CST` (TTZZ) carries rule UTC-6 with the US daylight-saving rule (TTZD / TTZDV `USA`: 10:00 local all year, CDT in summer); `CSTNO` would be standard time all year — do not use it.
@@ -182,7 +182,7 @@ The message names the bank and statement date (277). **One finding per interface
 
 The finding's AMOUNT / CURRENCY are the file amount; REFERENCE stays the file ID (the file monitoring dashboard links findings to files by it) and the file name is the OBJECT_KEY and a DETAILS line. DETAILS hold the labelled lines (*label: value*, one block per file) - the exceptions app shows them as they are.
 
-**E-mail** (`ZCL_CD_OPS_ALERT_POLICY` with `ZCL_CD_OPS_ACK_MAIL`): subject `[<SYSID>][FMON][<severity>] Missing bank ACK: <n> file(s), <payments> payments, <CUR> <total>`; a table House bank | Bank | File name | Payment method | Payments | Amount | Payment run | Generated | Delivered to bank | ACK due | Overdue by, most overdue first, amounts with thousands separators and two decimals (right-aligned), a totals row (files, payments, amount per currency); the run / job / exceptions-app line; the same content in the text version. Other findings of the same alert stay in the general table. Layout sample: `config/alert_seed.md`.
+**E-mail** (`ZCL_CA_OPS_ALERT_POLICY` with `ZCL_CD_OPS_ACK_MAIL`): subject `[<SYSID>][FMON][<severity>] Missing bank ACK: <n> file(s), <payments> payments, <CUR> <total>`; a table House bank | Bank | File name | Payment method | Payments | Amount | Payment run | Generated | Delivered to bank | ACK due | Overdue by, most overdue first, amounts with thousands separators and two decimals (right-aligned), a totals row (files, payments, amount per currency); the run / job / exceptions-app line; the same content in the text version. Other findings of the same alert stay in the general table. Layout sample: `config/alert_seed.md`.
 
 **Amounts (user decision 2026-11-10):** amounts and payment counts are shown in the missing-ACK alert. No payee or member data and no bank account number beyond the house bank / account ID.
 
@@ -241,7 +241,7 @@ Design direction once confirmed: an inbound interface for the IRIS status flow, 
 | *_INFERRED (e.g. BANK_ACK_INFERRED) | A | Only a later stage was reported, the SLA stage itself has no evidence | Confirm the stage in the source system; map its status |
 | LOT_SCAN_TRUNCATED / PERSIST_CONFLICT | A | Lot completion not provable (row cap) / registry changed by another process meanwhile | Raise FMON_MAX_ROWS or narrow the lot; re-run the monitor |
 
-Every R/A finding is an owned exception in `ZCD_OPS_FINDING` with a due date (`SLA_DAYS_FMON_<severity>`).
+Every R/A finding is an owned exception in `ZCA_OPS_FINDING` with a due date (`SLA_DAYS_FMON_<severity>`).
 
 ---
 
@@ -337,8 +337,8 @@ classDiagram
     ZCL_CD_FMON_ENGINE --> ZIF_CD_FMON_CHECK
     ZCL_CD_FMON_ENGINE --> ZCL_CD_FMON_STATUS
     ZCL_CD_FMON_ENGINE --> ZCL_CD_FMON_RULES
-    ZCL_CD_FMON_ENGINE ..> ZIF_CD_OPS_STORE : run + findings
-    ZCL_CD_FMON_ENGINE ..> ZIF_CD_OPS_ALERT : dispatch()
+    ZCL_CD_FMON_ENGINE ..> ZIF_CA_OPS_STORE : run + findings
+    ZCL_CD_FMON_ENGINE ..> ZIF_CA_OPS_ALERT : dispatch()
     ZIF_CD_FMON_DAO <|.. ZCL_CD_FMON_DAO
     ZIF_CD_FMON_ADAPTER <|.. ZCL_CD_FMON_ADAPTER_GENERIC
     ZIF_CD_FMON_LOT_READER <|.. ZCL_CD_FMON_LOT_READER
@@ -366,7 +366,7 @@ classDiagram
     ZCL_CD_FMON_INJECTOR ..> ZCL_CD_FMON_FACTORY : friend
 ```
 
-Run sequence (`ZCL_CD_FMON_ENGINE->run`): **run lock** for the whole payment engine area (registry and event numbering are shared; an overlapping run is refused with RUN_LOCKED; not in test mode) → start run (store) + commit (not in test mode) → load customizing → **sync**: every active source → adapter → records → resolve interface (pattern + defaults) → quarantine malformed rows (MALFORMED_SOURCE_ROW) → group by source/file/business date/stage → resolve the file instance (file generation identity, §A2 rule 8, `ZCL_CD_FMON_RULES=>FILE_INSTANCE` with the recorded events of the instances found by reference: instance of the same date, else the latest earlier instance unless the observation is a new generation's first evidence; undated with several instances → FILE_REF_AMBIGUOUS) → apply all groups in event-time order through the state machine → **registry**: window files + open files + the other generations of their generation groups (index GRP, §A2 rule 9; the instant unit keeps them in the check context only) + events → **lots**: lot reader per lot config → derive PARTIALLY/FULLY, banking-day age → **expectations** from calendar → **checks** (each isolated; failure = PLUGIN_ERROR) → persist registry and events (not in test mode; version-checked — a row changed meanwhile is not overwritten, PERSIST_CONFLICT; on failure, including a technical CX_SY_OPEN_SQL_DB, **rollback** + PERSIST_ERROR, never a half-written registry) → board → save findings → finish run → **reconcile** the evaluated files (skipped after PLUGIN_ERROR / PERSIST_ERROR) → commit → `ZIF_CD_OPS_ALERT~DISPATCH( run, findings )` (not in test mode; a delivery failure is saved as ALERT_FAILED and committed). Event numbers: MAX + 1 per file; on a key collision with a parallel run the business key (FILE_ID / SRC_ID / SRC_KEY / STAGE) decides — recorded means idempotent, otherwise up to 3 retries.
+Run sequence (`ZCL_CD_FMON_ENGINE->run`): **run lock** for the whole payment engine area (registry and event numbering are shared; an overlapping run is refused with RUN_LOCKED; not in test mode) → start run (store) + commit (not in test mode) → load customizing → **sync**: every active source → adapter → records → resolve interface (pattern + defaults) → quarantine malformed rows (MALFORMED_SOURCE_ROW) → group by source/file/business date/stage → resolve the file instance (file generation identity, §A2 rule 8, `ZCL_CD_FMON_RULES=>FILE_INSTANCE` with the recorded events of the instances found by reference: instance of the same date, else the latest earlier instance unless the observation is a new generation's first evidence; undated with several instances → FILE_REF_AMBIGUOUS) → apply all groups in event-time order through the state machine → **registry**: window files + open files + the other generations of their generation groups (index GRP, §A2 rule 9; the instant unit keeps them in the check context only) + events → **lots**: lot reader per lot config → derive PARTIALLY/FULLY, banking-day age → **expectations** from calendar → **checks** (each isolated; failure = PLUGIN_ERROR) → persist registry and events (not in test mode; version-checked — a row changed meanwhile is not overwritten, PERSIST_CONFLICT; on failure, including a technical CX_SY_OPEN_SQL_DB, **rollback** + PERSIST_ERROR, never a half-written registry) → board → save findings → finish run → **reconcile** the evaluated files (skipped after PLUGIN_ERROR / PERSIST_ERROR) → commit → `ZIF_CA_OPS_ALERT~DISPATCH( run, findings )` (not in test mode; a delivery failure is saved as ALERT_FAILED and committed). Event numbers: MAX + 1 per file; on a key collision with a parallel run the business key (FILE_ID / SRC_ID / SRC_KEY / STAGE) decides — recorded means idempotent, otherwise up to 3 retries.
 
 Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYPEDESCR=>DESCRIBE_BY_NAME` (classic EXCEPTIONS) and `GET_DDIC_FIELD_LIST`; `ZCL_CD_FMON_QUERY=>VALIDATE` rejects any table/field name that is not a DDIC identifier (pattern check) or not in the table (200–203), requires a date or key restriction (209); at the read boundary the DAO additionally requires the table and every field to be approved in ZCD_OPS_TABWL, area FMON / purpose SOURCE (244 / 249) and the caller to hold S_TABU_NAM display for the table (245); it builds `SELECT (fields) FROM (table) WHERE (validated name) BETWEEN @… / >= @… AND < @… / IN @…` — timestamps as the half-open range [from, next midnight); there is no free-text WHERE anywhere.
 
@@ -386,7 +386,7 @@ Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYP
 | **New returns/NOC lot table** | `ZCD_FMON_LOTCFG` row (interface or `*`, lot type, header/item fields, done values, NOC SLA days). |
 | **New check** | Class implementing `ZIF_CD_FMON_CHECK` (pure: context in, findings out) + `ZCD_FMON_CHK` row. Variants of existing checks (other stage, grace, tolerance) are rows with parameters. |
 | **Thresholds** | SLA minutes, windows, tolerance (`TOLERANCE=`), grace (`GRACE_MIN=`), NOC days — rows/parameters. |
-| **Alert routing** | `ZCD_OPS_ALRULE` (core): payment engine area FMON, minimum severity, group1 pattern = interface, channel, recipients. |
+| **Alert routing** | `ZCA_OPS_ALRULE` (core): payment engine area FMON, minimum severity, group1 pattern = interface, channel, recipients. |
 
 ## B4. Messages (class ZCD_OPS, FMON range 200–299)
 
@@ -495,7 +495,7 @@ Recommended QA1 functional test cases (Test & Validation document):
 |---|---|---|---|
 | FMON-QA-01 | Outbound ACH file end to end | IFACE ACH_PNC_DISB_OUT, SRC REGUT + ACHACK with SE11 field names, SLA rows | Board: GENERATED → SENT → ACK_RECEIVED, green; 3 events in ZCD_FMON_EVENT |
 | FMON-QA-02 | Re-run idempotency | Run QA-01 twice (test mode off) | No new events, registry unchanged, no duplicate findings beyond the run's own |
-| FMON-QA-03 | Missing PRISM handoff | Generation row only; run after SLA | NO_PRISM_HANDOFF (E), alert via ZCD_OPS_ALRULE |
+| FMON-QA-03 | Missing PRISM handoff | Generation row only; run after SLA | NO_PRISM_HANDOFF (E), alert via ZCA_OPS_ALRULE |
 | FMON-QA-04 | Wire ack SLA 30 min | WIRE_JPMC_OUT SLA ACK_RECEIVED 30 G | Ack after 45 min → BANK_ACK_LATE (W) |
 | FMON-QA-05 | Bank NACK | ACK table row with rejected status | Outcome NACK_REJECTED, NACK (E) |
 | FMON-QA-06 | Ack count mismatch | Ack count field ≠ file record count | ACK_COUNT_MISMATCH (E) |
@@ -504,7 +504,7 @@ Recommended QA1 functional test cases (Test & Validation document):
 | FMON-QA-09 | Returns file with one unprocessed item (acceptance test 8) | LOTCFG RETURNS; leave one returns item unprocessed | PARTIALLY_PROCESSED, unprocessed count 1, LOT_UNPROCESSED (E), alert; after processing and re-run → FULLY_PROCESSED |
 | FMON-QA-10 | Wrong field name in customizing | SRC with a non-existent field | PLUGIN_ERROR with message 201; other sources processed |
 | FMON-QA-11 | NOC aging | NOC file 7 banking days old with an open entry | NOC_AGING (E); on day 6 NOC_DUE_TODAY (W) |
-| FMON-QA-12 | Report and test mode | ZCD_FMON_MONITOR, test mode on | Board shown; nothing in ZCD_FMON_FILE/EVENT/ZCD_OPS_RUN; no alert |
+| FMON-QA-12 | Report and test mode | ZCD_FMON_MONITOR, test mode on | Board shown; nothing in ZCD_FMON_FILE/EVENT/ZCA_OPS_RUN; no alert |
 | FMON-QA-13 | New source and LOB (acceptance test 2) | Records with SOURCE/LOB values not configured; `*` interface row | Files registered under the default interface; no code change |
 | FMON-QA-14 | Duplicate file | Same file name/checksum twice | DUPLICATE_FILE (E) on the later file |
 | FMON-QA-15 | BAI deadline: not received | ZCD_FMON_SLA DEADLINE BAI_JPMC_IN FULLY_PROCESSED 10:00; no file, no FEBKO for the statement date | Run 10:00–10:05: STAGE_DEADLINE_MISSED (E), GROUP2 NOT_RECEIVED, alert to ZCD_PAYOPS; 10:05 run: no second mail (ALLOG R) |
@@ -545,7 +545,7 @@ Recommended QA1 functional test cases (Test & Validation document):
 5. **Events aggregated** per source + file + stage (one event, counts/amounts summed). Payment-level acks (one row per payment) would otherwise flood the audit trail. Event uniqueness: FILE_ID + SRC_ID + SRC_KEY (= file reference) + STAGE (the file instance is part of the key since 2026-11-06); lot-derived events use SRC_ID `LOT`, SRC_KEY = file ID.
 6. **Groups of all sources applied in event-time order** (not per source), so a terminal status from one table cannot overtake an earlier stage from another.
 7. **Added fields:** registry FILE_REF (cross-source key), SIZE_KNOWN, ACK_COUNT/ACK_AMOUNT/NACK_COUNT, ORIGIN_ROWS; SRC SIZE/CHECKSUM/SOURCE/LOB fields and DEFAULT_STAGE; LOTCFG header/item split and LINK_BY.
-8. **Alert route removed from ZCD_FMON_IFACE**: per addendum, the engine calls `ZIF_CD_OPS_ALERT~DISPATCH` once per run (never in test mode); thresholds and recipients live in `ZCD_OPS_ALRULE`. FMON does not use `send( )`.
+8. **Alert route removed from ZCD_FMON_IFACE**: per addendum, the engine calls `ZIF_CA_OPS_ALERT~DISPATCH` once per run (never in test mode); thresholds and recipients live in `ZCA_OPS_ALRULE`. FMON does not use `send( )`.
 9. **SLA check is one configurable class** (`ZCL_CD_FMON_CHK_SLA`) driven by ZCD_FMON_SLA rows; "no PRISM handoff" and "no bank ack" are check rows with `STAGE=`. Late-but-reached is reported separately (`*_LATE`, W).
 10. **Holiday without a calendar row expects nothing** (no fallback to NORMAL) — avoids false FILE_MISSING on bank holidays; files that day → UNEXPECTED_FILE.
 11. **New warnings for "no silent suspense"**: UNMAPPED_FILE, UNMAPPED_STATUS, LOT_NOT_FOUND; since 2026-11-06 FILE_REF_AMBIGUOUS, MALFORMED_SOURCE_ROW, LOT_SCAN_TRUNCATED, PERSIST_CONFLICT. FILE_REF_REUSED is retired: a reused reference on another business date is a new file instance when it is a new generation (§A2 rule 8, 2026-11-07), otherwise the same file.

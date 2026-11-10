@@ -67,12 +67,12 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_clock PARTIALLY IMPLEMENTED.
 ENDCLASS.
 
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = '20261109081500'.
   ENDMETHOD.
 ENDCLASS.
@@ -124,7 +124,7 @@ CLASS ltc_adapter_feb DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rt_records) TYPE zif_cd_fmon_types=>tt_src_record
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS expected_record
       IMPORTING
         is_flags        TYPE ty_flags
@@ -154,7 +154,7 @@ CLASS ltc_adapter_feb IMPLEMENTATION.
     zcl_cd_fmon_injector=>inject_dao( mo_dao ).
     zcl_cd_fmon_injector=>inject_calendar( NEW ltd_calendar( ) ).
     zcl_cd_ebs_injector=>inject_stmt_evidence( mo_evidence ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
   ENDMETHOD.
 
@@ -178,7 +178,7 @@ CLASS ltc_adapter_feb IMPLEMENTATION.
     ms_request-date_from         = COND #( WHEN is_flags-from_saturday = abap_true THEN gc_test-saturday
                                            ELSE gc_test-monday ).
     ms_request-date_to           = gc_test-monday.
-    ms_request-time_zone         = zif_cd_ops_types=>gc_time_zone_utc.
+    ms_request-time_zone         = zif_ca_ops_types=>gc_time_zone_utc.
     ms_request-max_rows          = gc_test-max_rows.
 
     ls_iface-iface_id  = gc_test-iface.

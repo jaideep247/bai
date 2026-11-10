@@ -91,7 +91,7 @@ CLASS lcl_app IMPLEMENTATION.
       MESSAGE e051(zcd_ops) WITH p_area TEXT-b01.
     ENDIF.
     " An ad-hoc pattern is checked as it would be saved: it must compile
-    IF zcl_cd_ops_util=>pcre_valid( p_pcre ) = abap_false.
+    IF zcl_ca_ops_util=>pcre_valid( p_pcre ) = abap_false.
       MESSAGE e743(zcd_ops) WITH p_pcre.
     ENDIF.
     IF p_from > p_to.
@@ -105,9 +105,9 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD main.
     TRY.
-        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-display
+        zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-display
                                                 iv_pe_area  = zcl_cd_ops_pattern_check=>pe_area_of( p_area ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.

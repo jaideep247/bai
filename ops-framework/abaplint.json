@@ -1,0 +1,176 @@
+{
+  "global": {
+    "files": "/src/**/*.*",
+    "skipGeneratedGatewayClasses": true,
+    "skipGeneratedPersistentClasses": true,
+    "skipGeneratedFunctionGroups": true
+  },
+  "dependencies": [
+    {
+      "url": "https://github.com/abaplint/deps",
+      "folder": "/deps",
+      "files": "/src/**/*.*"
+    },
+    {
+      "folder": "/../param-framework/src",
+      "files": "/**/*.*"
+    }
+  ],
+  "syntax": {
+    "version": "v758",
+    "errorNamespace": "^(ZCL_CA_OPS|ZIF_CA_OPS|ZCX_CA_OPS|ZBP_R_CA_OPS|LCL_|LTC_|LTD_|LIF_)",
+    "globalConstants": [],
+    "globalMacros": []
+  },
+  "rules": {
+    "parser_error": true,
+    "check_syntax": true,
+    "unknown_types": false,
+    "check_no_handler_pragma": true,
+    "unused_variables": true,
+    "unused_methods": {
+      "exclude": [
+        "/src/ui/zbp_r_ca_[a-z]+\\.clas\\.locals_imp\\.abap$"
+      ]
+    },
+    "unused_types": true,
+    "unused_ddic": {
+      "exclude": [
+        "/src/ui/zca_d_[a-z]+\\.tabl\\.xml$",
+        "/src/zca_ops_lock\\.tabl\\.xml$"
+      ]
+    },
+    "definitions_top": false,
+    "sql_escape_host_variables": true,
+    "max_one_statement": true,
+    "line_length": {
+      "length": 140
+    },
+    "method_length": {
+      "statements": 120,
+      "errorWhenEmpty": false
+    },
+    "obsolete_statement": {
+      "compute": true,
+      "add": true,
+      "subtract": true,
+      "multiply": true,
+      "divide": true,
+      "move": true,
+      "refresh": true,
+      "setExtended": true,
+      "occurs": true,
+      "withHeaderLine": true,
+      "fieldSymbolStructure": true,
+      "typePools": true,
+      "load": true,
+      "parameter": true,
+      "ranges": true,
+      "communication": true,
+      "pack": true,
+      "selectWithoutInto": true,
+      "freeMemory": true,
+      "exitFromSQL": true,
+      "sortByFS": true,
+      "callTransformation": false,
+      "regex": true,
+      "occurences": true,
+      "clientSpecified": true,
+      "formDefinition": false,
+      "formImplementation": false
+    },
+    "prefer_inline": false,
+    "keyword_case": false,
+    "exporting": true,
+    "preferred_compare_operator": true,
+    "use_new": true,
+    "check_comments": false,
+    "cds_parser_error": true,
+    "bdef_parser_error": true,
+    "prefer_corresponding": true,
+    "prefer_insert_into_table": true,
+    "prefer_is_not": true,
+    "prefer_raise_exception_new": true,
+    "prefer_string_template": true,
+    "prefer_xsdbool": true,
+    "use_bool_expression": true,
+    "use_line_exists": true,
+    "use_class_based_exceptions": true,
+    "functional_writing": true,
+    "strict_sql": true,
+    "unnecessary_return": true,
+    "unnecessary_chaining": true,
+    "omit_receiving": true,
+    "prefer_inline_cast": true,
+    "select_performance": true,
+    "unnecessary_copy": true,
+    "unnecessary_loop_guard": true,
+    "boolean_flag_via_if": true,
+    "change_if_to_case": true,
+    "omit_preceding_zeros": true,
+    "sql_value_conversion": true,
+    "unnecessary_pragma": true,
+    "prefer_returning_to_exporting": true,
+    "method_parameter_names": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "ignoreExceptions": true,
+      "importing": "^I._.+$",
+      "exporting": "^E._.+$",
+      "changing": "^C._.+$",
+      "returning": "^R._.+$"
+    },
+    "class_attribute_names": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "ignoreExceptions": true,
+      "ignoreLocal": false,
+      "ignoreInterfaces": false,
+      "statics": "^G._.+$",
+      "instance": "^M._.+$",
+      "constants": "^GC_.+$"
+    },
+    "local_variable_names": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "expectedData": "^L._.+$",
+      "expectedConstant": "^LC_.+$",
+      "expectedFS": "^<L._.+>$"
+    },
+    "local_class_naming": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "local": "^L(CL|HC|SC|TD)_.+$",
+      "exception": "^LCX_.+$",
+      "test": "^LT[CD]_.+$"
+    },
+    "types_naming": {
+      "pattern": "^T[YT]_.+$"
+    },
+    "selection_screen_naming": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "parameter": "^P_.+$",
+      "selectOption": "^S_.+$",
+      "screenElement": "^SC_.+$"
+    },
+    "object_naming": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "clas": "^Z(CL_CA_OPS_|CX_CA_OPS_|BP_R_CA_OPS)",
+      "intf": "^ZIF_CA_OPS_",
+      "prog": "^ZCA_OPS_",
+      "tabl": "^ZCA_(OPS|D)_",
+      "msag": "^ZCA_OPS$",
+      "ddls": "^Z[RCIA]_CA_",
+      "auth": "^ZCA_",
+      "suso": "^ZCA_OPS$"
+    }
+  }
+}

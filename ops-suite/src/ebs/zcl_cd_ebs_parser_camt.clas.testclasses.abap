@@ -27,18 +27,18 @@ CLASS ltc_parser_camt DEFINITION FINAL FOR TESTING
 
     CONSTANTS gc_file_name TYPE string VALUE `CAMT053_20261104.XML`.
     CONSTANTS gc_stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'S0001'.
-    CONSTANTS gc_usd TYPE zif_cd_ops_types=>ty_currency VALUE 'USD'.
+    CONSTANTS gc_usd TYPE zif_ca_ops_types=>ty_currency VALUE 'USD'.
     CONSTANTS gc_book_date TYPE d VALUE '20261103'.
     CONSTANTS gc_msgno_unreadable TYPE symsgno VALUE '151'.
     CONSTANTS gc_msgno_unsupported TYPE symsgno VALUE '152'.
 
     CONSTANTS:
       BEGIN OF gc_check,
-        entry_count TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_ENTRY_COUNT',
-        sum         TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_SUM_MISMATCH',
-        dbt_sum     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DBT_SUM_MISMATCH',
-        dbt_count   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DBT_ENTRY_COUNT',
-        empty_file  TYPE zif_cd_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
+        entry_count TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_ENTRY_COUNT',
+        sum         TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_SUM_MISMATCH',
+        dbt_sum     TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_DBT_SUM_MISMATCH',
+        dbt_count   TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_DBT_ENTRY_COUNT',
+        empty_file  TYPE zif_ca_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
       END OF gc_check.
 
     DATA mv_content TYPE string.
@@ -65,11 +65,11 @@ CLASS ltc_parser_camt DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_file) TYPE zif_cd_ebs_types=>ty_file
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS finding_keys
       IMPORTING
-        it_findings    TYPE zif_cd_ops_types=>tt_finding
+        it_findings    TYPE zif_ca_ops_types=>tt_finding
       RETURNING
         VALUE(rt_keys) TYPE string_table.
 
@@ -101,8 +101,8 @@ CLASS ltc_parser_camt DEFINITION FINAL FOR TESTING
     "! Parse and require one finding with check code and severity
     METHODS assert_finding
       IMPORTING
-        iv_check_code TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity   TYPE zif_cd_ops_types=>ty_severity
+        iv_check_code TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity   TYPE zif_ca_ops_types=>ty_severity
         iv_msg        TYPE string
       RETURNING
         VALUE(rs_file) TYPE zif_cd_ebs_types=>ty_file.
@@ -320,7 +320,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
         configure_scenario( VALUE #( ) ).
         DATA(ls_file) = parse( ).
         cl_abap_unit_assert=>assert_equals( act = ls_file-findings
-                                            exp = VALUE zif_cd_ops_types=>tt_finding( )
+                                            exp = VALUE zif_ca_ops_types=>tt_finding( )
                                             msg = 'Consistent statement must not produce findings' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
@@ -342,7 +342,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
                                             exp = lt_exp
                                             msg = 'Summary mismatches not reported as S06/B and S12/E' ).
         cl_abap_unit_assert=>assert_equals( act = ls_file-findings[ check_code = gc_check-sum ]-amount
-                                            exp = CONV zif_cd_ops_types=>ty_amount( '-50.00' )
+                                            exp = CONV zif_ca_ops_types=>ty_amount( '-50.00' )
                                             msg = 'S06 amount must be found minus expected' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
@@ -400,7 +400,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
           msg = 'Batch entry without transaction amounts must stay one entry-level line' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_file-findings[ check_code = 'CAMT_DETAIL_AMOUNT_MISSING'
-                                                        severity   = zif_cd_ops_types=>gc_severity-error ] ) )
+                                                        severity   = zif_ca_ops_types=>gc_severity-error ] ) )
           msg = 'A detail without amount must give a batch-level exception' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
@@ -463,7 +463,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
     TRY.
         parse( ).
         cl_abap_unit_assert=>fail( msg = 'Malformed XML must raise ZCX_CD_OPS_ERROR' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_msgno_unreadable
                                             msg = 'Message 151 expected for malformed XML' ).
@@ -477,7 +477,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
     TRY.
         parse( ).
         cl_abap_unit_assert=>fail( msg = 'pain.001 content must raise ZCX_CD_OPS_ERROR' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_msgno_unsupported
                                             msg = 'Message 152 expected for unsupported message type' ).
@@ -504,7 +504,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       `<NtryDtls><TxDtls><Refs><EndToEndId>E2E-A</EndToEndId></Refs><Amt Ccy="USD">100.00</Amt></TxDtls>` &&
       `<TxDtls><Refs><EndToEndId>E2E-B</EndToEndId></Refs><Amt Ccy="USD">150.00</Amt></TxDtls></NtryDtls></Ntry>` ) ).
     DATA(ls_file) = assert_finding( iv_check_code = 'CAMT_BATCH_MISMATCH'
-                                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                                    iv_severity   = zif_ca_ops_types=>gc_severity-block
                                     iv_msg        = 'Details that do not add up to the entry must block' ).
     cl_abap_unit_assert=>assert_equals(
       act = VALUE string_table( FOR l IN ls_file-lines ( |{ l-amount }/{ l-reference }| ) )
@@ -520,7 +520,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       `<NtryDtls><TxDtls><Amt Ccy="USD">100.00</Amt></TxDtls>` &&
       `<TxDtls><Amt Ccy="EUR">200.00</Amt></TxDtls></NtryDtls></Ntry>` ) ).
     assert_finding( iv_check_code = 'CAMT_BATCH_MISMATCH'
-                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_severity   = zif_ca_ops_types=>gc_severity-block
                     iv_msg        = 'A detail currency other than the entry currency must block' ).
   ENDMETHOD.
 
@@ -530,7 +530,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       `<Ntry><Amt Ccy="USD">80.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>PDNG</Cd></Sts>` &&
       `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0012</AcctSvcrRef></Ntry>` ) ).
     DATA(ls_file) = assert_finding( iv_check_code = 'ENTRY_NOT_BOOKED'
-                                    iv_severity   = zif_cd_ops_types=>gc_severity-warning
+                                    iv_severity   = zif_ca_ops_types=>gc_severity-warning
                                     iv_msg        = 'A pending entry must be quarantined as a finding' ).
     cl_abap_unit_assert=>assert_initial( act = ls_file-lines msg = 'A pending entry must not become a line' ).
   ENDMETHOD.
@@ -541,7 +541,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       `<Ntry><Amt Ccy="USD">80.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts>INFO</Sts>` &&
       `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0013</AcctSvcrRef></Ntry>` ) ).
     DATA(ls_file) = assert_finding( iv_check_code = 'ENTRY_NOT_BOOKED'
-                                    iv_severity   = zif_cd_ops_types=>gc_severity-warning
+                                    iv_severity   = zif_ca_ops_types=>gc_severity-warning
                                     iv_msg        = 'An information entry must be quarantined as a finding' ).
     cl_abap_unit_assert=>assert_initial( act = ls_file-lines msg = 'An information entry must not become a line' ).
   ENDMETHOD.
@@ -566,7 +566,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
                  |<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr></BkToCstmrStmt>| &&
                  |<BkToCstmrStmt><GrpHdr><MsgId>B</MsgId></GrpHdr></BkToCstmrStmt></Document>|.
     assert_finding( iv_check_code = 'CAMT_DOCUMENT'
-                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_severity   = zif_ca_ops_types=>gc_severity-block
                     iv_msg        = 'A second message body must block' ).
   ENDMETHOD.
 
@@ -575,7 +575,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
     configure_scenario( VALUE #( ) ).
     REPLACE FIRST OCCURRENCE OF `camt.053.001.08` IN mv_content WITH `camt.053.001.99`.
     assert_finding( iv_check_code = 'CAMT_DOCUMENT'
-                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_severity   = zif_ca_ops_types=>gc_severity-block
                     iv_msg        = 'An unapproved namespace version must block' ).
   ENDMETHOD.
 
@@ -585,7 +585,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
                  |<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr>| &&
                  |<Ntfctn><Id>N1</Id></Ntfctn></BkToCstmrStmt></Document>|.
     DATA(ls_file) = assert_finding( iv_check_code = 'CAMT_DOCUMENT'
-                                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                                    iv_severity   = zif_ca_ops_types=>gc_severity-block
                                     iv_msg        = 'A statement element of another message type must block' ).
     cl_abap_unit_assert=>assert_initial( act = ls_file-statements msg = 'The foreign element must not become a statement' ).
   ENDMETHOD.
@@ -596,7 +596,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       `<Ntry><Amt Ccy="USD">12,50</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
       `<BookgDt><Dt>2026-11-03</Dt></BookgDt></Ntry>` ) ).
     assert_finding( iv_check_code = 'INVALID_AMOUNT'
-                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_severity   = zif_ca_ops_types=>gc_severity-block
                     iv_msg        = 'An invalid amount must block' ).
   ENDMETHOD.
 
@@ -605,7 +605,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
     configure_scenario( VALUE #( ) ).
     REPLACE FIRST OCCURRENCE OF `<NbOfNtries>2</NbOfNtries>` IN mv_content WITH `<NbOfNtries>two</NbOfNtries>`.
     assert_finding( iv_check_code = 'INVALID_COUNT'
-                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_severity   = zif_ca_ops_types=>gc_severity-block
                     iv_msg        = 'An invalid count must block' ).
   ENDMETHOD.
 

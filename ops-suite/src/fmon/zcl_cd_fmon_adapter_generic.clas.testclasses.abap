@@ -109,7 +109,7 @@ CLASS ltc_mapping IMPLEMENTATION.
     TRY.
         zcl_cd_fmon_adapter_generic=>build_query( ms_request ).
         cl_abap_unit_assert=>fail( msg = 'Five group fields must be refused' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = '284'
                                             msg = 'Message 284 names the limit' ).
@@ -384,7 +384,7 @@ CLASS ltc_read IMPLEMENTATION.
     TRY.
         DATA(lo_cut) = zcl_cd_fmon_factory=>get_adapter( ).
         lo_cut->read( ms_request ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         lv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
     cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '201'

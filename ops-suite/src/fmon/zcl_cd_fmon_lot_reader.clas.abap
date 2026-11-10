@@ -53,7 +53,7 @@ CLASS zcl_cd_fmon_lot_reader DEFINITION
       IMPORTING
         is_cfg TYPE zif_cd_fmon_types=>ty_lotcfg
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS link_of
       IMPORTING
@@ -73,7 +73,7 @@ CLASS zcl_cd_fmon_lot_reader DEFINITION
       RETURNING
         VALUE(rt_rows)  TYPE zif_cd_fmon_types=>tt_raw_row
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Fix 8: grouped COUNT(*) on the same validated read path (no cap - one row per group)
     METHODS run_count
@@ -82,7 +82,7 @@ CLASS zcl_cd_fmon_lot_reader DEFINITION
       RETURNING
         VALUE(rt_counts) TYPE zif_cd_fmon_types=>tt_raw_count
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Header shape: lots of the files (lot key -> file link); capped as before
     METHODS read_lots
@@ -93,7 +93,7 @@ CLASS zcl_cd_fmon_lot_reader DEFINITION
       RETURNING
         VALUE(rt_lots)  TYPE tt_lot_link
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Item query: by file link (item shape) or by lot key (header shape); with
     "! iv_keys also the item key (sample read), else only link / lot and status (count)
@@ -124,7 +124,7 @@ CLASS zcl_cd_fmon_lot_reader DEFINITION
       RETURNING
         VALUE(rt_counts) TYPE tt_count
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 

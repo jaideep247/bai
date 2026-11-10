@@ -9,11 +9,11 @@
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #M, dataClass: #MIXED }
 define root view entity ZR_CD_HckRun
-  as select from zcd_ops_run
+  as select from zca_ops_run
   association [0..*] to ZR_CD_HckFind as _Findings on $projection.RunId = _Findings.RunId
 {
   key run_id                                                as RunId,
-      cast( 'HCK' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_HCK' as abap.char( 16 ) )                       as PaymentEngineArea,
       variant                                               as RunVariant,
       started_at                                            as StartedAt,
       ended_at                                              as EndedAt,
@@ -36,7 +36,7 @@ define root view entity ZR_CD_HckRun
       finding_count                                         as FindingCount,
       _Findings
 }
-where pe_area   = 'HCK'
+where area   = 'CD_HCK'
   and test_mode = ' '
   and tstmp_to_dats( cast( started_at as timestamp ), 'UTC', $session.client, 'NULL' )
       >= dats_add_days( $session.system_date, -31, 'INITIAL' )

@@ -17,7 +17,7 @@ CLASS ltc_suppression DEFINITION FINAL
     CONSTANTS:
       BEGIN OF gc_test,
         check TYPE zif_cd_hck_types=>ty_check_id VALUE 'HCK_C04',
-        key   TYPE zif_cd_ops_types=>ty_object_key VALUE 'HCK_C04/AGE_DAYS/US01',
+        key   TYPE zif_ca_ops_types=>ty_object_key VALUE 'HCK_C04/AGE_DAYS/US01',
         today TYPE d VALUE '20261106',
         user  TYPE syuname VALUE 'RTB_LEAD',
       END OF gc_test.
@@ -25,12 +25,12 @@ CLASS ltc_suppression DEFINITION FINAL
     METHODS finding
       IMPORTING
         iv_check          TYPE zif_cd_hck_types=>ty_check_id DEFAULT gc_test-check
-        iv_key            TYPE zif_cd_ops_types=>ty_object_key DEFAULT gc_test-key
+        iv_key            TYPE zif_ca_ops_types=>ty_object_key DEFAULT gc_test-key
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
     METHODS suppression
       IMPORTING
-        iv_pattern            TYPE zif_cd_ops_types=>ty_object_key OPTIONAL
+        iv_pattern            TYPE zif_ca_ops_types=>ty_object_key OPTIONAL
         iv_bukrs              TYPE char4 OPTIONAL
         iv_valid_to           TYPE d DEFAULT '20261110'
         iv_status             TYPE zif_cd_hck_suppress_types=>ty_status DEFAULT zif_cd_hck_suppress_types=>gc_status-active
@@ -39,9 +39,9 @@ CLASS ltc_suppression DEFINITION FINAL
     METHODS act
       IMPORTING
         it_suppressions    TYPE zif_cd_hck_suppress_types=>tt_suppression
-        is_finding         TYPE zif_cd_ops_types=>ty_finding
+        is_finding         TYPE zif_ca_ops_types=>ty_finding
       RETURNING
-        VALUE(rs_finding)  TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding)  TYPE zif_ca_ops_types=>ty_finding.
 
     METHODS matching_finding_becomes_info FOR TESTING.
     METHODS pattern_limits_the_match      FOR TESTING.
@@ -63,8 +63,8 @@ CLASS ltc_suppression IMPLEMENTATION.
     rs_finding-object_key = iv_key.
     rs_finding-group2     = iv_check.
     rs_finding-check_code = 'THRESHOLD_RED'.
-    rs_finding-severity   = zif_cd_ops_types=>gc_severity-error.
-    rs_finding-action     = zif_cd_ops_types=>gc_action-exception.
+    rs_finding-severity   = zif_ca_ops_types=>gc_severity-error.
+    rs_finding-action     = zif_ca_ops_types=>gc_action-exception.
     rs_finding-message    = 'AGE_DAYS US01: 15 (amber 1, red 10)'.
   ENDMETHOD.
 
@@ -95,7 +95,7 @@ CLASS ltc_suppression IMPLEMENTATION.
   METHOD matching_finding_becomes_info.
     TRY.
         DATA(ls_result) = act( it_suppressions = suppression( ) is_finding = finding( ) ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_cd_ops_types=>gc_severity-info
+        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'A suppressed finding must become information' ).
         cl_abap_unit_assert=>assert_char_cp( act = ls_result-message exp = '*2026-11-10*RTB_LEAD*'
                                              msg = 'The message must name end date and user' ).
@@ -109,7 +109,7 @@ CLASS ltc_suppression IMPLEMENTATION.
   METHOD pattern_limits_the_match.
     TRY.
         DATA(ls_result) = act( it_suppressions = suppression( iv_pattern = 'HCK_C04/.*/DE01' ) is_finding = finding( ) ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'A finding outside the pattern must stay an error' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -122,9 +122,9 @@ CLASS ltc_suppression IMPLEMENTATION.
     TRY.
         DATA(ls_other) = act( it_suppressions = suppression( iv_bukrs = 'DE01' ) is_finding = finding( ) ).
         DATA(ls_same) = act( it_suppressions = suppression( iv_bukrs = 'US01' ) is_finding = finding( ) ).
-        cl_abap_unit_assert=>assert_equals( act = ls_other-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_other-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Another company code must not be suppressed' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_same-severity exp = zif_cd_ops_types=>gc_severity-info
+        cl_abap_unit_assert=>assert_equals( act = ls_same-severity exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'The company code named must be suppressed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -137,7 +137,7 @@ CLASS ltc_suppression IMPLEMENTATION.
     TRY.
         DATA(ls_result) = act( it_suppressions = suppression( )
                                is_finding      = finding( iv_check = 'HCK_A01' iv_key = 'HCK_A01/X/US01' ) ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Another check must not be suppressed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -149,7 +149,7 @@ CLASS ltc_suppression IMPLEMENTATION.
   METHOD expired_is_ignored.
     TRY.
         DATA(ls_result) = act( it_suppressions = suppression( iv_valid_to = '20261105' ) is_finding = finding( ) ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'An expired suppression must be ignored' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -162,7 +162,7 @@ CLASS ltc_suppression IMPLEMENTATION.
     TRY.
         DATA(ls_result) = act( it_suppressions = suppression( iv_status = zif_cd_hck_suppress_types=>gc_status-requested )
                                is_finding      = finding( ) ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'A pending suppression must not apply' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -191,9 +191,9 @@ CLASS ltc_suppression IMPLEMENTATION.
     TRY.
         DATA(ls_whole) = act( it_suppressions = suppression( iv_pattern = 'HCK_C04/.*/us01' ) is_finding = finding( ) ).
         DATA(ls_part) = act( it_suppressions = suppression( iv_pattern = 'HCK_C04/AGE_DAYS' ) is_finding = finding( ) ).
-        cl_abap_unit_assert=>assert_equals( act = ls_whole-severity exp = zif_cd_ops_types=>gc_severity-info
+        cl_abap_unit_assert=>assert_equals( act = ls_whole-severity exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'A pattern for the complete key suppresses' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_part-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_part-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'A pattern for part of the key does not suppress' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -209,7 +209,7 @@ CLASS ltc_suppression IMPLEMENTATION.
                                                            iv_today        = gc_test-today ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_findings ) exp = 2
                                             msg = 'The finding and the configuration warning' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'The finding is not suppressed' ).
         cl_abap_unit_assert=>assert_equals( act = lt_findings[ 2 ]-check_code
                                             exp = zif_cd_hck_types=>gc_code-suppression_invalid

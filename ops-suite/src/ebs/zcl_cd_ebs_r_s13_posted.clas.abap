@@ -29,7 +29,7 @@ CLASS zcl_cd_ebs_r_s13_posted IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>) WHERE source = zif_cd_ebs_types=>gc_source-feb.
       DATA(lv_open) = 0.
-      DATA(lv_amount) = CONV zif_cd_ops_types=>ty_amount( 0 ).
+      DATA(lv_amount) = CONV zif_ca_ops_types=>ty_amount( 0 ).
       LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>) USING KEY stmt
            WHERE stmt_key = <ls_statement>-stmt_key AND posting_open = abap_true.
         lv_open += 1.

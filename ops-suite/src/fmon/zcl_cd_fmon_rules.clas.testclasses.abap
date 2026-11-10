@@ -1220,7 +1220,7 @@ CLASS ltc_throttle IMPLEMENTATION.
     ls_sla-stage       = iv_stage.
     ls_sla-max_minutes = iv_max_minutes.
     ls_sla-basis       = iv_basis.
-    ls_sla-severity    = zif_cd_ops_types=>gc_severity-error.
+    ls_sla-severity    = zif_ca_ops_types=>gc_severity-error.
     rs_verdict = zcl_cd_fmon_rules=>sla_verdict(
                    is_file      = mt_files[ file_id = file_id( iv_no ) ]
                    is_sla       = ls_sla
@@ -1904,7 +1904,7 @@ CLASS ltc_instance IMPLEMENTATION.
     ls_sla-stage       = iv_stage.
     ls_sla-max_minutes = gc_dst-sla_min.
     ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
-    ls_sla-severity    = zif_cd_ops_types=>gc_severity-error.
+    ls_sla-severity    = zif_ca_ops_types=>gc_severity-error.
     rs_verdict = zcl_cd_fmon_rules=>sla_verdict( is_file   = mt_files[ file_id = gc_first_id ]
                                                 is_sla    = ls_sla
                                                 it_events = mt_events

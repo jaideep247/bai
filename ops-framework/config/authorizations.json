@@ -1,0 +1,9 @@
+{
+  "_comment": "Authorization object of the operations framework. tools/abapgit_serialize.py writes src/<name>.suso.xml from this file (VERIFY-ADT: first pull, SU21). Object class ZCA and field ZCA_PARAR (area, data element ZCA_PARAM_AREA_ID) are the parameter framework's (param-framework/config/authorizations.json) - install ZCA_PARAM first. BUKRS (SAP standard field) restricts objects that carry a company code; area-wide checks pass it as DUMMY.",
+  "object_classes": [],
+  "fields": [],
+  "objects": [
+    {"name": "ZCA_OPS", "class": "ZCA", "text": "Operations framework: runs, findings, alerts per area",
+     "fields": ["ZCA_PARAR", "ACTVT", "BUKRS"], "activities": ["01", "02", "03", "06", "16", "85"]}
+  ]
+}

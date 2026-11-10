@@ -37,4 +37,4 @@ define table zcd_hck_result {
 // Written by ZCL_CD_HCK_ENGINE from the decision the report uses (one row per executed or skipped
 // check per run, not in test mode); read by the health check dashboard (ZI_CD_HckResult).
 // @index TIM: MANDT, EXECUTED_AT
-// Retention: ZCD_OPS_PURGE deletes rows older than parameter RETENTION_DAYS_HCK_RESULT (ZCA_PARAM).
+// Retention: ZCA_OPS_RETENTION deletes rows older than parameter RETENTION_DAYS_HCK_RESULT (ZCA_PARAM).

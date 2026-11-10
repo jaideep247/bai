@@ -1,5 +1,5 @@
 // Artifact: zi_cd_ebsrunbase.ddls.asddls
-// Purpose: Basic view of EBS validation runs (ZCD_OPS_RUN, area EBS, not test mode) started in
+// Purpose: Basic view of EBS validation runs (ZCA_OPS_RUN, area EBS, not test mode) started in
 //          the last 31 days (bounded read), with the run date (UTC calendar day of the start),
 //          the completed flag and the line counters written by ZCL_CD_EBS_ENGINE->COUNT_LINES:
 //          total = lines validated, passed, warning, failed (incl. lines of a rule group whose
@@ -14,10 +14,10 @@
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #M, dataClass: #TRANSACTIONAL }
 @VDM.viewType: #BASIC
 define view entity ZI_CD_EbsRunBase
-  as select from zcd_ops_run
+  as select from zca_ops_run
 {
   key run_id                                                as RunId,
-      cast( 'EBS' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_EBS' as abap.char( 16 ) )                       as PaymentEngineArea,
       variant                                               as RunVariant,
       started_at                                            as StartedAt,
       ended_at                                              as EndedAt,
@@ -39,7 +39,7 @@ define view entity ZI_CD_EbsRunBase
       runtime_ms                                            as RuntimeMs,
       message                                               as RunMessage
 }
-where pe_area   = 'EBS'
+where area   = 'CD_EBS'
   and test_mode = ' '
   and tstmp_to_dats( cast( started_at as timestamp ), 'UTC', $session.client, 'NULL' )
       >= dats_add_days( $session.system_date, -31, 'INITIAL' )

@@ -10,6 +10,8 @@
 *& It does not maintain parameters (maintenance app ZUI_CA_PARAM).
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-10 | CHECK_AREA: the area is registered and active (one area register for consumers such as the
+*&            | operations framework ZCA_OPS, release 1.1.0).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - read API</p>
 "! Reads parameters by area + name. Semantics (docs/DESIGN.md, section 3):
@@ -123,6 +125,15 @@ INTERFACE zif_ca_param
       iv_name              TYPE zif_ca_param_types=>ty_name
     RETURNING
       VALUE(rs_definition) TYPE zif_ca_param_types=>ty_definition
+    RAISING
+      zcx_ca_param.
+
+  "! The area exists in ZCA_PARAM_AREA and is active - the one area register of every consumer
+  "! (e.g. the area of a run of the operations framework ZCA_OPS). Same buffer as the reads.
+  "! @raising zcx_ca_param | Unknown area (001) or inactive area (002)
+  METHODS check_area
+    IMPORTING
+      iv_area TYPE zif_ca_param_types=>ty_area
     RAISING
       zcx_ca_param.
 

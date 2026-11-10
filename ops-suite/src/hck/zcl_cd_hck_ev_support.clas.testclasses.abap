@@ -194,7 +194,7 @@ CLASS ltc_ev_support IMPLEMENTATION.
                                                iv_name  = zif_cd_hck_runtime_types=>gc_rule_param-param1
                                                is_rule  = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_PAY_STATUS' ) ).
         cl_abap_unit_assert=>fail( msg = 'Blank parameter must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Raised' ).
     ENDTRY.
   ENDMETHOD.

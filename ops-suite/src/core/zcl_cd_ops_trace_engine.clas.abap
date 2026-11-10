@@ -22,7 +22,7 @@
 *& 2026-11-06 | stage_file returns the file links (RETURNING instead of a single EXPORTING parameter).
 *& 2026-11-07 | Reversal = clearing reason ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD (05, the only
 *&            | reversal reason); parameter TRACE_REVERSAL_AUGRD removed.
-*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CA_OPS_PARAMS).
 *& 2026-11-07 | Cheque settlement lines through the shared link ZCL_CD_OPS_CHEQUE_LINK (cheque number
 *&            | AND statement house bank account = the cheque's; a line of another account is not the
 *&            | cheque's, a line fitting several cheques of the attempt is one AMBIGUOUS row).
@@ -55,7 +55,7 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
     "! 'TABLE=X;KEY=Y;...' of a TRACE_SRC_* parameter -> source configuration (upper case)
     CLASS-METHODS parse_source
       IMPORTING
-        iv_param      TYPE zif_cd_ops_types=>ty_param_name
+        iv_param      TYPE zif_ca_ops_types=>ty_param_name
         iv_spec       TYPE clike
       RETURNING
         VALUE(rs_cfg) TYPE zif_cd_ops_trace_types=>ty_source_cfg.
@@ -469,7 +469,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                                                 iv_match_key2 = iv_match_key2
                                                 iv_max_rows   = ms_cfg-max_rows ).
         rs_read-status = zif_cd_ops_trace_types=>gc_status-verified.
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         rs_read-status = zif_cd_ops_trace_types=>gc_status-unavailable.
         rs_read-reason = zif_cd_ops_trace_types=>gc_reason-not_readable.
         rs_read-text   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-not_readable
@@ -593,7 +593,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
           lt_partners = mo_dao->get_partners( iv_bpext = iv_member iv_max_rows = ms_cfg-max_rows ).
           ev_without_source = abap_true.
         ENDIF.
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         " A wrong source field only loses the partner filter; the items still show - and the
         " trace says so in a configuration row (never silently)
         CLEAR lt_partners.
@@ -1173,7 +1173,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                                                                                iv_v1    = ls_rtrv-augbl
                                                                                iv_v2    = ls_rtrv-status ) ) ).
         ENDLOOP.
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         add_row( is_attempt = is_attempt
                  is_row     = VALUE #( BASE ls_base status = zif_cd_ops_trace_types=>gc_status-unavailable
                                        reason       = zif_cd_ops_trace_types=>gc_reason-not_readable
@@ -1516,7 +1516,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                           iv_max_rows = zcl_cd_ops_pay_outcome=>evidence_cap( ) ).
         ls_evaluation = lo_outcome->evaluate_documents( lt_docno ).
         lt_sources = lo_outcome->sources_of( lt_fin ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         lv_error = lx_error->get_text( ).
     ENDTRY.
 
@@ -1579,10 +1579,10 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     IF mt_req_keys IS INITIAL.
       RETURN.
     ENDIF.
-    DATA(lv_now) = CONV zif_cd_ops_payout_types=>ty_timestamp( trunc( zcl_cd_ops_factory=>get_clock( )->now( ) ) ).
+    DATA(lv_now) = CONV zif_cd_ops_payout_types=>ty_timestamp( trunc( zcl_ca_ops_factory=>get_clock( )->now( ) ) ).
     TRY.
         DATA(lt_requests) = zcl_cd_ops_factory=>get_pay_request( )->evaluate( it_keys = mt_req_keys iv_now = lv_now ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         add_row( is_row = VALUE #( stage        = zif_cd_ops_trace_types=>gc_stage-request_due
                                    status       = zif_cd_ops_trace_types=>gc_status-unavailable
                                    reason       = zif_cd_ops_trace_types=>gc_reason-not_readable
@@ -1768,7 +1768,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
 
   METHOD is_allowed.
-    rv_allowed = zcl_cd_ops_factory=>get_auth( )->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-display
+    rv_allowed = zcl_ca_ops_factory=>get_auth( )->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-display
                                                               iv_pe_area  = zif_cd_ops_types=>gc_pe_area-core
                                                               iv_bukrs    = iv_bukrs ).
   ENDMETHOD.
@@ -1796,10 +1796,10 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
   METHOD light.
     rv_light = SWITCH #( iv_status
                          WHEN zif_cd_ops_trace_types=>gc_status-verified
-                           OR zif_cd_ops_trace_types=>gc_status-not_applicable THEN zif_cd_ops_types=>gc_light-green
+                           OR zif_cd_ops_trace_types=>gc_status-not_applicable THEN zif_ca_ops_types=>gc_light-green
                          WHEN zif_cd_ops_trace_types=>gc_status-failed
-                           OR zif_cd_ops_trace_types=>gc_status-missing THEN zif_cd_ops_types=>gc_light-red
-                         ELSE zif_cd_ops_types=>gc_light-yellow ).
+                           OR zif_cd_ops_trace_types=>gc_status-missing THEN zif_ca_ops_types=>gc_light-red
+                         ELSE zif_ca_ops_types=>gc_light-yellow ).
   ENDMETHOD.
 
 

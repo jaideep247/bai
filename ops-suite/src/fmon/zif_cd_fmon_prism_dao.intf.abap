@@ -17,14 +17,14 @@ INTERFACE zif_cd_fmon_prism_dao
   "! Insert the event. An event ID already stored is not overwritten: the stored content
   "! is compared - same content = duplicate (idempotent retry), other content = conflict.
   "! @parameter rv_result | I inserted, D duplicate, C conflict (gc_store_result)
-  "! @raising zcx_cd_ops_error | the event could neither be inserted nor read back
+  "! @raising zcx_ca_ops_error | the event could neither be inserted nor read back
   METHODS insert_event
     IMPORTING
       is_row           TYPE zif_cd_fmon_prism_types=>ty_row
     RETURNING
       VALUE(rv_result) TYPE zif_cd_fmon_prism_types=>ty_store_result
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! One stored event (initial when the ID is not stored)
   METHODS read_event
@@ -52,12 +52,12 @@ INTERFACE zif_cd_fmon_prism_dao
       VALUE(rt_rows) TYPE zif_cd_fmon_prism_types=>tt_row.
 
   "! Set PROCESSED_AT of events still unprocessed (an event processed meanwhile keeps its time)
-  "! @raising zcx_cd_ops_error | update failed
+  "! @raising zcx_ca_ops_error | update failed
   METHODS mark_processed
     IMPORTING
       it_event_ids TYPE zif_cd_fmon_prism_types=>tt_event_id
       iv_at        TYPE timestampl
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

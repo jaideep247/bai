@@ -3,7 +3,7 @@
 //          inconsistent, undetermined, ambiguous, late payments, payments waiting for the status job and
 //          requests not paid on their due date; overview-page list card, oldest first, navigation to the
 //          payment trace.
-//          Read access: DCL ZC_CD_TRXDASH (ZCD_OPS, ZCD_PE_AREA = CORE and BUKRS, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_TRXDASH (ZCD_OPS, ZCA_PARAR = CORE and BUKRS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
 //                   2026-11-07 | Canonical outcome: outcome finding.
 //                   2026-11-08 | Exceptions-only worklist: the worklist's exceptions.

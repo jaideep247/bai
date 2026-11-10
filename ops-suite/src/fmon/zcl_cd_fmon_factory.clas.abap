@@ -37,23 +37,23 @@ CLASS zcl_cd_fmon_factory DEFINITION
         VALUE(ro_reader) TYPE REF TO zif_cd_fmon_lot_reader.
 
     "! Blank class name = generic adapter; otherwise a configured plug-in
-    "! @raising zcx_cd_ops_error | class missing or not a ZIF_CD_FMON_ADAPTER
+    "! @raising zcx_ca_ops_error | class missing or not a ZIF_CD_FMON_ADAPTER
     CLASS-METHODS get_adapter
       IMPORTING
-        iv_class_name     TYPE zif_cd_ops_types=>ty_class_name OPTIONAL
+        iv_class_name     TYPE zif_ca_ops_types=>ty_class_name OPTIONAL
       RETURNING
         VALUE(ro_adapter) TYPE REF TO zif_cd_fmon_adapter
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
-    "! @raising zcx_cd_ops_error | class missing or not a ZIF_CD_FMON_CHECK
+    "! @raising zcx_ca_ops_error | class missing or not a ZIF_CD_FMON_CHECK
     CLASS-METHODS get_check
       IMPORTING
-        iv_class_name   TYPE zif_cd_ops_types=>ty_class_name
+        iv_class_name   TYPE zif_ca_ops_types=>ty_class_name
       RETURNING
         VALUE(ro_check) TYPE REF TO zif_cd_fmon_check
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     CLASS-METHODS get_engine
       RETURNING
@@ -115,7 +115,7 @@ CLASS zcl_cd_fmon_factory IMPLEMENTATION.
       RETURN.
     ENDIF.
     " A62: the core factory checks the interface by RTTI before CREATE OBJECT
-    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin(
+    DATA(lo_object) = zcl_ca_ops_factory=>get_plugin(
                         iv_class_name = iv_class_name
                         iv_interface  = zif_cd_fmon_types=>gc_plugin_interface-adapter ).
     TRY.
@@ -130,7 +130,7 @@ CLASS zcl_cd_fmon_factory IMPLEMENTATION.
 
 
   METHOD get_check.
-    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin(
+    DATA(lo_object) = zcl_ca_ops_factory=>get_plugin(
                         iv_class_name = iv_class_name
                         iv_interface  = zif_cd_fmon_types=>gc_plugin_interface-check ).
     TRY.

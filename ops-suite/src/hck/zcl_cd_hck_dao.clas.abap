@@ -22,7 +22,7 @@
 *&            | first, UP TO iv_max_rows (was up to 5000 points per series filtered in ABAP).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
-*& 2026-11-06 | Modern-syntax sweep: string templates, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Modern-syntax sweep: string templates, alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | PCRE patterns: ABAP SQL LIKE_REGEXPR is not used (not parsed by the offline lint; HANA regex
 *&              cannot use an index). Job names: distinct names of the window / open statuses, PCRE filter
 *&              in ABAP, then the runs of the matched names (FOR ALL ENTRIES). BALHDR counters grouped per day, filtered
@@ -38,7 +38,7 @@
 *& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
 *&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
 *& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
-*& 2026-11-10 | get_table_fields checks S_TABU_NAM 03 (ZIF_CD_OPS_AUTH=>MAY_READ_TABLE) first: every dynamic read
+*& 2026-11-10 | get_table_fields checks S_TABU_NAM 03 (ZIF_CA_OPS_AUTH=>MAY_READ_TABLE) first: every dynamic read
 *&            | (aggregate, values, queues, reference rows, drift hash) describes its table there - 813.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
@@ -73,11 +73,11 @@ CLASS zcl_cd_hck_dao DEFINITION
     METHODS matched_jobnames
       IMPORTING
         it_names        TYPE tt_jobname
-        it_patterns     TYPE zif_cd_ops_types=>tt_pcre
+        it_patterns     TYPE zif_ca_ops_types=>tt_pcre
       RETURNING
         VALUE(rt_names) TYPE tt_jobname
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Program and variant of the first job step (TBTCP) into the job runs (A42)
     METHODS add_step_program
@@ -90,7 +90,7 @@ CLASS zcl_cd_hck_dao DEFINITION
       RETURNING
         VALUE(rv_hash) TYPE zif_cd_hck_types=>ty_hash
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 
@@ -153,7 +153,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA(lv_name) = to_upper( condense( CONV string( iv_tabname ) ) ).
     " Every dynamic read of the health check describes its table here first: S_TABU_NAM display
     " of the running user, in addition to the approved-table list (the check reports 813)
-    IF zcl_cd_ops_factory=>get_auth( )->may_read_table( lv_name ) = abap_false.
+    IF zcl_ca_ops_factory=>get_auth( )->may_read_table( lv_name ) = abap_false.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e813(zcd_ops) WITH lv_name.
     ENDIF.
@@ -258,16 +258,16 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       SELECT m~run_id, m~value, m~measured_at,
              row_number( ) OVER( PARTITION BY m~run_id ORDER BY m~measured_at DESCENDING ) AS rn
         FROM zcd_hck_metric AS m
-          INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
+          INNER JOIN zca_ops_run AS r ON r~run_id = m~run_id
         WHERE m~check_id    = @iv_check_id
           AND m~metric      = @iv_metric
           AND m~dim1        = @iv_dim1
           AND m~dim2        = @iv_dim2
           AND m~measured_at <= @lv_as_of
           AND r~test_mode   = @abap_false
-          AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,
-                            @zif_cd_ops_types=>gc_run_status-warning,
-                            @zif_cd_ops_types=>gc_run_status-error ) )
+          AND r~status IN ( @zif_ca_ops_types=>gc_run_status-success,
+                            @zif_ca_ops_types=>gc_run_status-warning,
+                            @zif_ca_ops_types=>gc_run_status-error ) )
     SELECT run_id, value, measured_at
       FROM +points
       WHERE rn = 1
@@ -448,7 +448,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA(lt_all) = rt_steps.
     CLEAR rt_steps.
     LOOP AT lt_all ASSIGNING FIELD-SYMBOL(<ls_step>).
-      IF zcl_cd_ops_util=>pcre_match_any( iv_value = <ls_step>-cycle_id it_patterns = it_cycle_ids ) = abap_true.
+      IF zcl_ca_ops_util=>pcre_match_any( iv_value = <ls_step>-cycle_id it_patterns = it_cycle_ids ) = abap_true.
         INSERT <ls_step> INTO TABLE rt_steps.
       ENDIF.
     ENDLOOP.
@@ -557,7 +557,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
         MESSAGE e747(zcd_ops) WITH lv_max_names gc_table_tbtco.
     ENDIF.
     LOOP AT it_names ASSIGNING FIELD-SYMBOL(<lv_name>).
-      IF zcl_cd_ops_util=>pcre_match_any( iv_value = <lv_name> it_patterns = it_patterns ) = abap_true.
+      IF zcl_ca_ops_util=>pcre_match_any( iv_value = <lv_name> it_patterns = it_patterns ) = abap_true.
         INSERT <lv_name> INTO TABLE rt_names.
       ENDIF.
     ENDLOOP.
@@ -612,9 +612,9 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA(lt_all) = rt_stat.
     CLEAR rt_stat.
     LOOP AT lt_all ASSIGNING FIELD-SYMBOL(<ls_stat>).
-      IF zcl_cd_ops_util=>pcre_match_any( iv_value = <ls_stat>-object it_patterns = it_objects ) = abap_true
+      IF zcl_ca_ops_util=>pcre_match_any( iv_value = <ls_stat>-object it_patterns = it_objects ) = abap_true
          AND ( it_subobjects IS INITIAL
-               OR zcl_cd_ops_util=>pcre_match_any( iv_value    = <ls_stat>-subobject
+               OR zcl_ca_ops_util=>pcre_match_any( iv_value    = <ls_stat>-subobject
                                                    it_patterns = it_subobjects ) = abap_true ).
         INSERT <ls_stat> INTO TABLE rt_stat.
       ENDIF.
@@ -624,9 +624,9 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_overdue_exceptions.
     CONSTANTS lc_no_date TYPE d VALUE '00000000'.
-    " index ZCD_OPS_FINDING~OPN: CLIENT, PE_AREA, DISPOSITION, DUE_DATE
+    " index ZCA_OPS_FINDING~OPN: CLIENT, PE_AREA, DISPOSITION, DUE_DATE
     SELECT pe_area, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
-      FROM zcd_ops_finding
+      FROM zca_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )
         AND due_date    < @iv_today
         AND due_date    > @lc_no_date
@@ -639,7 +639,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~get_open_exceptions.
     SELECT pe_area, group1, group2, object_key, check_code, severity, message, disposition,
            owner, due_date, created_at
-      FROM zcd_ops_finding
+      FROM zca_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )
       ORDER BY due_date ASCENDING, created_at ASCENDING
       INTO CORRESPONDING FIELDS OF TABLE @rt_exceptions
@@ -741,9 +741,9 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_alert_stats.
-    " ZCD_OPS_ALLOG is delivered by the core alert router
+    " ZCA_OPS_ALLOG is delivered by the core alert router
     SELECT channel, status, COUNT(*) AS item_count
-      FROM zcd_ops_allog
+      FROM zca_ops_allog
       WHERE sent_at BETWEEN @iv_from AND @iv_to
       GROUP BY channel, status
       ORDER BY channel, status

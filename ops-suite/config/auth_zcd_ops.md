@@ -3,7 +3,7 @@
 > **First principle:** one object guards every operations action, so a role says in one place who may run, change or approve.
 > **Analogy:** one keycard system for the whole building — the card says which floors (payment engine areas) and which doors (activities), not a different key per room.
 
-Created once per landscape by security / Basis (DV1, transported to QA1 / PS4). The code checks it only through `ZCL_CD_OPS_AUTH` (`ZIF_CD_OPS_AUTH`).
+Created once per landscape by security / Basis (DV1, transported to QA1 / PS4). The code checks it only through `ZCL_CA_OPS_AUTH` (`ZIF_CA_OPS_AUTH`).
 
 ## 1. Authorisation field (SU20)
 
@@ -27,7 +27,7 @@ Permitted activities (SU21 → Activities):
 | 02 | Change (existing configuration row, exception assign / resolve) | Configuration apps (change of a child row; editing the singleton) and operations apps |
 | 03 | Display | All apps, ALV reports |
 | 06 | Delete configuration entry (row of a child entity, DV1 only, transport) | Configuration apps (delete of a child row; editing the singleton) |
-| 16 | Execute | `ZCD_EBS_VALIDATE` (EBS), `ZCD_FMON_MONITOR` (FMON), `ZCD_MORNING_REPORT` (HCK), `ZCD_OPS_PURGE` (CORE) |
+| 16 | Execute | `ZCD_EBS_VALIDATE` (EBS), `ZCD_FMON_MONITOR` (FMON), `ZCD_MORNING_REPORT` (HCK), `ZCA_OPS_RETENTION` (CORE) |
 | 85 | Approve (second person) | Waiver approval, HCK suppression approval |
 
 Configuration apps (user decision 2026-11-08): each activity is checked on its own per child entity and payment engine area of the app (EBS / FMON / HCK / CORE) — 01 create, 02 change, 06 delete; editing the singleton (Edit) needs at least one of the three; display needs only `S_SERVICE` (§3b). The client policy is unchanged: new rows and deletions only where the client records customizing changes (DV1).
@@ -65,35 +65,35 @@ Roles: `Z_CD_OPS_DISPLAY` (ZCD_PE_AREA *, 03, BUKRS *) covers all dashboards. Bu
 
 ## 3b. Every entry point and the ZCD_OPS check it makes (audit mapping, 2026-11-08)
 
-Every `AUTHORITY-CHECK` on `ZCD_OPS` is in one class, `ZCL_CD_OPS_AUTH` (`ZIF_CD_OPS_AUTH`, factory `GET_AUTH`). The engines (`ZCL_CD_EBS_ENGINE`, `ZCL_CD_FMON_ENGINE`, `ZCL_CD_HCK_ENGINE`, …) are called only from the entry points below, which check before the engine is created. The suite has no RFC-enabled function module and no other external entry point.
+Every `AUTHORITY-CHECK` on `ZCD_OPS` is in one class, `ZCL_CA_OPS_AUTH` (`ZIF_CA_OPS_AUTH`, factory `GET_AUTH`). The engines (`ZCL_CD_EBS_ENGINE`, `ZCL_CD_FMON_ENGINE`, `ZCL_CD_HCK_ENGINE`, …) are called only from the entry points below, which check before the engine is created. The suite has no RFC-enabled function module and no other external entry point.
 
 **Batch programs and reports**
 
 | Entry point | ZCD_PE_AREA | ACTVT | When |
 |---|---|---|---|
-| `ZCD_EBS_VALIDATE` (job / SE38) | EBS | 16 | At start, before the run; a bank file on the application server is a file name only, resolved in logical path `ZCD_OPS_EBS_IN` (FILE) and checked with `S_DATASET` activity READ (`ZCL_CD_OPS_FILE_PATH`, 2026-11-10) |
+| `ZCD_EBS_VALIDATE` (job / SE38) | EBS | 16 | At start, before the run; a bank file on the application server is a file name only, resolved in logical path `ZCD_OPS_EBS_IN` (FILE) and checked with `S_DATASET` activity READ (`ZCL_CA_OPS_FILE_PATH`, 2026-11-10) |
 | `ZCD_FMON_MONITOR` (job `ZCD_FMON_MONITOR_ALL` step 1) | FMON | 16 | At start |
 | `ZCD_OPS_PAY_SNAPSHOT` (job `ZCD_FMON_MONITOR_ALL` step 2) | CORE | 16 | At start |
-| `ZCD_MORNING_REPORT` | HCK | 16 | At start; the CSV export takes a file name only, resolved in logical path `ZCD_OPS_HCK_OUT` (FILE) and checked with `S_DATASET` activity WRITE (`ZCL_CD_OPS_FILE_PATH`, 2026-11-10) |
-| `ZCD_OPS_PURGE` | CORE | 16 | At start |
+| `ZCD_MORNING_REPORT` | HCK | 16 | At start; the CSV export takes a file name only, resolved in logical path `ZCD_OPS_HCK_OUT` (FILE) and checked with `S_DATASET` activity WRITE (`ZCL_CA_OPS_FILE_PATH`, 2026-11-10) |
+| `ZCA_OPS_RETENTION` | CORE | 16 | At start |
 | `ZCD_OPS_PAYMENT_TRACE` | CORE | 03, plus company code per item | At start; a step on an item of a company code without 03 is shown as not authorised |
 | `ZCD_OPS_PATTERN_CHECK` | each area | 03 | Per area read |
 | `ZCD_OPS_PATTERN_MIGRATE` | each area | 02 | Per area, before anything is written (DV1, customizing request) |
-| HCK checks reading a configured table (aggregates, value queries, queue and reference sources, drift hash) | — | `S_TABU_NAM` 03 | Before every dynamic read (`ZCL_CD_HCK_DAO=>GET_TABLE_FIELDS`, `ZIF_CD_OPS_AUTH=>MAY_READ_TABLE`, 2026-11-10), in addition to the approved-table list; refused = message 813 |
+| HCK checks reading a configured table (aggregates, value queries, queue and reference sources, drift hash) | — | `S_TABU_NAM` 03 | Before every dynamic read (`ZCL_CD_HCK_DAO=>GET_TABLE_FIELDS`, `ZIF_CA_OPS_AUTH=>MAY_READ_TABLE`, 2026-11-10), in addition to the approved-table list; refused = message 813 |
 | EBS lookup rule R21 (`ZCD_EBS_LOOKUP`) | — | `S_TABU_NAM` 03 | Per lookup table at run time (`ZCL_CD_EBS_SAP_DAO=>GET_LOOKUP_ROWS`), after the field-level approval in `ZCD_OPS_TABWL` (area EBS, purpose LOOKUP; message 812); the approval is also checked when the lookup is saved |
-| FMON dynamic reader (`ZCD_FMON_SRC` / `_LOTCFG` tables) | — | `S_TABU_NAM` 03 | Per table (`ZCL_CD_FMON_DDIC=>MAY_READ`, now the shared `ZIF_CD_OPS_AUTH=>MAY_READ_TABLE`) |
+| FMON dynamic reader (`ZCD_FMON_SRC` / `_LOTCFG` tables) | — | `S_TABU_NAM` 03 | Per table (`ZCL_CD_FMON_DDIC=>MAY_READ`, now the shared `ZIF_CA_OPS_AUTH=>MAY_READ_TABLE`) |
 | PRISM status API (`POST /sap/zcd_ops/prism_status`, `ZCL_CD_FMON_PRISM_API`) | FMON | 01 | Per call, before the event is stored; the bgPF unit it queues runs only for that stored event |
 
 **RAP services (Fiori apps)**
 
 | Service | Behaviour pool | Operation | ZCD_PE_AREA | ACTVT |
 |---|---|---|---|---|
-| `ZUI_CD_EBS_CFG`, `ZUI_CD_FMON_CFG`, `ZUI_CD_HCK_CFG`, `ZUI_CD_OPS_CFG` (configuration apps) | `ZBP_R_CD_EBSCFGALL`, `…FMONCFGALL`, `…HCKCFGALL`, `…OPSCFGALL` | Edit / update of the singleton (global authorisation of the root, `ZCL_CD_OPS_CFG_GATE=>MAY_EDIT`) | EBS / FMON / HCK / CORE | at least one of 01, 02, 06 |
+| `ZUI_CD_EBS_CFG`, `ZUI_CD_FMON_CFG`, `ZUI_CD_HCK_CFG`, `ZUI_CD_OPS_CFG` (configuration apps) | `ZBP_R_CD_EBSCFGALL`, `…FMONCFGALL`, `…HCKCFGALL`, `…OPSCFGALL` | Edit / update of the singleton (global authorisation of the root, `ZCL_CA_OPS_CFG_GATE=>MAY_EDIT`) | EBS / FMON / HCK / CORE | at least one of 01, 02, 06 |
 | same | same | Create of a child row (global authorisation of the root, create-by-association `%assoc`) | same | 01 |
 | same | same | Change of a child row (global authorisation of the child entity, authorisation master) | same | 02 |
 | same | same | Delete of a child row (global authorisation of the child entity) | same | 06 |
 | same | same | Create and delete offered at all (global feature control) | — | Only in a client that records customizing changes (DV1), D-3; not an activity check |
-| `ZUI_CD_OPS_EXC` (exceptions) | `ZBP_R_CD_OPSEXCEPTION` | Assign, resolve (instance authorisation) | Area of the exception | 02 |
+| `ZUI_CA_OPS_EXC` (exceptions) | `ZBP_R_CA_OPSEXCEPTION` | Assign, resolve (instance authorisation) | Area of the exception | 02 |
 | same | same | Approve a waiver (second person; the requester is refused) | Area of the exception | 85 |
 | `ZUI_CD_HCK_SUP` (suppressions) | `ZBP_R_CD_HCKSUPPRESS` | Create, end suppression | HCK | 02 |
 | same | same | Approve suppression (second person) | HCK | 85 |
@@ -101,7 +101,7 @@ Every `AUTHORITY-CHECK` on `ZCD_OPS` is in one class, `ZCL_CD_OPS_AUTH` (`ZIF_CD
 | `ZUI_CD_FMON_PRQ` (PRISM request handled manually) | `ZBP_R_CD_FMONPRQWA` | Create (records the reference and resolves the exception) | FMON | 02 |
 | Dashboards (`ZUI_CD_*_DASH`, `ZUI_CD_FMON_FLOW`, `ZUI_CD_TRX_REQ`, `ZUI_CD_OPS_OVERVIEW`) | — (read-only) | Read through the DCLs of §3a | per §3a | 03 |
 
-The four configuration apps are generated (`tools/rap_generate.py`): every child entity is its own global authorisation master (VERIFY-ADT: child entity as authorisation master with draft on 7.58), so a user with 02 only can change but not add or delete rows, 01 only can add but not change, 06 can delete. Tests: the generated permission tests of each behaviour pool (02 only, 01 only, 06 only, no activity) and `ZCL_CD_OPS_CFG_GATE` (`edit_with_delete_only`, `no_activity_no_edit`).
+The four configuration apps are generated (`tools/rap_generate.py`): every child entity is its own global authorisation master (VERIFY-ADT: child entity as authorisation master with draft on 7.58), so a user with 02 only can change but not add or delete rows, 01 only can add but not change, 06 can delete. Tests: the generated permission tests of each behaviour pool (02 only, 01 only, 06 only, no activity) and `ZCL_CA_OPS_CFG_GATE` (`edit_with_delete_only`, `no_activity_no_edit`).
 
 ## 3c. Read access of the operations apps (DCL, 2026-11-10)
 
@@ -109,14 +109,14 @@ The operations apps were readable with `S_SERVICE` alone (`#NOT_REQUIRED`). Thei
 
 | Projection (service) | DCL | Condition |
 |---|---|---|
-| `ZC_CD_OpsException` (`ZUI_CD_OPS_EXC`) | `ZC_CD_OPSEXCEPTION` | `( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` |
-| `ZC_CD_OpsExcHist` (same service) | `ZC_CD_OPSEXCEPTION` | area of the exception (path `_Exception.PaymentEngineArea`) |
+| `ZC_CA_OpsException` (`ZUI_CA_OPS_EXC`) | `ZC_CA_OPSEXCEPTION` | `( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` |
+| `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | area of the exception (path `_Exception.PaymentEngineArea`) |
 | `ZC_CD_FmonFile` (`ZUI_CD_FMON_MAN`) | `ZC_CD_FMONFILE` | fixed `ZCD_PE_AREA = 'FMON'`, ACTVT 03 (no area element in the view) |
 | `ZC_CD_FmonPrqWa` (`ZUI_CD_FMON_PRQ`) | `ZC_CD_FMONPRQWA` | fixed `ZCD_PE_AREA = 'FMON'`, ACTVT 03 |
 | `ZC_CD_HckSuppress` (`ZUI_CD_HCK_SUP`) | `ZC_CD_HCKSUPPRESS` | fixed `ZCD_PE_AREA = 'HCK'`, ACTVT 03 |
 
 VERIFY-ADT: `pfcg_auth` with an empty element list and fixed field values, and the path to the parent entity, on 7.58. Roles: `Z_CD_OPS_DISPLAY` (03, all areas) already covers them; `Z_CD_OPS_OPERATOR` / `_APPROVER` carry 03 for their areas.
 
-**Field names checked offline.** The kernel check of `ZCL_CD_OPS_AUTH` used the field name `ZCD_MODULE`, which SU21 does not know - every check failed. It now uses `ZCD_PE_AREA` (§1). The portable check `auth_fields_defined` (`tools/auth_checks.py`) fails when an `AUTHORITY-CHECK` on `ZCD_OPS` or a `pfcg_auth( ZCD_OPS, … )` names a field that §1 / §2 do not define.
+**Field names checked offline.** The kernel check of `ZCL_CA_OPS_AUTH` used the field name `ZCD_MODULE`, which SU21 does not know - every check failed. It now uses `ZCD_PE_AREA` (§1). The portable check `auth_fields_defined` (`tools/auth_checks.py`) fails when an `AUTHORITY-CHECK` on `ZCD_OPS` or a `pfcg_auth( ZCD_OPS, … )` names a field that §1 / §2 do not define.
 
 **S_DATASET (2026-11-10).** The application-server files of the suite are reached only through logical paths of transaction FILE: `ZCD_OPS_EBS_IN` (EBS bank file, READ) and `ZCD_OPS_HCK_OUT` (morning report CSV, WRITE), each with a logical file name of the same name for `FILE_VALIDATE_NAME`. The user enters a file name only (no `/`, `\` or `..`, message 808). Roles running these programs need `S_DATASET` with the program name, activity `33` (read) / `34` (write) - and `06` (delete) for the export, whose temporary file is deleted - for the physical path of the logical path.

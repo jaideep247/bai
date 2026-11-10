@@ -3,7 +3,7 @@
 //          service ZUI_CD_FMON_FLOW): projection of ZR_CD_FmonFlow with the default aggregation
 //          of every measure (OData V4 data aggregation, $apply) and the drill-down to file events
 //          and open exceptions. UI annotations in the metadata extension ZC_CD_FMONFLOW.
-//          Read access: DCL ZC_CD_FMONFLOW (ZCD_OPS, ZCD_PE_AREA = FMON, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_FMONFLOW (ZCD_OPS, ZCA_PARAR = FMON, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (FMON file monitoring dashboard).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'FMON file monitoring dashboard'

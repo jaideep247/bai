@@ -44,9 +44,9 @@ INTERFACE zif_cd_ebs_feb_dao
       aznum TYPE c LENGTH 5,
       azdat TYPE d,
       waers TYPE c LENGTH 5,
-      ssbtr TYPE zif_cd_ops_types=>ty_amount,
+      ssbtr TYPE zif_ca_ops_types=>ty_amount,
       ssvoz TYPE c LENGTH 1,
-      esbtr TYPE zif_cd_ops_types=>ty_amount,
+      esbtr TYPE zif_ca_ops_types=>ty_amount,
       esvoz TYPE c LENGTH 1,
       anzes TYPE i,
       efart TYPE c LENGTH 1,
@@ -62,7 +62,7 @@ INTERFACE zif_cd_ebs_feb_dao
       vgext TYPE c LENGTH 27,
       vgint TYPE c LENGTH 4,
       epvoz TYPE c LENGTH 1,
-      kwbtr TYPE zif_cd_ops_types=>ty_amount,
+      kwbtr TYPE zif_ca_ops_types=>ty_amount,
       kwaer TYPE c LENGTH 5,
       budat TYPE d,
       valut TYPE d,
@@ -103,7 +103,7 @@ INTERFACE zif_cd_ebs_feb_dao
     RETURNING
       VALUE(rt_items) TYPE tt_item
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Latest statement of the same house bank account dated before iv_before
   "! (or same date with a lower statement number)

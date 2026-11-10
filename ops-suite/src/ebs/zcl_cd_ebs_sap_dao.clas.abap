@@ -16,7 +16,7 @@
 *& 2026-11-06 | Performance fix 3: FEBEP reason / posting-flag reads moved into ZCL_CD_EBS_FEB_DAO get_items (one pass).
 *& 2026-11-06 | Performance fix 6: get_gl_balances - ACDOCA JOIN @itab GROUP BY request (one statement per package).
 *& 2026-11-06 | Return / NOC reason correction: DFKKRP-RLGRD in the returns lot read; get_noc_items (DFKKNRP by INFOF).
-*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CA_OPS_PARAMS).
 *& 2026-11-07 | EBS_GL_LEDGER and EBS_RTRV_STATUS_FIELD name / default from ZIF_CD_EBS_TYPES.
 *& 2026-11-07 | Comments: parameters in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *& 2026-11-07 | Returns lot read also returns the item amount DFKKRP-BETRW (A_INFLIGHT, VERIFY-DDIC).
@@ -139,7 +139,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e812(zcd_ops) WITH lv_status lv_table.
     ENDIF.
-    IF zcl_cd_ops_factory=>get_auth( )->may_read_table( lv_table ) = abap_false.
+    IF zcl_ca_ops_factory=>get_auth( )->may_read_table( lv_table ) = abap_false.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e813(zcd_ops) WITH lv_table.
     ENDIF.

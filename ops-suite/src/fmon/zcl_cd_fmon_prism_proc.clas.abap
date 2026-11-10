@@ -7,7 +7,7 @@
 *& it processed. Suite-internal only: no business data, no job start.
 *& Modification log:
 *& 2026-11-06 | Initial version (instant PRISM processing, user decision 2026-11-06).
-*& 2026-11-07 | Time zone parameter through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Time zone parameter through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CA_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - instant processing of one event</p>
 "! The event stays unprocessed (the 5-minute run applies it - safety net) when: it needs a file
@@ -79,10 +79,10 @@ CLASS zcl_cd_fmon_prism_proc IMPLEMENTATION.
     ENDIF.
     DATA(lt_maps) = lo_dao->get_source_maps( ).
     ls_request-maps = VALUE #( FOR ls_map IN lt_maps WHERE ( src_id = ls_request-src-src_id ) ( ls_map ) ).
-    DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
+    DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     ls_request-time_zone = zcl_cd_ops_factory=>get_params( )->get_param(
                              iv_name    = zif_cd_fmon_types=>gc_param-time_zone
-                             iv_default = CONV #( zif_cd_ops_types=>gc_time_zone_utc ) ).
+                             iv_default = CONV #( zif_ca_ops_types=>gc_time_zone_utc ) ).
 
     TRY.
         DATA(lt_records) = zcl_cd_fmon_adapter_prism=>to_records( is_request = ls_request
@@ -98,7 +98,7 @@ CLASS zcl_cd_fmon_prism_proc IMPLEMENTATION.
             EXIT.
           ENDIF.
         ENDDO.
-      CATCH zcx_cd_ops_error cx_sy_open_sql_db.
+      CATCH zcx_ca_ops_error cx_sy_open_sql_db.
         " Left unprocessed: the 5-minute run applies the event
         lo_store->rollback( ).
         rs_outcome-deferred = abap_true.
@@ -111,10 +111,10 @@ CLASS zcl_cd_fmon_prism_proc IMPLEMENTATION.
     ENDIF.
     TRY.
         lo_prism_dao->mark_processed( it_event_ids = VALUE #( ( iv_event_id ) )
-                                      iv_at        = zcl_cd_ops_factory=>get_clock( )->now( ) ).
+                                      iv_at        = zcl_ca_ops_factory=>get_clock( )->now( ) ).
         lo_store->commit( ).
         rs_outcome-processed = abap_true.
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         " Not marked: the 5-minute run re-applies it (idempotent)
         lo_store->rollback( ).
     ENDTRY.

@@ -1,5 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Alerting and approved tables'
+@EndUserText.label: 'Approved tables'
 @Metadata.allowExtensions: true
 @ObjectModel.semanticKey: ['SingletonID']
 define root view entity ZC_CD_OpsCfgAll
@@ -10,7 +10,5 @@ define root view entity ZC_CD_OpsCfgAll
       @Consumption.hidden: true
       LastChangedAtMax,
       TransportRequestID,
-      _AlertRule : redirected to composition child ZC_CD_AlertRule,
-      _AlertChannel : redirected to composition child ZC_CD_AlertChannel,
       _ApprovedTable : redirected to composition child ZC_CD_ApprovedTable
 }

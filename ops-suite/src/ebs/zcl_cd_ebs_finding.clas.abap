@@ -16,10 +16,10 @@ CLASS zcl_cd_ebs_finding DEFINITION
   PUBLIC SECTION.
     CONSTANTS:
       BEGIN OF gc_object_type,
-        line      TYPE zif_cd_ops_types=>ty_object_type VALUE 'LINE',
-        statement TYPE zif_cd_ops_types=>ty_object_type VALUE 'STMT',
-        file      TYPE zif_cd_ops_types=>ty_object_type VALUE 'FILE',
-        run       TYPE zif_cd_ops_types=>ty_object_type VALUE 'RUN',
+        line      TYPE zif_ca_ops_types=>ty_object_type VALUE 'LINE',
+        statement TYPE zif_ca_ops_types=>ty_object_type VALUE 'STMT',
+        file      TYPE zif_ca_ops_types=>ty_object_type VALUE 'FILE',
+        run       TYPE zif_ca_ops_types=>ty_object_type VALUE 'RUN',
       END OF gc_object_type.
 
     "! Object key of a line: <stmt_key>/<line_no>
@@ -27,53 +27,53 @@ CLASS zcl_cd_ebs_finding DEFINITION
       IMPORTING
         is_line       TYPE zif_cd_ebs_types=>ty_line
       RETURNING
-        VALUE(rv_key) TYPE zif_cd_ops_types=>ty_object_key.
+        VALUE(rv_key) TYPE zif_ca_ops_types=>ty_object_key.
 
     CLASS-METHODS for_line
       IMPORTING
         is_line           TYPE zif_cd_ebs_types=>ty_line
-        iv_rule_id        TYPE zif_cd_ops_types=>ty_rule_id
-        iv_check_code     TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity
-        iv_action         TYPE zif_cd_ops_types=>ty_action OPTIONAL
+        iv_rule_id        TYPE zif_ca_ops_types=>ty_rule_id
+        iv_check_code     TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity
+        iv_action         TYPE zif_ca_ops_types=>ty_action OPTIONAL
         iv_message        TYPE clike
         iv_details        TYPE string OPTIONAL
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     CLASS-METHODS for_statement
       IMPORTING
         is_statement      TYPE zif_cd_ebs_types=>ty_statement
-        iv_rule_id        TYPE zif_cd_ops_types=>ty_rule_id
-        iv_check_code     TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity
-        iv_action         TYPE zif_cd_ops_types=>ty_action OPTIONAL
+        iv_rule_id        TYPE zif_ca_ops_types=>ty_rule_id
+        iv_check_code     TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity
+        iv_action         TYPE zif_ca_ops_types=>ty_action OPTIONAL
         iv_message        TYPE clike
-        iv_amount         TYPE zif_cd_ops_types=>ty_amount OPTIONAL
+        iv_amount         TYPE zif_ca_ops_types=>ty_amount OPTIONAL
         iv_details        TYPE string OPTIONAL
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! Finding from a rule configuration row (severity and action come from customizing)
     CLASS-METHODS for_rule_line
       IMPORTING
         is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
         is_line           TYPE zif_cd_ebs_types=>ty_line
-        iv_check_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code     TYPE zif_ca_ops_types=>ty_check_code
         iv_message        TYPE clike
         iv_details        TYPE string OPTIONAL
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     CLASS-METHODS for_rule_statement
       IMPORTING
         is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
         is_statement      TYPE zif_cd_ebs_types=>ty_statement
-        iv_check_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code     TYPE zif_ca_ops_types=>ty_check_code
         iv_message        TYPE clike
-        iv_amount         TYPE zif_cd_ops_types=>ty_amount OPTIONAL
+        iv_amount         TYPE zif_ca_ops_types=>ty_amount OPTIONAL
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
 
 ENDCLASS.

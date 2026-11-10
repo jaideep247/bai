@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_ebs_dash_cds_test.clas.testclasses.abap
 *& Purpose:
 *& CDS tests of the EBS validation dashboard on cl_cds_test_environment
-*& doubles of the base tables (FEBKO, FEBEP, ZCD_OPS_FINDING, ZCD_OPS_RUN,
+*& doubles of the base tables (FEBKO, FEBEP, ZCA_OPS_FINDING, ZCA_OPS_RUN,
 *& ZCD_EBS_RULE_DEF, DFKKRP, DFKKRK, DFKKNRP): validation status of a
 *& statement and a line from its open findings, masking of the bank account,
 *& hidden messages of file-source statements, line counters and unevaluated
@@ -27,7 +27,7 @@
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    CONSTANTS gc_pe_area TYPE zif_cd_ops_types=>ty_pe_area VALUE 'EBS'.
+    CONSTANTS gc_pe_area TYPE zif_ca_ops_types=>ty_area VALUE 'EBS'.
     CONSTANTS gc_house_bank TYPE c LENGTH 5 VALUE 'PNC01'.
     CONSTANTS gc_account_id TYPE c LENGTH 5 VALUE 'DISB1'.
     CONSTANTS gc_company TYPE c LENGTH 4 VALUE 'US01'.
@@ -81,25 +81,25 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
     "! Finding as ZCL_CD_EBS_FINDING writes it (statement / line key from KUKEY, ESNUM)
     CLASS-METHODS finding
       IMPORTING
-        iv_run_id         TYPE zif_cd_ops_types=>ty_run_id
+        iv_run_id         TYPE zif_ca_ops_types=>ty_run_id
         iv_finding_no     TYPE i
-        iv_object_type    TYPE zif_cd_ops_types=>ty_object_type
+        iv_object_type    TYPE zif_ca_ops_types=>ty_object_type
         iv_object_key     TYPE clike
-        iv_rule_id        TYPE zif_cd_ops_types=>ty_rule_id
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity
-        iv_disposition    TYPE zif_cd_ops_types=>ty_disposition DEFAULT zif_cd_ops_types=>gc_disposition-open
+        iv_rule_id        TYPE zif_ca_ops_types=>ty_rule_id
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity
+        iv_disposition    TYPE zif_ca_ops_types=>ty_disposition DEFAULT zif_ca_ops_types=>gc_disposition-open
       RETURNING
-        VALUE(rs_finding) TYPE zcd_ops_finding.
+        VALUE(rs_finding) TYPE zca_ops_finding.
 
     CLASS-METHODS run
       IMPORTING
-        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
-        iv_status     TYPE zif_cd_ops_types=>ty_run_status
+        iv_run_id     TYPE zif_ca_ops_types=>ty_run_id
+        iv_status     TYPE zif_ca_ops_types=>ty_run_status
         iv_ended_at   TYPE timestampl
         iv_test_mode  TYPE abap_bool DEFAULT abap_false
       RETURNING
-        VALUE(rs_run) TYPE zcd_ops_run.
+        VALUE(rs_run) TYPE zca_ops_run.
 
     "! Payment engine account (ZCD_EBS_ACCT) of the default XBLNR: only statements whose every line
     "! carries an active one are on the dashboard
@@ -116,14 +116,14 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
       IMPORTING
         iv_kukey      TYPE zif_cd_ebs_types=>ty_kukey
       RETURNING
-        VALUE(rv_key) TYPE zif_cd_ops_types=>ty_object_key.
+        VALUE(rv_key) TYPE zif_ca_ops_types=>ty_object_key.
 
     CLASS-METHODS line_key
       IMPORTING
         iv_kukey      TYPE zif_cd_ebs_types=>ty_kukey
         iv_esnum      TYPE zif_cd_ebs_types=>ty_esnum
       RETURNING
-        VALUE(rv_key) TYPE zif_cd_ops_types=>ty_object_key.
+        VALUE(rv_key) TYPE zif_ca_ops_types=>ty_object_key.
 ENDCLASS.
 
 
@@ -234,7 +234,7 @@ CLASS ltc_statement DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_run TYPE zif_cd_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000001'.
+    CONSTANTS gc_run TYPE zif_ca_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000001'.
     CONSTANTS:
       BEGIN OF gc_kukey,
         blocked    TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000101',
@@ -254,24 +254,24 @@ CLASS ltc_statement DEFINITION FINAL
       END OF gc_status.
     CONSTANTS:
       BEGIN OF gc_rule,
-        unmapped   TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R14',
-        reference  TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R07',
-        posting    TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S13',
-        duplicate  TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R09',
+        unmapped   TYPE zif_ca_ops_types=>ty_rule_id VALUE 'R14',
+        reference  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'R07',
+        posting    TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S13',
+        duplicate  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'R09',
       END OF gc_rule.
     CONSTANTS:
       BEGIN OF gc_code,
-        unmapped   TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_BTC',
-        not_found  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAYMENT_NOT_FOUND',
-        incomplete TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_INCOMPLETE',
-        duplicate  TYPE zif_cd_ops_types=>ty_check_code VALUE 'DUPLICATE_ENTRY',
+        unmapped   TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNMAPPED_BTC',
+        not_found  TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAYMENT_NOT_FOUND',
+        incomplete TYPE zif_ca_ops_types=>ty_check_code VALUE 'POSTING_INCOMPLETE',
+        duplicate  TYPE zif_ca_ops_types=>ty_check_code VALUE 'DUPLICATE_ENTRY',
       END OF gc_code.
     CONSTANTS gc_line_1 TYPE zif_cd_ebs_types=>ty_esnum VALUE '00001'.
     CONSTANTS gc_line_2 TYPE zif_cd_ebs_types=>ty_esnum VALUE '00002'.
     CONSTANTS gc_belnr TYPE c LENGTH 10 VALUE '0100000001'.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
-    DATA mt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA mt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -290,12 +290,12 @@ CLASS ltc_statement DEFINITION FINAL
 
     METHODS add_finding
       IMPORTING
-        iv_type        TYPE zif_cd_ops_types=>ty_object_type
-        iv_key         TYPE zif_cd_ops_types=>ty_object_key
-        iv_rule        TYPE zif_cd_ops_types=>ty_rule_id
-        iv_code        TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity    TYPE zif_cd_ops_types=>ty_severity
-        iv_disposition TYPE zif_cd_ops_types=>ty_disposition DEFAULT zif_cd_ops_types=>gc_disposition-open.
+        iv_type        TYPE zif_ca_ops_types=>ty_object_type
+        iv_key         TYPE zif_ca_ops_types=>ty_object_key
+        iv_rule        TYPE zif_ca_ops_types=>ty_rule_id
+        iv_code        TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity    TYPE zif_ca_ops_types=>ty_severity
+        iv_disposition TYPE zif_ca_ops_types=>ty_disposition DEFAULT zif_ca_ops_types=>gc_disposition-open.
     METHODS insert_scenario.
     METHODS status_of
       IMPORTING
@@ -341,7 +341,7 @@ CLASS ltc_statement IMPLEMENTATION.
   METHOD insert_scenario.
     DATA lt_stmts TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
     DATA lt_lines TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
-    DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+    DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
 
     INSERT ltd_rows=>statement( gc_kukey-blocked ) INTO TABLE lt_stmts.
     INSERT ltd_rows=>statement( gc_kukey-error ) INTO TABLE lt_stmts.
@@ -364,43 +364,43 @@ CLASS ltc_statement IMPLEMENTATION.
                  iv_key      = ltd_rows=>line_key( iv_kukey = gc_kukey-blocked iv_esnum = gc_line_1 )
                  iv_rule     = gc_rule-unmapped
                  iv_code     = gc_code-unmapped
-                 iv_severity = zif_cd_ops_types=>gc_severity-block ).
+                 iv_severity = zif_ca_ops_types=>gc_severity-block ).
     add_finding( iv_type     = zcl_cd_ebs_finding=>gc_object_type-line
                  iv_key      = ltd_rows=>line_key( iv_kukey = gc_kukey-blocked iv_esnum = gc_line_1 )
                  iv_rule     = gc_rule-duplicate
                  iv_code     = gc_code-duplicate
-                 iv_severity = zif_cd_ops_types=>gc_severity-warning ).
+                 iv_severity = zif_ca_ops_types=>gc_severity-warning ).
     add_finding( iv_type     = zcl_cd_ebs_finding=>gc_object_type-statement
                  iv_key      = ltd_rows=>stmt_key( gc_kukey-error )
                  iv_rule     = gc_rule-reference
                  iv_code     = gc_code-not_found
-                 iv_severity = zif_cd_ops_types=>gc_severity-error ).
+                 iv_severity = zif_ca_ops_types=>gc_severity-error ).
     " POSTING_INCOMPLETE (W) outranks an ordinary warning, not an error
     add_finding( iv_type     = zcl_cd_ebs_finding=>gc_object_type-statement
                  iv_key      = ltd_rows=>stmt_key( gc_kukey-incomplete )
                  iv_rule     = gc_rule-posting
                  iv_code     = gc_code-incomplete
-                 iv_severity = zif_cd_ops_types=>gc_severity-warning ).
+                 iv_severity = zif_ca_ops_types=>gc_severity-warning ).
     add_finding( iv_type     = zcl_cd_ebs_finding=>gc_object_type-statement
                  iv_key      = ltd_rows=>stmt_key( gc_kukey-warning )
                  iv_rule     = gc_rule-duplicate
                  iv_code     = gc_code-duplicate
-                 iv_severity = zif_cd_ops_types=>gc_severity-warning ).
+                 iv_severity = zif_ca_ops_types=>gc_severity-warning ).
     " Resolved and waived findings never count
     add_finding( iv_type        = zcl_cd_ebs_finding=>gc_object_type-statement
                  iv_key         = ltd_rows=>stmt_key( gc_kukey-resolved )
                  iv_rule        = gc_rule-reference
                  iv_code        = gc_code-not_found
-                 iv_severity    = zif_cd_ops_types=>gc_severity-error
-                 iv_disposition = zif_cd_ops_types=>gc_disposition-resolved ).
+                 iv_severity    = zif_ca_ops_types=>gc_severity-error
+                 iv_disposition = zif_ca_ops_types=>gc_disposition-resolved ).
     add_finding( iv_type        = zcl_cd_ebs_finding=>gc_object_type-statement
                  iv_key         = ltd_rows=>stmt_key( gc_kukey-resolved )
                  iv_rule        = gc_rule-unmapped
                  iv_code        = gc_code-unmapped
-                 iv_severity    = zif_cd_ops_types=>gc_severity-block
-                 iv_disposition = zif_cd_ops_types=>gc_disposition-waived ).
+                 iv_severity    = zif_ca_ops_types=>gc_severity-block
+                 iv_disposition = zif_ca_ops_types=>gc_disposition-waived ).
     INSERT ltd_rows=>run( iv_run_id   = gc_run
-                          iv_status   = zif_cd_ops_types=>gc_run_status-warning
+                          iv_status   = zif_ca_ops_types=>gc_run_status-warning
                           iv_ended_at = ltd_rows=>now( ) ) INTO TABLE lt_runs.
 
     go_env->insert_test_data( i_data = lt_stmts ).
@@ -723,17 +723,17 @@ CLASS ltc_finding DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_run TYPE zif_cd_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000002'.
+    CONSTANTS gc_run TYPE zif_ca_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000002'.
     CONSTANTS gc_kukey TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000201'.
     CONSTANTS gc_esnum TYPE zif_cd_ebs_types=>ty_esnum VALUE '00012'.
     CONSTANTS gc_line_no TYPE c LENGTH 5 VALUE '12'.
-    CONSTANTS gc_account TYPE zif_cd_ops_types=>ty_group VALUE '123456789012'.
+    CONSTANTS gc_account TYPE zif_ca_ops_types=>ty_group VALUE '123456789012'.
     CONSTANTS gc_account_masked TYPE c LENGTH 8 VALUE '****9012'.
-    CONSTANTS gc_file_stmt TYPE zif_cd_ops_types=>ty_object_key VALUE 'S0001'.
-    CONSTANTS gc_bai TYPE zif_cd_ops_types=>ty_group VALUE 'BAI2:165'.
+    CONSTANTS gc_file_stmt TYPE zif_ca_ops_types=>ty_object_key VALUE 'S0001'.
+    CONSTANTS gc_bai TYPE zif_ca_ops_types=>ty_group VALUE 'BAI2:165'.
     CONSTANTS gc_message TYPE c LENGTH 40 VALUE 'Account 123456789012: balance mismatch'.
-    CONSTANTS gc_rule TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S02'.
-    CONSTANTS gc_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'BALANCE_MISMATCH'.
+    CONSTANTS gc_rule TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S02'.
+    CONSTANTS gc_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'BALANCE_MISMATCH'.
     CONSTANTS gc_source_file TYPE c LENGTH 4 VALUE 'FILE'.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
@@ -762,7 +762,7 @@ CLASS ltc_finding IMPLEMENTATION.
 
 
   METHOD setup.
-    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
 
     go_env->clear_doubles( ).
     go_env->insert_test_data( i_data = ltd_rows=>rule_defs( ) ).
@@ -772,7 +772,7 @@ CLASS ltc_finding IMPLEMENTATION.
                                       iv_object_key  = ltd_rows=>stmt_key( gc_kukey )
                                       iv_rule_id     = gc_rule
                                       iv_code        = gc_code
-                                      iv_severity    = zif_cd_ops_types=>gc_severity-block ).
+                                      iv_severity    = zif_ca_ops_types=>gc_severity-block ).
     ls_feb-group1  = gc_account.
     ls_feb-message = gc_message.
     INSERT ls_feb INTO TABLE lt_findings.
@@ -782,7 +782,7 @@ CLASS ltc_finding IMPLEMENTATION.
                                        iv_object_key  = gc_file_stmt
                                        iv_rule_id     = gc_rule
                                        iv_code        = gc_code
-                                       iv_severity    = zif_cd_ops_types=>gc_severity-block ).
+                                       iv_severity    = zif_ca_ops_types=>gc_severity-block ).
     ls_file-group1  = gc_account.
     ls_file-message = gc_message.
     INSERT ls_file INTO TABLE lt_findings.
@@ -792,7 +792,7 @@ CLASS ltc_finding IMPLEMENTATION.
                                        iv_object_key  = ltd_rows=>line_key( iv_kukey = gc_kukey iv_esnum = gc_esnum )
                                        iv_rule_id     = gc_rule
                                        iv_code        = gc_code
-                                       iv_severity    = zif_cd_ops_types=>gc_severity-warning ).
+                                       iv_severity    = zif_ca_ops_types=>gc_severity-warning ).
     ls_line-group1 = gc_bai.
     INSERT ls_line INTO TABLE lt_findings.
     go_env->insert_test_data( i_data = lt_findings ).
@@ -856,10 +856,10 @@ CLASS ltc_run DEFINITION FINAL
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_run,
-        early   TYPE zif_cd_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000011',
-        late    TYPE zif_cd_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000012',
-        running TYPE zif_cd_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000013',
-        test    TYPE zif_cd_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000014',
+        early   TYPE zif_ca_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000011',
+        late    TYPE zif_ca_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000012',
+        running TYPE zif_ca_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000013',
+        test    TYPE zif_ca_ops_types=>ty_run_id VALUE 'E0000000000000000000000000000014',
       END OF gc_run.
     CONSTANTS:
       BEGIN OF gc_count,
@@ -872,11 +872,11 @@ CLASS ltc_run DEFINITION FINAL
       END OF gc_count.
     CONSTANTS gc_unevaluated TYPE i VALUE 4.
     CONSTANTS gc_kukey TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000301'.
-    CONSTANTS gc_s13 TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S13'.
-    CONSTANTS gc_s13_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_INCOMPLETE'.
-    CONSTANTS gc_r22 TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R22'.
-    CONSTANTS gc_r22_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'DUPLICATE_HISTORY'.
-    CONSTANTS gc_plugin TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR'.
+    CONSTANTS gc_s13 TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S13'.
+    CONSTANTS gc_s13_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'POSTING_INCOMPLETE'.
+    CONSTANTS gc_r22 TYPE zif_ca_ops_types=>ty_rule_id VALUE 'R22'.
+    CONSTANTS gc_r22_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'DUPLICATE_HISTORY'.
+    CONSTANTS gc_plugin TYPE zif_ca_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR'.
     CONSTANTS gc_seconds_old TYPE i VALUE 108000.
     CONSTANTS gc_stale_minutes TYPE i VALUE 1560.
 
@@ -896,11 +896,11 @@ CLASS ltc_run DEFINITION FINAL
 
     METHODS counted_run
       IMPORTING
-        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
+        iv_run_id     TYPE zif_ca_ops_types=>ty_run_id
         iv_ended_at   TYPE timestampl
         iv_total      TYPE i DEFAULT gc_count-total
       RETURNING
-        VALUE(rs_run) TYPE zcd_ops_run.
+        VALUE(rs_run) TYPE zca_ops_run.
     METHODS insert_runs.
 ENDCLASS.
 
@@ -928,7 +928,7 @@ CLASS ltc_run IMPLEMENTATION.
 
   METHOD counted_run.
     rs_run = ltd_rows=>run( iv_run_id   = iv_run_id
-                            iv_status   = zif_cd_ops_types=>gc_run_status-warning
+                            iv_status   = zif_ca_ops_types=>gc_run_status-warning
                             iv_ended_at = iv_ended_at ).
     rs_run-total_items   = iv_total.
     rs_run-passed_items  = gc_count-passed.
@@ -939,14 +939,14 @@ CLASS ltc_run IMPLEMENTATION.
 
 
   METHOD insert_runs.
-    DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
-    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
+    DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
 
     INSERT counted_run( iv_run_id = gc_run-early iv_ended_at = ltd_rows=>seconds_ago( 120 )
                         iv_total  = gc_count-early ) INTO TABLE lt_runs.
     INSERT counted_run( iv_run_id = gc_run-late iv_ended_at = ltd_rows=>seconds_ago( 60 ) ) INTO TABLE lt_runs.
     DATA(ls_running) = counted_run( iv_run_id = gc_run-running iv_ended_at = ltd_rows=>now( ) ).
-    ls_running-status = zif_cd_ops_types=>gc_run_status-running.
+    ls_running-status = zif_ca_ops_types=>gc_run_status-running.
     INSERT ls_running INTO TABLE lt_runs.
     DATA(ls_test) = counted_run( iv_run_id = gc_run-test iv_ended_at = ltd_rows=>now( ) ).
     ls_test-test_mode = abap_true.
@@ -958,14 +958,14 @@ CLASS ltc_run IMPLEMENTATION.
                               iv_object_key  = ltd_rows=>stmt_key( gc_kukey )
                               iv_rule_id     = gc_s13
                               iv_code        = gc_s13_code
-                              iv_severity    = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
+                              iv_severity    = zif_ca_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
     INSERT ltd_rows=>finding( iv_run_id      = gc_run-late
                               iv_finding_no  = 2
                               iv_object_type = zcl_cd_ebs_finding=>gc_object_type-statement
                               iv_object_key  = ltd_rows=>stmt_key( gc_kukey )
                               iv_rule_id     = gc_r22
                               iv_code        = gc_r22_code
-                              iv_severity    = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
+                              iv_severity    = zif_ca_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
     " A run-level finding has a blank statement key: never counted as a statement
     INSERT ltd_rows=>finding( iv_run_id      = gc_run-late
                               iv_finding_no  = 3
@@ -973,7 +973,7 @@ CLASS ltc_run IMPLEMENTATION.
                               iv_object_key  = gc_r22
                               iv_rule_id     = gc_r22
                               iv_code        = gc_plugin
-                              iv_severity    = zif_cd_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
+                              iv_severity    = zif_ca_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
     go_env->insert_test_data( i_data = lt_runs ).
     go_env->insert_test_data( i_data = lt_findings ).
   ENDMETHOD.
@@ -1056,9 +1056,9 @@ CLASS ltc_run IMPLEMENTATION.
 
   METHOD stale_when_no_completed_run.
     TRY.
-        DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+        DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
         DATA(ls_aborted) = counted_run( iv_run_id = gc_run-running iv_ended_at = ltd_rows=>now( ) ).
-        ls_aborted-status = zif_cd_ops_types=>gc_run_status-aborted.
+        ls_aborted-status = zif_ca_ops_types=>gc_run_status-aborted.
         INSERT ls_aborted INTO TABLE lt_runs.
         go_env->insert_test_data( i_data = lt_runs ).
 
@@ -1086,7 +1086,7 @@ CLASS ltc_run IMPLEMENTATION.
     DATA lt_val TYPE STANDARD TABLE OF zca_param_val WITH EMPTY KEY.
     DATA ls_val TYPE zca_param_val.
     TRY.
-        DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+        DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
         INSERT counted_run( iv_run_id = gc_run-early iv_ended_at = ltd_rows=>seconds_ago( lc_two_hours ) )
                INTO TABLE lt_runs.
         go_env->insert_test_data( i_data = lt_runs ).
@@ -1121,7 +1121,7 @@ CLASS ltc_run IMPLEMENTATION.
 
   METHOD stale_after_26_hours.
     TRY.
-        DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+        DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
         INSERT counted_run( iv_run_id = gc_run-early iv_ended_at = ltd_rows=>seconds_ago( gc_seconds_old ) )
                INTO TABLE lt_runs.
         go_env->insert_test_data( i_data = lt_runs ).

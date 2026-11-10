@@ -37,14 +37,14 @@ CLASS zcl_cd_fmon_query DEFINITION
       CHANGING
         cs_query TYPE zif_cd_fmon_types=>ty_query.
 
-    "! @raising zcx_cd_ops_error | 201 unknown field, 202 invalid name,
+    "! @raising zcx_ca_ops_error | 201 unknown field, 202 invalid name,
     "! 203 wrong type of date field, 209 no restricting condition
     CLASS-METHODS validate
       IMPORTING
         is_query  TYPE zif_cd_fmon_types=>ty_query
         it_fields TYPE zif_cd_fmon_types=>tt_ddic_field
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Keyset condition of a watermark read (dynamic WHERE part, host variables LV_SEEK_DATE /
     "! LV_SEEK_TIME / LV_SEEK_KEY of the reader): the rows after (date, time, key) of the query's
@@ -69,7 +69,7 @@ CLASS zcl_cd_fmon_query DEFINITION
         is_query TYPE zif_cd_fmon_types=>ty_query
         it_allow TYPE zif_cd_fmon_types=>tt_tab_allow
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
   PRIVATE SECTION.
     "! DDIC name, optionally with namespace (/ABC/NAME); length checked separately
@@ -98,7 +98,7 @@ CLASS zcl_cd_fmon_query DEFINITION
       RETURNING
         VALUE(rs_field) TYPE zif_cd_fmon_types=>ty_ddic_field
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 

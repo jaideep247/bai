@@ -28,7 +28,7 @@ CLASS zcl_cd_hck_c_prq_cancel DEFINITION
     INTERFACES zif_cd_hck_check.
 
     CONSTANTS gc_metric TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PRQ_PAID_CANCELLED'.
-    CONSTANTS gc_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRQ_PAID_CANCELLED'.
+    CONSTANTS gc_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRQ_PAID_CANCELLED'.
 
     "! The cancellation rule of the check (PARAM2 CANCELLED= / SRC=, defaults CANCELLED / PCLM): a
     "! request of one of the sources with an attempt in the cancelled status is not expected to be paid.
@@ -140,8 +140,8 @@ CLASS zcl_cd_hck_c_prq_cancel IMPLEMENTATION.
     LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<lv_fin>) FROM 1 TO lv_max.
       INSERT VALUE #( object_key = <lv_fin>
                       check_code = gc_code
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-exception
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-exception
                       reference  = <lv_fin>
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-payment_request_is_cancelle
                                                           iv_v1    = <lv_fin> ) )

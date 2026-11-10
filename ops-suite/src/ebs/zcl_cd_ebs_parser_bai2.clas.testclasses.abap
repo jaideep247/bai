@@ -29,19 +29,19 @@ CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
 
     CONSTANTS gc_file_name TYPE string VALUE `BAI2_20261104.TXT`.
     CONSTANTS gc_stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'S0001'.
-    CONSTANTS gc_usd TYPE zif_cd_ops_types=>ty_currency VALUE 'USD'.
+    CONSTANTS gc_usd TYPE zif_ca_ops_types=>ty_currency VALUE 'USD'.
     CONSTANTS gc_as_of TYPE d VALUE '20261103'.
     CONSTANTS gc_msgno_not_bai2 TYPE symsgno VALUE '150'.
 
     CONSTANTS:
       BEGIN OF gc_check,
-        acct_total   TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_ACCT_CTRL_TOTAL',
-        record_count TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_RECORD_COUNT',
-        item_count   TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_ITEM_COUNT',
-        missing_trl  TYPE zif_cd_ops_types=>ty_check_code VALUE 'MISSING_TRAILER',
-        empty_file   TYPE zif_cd_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
-        info_skipped TYPE zif_cd_ops_types=>ty_check_code VALUE 'INFO_CODE_SKIPPED',
-        trl_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'TRAILER_FIELD_MISSING',
+        acct_total   TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_ACCT_CTRL_TOTAL',
+        record_count TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_RECORD_COUNT',
+        item_count   TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_ITEM_COUNT',
+        missing_trl  TYPE zif_ca_ops_types=>ty_check_code VALUE 'MISSING_TRAILER',
+        empty_file   TYPE zif_ca_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
+        info_skipped TYPE zif_ca_ops_types=>ty_check_code VALUE 'INFO_CODE_SKIPPED',
+        trl_missing  TYPE zif_ca_ops_types=>ty_check_code VALUE 'TRAILER_FIELD_MISSING',
       END OF gc_check.
 
     DATA mv_content TYPE string.
@@ -57,14 +57,14 @@ CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_file) TYPE zif_cd_ebs_types=>ty_file
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS finding
       IMPORTING
-        it_findings       TYPE zif_cd_ops_types=>tt_finding
-        iv_check_code     TYPE zif_cd_ops_types=>ty_check_code
+        it_findings       TYPE zif_ca_ops_types=>tt_finding
+        iv_check_code     TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     METHODS file_header_fields_mapped FOR TESTING.
     METHODS account_maps_to_statement FOR TESTING.
@@ -112,7 +112,7 @@ CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
     "! Findings as OBJECT_TYPE/RULE_ID/CHECK_CODE/SEVERITY
     METHODS finding_codes
       IMPORTING
-        it_findings     TYPE zif_cd_ops_types=>tt_finding
+        it_findings     TYPE zif_ca_ops_types=>tt_finding
       RETURNING
         VALUE(rt_codes) TYPE string_table.
 
@@ -283,7 +283,7 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
         configure_scenario( VALUE #( ) ).
         DATA(ls_file) = parse( ).
         cl_abap_unit_assert=>assert_equals( act = ls_file-findings
-                                            exp = VALUE zif_cd_ops_types=>tt_finding( )
+                                            exp = VALUE zif_ca_ops_types=>tt_finding( )
                                             msg = 'A consistent file must not produce findings' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
@@ -329,7 +329,7 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
                                             exp = lt_exp
                                             msg = 'Signed balances not mapped' ).
         cl_abap_unit_assert=>assert_equals( act = ls_stmt-opening_bal
-                                            exp = CONV zif_cd_ops_types=>ty_amount( '-250.00' )
+                                            exp = CONV zif_ca_ops_types=>ty_amount( '-250.00' )
                                             msg = 'Opening balance must be negative' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
@@ -413,9 +413,9 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
         CLEAR ls_finding-message.
         cl_abap_unit_assert=>assert_equals(
           act = ls_finding
-          exp = VALUE zif_cd_ops_types=>ty_finding( object_type = 'STMT' object_key = gc_stmt_key rule_id = 'S06'
+          exp = VALUE zif_ca_ops_types=>ty_finding( object_type = 'STMT' object_key = gc_stmt_key rule_id = 'S06'
                                                      check_code = gc_check-acct_total
-                                                     severity = zif_cd_ops_types=>gc_severity-block
+                                                     severity = zif_ca_ops_types=>gc_severity-block
                                                      amount = '-0.99' currency = gc_usd )
           msg = 'Account control total mismatch must block (S06/B)' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -488,7 +488,7 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
     TRY.
         parse( ).
         cl_abap_unit_assert=>fail( msg = 'Non-BAI2 content must raise ZCX_CD_OPS_ERROR' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_msgno_not_bai2
                                             msg = 'Message 150 expected for non-BAI2 content' ).
@@ -586,7 +586,7 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
         DATA(ls_file) = parse( ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_file-findings[ check_code = 'FUNDS_LAYOUT'
-                                                        severity   = zif_cd_ops_types=>gc_severity-block ] ) )
+                                                        severity   = zif_ca_ops_types=>gc_severity-block ] ) )
           msg = 'A funds-type layout that cannot be read must give a blocking FUNDS_LAYOUT finding' ).
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_file-lines[ btc_code = iv_code ] ) )
                                            msg = 'No line with shifted or blank references may be emitted' ).

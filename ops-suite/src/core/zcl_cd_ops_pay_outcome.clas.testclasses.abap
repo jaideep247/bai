@@ -134,12 +134,12 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_clock PARTIALLY IMPLEMENTED.
     CONSTANTS gc_today TYPE d VALUE '20261111'.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = gc_today.
   ENDMETHOD.
 ENDCLASS.
@@ -154,7 +154,7 @@ CLASS ltc_outcome DEFINITION FINAL FOR TESTING
     CONSTANTS gc_cap TYPE i VALUE 1000.
     CONSTANTS gc_unwatched TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'Z'.
     "! An evidence class that does not exist (configuration error 030)
-    CONSTANTS gc_no_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_EV_NONE'.
+    CONSTANTS gc_no_class TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_EV_NONE'.
     CONSTANTS gc_reversal TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000990001'.
     CONSTANTS gc_request_spec TYPE string VALUE `TABLE=ZCD_PAYM_REQ_LOG;KEY=ZZ_FIN_TRANS_NUM;KEY2=SOURCE;STATUS=ZZ_STATUS`.
 
@@ -194,7 +194,7 @@ CLASS ltc_outcome DEFINITION FINAL FOR TESTING
       IMPORTING
         iv_id TYPE zcl_cd_ops_pay_fixture=>ty_scenario_id
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Serve one fixture scenario from the doubles
     METHODS load
@@ -209,7 +209,7 @@ CLASS ltc_outcome DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_verdict) TYPE zif_cd_ops_payout_types=>ty_verdict
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -225,7 +225,7 @@ CLASS ltc_outcome IMPLEMENTATION.
     zcl_cd_hck_injector=>inject_runtime_dao( mo_runtime ).
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     mo_params = NEW #( ).
     mo_params->set( iv_name = zif_cd_ops_trace_types=>gc_param-src_request iv_value = gc_request_spec ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
@@ -406,7 +406,7 @@ CLASS ltc_outcome IMPLEMENTATION.
   METHOD config_message_is_config.
     TRY.
         RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e032(zcd_ops) WITH gc_no_class gc_no_class.
-      CATCH zcx_cd_ops_error INTO DATA(lx_config).
+      CATCH zcx_ca_ops_error INTO DATA(lx_config).
         cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_pay_outcome=>is_config_error( lx_config )
                                           msg = 'Message 032 is configuration' ).
     ENDTRY.
@@ -420,7 +420,7 @@ CLASS ltc_outcome IMPLEMENTATION.
   METHOD read_error_is_not_config.
     TRY.
         RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH gc_no_class.
-      CATCH zcx_cd_ops_error INTO DATA(lx_read).
+      CATCH zcx_ca_ops_error INTO DATA(lx_read).
         cl_abap_unit_assert=>assert_false( act = zcl_cd_ops_pay_outcome=>is_config_error( lx_read )
                                            msg = 'A read failure is no configuration error' ).
     ENDTRY.
@@ -434,10 +434,10 @@ CLASS ltc_outcome IMPLEMENTATION.
     TRY.
         TRY.
             RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e703(zcd_ops) WITH zif_cd_ops_trace_types=>gc_param-src_request.
-          CATCH zcx_cd_ops_error INTO DATA(lx_inner).
+          CATCH zcx_ca_ops_error INTO DATA(lx_inner).
             RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e751(zcd_ops) WITH gc_context EXPORTING previous = lx_inner.
         ENDTRY.
-      CATCH zcx_cd_ops_error INTO DATA(lx_outer).
+      CATCH zcx_ca_ops_error INTO DATA(lx_outer).
         cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_pay_outcome=>is_config_error( lx_outer )
                                           msg = 'The chained 703 decides' ).
     ENDTRY.
@@ -450,10 +450,10 @@ CLASS ltc_outcome IMPLEMENTATION.
     TRY.
         TRY.
             RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH gc_no_class.
-          CATCH zcx_cd_ops_error INTO DATA(lx_inner).
+          CATCH zcx_ca_ops_error INTO DATA(lx_inner).
             RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e751(zcd_ops) WITH gc_context EXPORTING previous = lx_inner.
         ENDTRY.
-      CATCH zcx_cd_ops_error INTO DATA(lx_outer).
+      CATCH zcx_ca_ops_error INTO DATA(lx_outer).
         DATA(lv_reason) = zcl_cd_ops_pay_outcome=>reason_chain( lx_outer ).
         cl_abap_unit_assert=>assert_equals( act = lv_reason
                                             exp = |{ lx_outer->get_text( ) } - { lx_inner->get_text( ) }|
@@ -660,13 +660,13 @@ CLASS ltc_outcome IMPLEMENTATION.
 
   " Rule: without a request source the attribution is not possible - it raises, nothing is guessed
   METHOD request_source_fails_closed.
-    DATA lx_expected TYPE REF TO zcx_cd_ops_error.
+    DATA lx_expected TYPE REF TO zcx_ca_ops_error.
     DATA(lo_params) = NEW zcl_cd_ops_param_seed( ).
     zcl_cd_ops_injector=>inject_params( lo_params->params( ) ).
     TRY.
         zcl_cd_ops_factory=>get_pay_outcome( )->sources_of(
           VALUE #( ( mo_fixture->scenario( zcl_cd_ops_pay_fixture=>gc_scenario-two_sources )-fin ) ) ).
-      CATCH zcx_cd_ops_error INTO lx_expected.
+      CATCH zcx_ca_ops_error INTO lx_expected.
     ENDTRY.
     cl_abap_unit_assert=>assert_bound( act = lx_expected msg = 'Unconfigured request source raises' ).
   ENDMETHOD.

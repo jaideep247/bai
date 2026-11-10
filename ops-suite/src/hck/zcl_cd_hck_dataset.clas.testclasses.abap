@@ -46,7 +46,7 @@ CLASS ltc_dataset IMPLEMENTATION.
     TRY.
         mo_cut->open_output( gc_missing_file ).
         cl_abap_unit_assert=>fail( msg = 'Open in a missing directory must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Open error raised' ).
     ENDTRY.
   ENDMETHOD.
@@ -58,7 +58,7 @@ CLASS ltc_dataset IMPLEMENTATION.
         mo_cut->transfer( iv_file = gc_missing_file
                           iv_line = gc_line ).
         cl_abap_unit_assert=>fail( msg = 'Transfer to a file that is not open must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Transfer error raised' ).
     ENDTRY.
   ENDMETHOD.

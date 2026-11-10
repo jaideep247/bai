@@ -12,7 +12,7 @@
 *& 2026-11-06 | Return / NOC reason correction: RLGRD with the returns lot item; NOC items by INFOF (DFKKNRP double).
 *& 2026-11-06 | ltc_sap_dao_reads: cheques, FI lines, lookup rows, retrieval field check (coverage gap closure).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
-*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*&            | instead of a hand-written store double: the semantics of ZCL_CA_OPS_STORE.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | ZCD_OPS_PARAM retired: the lookup tests read ZCD_OPS_MONCFG as configured table; ltc_sap_dao
 *&            | injects the parameters (EBS_GL_LEDGER) and resets them.
@@ -24,14 +24,14 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
     "! S_TABU_NAM display of the test user (B4); allowed unless a test refuses it
     DATA mv_allowed TYPE abap_bool VALUE abap_true.
 ENDCLASS.
 
 
 CLASS ltd_table_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_auth~may_read_table.
+  METHOD zif_ca_ops_auth~may_read_table.
     rv_allowed = mv_allowed.
   ENDMETHOD.
 ENDCLASS.
@@ -210,10 +210,10 @@ CLASS ltc_sap_dao IMPLEMENTATION.
         INSERT ls_request INTO TABLE lt_requests.
         DATA(lt_balances) = mo_cut->get_gl_balances( lt_requests ).
         cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_balances[ request_no = 1 ]-balance OPTIONAL )
-                                            exp = CONV zif_cd_ops_types=>ty_amount( '150.00' )
+                                            exp = CONV zif_ca_ops_types=>ty_amount( '150.00' )
                                             msg = 'Postings up to 05 Nov: 100 + 50' ).
         cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_balances[ request_no = 2 ]-balance OPTIONAL )
-                                            exp = CONV zif_cd_ops_types=>ty_amount( '175.00' )
+                                            exp = CONV zif_ca_ops_types=>ty_amount( '175.00' )
                                             msg = 'Postings up to 10 Nov: 100 + 50 + 25' ).
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_balances[ request_no = 3 ] ) )
                                            msg = 'An account without postings has no row (balance 0)' ).
@@ -344,7 +344,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
     go_env->clear_doubles( ).
     mo_params = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
+    zcl_ca_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
     mo_cut = NEW zcl_cd_ebs_sap_dao( ).
     approve_lookup_fields( ).
   ENDMETHOD.
@@ -398,7 +398,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
     TRY.
         mo_cut->get_retrievals( lt_docno ).
         cl_abap_unit_assert=>fail( msg = 'Unknown status field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_test-msgno_field
                                             msg = 'Unknown field is message 051' ).
@@ -529,7 +529,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
     TRY.
         mo_cut->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
         cl_abap_unit_assert=>fail( msg = 'Unknown key field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_test-msgno_field
                                             msg = 'Unknown field is message 051' ).
@@ -547,7 +547,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
     TRY.
         mo_cut->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
         cl_abap_unit_assert=>fail( msg = 'A field that is not approved must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = CONV symsgno( '812' )
                                             msg = 'Field not approved is message 812' ).
@@ -561,14 +561,14 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
     DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
     DATA(lo_auth) = NEW ltd_table_auth( ).
     lo_auth->mv_allowed = abap_false.
-    zcl_cd_ops_injector=>inject_auth( lo_auth ).
+    zcl_ca_ops_injector=>inject_auth( lo_auth ).
     ls_lookup-table_name = gc_test-lookup_tab.
     ls_lookup-key_field  = gc_test-lookup_key.
     INSERT CONV #( gc_test-param ) INTO TABLE lt_keys.
     TRY.
         mo_cut->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
         cl_abap_unit_assert=>fail( msg = 'A table without display authorisation must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = CONV symsgno( '813' )
                                             msg = 'S_TABU_NAM refusal is message 813' ).

@@ -7,7 +7,7 @@
 //          never green), SKIPPED (outside the run's scope), NO_RESULT (no row in that run, e.g. a
 //          check created after it). Completion, evidence availability, run scope, baseline mode
 //          and the summary come with the verdict. The run's overall RAG and score stay
-//          authoritative in ZCD_OPS_RUN (ZR_CD_HckAsOf). Open exceptions per check (any run) and the
+//          authoritative in ZCA_OPS_RUN (ZR_CD_HckAsOf). Open exceptions per check (any run) and the
 //          as-of fields on every row. Drill-down: check -> metric history -> findings.
 //          Read-only: no behaviour definition.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
@@ -28,7 +28,7 @@ define root view entity ZR_CD_HckCheck
   association [0..*] to ZR_CD_HckFind   as _Findings on $projection.CheckId = _Findings.CheckId
 {
   key Def.check_id                                          as CheckId,
-      cast( 'HCK' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_HCK' as abap.char( 16 ) )                       as PaymentEngineArea,
       Def.description                                       as CheckText,
       Def.category                                          as Category,
       cast( case Def.category when 'A' then 'Financial integrity'

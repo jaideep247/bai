@@ -28,7 +28,7 @@ CLASS lcl_app DEFINITION FINAL.
 
   PRIVATE SECTION.
     DATA mt_board TYPE zif_cd_fmon_types=>tt_board.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
 
     METHODS show_board.
     METHODS show_findings.
@@ -39,13 +39,13 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD main.
     TRY.
-        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
+        zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
                                                 iv_pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ).
         DATA(ls_result) = zcl_cd_fmon_factory=>get_engine( )->run(
           iv_business_date = p_date
           iv_iface_id      = CONV #( to_upper( p_iface ) )
           iv_test_mode     = xsdbool( p_test = abap_true ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+      CATCH zcx_ca_ops_error INTO DATA(lx_ops).
         " B9: in background the job ends cancelled (Control-M red), never green
         IF sy-batch = abap_true.
           MESSAGE lx_ops TYPE 'E'.
@@ -54,7 +54,7 @@ CLASS lcl_app IMPLEMENTATION.
         RETURN.
     ENDTRY.
 
-    IF zcl_cd_ops_run_guard=>was_refused( ls_result-findings ) = abap_true.
+    IF zcl_ca_ops_run_guard=>was_refused( ls_result-findings ) = abap_true.
       " Run lock held: background job ends in error so Control-M shows it
       IF sy-batch = abap_true.
         MESSAGE ls_result-run-message TYPE 'E'.

@@ -45,7 +45,7 @@ CLASS ltc_ev_gl_zuonr DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_runtime_types=>ty_evidence_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS equal_holds_changed_anomaly FOR TESTING.
     METHODS changed_holds_for_stripe   FOR TESTING.
     METHODS invalid_expectation_raises FOR TESTING.
@@ -118,7 +118,7 @@ CLASS ltc_ev_gl_zuonr IMPLEMENTATION.
     TRY.
         collect( 'SOMETIMES' ).
         cl_abap_unit_assert=>fail( msg = 'Invalid expectation must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Raised' ).
     ENDTRY.
   ENDMETHOD.

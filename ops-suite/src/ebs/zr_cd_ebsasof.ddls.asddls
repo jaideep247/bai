@@ -17,7 +17,7 @@
 define root view entity ZR_CD_EbsAsOf
   as select from    ZI_CD_EbsRunLast as Last
     // Two EBS runs ending in the same 100 ns are not expected; the end time names the run
-    left outer join zcd_ops_run      as Run on  Run.pe_area   = Last.PaymentEngineArea
+    left outer join zca_ops_run      as Run on  Run.area   = Last.PaymentEngineArea
                                             and Run.ended_at  = Last.LastEndedAt
                                             and Run.test_mode = ' '
     // Stale threshold per area: ZCA_PARAM MON_STALE_AFTER_MIN_<area> (value, else definition default;

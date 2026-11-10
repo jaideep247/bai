@@ -386,7 +386,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     TRY.
         mo_cut->get_queue_groups( is_source = ls_source iv_max_rows = 100 ).
         cl_abap_unit_assert=>fail( msg = 'Unknown field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Validation error' ).
     ENDTRY.
   ENDMETHOD.
@@ -399,7 +399,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     TRY.
         mo_cut->get_queue_groups( is_source = ls_source iv_max_rows = 100 ).
         cl_abap_unit_assert=>fail( msg = 'Table off the whitelist must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Whitelist error' ).
     ENDTRY.
   ENDMETHOD.
@@ -412,7 +412,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     TRY.
         mo_cut->get_queue_groups( is_source = ls_source iv_max_rows = 100 ).
         cl_abap_unit_assert=>fail( msg = 'Character day field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Type error' ).
     ENDTRY.
   ENDMETHOD.
@@ -712,7 +712,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
                                     it_refs     = VALUE #( ( CONV #( 'WIR' ) ) )
                                     iv_max_rows = 100 ).
         cl_abap_unit_assert=>fail( msg = 'Table off the whitelist must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Whitelist error' ).
     ENDTRY.
   ENDMETHOD.
@@ -725,7 +725,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
                                     it_refs     = VALUE #( ( CONV #( 'WIR' ) ) )
                                     iv_max_rows = 100 ).
         cl_abap_unit_assert=>fail( msg = 'Unknown field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Validation error' ).
     ENDTRY.
   ENDMETHOD.

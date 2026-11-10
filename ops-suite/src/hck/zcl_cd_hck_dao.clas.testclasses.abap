@@ -30,14 +30,14 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
     "! S_TABU_NAM display of the test user (B4); allowed unless a test refuses it
     DATA mv_allowed TYPE abap_bool VALUE abap_true.
 ENDCLASS.
 
 
 CLASS ltd_table_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_auth~may_read_table.
+  METHOD zif_ca_ops_auth~may_read_table.
     rv_allowed = mv_allowed.
   ENDMETHOD.
 ENDCLASS.
@@ -58,8 +58,8 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
     DATA mo_cut TYPE REF TO zif_cd_hck_dao.
     DATA mt_metrics TYPE STANDARD TABLE OF zcd_hck_metric WITH EMPTY KEY.
-    DATA mt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
-    DATA mt_runs TYPE SORTED TABLE OF zcd_ops_run WITH UNIQUE KEY run_id.
+    DATA mt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA mt_runs TYPE SORTED TABLE OF zca_ops_run WITH UNIQUE KEY run_id.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -90,7 +90,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
         iv_dim1     TYPE zif_cd_hck_types=>ty_dim
         iv_value    TYPE zif_cd_hck_types=>ty_value
         iv_at       TYPE timestampl
-        iv_status   TYPE zif_cd_ops_types=>ty_run_status DEFAULT zif_cd_ops_types=>gc_run_status-success
+        iv_status   TYPE zif_ca_ops_types=>ty_run_status DEFAULT zif_ca_ops_types=>gc_run_status-success
         iv_dim2     TYPE zif_cd_hck_types=>ty_dim OPTIONAL.
 
     "! Metric rows and the run headers they belong to
@@ -99,7 +99,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS add_finding
       IMPORTING
         iv_no          TYPE i
-        iv_pe_area      TYPE zif_cd_ops_types=>ty_pe_area
+        iv_pe_area      TYPE zif_ca_ops_types=>ty_area
         iv_disposition TYPE zif_cd_hck_types=>ty_disposition
         iv_due         TYPE d.
 
@@ -112,8 +112,8 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZCD_HCK_METRIC' )
                                                                             ( 'ZCD_HCK_RESULT' )
-                                                                            ( 'ZCD_OPS_FINDING' )
-                                                                            ( 'ZCD_OPS_RUN' )
+                                                                            ( 'ZCA_OPS_FINDING' )
+                                                                            ( 'ZCA_OPS_RUN' )
                                                                             ( 'TBTCO' )
                                                                             ( 'TBTCP' )
                                                                             ( 'DFKKSUMC' )
@@ -132,7 +132,7 @@ CLASS ltc_dao IMPLEMENTATION.
 
   METHOD setup.
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
-    zcl_cd_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
+    zcl_ca_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
     go_env->clear_doubles( ).
     CLEAR: mt_metrics, mt_findings, mt_runs.
     mo_cut = zcl_cd_hck_factory=>get_dao( ).
@@ -151,7 +151,7 @@ CLASS ltc_dao IMPLEMENTATION.
     ls_row-value       = iv_value.
     ls_row-measured_at = iv_at.
     INSERT ls_row INTO TABLE mt_metrics.
-    DATA ls_run TYPE zcd_ops_run.
+    DATA ls_run TYPE zca_ops_run.
     ls_run-run_id     = lv_run_byte.
     ls_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
     ls_run-status     = iv_status.
@@ -167,11 +167,11 @@ CLASS ltc_dao IMPLEMENTATION.
 
 
   METHOD add_finding.
-    DATA ls_row TYPE zcd_ops_finding.
+    DATA ls_row TYPE zca_ops_finding.
     ls_row-run_id      = '0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A'.
     ls_row-finding_no  = iv_no.
     ls_row-pe_area      = iv_pe_area.
-    ls_row-severity    = zif_cd_ops_types=>gc_severity-error.
+    ls_row-severity    = zif_ca_ops_types=>gc_severity-error.
     ls_row-disposition = iv_disposition.
     ls_row-due_date    = iv_due.
     INSERT ls_row INTO TABLE mt_findings.
@@ -259,14 +259,14 @@ CLASS ltc_dao IMPLEMENTATION.
     TRY.
         ls_result-run_id       = '0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D'.
         ls_result-check_id     = gc_check.
-        ls_result-verdict      = zif_cd_ops_types=>gc_rag-amber.
+        ls_result-verdict      = zif_ca_ops_types=>gc_rag-amber.
         ls_result-check_status = zif_cd_hck_types=>gc_check_status-amber.
         ls_result-completion   = zif_cd_hck_types=>gc_completion-complete.
         ls_result-evidence     = zif_cd_hck_types=>gc_evidence-all.
         INSERT ls_result INTO TABLE lt_results.
         mo_cut->save_results( lt_results ).
         CLEAR lt_results.
-        ls_result-verdict      = zif_cd_ops_types=>gc_rag-red.
+        ls_result-verdict      = zif_ca_ops_types=>gc_rag-red.
         ls_result-check_status = zif_cd_hck_types=>gc_check_status-red.
         INSERT ls_result INTO TABLE lt_results.
         mo_cut->save_results( lt_results ).
@@ -322,10 +322,10 @@ CLASS ltc_dao IMPLEMENTATION.
         ls_metric-measured_at = '20261105070000.0000000'.
         INSERT ls_metric INTO TABLE lt_metrics.
         mo_cut->save_metrics( lt_metrics ).
-        DATA ls_run TYPE zcd_ops_run.
+        DATA ls_run TYPE zca_ops_run.
         ls_run-run_id  = ls_metric-run_id.
         ls_run-pe_area = zif_cd_ops_types=>gc_pe_area-health_check.
-        ls_run-status  = zif_cd_ops_types=>gc_run_status-success.
+        ls_run-status  = zif_ca_ops_types=>gc_run_status-success.
         INSERT ls_run INTO TABLE mt_runs.
         go_env->insert_test_data( mt_runs ).
         lv_value = '42.5'.
@@ -462,9 +462,9 @@ CLASS ltc_dao IMPLEMENTATION.
     TRY.
         add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 10 iv_at = '20261102070000.0000000' ).
         add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_value = 20 iv_at = '20261103070000.0000000'
-                    iv_status = zif_cd_ops_types=>gc_run_status-running ).
+                    iv_status = zif_ca_ops_types=>gc_run_status-running ).
         add_metric( iv_run_no = 3 iv_dim1 = gc_job iv_value = 30 iv_at = '20261104070000.0000000'
-                    iv_status = zif_cd_ops_types=>gc_run_status-aborted ).
+                    iv_status = zif_ca_ops_types=>gc_run_status-aborted ).
         insert_history( ).
         lv_value = 10.
         INSERT lv_value INTO TABLE lt_exp.
@@ -509,7 +509,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA ls_job TYPE tbtco.
     DATA lt_steps TYPE STANDARD TABLE OF tbtcp WITH EMPTY KEY.
     DATA ls_step TYPE tbtcp.
-    DATA lt_names TYPE zif_cd_ops_types=>tt_pcre.
+    DATA lt_names TYPE zif_ca_ops_types=>tt_pcre.
     TRY.
         ls_job-jobname  = gc_job.
         ls_job-jobcount = '13300001'.
@@ -542,7 +542,7 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD job_pattern_is_whole_name.
     DATA lt_jobs TYPE STANDARD TABLE OF tbtco WITH EMPTY KEY.
     DATA ls_job TYPE tbtco.
-    DATA lt_names TYPE zif_cd_ops_types=>tt_pcre.
+    DATA lt_names TYPE zif_ca_ops_types=>tt_pcre.
     TRY.
         ls_job-jobname  = gc_job.
         ls_job-jobcount = '00000001'.
@@ -573,7 +573,7 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD unresolved_jobs_any_date.
     DATA lt_jobs TYPE STANDARD TABLE OF tbtco WITH EMPTY KEY.
     DATA ls_job TYPE tbtco.
-    DATA lt_names TYPE zif_cd_ops_types=>tt_pcre.
+    DATA lt_names TYPE zif_ca_ops_types=>tt_pcre.
     TRY.
         ls_job-jobname  = gc_job.
         ls_job-jobcount = '00000001'.
@@ -658,15 +658,15 @@ CLASS ltc_dao IMPLEMENTATION.
   " is rejected at the SQL boundary - the raw strings are never executed
   METHOD raw_aggregate_is_rejected.
     DATA ls_query TYPE zif_cd_hck_types=>ty_agg_query.
-    ls_query-tabname        = 'ZCD_OPS_FINDING'.
+    ls_query-tabname        = 'ZCA_OPS_FINDING'.
     ls_query-where_clause   = `1 = 1`.
     ls_query-agg_func       = zif_cd_hck_types=>gc_agg_func-count.
-    ls_query-def-tabname    = 'ZCD_OPS_FINDING'.
+    ls_query-def-tabname    = 'ZCA_OPS_FINDING'.
     ls_query-def-agg_func   = zif_cd_hck_types=>gc_agg_func-count.
     TRY.
         mo_cut->aggregate( ls_query ).
         cl_abap_unit_assert=>fail( msg = 'A table that is not whitelisted must be rejected by the DAO' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '302'
                                             msg = 'Message 302 (not whitelisted) expected' ).
     ENDTRY.
@@ -676,14 +676,14 @@ CLASS ltc_dao IMPLEMENTATION.
   " Audit A56: the same for a value query passed directly to the DAO
   METHOD raw_value_query_is_rejected.
     DATA ls_query TYPE zif_cd_hck_value_types=>ty_value_query.
-    ls_query-tabname      = 'ZCD_OPS_FINDING'.
+    ls_query-tabname      = 'ZCA_OPS_FINDING'.
     ls_query-field_list   = `MESSAGE AS V1`.
     ls_query-where_clause = `1 = 1`.
     ls_query-date_field   = 'DUE_DATE'.
     TRY.
         mo_cut->select_values( is_query = ls_query iv_max_rows = 10 ).
         cl_abap_unit_assert=>fail( msg = 'A table that is not whitelisted must be rejected by the DAO' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '302'
                                             msg = 'Message 302 (not whitelisted) expected' ).
     ENDTRY.
@@ -746,7 +746,7 @@ CLASS ltc_dao_reads DEFINITION FINAL FOR TESTING
     "! A row of the approved-table list ZCD_OPS_TABWL (default: area HCK, active, whole table)
     METHODS approved_row
       IMPORTING
-        iv_pe_area    TYPE zif_cd_ops_types=>ty_pe_area DEFAULT zif_cd_ops_types=>gc_pe_area-health_check
+        iv_pe_area    TYPE zif_ca_ops_types=>ty_area DEFAULT zif_cd_ops_types=>gc_pe_area-health_check
         iv_purpose    TYPE zif_cd_ops_types=>ty_tabwl_purpose
         iv_table      TYPE zif_cd_hck_types=>ty_tabname
         iv_active     TYPE abap_bool DEFAULT abap_true
@@ -774,7 +774,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
       i_dependency_list = VALUE #( ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_THRESH' ) ( 'ZCD_HCK_AGG' )
                                    ( 'ZCD_OPS_TABWL' ) ( 'ZCD_HCK_BASELINE' )
                                    ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_JOB_STEP' ) ( 'BALHDR' )
-                                   ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' ) ) ).
+                                   ( 'ZCA_OPS_FINDING' ) ( 'ZCA_OPS_ALLOG' ) ) ).
   ENDMETHOD.
 
 
@@ -786,7 +786,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
 
   METHOD setup.
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
-    zcl_cd_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
+    zcl_ca_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
     go_env->clear_doubles( ).
     mo_cut = NEW zcl_cd_hck_dao( ).
   ENDMETHOD.
@@ -996,7 +996,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
   METHOD applog_stats_per_object.
     DATA lt_rows TYPE STANDARD TABLE OF balhdr WITH EMPTY KEY.
     DATA ls_row TYPE balhdr.
-    DATA lt_objects TYPE zif_cd_ops_types=>tt_pcre.
+    DATA lt_objects TYPE zif_ca_ops_types=>tt_pcre.
     TRY.
         ls_row-lognumber  = gc_test-log_1.
         ls_row-object     = gc_test-log_object.
@@ -1032,8 +1032,8 @@ CLASS ltc_dao_reads IMPLEMENTATION.
 
   " Rule: open and assigned exceptions, oldest due first, capped; resolved ones excluded
   METHOD open_exceptions_oldest_first.
-    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
-    DATA ls_row TYPE zcd_ops_finding.
+    DATA lt_rows TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_finding.
     TRY.
         ls_row-run_id      = gc_test-run_id.
         ls_row-finding_no  = 1.
@@ -1045,7 +1045,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
         ls_row-due_date    = gc_test-due_old.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-finding_no  = 3.
-        ls_row-disposition = zif_cd_ops_types=>gc_disposition-resolved.
+        ls_row-disposition = zif_ca_ops_types=>gc_disposition-resolved.
         INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_open_exceptions( 10 ) ) exp = 2
@@ -1062,8 +1062,8 @@ CLASS ltc_dao_reads IMPLEMENTATION.
 
   " Rule: deliveries counted per channel and status inside the window only
   METHOD alert_stats_in_window.
-    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_allog WITH EMPTY KEY.
-    DATA ls_row TYPE zcd_ops_allog.
+    DATA lt_rows TYPE STANDARD TABLE OF zca_ops_allog WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_allog.
     TRY.
         ls_row-alert_id = gc_test-alert_1.
         ls_row-channel  = gc_test-channel.
@@ -1090,11 +1090,11 @@ CLASS ltc_dao_reads IMPLEMENTATION.
   METHOD refused_table_display_813.
     DATA(lo_auth) = NEW ltd_table_auth( ).
     lo_auth->mv_allowed = abap_false.
-    zcl_cd_ops_injector=>inject_auth( lo_auth ).
+    zcl_ca_ops_injector=>inject_auth( lo_auth ).
     TRY.
         mo_cut->get_table_fields( 'T000' ).
         cl_abap_unit_assert=>fail( msg = 'A table without display authorisation must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = CONV symsgno( '813' )
                                             msg = 'S_TABU_NAM refusal is message 813' ).

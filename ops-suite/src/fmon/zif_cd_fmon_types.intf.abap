@@ -46,7 +46,7 @@
 *&            | REQUESTS of the payment worklist).
 *& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): payment run key of a file (generation group
 *&            | split by GROUP_FIELDS), payment run totals (fallback), FMON_DEFAULT_CURRENCY.
-*& 2026-11-10 | GC_TABLE_AUTH moved to ZIF_CD_OPS_AUTH (one S_TABU_NAM check for every area).
+*& 2026-11-10 | GC_TABLE_AUTH moved to ZIF_CA_OPS_AUTH (one S_TABU_NAM check for every area).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -79,7 +79,7 @@ INTERFACE zif_cd_fmon_types
   TYPES ty_day_type     TYPE c LENGTH 12.
   TYPES ty_fcal_id      TYPE c LENGTH 2.
   TYPES ty_lot_type     TYPE c LENGTH 10.
-  TYPES ty_check_id     TYPE zif_cd_ops_types=>ty_rule_id.
+  TYPES ty_check_id     TYPE zif_ca_ops_types=>ty_rule_id.
   TYPES ty_params       TYPE c LENGTH 255.
   TYPES ty_file_ref     TYPE c LENGTH 70.
   TYPES ty_file_name    TYPE c LENGTH 255.
@@ -123,8 +123,8 @@ INTERFACE zif_cd_fmon_types
   "! Plug-in interfaces checked by the core factory before instantiation (audit A62)
   CONSTANTS:
     BEGIN OF gc_plugin_interface,
-      adapter TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_FMON_ADAPTER',
-      check   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_FMON_CHECK',
+      adapter TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZIF_CD_FMON_ADAPTER',
+      check   TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZIF_CD_FMON_CHECK',
     END OF gc_plugin_interface.
 
   CONSTANTS:
@@ -254,96 +254,96 @@ INTERFACE zif_cd_fmon_types
 
   CONSTANTS:
     BEGIN OF gc_check_code,
-      file_missing     TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_MISSING',
-      unexpected_file  TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNEXPECTED_FILE',
-      file_late        TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_LATE',
-      no_prism_handoff TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_PRISM_HANDOFF',
-      prism_late       TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_HANDOFF_LATE',
-      no_bank_ack      TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_BANK_ACK',
-      bank_ack_late    TYPE zif_cd_ops_types=>ty_check_code VALUE 'BANK_ACK_LATE',
-      nack             TYPE zif_cd_ops_types=>ty_check_code VALUE 'NACK',
-      file_failed      TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_FAILED',
-      ack_count        TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACK_COUNT_MISMATCH',
-      ack_amount       TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACK_AMOUNT_MISMATCH',
-      duplicate        TYPE zif_cd_ops_types=>ty_check_code VALUE 'DUPLICATE_FILE',
-      zero_byte        TYPE zif_cd_ops_types=>ty_check_code VALUE 'ZERO_BYTE',
-      size_bounds      TYPE zif_cd_ops_types=>ty_check_code VALUE 'SIZE_OUT_OF_BOUNDS',
-      lot_unprocessed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOT_UNPROCESSED',
-      lot_not_found    TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOT_NOT_FOUND',
-      noc_aging        TYPE zif_cd_ops_types=>ty_check_code VALUE 'NOC_AGING',
-      noc_due_today    TYPE zif_cd_ops_types=>ty_check_code VALUE 'NOC_DUE_TODAY',
-      unmapped_file    TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_FILE',
-      unmapped_status  TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_STATUS',
+      file_missing     TYPE zif_ca_ops_types=>ty_check_code VALUE 'FILE_MISSING',
+      unexpected_file  TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNEXPECTED_FILE',
+      file_late        TYPE zif_ca_ops_types=>ty_check_code VALUE 'FILE_LATE',
+      no_prism_handoff TYPE zif_ca_ops_types=>ty_check_code VALUE 'NO_PRISM_HANDOFF',
+      prism_late       TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRISM_HANDOFF_LATE',
+      no_bank_ack      TYPE zif_ca_ops_types=>ty_check_code VALUE 'NO_BANK_ACK',
+      bank_ack_late    TYPE zif_ca_ops_types=>ty_check_code VALUE 'BANK_ACK_LATE',
+      nack             TYPE zif_ca_ops_types=>ty_check_code VALUE 'NACK',
+      file_failed      TYPE zif_ca_ops_types=>ty_check_code VALUE 'FILE_FAILED',
+      ack_count        TYPE zif_ca_ops_types=>ty_check_code VALUE 'ACK_COUNT_MISMATCH',
+      ack_amount       TYPE zif_ca_ops_types=>ty_check_code VALUE 'ACK_AMOUNT_MISMATCH',
+      duplicate        TYPE zif_ca_ops_types=>ty_check_code VALUE 'DUPLICATE_FILE',
+      zero_byte        TYPE zif_ca_ops_types=>ty_check_code VALUE 'ZERO_BYTE',
+      size_bounds      TYPE zif_ca_ops_types=>ty_check_code VALUE 'SIZE_OUT_OF_BOUNDS',
+      lot_unprocessed  TYPE zif_ca_ops_types=>ty_check_code VALUE 'LOT_UNPROCESSED',
+      lot_not_found    TYPE zif_ca_ops_types=>ty_check_code VALUE 'LOT_NOT_FOUND',
+      noc_aging        TYPE zif_ca_ops_types=>ty_check_code VALUE 'NOC_AGING',
+      noc_due_today    TYPE zif_ca_ops_types=>ty_check_code VALUE 'NOC_DUE_TODAY',
+      unmapped_file    TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNMAPPED_FILE',
+      unmapped_status  TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNMAPPED_STATUS',
       " retired by audit A49 (no longer raised); kept for findings of earlier runs
-      ref_reused       TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REF_REUSED',
-      ref_ambiguous    TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REF_AMBIGUOUS',
-      persist_conflict TYPE zif_cd_ops_types=>ty_check_code VALUE 'PERSIST_CONFLICT',
-      lot_truncated    TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOT_SCAN_TRUNCATED',
-      malformed_row    TYPE zif_cd_ops_types=>ty_check_code VALUE 'MALFORMED_SOURCE_ROW',
-      plugin_error     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
-      persist_error    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PERSIST_ERROR',
-      alert_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'ALERT_FAILED',
+      ref_reused       TYPE zif_ca_ops_types=>ty_check_code VALUE 'FILE_REF_REUSED',
+      ref_ambiguous    TYPE zif_ca_ops_types=>ty_check_code VALUE 'FILE_REF_AMBIGUOUS',
+      persist_conflict TYPE zif_ca_ops_types=>ty_check_code VALUE 'PERSIST_CONFLICT',
+      lot_truncated    TYPE zif_ca_ops_types=>ty_check_code VALUE 'LOT_SCAN_TRUNCATED',
+      malformed_row    TYPE zif_ca_ops_types=>ty_check_code VALUE 'MALFORMED_SOURCE_ROW',
+      plugin_error     TYPE zif_ca_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
+      persist_error    TYPE zif_ca_ops_types=>ty_check_code VALUE 'PERSIST_ERROR',
+      alert_failed     TYPE zif_ca_ops_types=>ty_check_code VALUE 'ALERT_FAILED',
       "! PRISM reported that it could not process or deliver the file
-      prism_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_FAILED',
+      prism_failed     TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRISM_FAILED',
       "! Outbound: PRISM evidence for a file SAP has no generation / send record of
-      prism_unknown    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_UNKNOWN_FILE',
+      prism_unknown    TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRISM_UNKNOWN_FILE',
       "! Inbound: PRISM delivered the file, SAP has not received it after the grace period
-      prism_not_loaded TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_NOT_LOADED',
+      prism_not_loaded TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRISM_NOT_LOADED',
       "! Outbound: more throttled files queued in PRISM ahead of the file than FMON_PRISM_QUEUE_MAX
-      prism_queue_long TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_QUEUE_LONG',
+      prism_queue_long TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRISM_QUEUE_LONG',
       "! ZCD_FMON_IFACE-NAME_PATTERN does not compile as PCRE (configuration; never 'no match')
-      pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
+      pattern_invalid  TYPE zif_ca_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
       "! The stage of a DEADLINE row of ZCD_FMON_SLA not reached by its clock time on a business day
-      deadline_missed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'STAGE_DEADLINE_MISSED',
+      deadline_missed  TYPE zif_ca_ops_types=>ty_check_code VALUE 'STAGE_DEADLINE_MISSED',
       "! Information: the PRISM_FAILED file was replaced by a regenerated file of its generation group
-      file_replaced    TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REPLACED',
+      file_replaced    TYPE zif_ca_ops_types=>ty_check_code VALUE 'FILE_REPLACED',
       "! The PRISM_FAILED file has no regenerated file after FMON_REGEN_WAIT_MIN minutes
-      regen_missing    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REGENERATION_MISSING',
+      regen_missing    TYPE zif_ca_ops_types=>ty_check_code VALUE 'REGENERATION_MISSING',
       "! A regenerated file exists although the earlier file of its group did not fail (duplicate risk)
-      regen_not_failed TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REGENERATED_NOT_FAILED',
+      regen_not_failed TYPE zif_ca_ops_types=>ty_check_code VALUE 'FILE_REGENERATED_NOT_FAILED',
       "! PRISM rejected the file because it already received that name (FMON_PRISM_DUP_NAME_CODES)
-      prism_dup_name   TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_DUPLICATE_NAME',
+      prism_dup_name   TYPE zif_ca_ops_types=>ty_check_code VALUE 'PRISM_DUPLICATE_NAME',
     END OF gc_check_code.
 
   "! Runtime parameters in ZCA_PARAM (defaults in brackets)
   CONSTANTS:
     BEGIN OF gc_param,
       "! Days read back from legacy tables and files evaluated [1]
-      lookback_days TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_LOOKBACK_DAYS',
+      lookback_days TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_LOOKBACK_DAYS',
       "! Open (not terminal / partially processed) files kept under watch [30]
-      open_days     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_OPEN_DAYS',
+      open_days     TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_OPEN_DAYS',
       "! Duplicate-file history window [7]
-      dup_days      TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_DUP_DAYS',
+      dup_days      TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_DUP_DAYS',
       "! Time zone of legacy date/time fields and calendar windows [UTC]
-      time_zone     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_TIME_ZONE',
+      time_zone     TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_TIME_ZONE',
       "! Factory calendar when ZCD_FMON_CAL has none [US]
-      factory_cal   TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_FACTORY_CAL',
+      factory_cal   TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_FACTORY_CAL',
       "! Weekdays (1 = Monday) that are ACH returns cycle days [blank]
-      returns_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_RETURNS_WEEKDAYS',
+      returns_days  TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_RETURNS_WEEKDAYS',
       "! NACHA NOC banking-day SLA when ZCD_FMON_LOTCFG has none [6]
-      noc_sla_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_NOC_SLA_DAYS',
+      noc_sla_days  TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_NOC_SLA_DAYS',
       "! Row cap per legacy table read [50000]
-      max_rows      TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_MAX_ROWS',
+      max_rows      TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_MAX_ROWS',
       "! Banking-day age basis: A strictly after receipt, N from next working day [A]
-      age_basis     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_AGE_BASIS',
+      age_basis     TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_AGE_BASIS',
       "! Minutes PRISM waits per throttled file before sending it to the bank; 0 = no allowance [2]
-      throttle_min  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_MIN',
+      throttle_min  TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_MIN',
       "! Queue scope: A one PRISM queue for all throttled files, C one per counterparty [A]
-      throttle_scope TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_SCOPE',
+      throttle_scope TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_SCOPE',
       "! Payment methods (ZCD_FMON_IFACE-PAY_METHOD, comma list) PRISM throttles [ACH,WIRE]
-      throttle_methods TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_METHODS',
+      throttle_methods TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_METHODS',
       "! Queue length (files incl. the file itself) covered by the allowance; longer = PRISM_QUEUE_LONG [30]
-      queue_max     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_QUEUE_MAX',
+      queue_max     TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_PRISM_QUEUE_MAX',
       "! Working days from the bank statement date (FEBKO-AZDAT) to the business date of the
       "! statement file (FEB adapter): 1 = prior-day statement, 0 = same-day statement [1]
-      feb_stmt_offset TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_FEB_STMT_OFFSET',
+      feb_stmt_offset TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_FEB_STMT_OFFSET',
       "! Minutes after PRISM_FAILED within which SAP regenerates the file; later = REGENERATION_MISSING,
       "! 0 = not reported [60]
-      regen_wait_min  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_REGEN_WAIT_MIN',
+      regen_wait_min  TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_REGEN_WAIT_MIN',
       "! PRISM error codes meaning "file name already received" (comma list, whole value) [blank]
-      dup_name_codes  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_DUP_NAME_CODES',
+      dup_name_codes  TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_PRISM_DUP_NAME_CODES',
       "! Currency of a file's control total (registry and interface have none) [USD]
-      default_currency TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_DEFAULT_CURRENCY',
+      default_currency TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_DEFAULT_CURRENCY',
     END OF gc_param.
 
   "! Missing bank ACK alert: payment run of a file from its generation group (GEN_GROUP split by the
@@ -370,14 +370,14 @@ INTERFACE zif_cd_fmon_types
       laufd    TYPE d,
       laufi    TYPE c LENGTH 6,
       hbkid    TYPE c LENGTH 5,
-      currency TYPE zif_cd_ops_types=>ty_currency,
+      currency TYPE zif_ca_ops_types=>ty_currency,
       payments TYPE i,
-      amount   TYPE zif_cd_ops_types=>ty_amount,
+      amount   TYPE zif_ca_ops_types=>ty_amount,
     END OF ty_payrun_total.
   TYPES tt_payrun_total TYPE STANDARD TABLE OF ty_payrun_total WITH EMPTY KEY.
 
   CONSTANTS gc_wildcard TYPE c LENGTH 1 VALUE '*'.
-  CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'FILE'.
+  CONSTANTS gc_object_type TYPE zif_ca_ops_types=>ty_object_type VALUE 'FILE'.
   CONSTANTS gc_engine_rule TYPE ty_check_id VALUE 'ENGINE'.
   CONSTANTS gc_lot_src_id TYPE ty_src_id VALUE 'LOT'.
   "! Source of events set by hand in the manual-status app (design 6.4)
@@ -442,7 +442,7 @@ INTERFACE zif_cd_fmon_types
       max_minutes TYPE i,
       basis       TYPE ty_sla_basis,
       due_time    TYPE t,
-      severity    TYPE zif_cd_ops_types=>ty_severity,
+      severity    TYPE zif_ca_ops_types=>ty_severity,
       description TYPE ty_text60,
     END OF ty_sla.
   TYPES tt_sla TYPE SORTED TABLE OF ty_sla WITH UNIQUE KEY iface_id stage kind day_type.
@@ -478,7 +478,7 @@ INTERFACE zif_cd_fmon_types
       "! Payment identity of per-payment ACK/NACK rows (dedupe, audit A39); blank = row count
       item_key_field  TYPE ty_fieldname,
       default_stage   TYPE ty_stage,
-      adapter_class   TYPE zif_cd_ops_types=>ty_class_name,
+      adapter_class   TYPE zif_ca_ops_types=>ty_class_name,
       active          TYPE abap_bool,
       description     TYPE ty_text60,
       "! Generation group fields (comma list, at most 4; blank = no regeneration link)
@@ -517,8 +517,8 @@ INTERFACE zif_cd_fmon_types
   TYPES:
     BEGIN OF ty_chk,
       check_id    TYPE ty_check_id,
-      class_name  TYPE zif_cd_ops_types=>ty_class_name,
-      severity    TYPE zif_cd_ops_types=>ty_severity,
+      class_name  TYPE zif_ca_ops_types=>ty_class_name,
+      severity    TYPE zif_ca_ops_types=>ty_severity,
       active      TYPE abap_bool,
       params      TYPE ty_params,
       description TYPE ty_text60,
@@ -549,13 +549,13 @@ INTERFACE zif_cd_fmon_types
       size_bytes        TYPE ty_size,
       size_known        TYPE abap_bool,
       record_count      TYPE i,
-      control_total     TYPE zif_cd_ops_types=>ty_amount,
+      control_total     TYPE zif_ca_ops_types=>ty_amount,
       checksum          TYPE ty_checksum,
       stage             TYPE ty_stage,
       outcome           TYPE ty_stage,
       unprocessed_count TYPE i,
       ack_count         TYPE i,
-      ack_amount        TYPE zif_cd_ops_types=>ty_amount,
+      ack_amount        TYPE zif_ca_ops_types=>ty_amount,
       "! ACK/NACK count reported by the source (X) - blank = not reported, not zero (audit A39)
       ack_known         TYPE abap_bool,
       nack_count        TYPE i,
@@ -623,7 +623,7 @@ INTERFACE zif_cd_fmon_types
       src_id       TYPE ty_src_id,
       src_key      TYPE ty_file_ref,
       record_count TYPE i,
-      amount       TYPE zif_cd_ops_types=>ty_amount,
+      amount       TYPE zif_ca_ops_types=>ty_amount,
       info         TYPE ty_info,
       created_by   TYPE syuname,
       created_at   TYPE timestampl,
@@ -752,7 +752,7 @@ INTERFACE zif_cd_fmon_types
       business_date TYPE d,
       rec_count     TYPE i,
       count_known   TYPE abap_bool,
-      amount        TYPE zif_cd_ops_types=>ty_amount,
+      amount        TYPE zif_ca_ops_types=>ty_amount,
       size_bytes    TYPE ty_size,
       size_known    TYPE abap_bool,
       checksum      TYPE ty_checksum,
@@ -895,7 +895,7 @@ INTERFACE zif_cd_fmon_types
   TYPES:
     BEGIN OF ty_failed_verdict,
       "! PRISM_FAILED, FILE_REPLACED or PRISM_DUPLICATE_NAME
-      code         TYPE zif_cd_ops_types=>ty_check_code,
+      code         TYPE zif_ca_ops_types=>ty_check_code,
       "! FILE_REPLACED: the regenerated file that replaces it
       replaced_by  TYPE ty_file,
       "! PRISM_DUPLICATE_NAME: PRISM's error code
@@ -964,7 +964,7 @@ INTERFACE zif_cd_fmon_types
   TYPES:
     BEGIN OF ty_board,
       sla_light         TYPE ty_light,
-      sla_status        TYPE zif_cd_ops_types=>ty_rag,
+      sla_status        TYPE zif_ca_ops_types=>ty_rag,
       iface_id          TYPE ty_iface_id,
       direction         TYPE ty_direction,
       file_type         TYPE ty_file_type,
@@ -978,21 +978,21 @@ INTERFACE zif_cd_fmon_types
       outcome           TYPE ty_stage,
       unprocessed_count TYPE i,
       record_count      TYPE i,
-      control_total     TYPE zif_cd_ops_types=>ty_amount,
+      control_total     TYPE zif_ca_ops_types=>ty_amount,
       ack_count         TYPE i,
       nack_count        TYPE i,
       first_event_at    TYPE timestampl,
       last_event_at     TYPE timestampl,
       finding_count     TYPE i,
-      top_message       TYPE zif_cd_ops_types=>ty_message,
+      top_message       TYPE zif_ca_ops_types=>ty_message,
     END OF ty_board.
   TYPES tt_board TYPE STANDARD TABLE OF ty_board WITH EMPTY KEY.
 
   TYPES:
     BEGIN OF ty_result,
-      run      TYPE zif_cd_ops_types=>ty_run,
+      run      TYPE zif_ca_ops_types=>ty_run,
       board    TYPE tt_board,
-      findings TYPE zif_cd_ops_types=>tt_finding,
+      findings TYPE zif_ca_ops_types=>tt_finding,
     END OF ty_result.
 
   "! Delivered default of a parameter: factory calendar (SCAL) when none is configured
@@ -1049,10 +1049,10 @@ INTERFACE zif_cd_fmon_types
   "! payment engine accounts) / imported, not processed (entries not posted) / other stage
   CONSTANTS:
     BEGIN OF gc_deadline_cond,
-      not_received TYPE zif_cd_ops_types=>ty_group VALUE 'NOT_RECEIVED',
-      not_imported TYPE zif_cd_ops_types=>ty_group VALUE 'NOT_IMPORTED',
-      not_posted   TYPE zif_cd_ops_types=>ty_group VALUE 'NOT_POSTED',
-      not_reached  TYPE zif_cd_ops_types=>ty_group VALUE 'STAGE_NOT_REACHED',
+      not_received TYPE zif_ca_ops_types=>ty_group VALUE 'NOT_RECEIVED',
+      not_imported TYPE zif_ca_ops_types=>ty_group VALUE 'NOT_IMPORTED',
+      not_posted   TYPE zif_ca_ops_types=>ty_group VALUE 'NOT_POSTED',
+      not_reached  TYPE zif_ca_ops_types=>ty_group VALUE 'STAGE_NOT_REACHED',
     END OF gc_deadline_cond.
   "! Calendar days searched back for the statement date of a business date (FEB adapter)
   CONSTANTS gc_feb_max_back_days TYPE i VALUE 10.
@@ -1081,56 +1081,56 @@ INTERFACE zif_cd_fmon_types
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
     BEGIN OF gc_msg,
-      record_s_sent_ack_nack      TYPE zif_cd_ops_types=>ty_msgno VALUE '207',
-      control_total_acknowledged  TYPE zif_cd_ops_types=>ty_msgno VALUE '210',
-      reported_times_by_the_sourc TYPE zif_cd_ops_types=>ty_msgno VALUE '212',
-      same_name_checksum_as_of    TYPE zif_cd_ops_types=>ty_msgno VALUE '213',
-      first_event_after_the_windo TYPE zif_cd_ops_types=>ty_msgno VALUE '214',
-      window_closed_of_file_s     TYPE zif_cd_ops_types=>ty_msgno VALUE '215',
-      loaded_but_no_lot_found     TYPE zif_cd_ops_types=>ty_msgno VALUE '216',
-      of_expected_file_s_received TYPE zif_cd_ops_types=>ty_msgno VALUE '217',
-      file_s_on_a_day             TYPE zif_cd_ops_types=>ty_msgno VALUE '218',
-      noc_entr_ies_open_after     TYPE zif_cd_ops_types=>ty_msgno VALUE '219',
-      rejected_by_the_bank_record TYPE zif_cd_ops_types=>ty_msgno VALUE '221',
-      processing_failed           TYPE zif_cd_ops_types=>ty_msgno VALUE '222',
-      bytes_min_max               TYPE zif_cd_ops_types=>ty_msgno VALUE '223',
-      after_min_sla_min           TYPE zif_cd_ops_types=>ty_msgno VALUE '224',
-      source                      TYPE zif_cd_ops_types=>ty_msgno VALUE '225',
-      source_no_interface_matches TYPE zif_cd_ops_types=>ty_msgno VALUE '227',
-      source_status_has_no_stage  TYPE zif_cd_ops_types=>ty_msgno VALUE '228',
-      lot_reader                  TYPE zif_cd_ops_types=>ty_msgno VALUE '229',
-      factory_calendar_normal_day TYPE zif_cd_ops_types=>ty_msgno VALUE '233',
-      check                       TYPE zif_cd_ops_types=>ty_msgno VALUE '234',
-      registry_not_saved          TYPE zif_cd_ops_types=>ty_msgno VALUE '235',
-      file_s_finding_s            TYPE zif_cd_ops_types=>ty_msgno VALUE '236',
-      alert_dispatch_failed       TYPE zif_cd_ops_types=>ty_msgno VALUE '237',
-      lot_unprocessed             TYPE zif_cd_ops_types=>ty_msgno VALUE '238',
-      event_info                  TYPE zif_cd_ops_types=>ty_msgno VALUE '239',
-      newer_registry_state        TYPE zif_cd_ops_types=>ty_msgno VALUE '240',
-      lot_scan_truncated          TYPE zif_cd_ops_types=>ty_msgno VALUE '241',
-      reference_ambiguous         TYPE zif_cd_ops_types=>ty_msgno VALUE '242',
-      malformed_rows              TYPE zif_cd_ops_types=>ty_msgno VALUE '243',
-      database_error              TYPE zif_cd_ops_types=>ty_msgno VALUE '246',
-      lot_items_open              TYPE zif_cd_ops_types=>ty_msgno VALUE '247',
-      factory_calendar_age_unknwn TYPE zif_cd_ops_types=>ty_msgno VALUE '248',
-      prism_failed                TYPE zif_cd_ops_types=>ty_msgno VALUE '265',
-      prism_unknown_file          TYPE zif_cd_ops_types=>ty_msgno VALUE '266',
-      prism_not_loaded            TYPE zif_cd_ops_types=>ty_msgno VALUE '267',
-      prism_queue_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '269',
-      after_min_sla_queue_min     TYPE zif_cd_ops_types=>ty_msgno VALUE '270',
-      pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '271',
-      deadline_not_received       TYPE zif_cd_ops_types=>ty_msgno VALUE '272',
-      deadline_not_imported       TYPE zif_cd_ops_types=>ty_msgno VALUE '273',
-      deadline_not_posted         TYPE zif_cd_ops_types=>ty_msgno VALUE '274',
-      deadline_accounts           TYPE zif_cd_ops_types=>ty_msgno VALUE '275',
-      deadline_lines_open         TYPE zif_cd_ops_types=>ty_msgno VALUE '276',
-      deadline_statement          TYPE zif_cd_ops_types=>ty_msgno VALUE '277',
-      deadline_stage              TYPE zif_cd_ops_types=>ty_msgno VALUE '278',
-      deadline_not_proven         TYPE zif_cd_ops_types=>ty_msgno VALUE '279',
-      file_replaced               TYPE zif_cd_ops_types=>ty_msgno VALUE '280',
-      regen_missing               TYPE zif_cd_ops_types=>ty_msgno VALUE '281',
-      regen_not_failed            TYPE zif_cd_ops_types=>ty_msgno VALUE '282',
-      prism_dup_name              TYPE zif_cd_ops_types=>ty_msgno VALUE '283',
+      record_s_sent_ack_nack      TYPE zif_ca_ops_types=>ty_msgno VALUE '207',
+      control_total_acknowledged  TYPE zif_ca_ops_types=>ty_msgno VALUE '210',
+      reported_times_by_the_sourc TYPE zif_ca_ops_types=>ty_msgno VALUE '212',
+      same_name_checksum_as_of    TYPE zif_ca_ops_types=>ty_msgno VALUE '213',
+      first_event_after_the_windo TYPE zif_ca_ops_types=>ty_msgno VALUE '214',
+      window_closed_of_file_s     TYPE zif_ca_ops_types=>ty_msgno VALUE '215',
+      loaded_but_no_lot_found     TYPE zif_ca_ops_types=>ty_msgno VALUE '216',
+      of_expected_file_s_received TYPE zif_ca_ops_types=>ty_msgno VALUE '217',
+      file_s_on_a_day             TYPE zif_ca_ops_types=>ty_msgno VALUE '218',
+      noc_entr_ies_open_after     TYPE zif_ca_ops_types=>ty_msgno VALUE '219',
+      rejected_by_the_bank_record TYPE zif_ca_ops_types=>ty_msgno VALUE '221',
+      processing_failed           TYPE zif_ca_ops_types=>ty_msgno VALUE '222',
+      bytes_min_max               TYPE zif_ca_ops_types=>ty_msgno VALUE '223',
+      after_min_sla_min           TYPE zif_ca_ops_types=>ty_msgno VALUE '224',
+      source                      TYPE zif_ca_ops_types=>ty_msgno VALUE '225',
+      source_no_interface_matches TYPE zif_ca_ops_types=>ty_msgno VALUE '227',
+      source_status_has_no_stage  TYPE zif_ca_ops_types=>ty_msgno VALUE '228',
+      lot_reader                  TYPE zif_ca_ops_types=>ty_msgno VALUE '229',
+      factory_calendar_normal_day TYPE zif_ca_ops_types=>ty_msgno VALUE '233',
+      check                       TYPE zif_ca_ops_types=>ty_msgno VALUE '234',
+      registry_not_saved          TYPE zif_ca_ops_types=>ty_msgno VALUE '235',
+      file_s_finding_s            TYPE zif_ca_ops_types=>ty_msgno VALUE '236',
+      alert_dispatch_failed       TYPE zif_ca_ops_types=>ty_msgno VALUE '237',
+      lot_unprocessed             TYPE zif_ca_ops_types=>ty_msgno VALUE '238',
+      event_info                  TYPE zif_ca_ops_types=>ty_msgno VALUE '239',
+      newer_registry_state        TYPE zif_ca_ops_types=>ty_msgno VALUE '240',
+      lot_scan_truncated          TYPE zif_ca_ops_types=>ty_msgno VALUE '241',
+      reference_ambiguous         TYPE zif_ca_ops_types=>ty_msgno VALUE '242',
+      malformed_rows              TYPE zif_ca_ops_types=>ty_msgno VALUE '243',
+      database_error              TYPE zif_ca_ops_types=>ty_msgno VALUE '246',
+      lot_items_open              TYPE zif_ca_ops_types=>ty_msgno VALUE '247',
+      factory_calendar_age_unknwn TYPE zif_ca_ops_types=>ty_msgno VALUE '248',
+      prism_failed                TYPE zif_ca_ops_types=>ty_msgno VALUE '265',
+      prism_unknown_file          TYPE zif_ca_ops_types=>ty_msgno VALUE '266',
+      prism_not_loaded            TYPE zif_ca_ops_types=>ty_msgno VALUE '267',
+      prism_queue_long            TYPE zif_ca_ops_types=>ty_msgno VALUE '269',
+      after_min_sla_queue_min     TYPE zif_ca_ops_types=>ty_msgno VALUE '270',
+      pattern_invalid             TYPE zif_ca_ops_types=>ty_msgno VALUE '271',
+      deadline_not_received       TYPE zif_ca_ops_types=>ty_msgno VALUE '272',
+      deadline_not_imported       TYPE zif_ca_ops_types=>ty_msgno VALUE '273',
+      deadline_not_posted         TYPE zif_ca_ops_types=>ty_msgno VALUE '274',
+      deadline_accounts           TYPE zif_ca_ops_types=>ty_msgno VALUE '275',
+      deadline_lines_open         TYPE zif_ca_ops_types=>ty_msgno VALUE '276',
+      deadline_statement          TYPE zif_ca_ops_types=>ty_msgno VALUE '277',
+      deadline_stage              TYPE zif_ca_ops_types=>ty_msgno VALUE '278',
+      deadline_not_proven         TYPE zif_ca_ops_types=>ty_msgno VALUE '279',
+      file_replaced               TYPE zif_ca_ops_types=>ty_msgno VALUE '280',
+      regen_missing               TYPE zif_ca_ops_types=>ty_msgno VALUE '281',
+      regen_not_failed            TYPE zif_ca_ops_types=>ty_msgno VALUE '282',
+      prism_dup_name              TYPE zif_ca_ops_types=>ty_msgno VALUE '283',
     END OF gc_msg.
 
 ENDINTERFACE.

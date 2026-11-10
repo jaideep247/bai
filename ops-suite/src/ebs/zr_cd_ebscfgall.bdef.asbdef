@@ -45,7 +45,7 @@ persistent table zcd_btc_rule
 with additional save
 draft table zcd_d_btcrule
 lock dependent by _EbsCfgAll
-// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
 // association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
 authorization master ( global )
 etag master LocalLastChangedAt
@@ -85,7 +85,7 @@ persistent table zcd_ebs_rule_def
 with additional save
 draft table zcd_d_ruledef
 lock dependent by _EbsCfgAll
-// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
 // association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
 authorization master ( global )
 etag master LocalLastChangedAt
@@ -121,7 +121,7 @@ persistent table zcd_ebs_acct
 with additional save
 draft table zcd_d_ebsacct
 lock dependent by _EbsCfgAll
-// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
 // association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
 authorization master ( global )
 etag master LocalLastChangedAt
@@ -158,7 +158,7 @@ persistent table zcd_ebs_flow_pat
 with additional save
 draft table zcd_d_flowpat
 lock dependent by _EbsCfgAll
-// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
 // association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
 authorization master ( global )
 etag master LocalLastChangedAt
@@ -189,7 +189,7 @@ persistent table zcd_ebs_lookup
 with additional save
 draft table zcd_d_ebslkp
 lock dependent by _EbsCfgAll
-// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
 // association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
 authorization master ( global )
 etag master LocalLastChangedAt

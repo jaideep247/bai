@@ -1,7 +1,7 @@
 // Artifact: zc_cd_ebskpi.ddls.asddls
 // Purpose: Consumption view of the EBS KPI entity (tiles, overview-page KPI and analytical cards,
 //          service ZUI_CD_EBS_DASH): one row per run date = the last completed run of that date.
-//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCA_PARAR = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'EBS validation dashboard - KPI'

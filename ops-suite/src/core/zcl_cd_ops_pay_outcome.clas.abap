@@ -94,7 +94,7 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
     "! One evidence kind with its parameters, collected once for every payment that needs it
     TYPES:
       BEGIN OF ty_group,
-        evidence_class TYPE zif_cd_ops_types=>ty_class_name,
+        evidence_class TYPE zif_ca_ops_types=>ty_class_name,
         param1         TYPE zif_cd_hck_runtime_types=>ty_rule_param,
         param2         TYPE zif_cd_hck_runtime_types=>ty_rule_param,
         param3         TYPE zif_cd_hck_runtime_types=>ty_rule_param,
@@ -111,7 +111,7 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
     TYPES:
       BEGIN OF ty_listed_key,
         doc1r TYPE zif_cd_hck_runtime_types=>ty_docno,
-        code  TYPE zif_cd_ops_types=>ty_check_code,
+        code  TYPE zif_ca_ops_types=>ty_check_code,
       END OF ty_listed_key.
     TYPES tt_listed_key TYPE HASHED TABLE OF ty_listed_key WITH UNIQUE KEY doc1r code.
     TYPES tt_key TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.
@@ -122,7 +122,7 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
     DATA mv_cap TYPE i.
     DATA mt_groups TYPE tt_group.
     DATA mt_listed TYPE tt_listed_key.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
 
     "! Each evidence kind of the rules collected once for the payments of its flow / classes
     METHODS collect_evidence
@@ -158,11 +158,11 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
     METHODS config_finding
       IMPORTING
         iv_object   TYPE clike
-        iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-info
-        iv_code     TYPE zif_cd_ops_types=>ty_check_code DEFAULT zif_cd_hck_runtime_types=>gc_code-inflight_config
+        iv_severity TYPE zif_ca_ops_types=>ty_severity DEFAULT zif_ca_ops_types=>gc_severity-info
+        iv_code     TYPE zif_ca_ops_types=>ty_check_code DEFAULT zif_cd_hck_runtime_types=>gc_code-inflight_config
         iv_message  TYPE string
       CHANGING
-        ct_findings TYPE zif_cd_ops_types=>tt_finding.
+        ct_findings TYPE zif_ca_ops_types=>tt_finding.
 
     "! A rule row of the group is mandatory (REQUIRED X / C / N)
     METHODS mandatory_use
@@ -188,7 +188,7 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
     "! In flight with the status pending: the deciding evidence and the rows waiting for the status job
     CLASS-METHODS pending_verdict
       IMPORTING
-        iv_kind    TYPE zif_cd_ops_types=>ty_class_name
+        iv_kind    TYPE zif_ca_ops_types=>ty_class_name
         iv_ref     TYPE string
         iv_date    TYPE d
         it_pending TYPE string_table
@@ -251,8 +251,8 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
 
 
   METHOD final_outcomes.
-    rt_outcomes = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                           option = zif_cd_ops_types=>gc_range-option_equal
+    rt_outcomes = VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                           option = zif_ca_ops_types=>gc_range-option_equal
                            ( low = zif_cd_ops_payout_types=>gc_outcome-cleared )
                            ( low = zif_cd_ops_payout_types=>gc_outcome-returned )
                            ( low = zif_cd_ops_payout_types=>gc_outcome-retrieved )
@@ -320,7 +320,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     cs_group-invalid = abap_true.
     IF is_config_error( ix_error ) = abap_true.
       config_finding( EXPORTING iv_object   = |{ cs_group-evidence_class }/{ cs_group-param1 }|
-                                iv_severity = zif_cd_ops_types=>gc_severity-error
+                                iv_severity = zif_ca_ops_types=>gc_severity-error
                                 iv_code     = zif_cd_hck_runtime_types=>gc_code-clrrule_invalid
                                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-rule_invalid
                                                                      iv_v1    = cs_group-evidence_class
@@ -331,7 +331,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     ENDIF.
     " A read or runtime error is no configuration error: its own code, so nobody changes a correct rule
     config_finding( EXPORTING iv_object   = |{ cs_group-evidence_class }/{ cs_group-param1 }|
-                              iv_severity = zif_cd_ops_types=>gc_severity-error
+                              iv_severity = zif_ca_ops_types=>gc_severity-error
                               iv_code     = zif_cd_ops_payout_types=>gc_code-evidence_failed
                               iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-evidence_failed
                                                                    iv_v1    = cs_group-evidence_class
@@ -540,7 +540,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     " Never attributed to one source: every source of the FIN shows AMBIGUOUS
     rs_verdict-outcome      = zif_cd_ops_payout_types=>gc_outcome-ambiguous.
     rs_verdict-finding      = zif_cd_ops_payout_types=>gc_code-source_ambiguous.
-    rs_verdict-severity     = zif_cd_ops_types=>gc_severity-warning.
+    rs_verdict-severity     = zif_ca_ops_types=>gc_severity-warning.
     rs_verdict-evidence_ref = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-source_ambiguous
                                                      iv_v1    = is_source-fin
                                                      iv_v2    = is_source-sources
@@ -577,7 +577,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
       ENDIF.
       TRY.
           DATA(lo_evidence) = CAST zif_cd_hck_evidence(
-                                zcl_cd_ops_factory=>get_plugin( iv_class_name = <ls_group>-evidence_class
+                                zcl_ca_ops_factory=>get_plugin( iv_class_name = <ls_group>-evidence_class
                                                                 iv_interface  = zif_cd_hck_runtime_types=>gc_evidence_intf ) ).
           DATA(ls_result) = lo_evidence->collect( it_payments = lt_need
                                                   is_rule     = ls_rule
@@ -591,7 +591,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
             " Mandatory rows: the purpose cannot be determined (warning); informational rows: skipped
             IF mandatory_use( <ls_group> ) = abap_true.
               config_finding( EXPORTING iv_object   = |{ <ls_group>-evidence_class }/{ <ls_group>-param1 }|
-                                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                                        iv_severity = zif_ca_ops_types=>gc_severity-warning
                                         iv_message  = zcl_cd_ops_util=>text(
                                                         iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_mandatory
                                                         iv_v1    = <ls_group>-evidence_class
@@ -606,7 +606,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
                               CHANGING  ct_findings = mt_findings ).
             ENDIF.
           ENDIF.
-        CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+        CATCH zcx_ca_ops_error INTO DATA(lx_ops).
           " Configuration (class, interface, parameters) or a read of the plug-in: classified by message
           kind_failed( EXPORTING ix_error = lx_ops
                        CHANGING  cs_group = <ls_group> ).
@@ -649,10 +649,10 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
       DATA(lv_indicated) = abap_false.
       DATA(lv_rows) = 0.
       DATA(lv_indicator_unusable) = abap_false.
-      DATA(lv_first_kind) = VALUE zif_cd_ops_types=>ty_class_name( ).
+      DATA(lv_first_kind) = VALUE zif_ca_ops_types=>ty_class_name( ).
       DATA(lv_first_ref) = ``.
       DATA(lv_first_date) = VALUE d( ).
-      DATA(lv_unusable_kind) = VALUE zif_cd_ops_types=>ty_class_name( ).
+      DATA(lv_unusable_kind) = VALUE zif_ca_ops_types=>ty_class_name( ).
       LOOP AT ms_config-rules ASSIGNING FIELD-SYMBOL(<ls_rule>)
            WHERE flow = is_payment-flow AND method_class = is_payment-class AND purpose = <lv_purpose>.
         ls_group = group_of( <ls_rule> ).
@@ -718,7 +718,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
       IF lv_indicator_unusable = abap_true OR ( lv_indicated = abap_true AND lt_unusable IS NOT INITIAL ).
         list( EXPORTING is_payment = is_payment
                         is_listing = VALUE #( code     = zif_cd_hck_runtime_types=>gc_code-undetermined
-                                              severity = zif_cd_ops_types=>gc_severity-warning
+                                              severity = zif_ca_ops_types=>gc_severity-warning
                                               line     = payment_line(
                                                            is_payment = is_payment
                                                            iv_what    = <lv_purpose>
@@ -781,7 +781,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
                       is_listing = VALUE #( code     = COND #( WHEN <lv_purpose> = zif_cd_hck_runtime_types=>gc_purpose-returned
                                                                THEN zif_cd_hck_runtime_types=>gc_code-return_inconsist
                                                                ELSE zif_cd_hck_runtime_types=>gc_code-clearing_inconsist )
-                                            severity = zif_cd_ops_types=>gc_severity-error
+                                            severity = zif_ca_ops_types=>gc_severity-error
                                             line     = payment_line( is_payment = is_payment
                                                                      iv_what    = <lv_purpose>
                                                                      iv_tail    = lv_tail ) )
@@ -863,8 +863,8 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     ENDIF.
     INSERT VALUE #( object_key = |{ mv_context }/{ iv_table }|
                     check_code = zif_cd_hck_runtime_types=>gc_code-read_capped
-                    severity   = zif_cd_ops_types=>gc_severity-warning
-                    action     = zif_cd_ops_types=>gc_action-notify
+                    severity   = zif_ca_ops_types=>gc_severity-warning
+                    action     = zif_ca_ops_types=>gc_action-notify
                     message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-read_capped
                                                         iv_v1    = iv_table
                                                         iv_v2    = mv_cap
@@ -876,7 +876,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     INSERT VALUE #( object_key = |{ mv_context }/{ iv_code }/{ iv_object }|
                     check_code = iv_code
                     severity   = iv_severity
-                    action     = zif_cd_ops_types=>gc_action-notify
+                    action     = zif_ca_ops_types=>gc_action-notify
                     message    = iv_message ) INTO TABLE ct_findings.
   ENDMETHOD.
 

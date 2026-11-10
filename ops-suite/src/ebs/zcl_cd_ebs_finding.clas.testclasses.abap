@@ -16,7 +16,7 @@ CLASS ltc_finding DEFINITION FINAL FOR TESTING
       BEGIN OF gc_test,
         stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'S0001',
         line_no  TYPE i VALUE 7,
-        amount   TYPE zif_cd_ops_types=>ty_amount VALUE '125.00',
+        amount   TYPE zif_ca_ops_types=>ty_amount VALUE '125.00',
         account  TYPE zif_cd_ebs_types=>ty_text35 VALUE '000123456789',
       END OF gc_test.
 
@@ -60,7 +60,7 @@ CLASS ltc_finding IMPLEMENTATION.
     DATA(ls_finding) = zcl_cd_ebs_finding=>for_line( is_line       = debit_line( )
                                                      iv_rule_id    = 'R08'
                                                      iv_check_code = 'CHECK_AMOUNT_MISMATCH'
-                                                     iv_severity   = zif_cd_ops_types=>gc_severity-error
+                                                     iv_severity   = zif_ca_ops_types=>gc_severity-error
                                                      iv_message    = 'test' ).
     cl_abap_unit_assert=>assert_equals( act = ls_finding-amount exp = - gc_test-amount
                                         msg = 'Debit amount must be negative' ).
@@ -72,7 +72,7 @@ CLASS ltc_finding IMPLEMENTATION.
     DATA(ls_finding) = zcl_cd_ebs_finding=>for_line( is_line       = debit_line( )
                                                      iv_rule_id    = 'R08'
                                                      iv_check_code = 'CHECK_AMOUNT_MISMATCH'
-                                                     iv_severity   = zif_cd_ops_types=>gc_severity-error
+                                                     iv_severity   = zif_ca_ops_types=>gc_severity-error
                                                      iv_message    = 'test' ).
     cl_abap_unit_assert=>assert_equals( act = ls_finding-group1 exp = 'BAI2:475' msg = 'group1 must be scheme:code' ).
     cl_abap_unit_assert=>assert_equals( act = ls_finding-group2 exp = 'K01' msg = 'group2 must be the category' ).
@@ -85,15 +85,15 @@ CLASS ltc_finding IMPLEMENTATION.
   METHOD rule_config_sets_sev_action.
     DATA ls_rule TYPE zif_cd_ebs_types=>ty_rule_cfg.
     ls_rule-rule_id  = 'S01'.
-    ls_rule-severity = zif_cd_ops_types=>gc_severity-block.
-    ls_rule-action   = zif_cd_ops_types=>gc_action-block.
+    ls_rule-severity = zif_ca_ops_types=>gc_severity-block.
+    ls_rule-action   = zif_ca_ops_types=>gc_action-block.
     DATA(ls_finding) = zcl_cd_ebs_finding=>for_rule_line( is_rule       = ls_rule
                                                           is_line       = debit_line( )
                                                           iv_check_code = 'X'
                                                           iv_message    = 'test' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-block
+    cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-block
                                         msg = 'Severity must come from the rule configuration' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_finding-action exp = zif_cd_ops_types=>gc_action-block
+    cl_abap_unit_assert=>assert_equals( act = ls_finding-action exp = zif_ca_ops_types=>gc_action-block
                                         msg = 'Action must come from the rule configuration' ).
   ENDMETHOD.
 
@@ -107,11 +107,11 @@ CLASS ltc_finding IMPLEMENTATION.
     DATA(ls_finding) = zcl_cd_ebs_finding=>for_statement( is_statement  = ls_statement
                                                           iv_rule_id    = 'S02'
                                                           iv_check_code = 'BALANCE_ARITHMETIC'
-                                                          iv_severity   = zif_cd_ops_types=>gc_severity-block
+                                                          iv_severity   = zif_ca_ops_types=>gc_severity-block
                                                           iv_message    = 'test' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_finding-object_key exp = CONV zif_cd_ops_types=>ty_object_key( gc_test-stmt_key )
+    cl_abap_unit_assert=>assert_equals( act = ls_finding-object_key exp = CONV zif_ca_ops_types=>ty_object_key( gc_test-stmt_key )
                                         msg = 'Statement finding must be keyed by stmt_key' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_finding-group1 exp = CONV zif_cd_ops_types=>ty_group( gc_test-account )
+    cl_abap_unit_assert=>assert_equals( act = ls_finding-group1 exp = CONV zif_ca_ops_types=>ty_group( gc_test-account )
                                         msg = 'group1 must be the account' ).
     cl_abap_unit_assert=>assert_equals( act = ls_finding-group2 exp = 'JPMC' msg = 'group2 must be the bank key' ).
   ENDMETHOD.

@@ -39,7 +39,7 @@ TYPES = """INTERFACE zif_cd_ops_types PUBLIC.
     END OF gc_param_area_prefix.
 ENDINTERFACE.
 """
-ADAPTER = """CLASS zcl_cd_ops_params_ca IMPLEMENTATION.
+ADAPTER = """CLASS zcl_ca_ops_params IMPLEMENTATION.
   METHOD prefix_areas.
     rt_map = VALUE #( ( prefix = zif_cd_ops_types=>gc_param_area_prefix-alert area = zif_cd_ops_types=>gc_param_area-ops )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-fix   area = zif_cd_ops_types=>gc_param_area-ops ) ).

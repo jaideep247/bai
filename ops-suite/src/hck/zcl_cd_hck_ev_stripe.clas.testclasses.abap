@@ -53,7 +53,7 @@ CLASS ltc_ev_stripe DEFINITION FINAL FOR TESTING
     METHODS teardown.
     METHODS setting
       IMPORTING
-        iv_name  TYPE zif_cd_ops_types=>ty_param_name
+        iv_name  TYPE zif_ca_ops_types=>ty_param_name
         iv_value TYPE clike.
     METHODS configure
       IMPORTING
@@ -62,7 +62,7 @@ CLASS ltc_ev_stripe DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_runtime_types=>ty_evidence_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS not_configured_reads_nothing FOR TESTING.
     METHODS payout_row_found             FOR TESTING.
     METHODS conditions_when_maintained   FOR TESTING.
@@ -229,7 +229,7 @@ CLASS ltc_ev_stripe IMPLEMENTATION.
   " (landscape-specific); with the delivered definitions only, the kind is not configured and reads
   " nothing - the morning report says so instead of judging card payments on half the chain
   METHOD delivered_blank_not_configured.
-    DATA lt_names TYPE STANDARD TABLE OF zif_cd_ops_types=>ty_param_name WITH EMPTY KEY.
+    DATA lt_names TYPE STANDARD TABLE OF zif_ca_ops_types=>ty_param_name WITH EMPTY KEY.
     TRY.
         lt_names = VALUE #( ( zif_cd_hck_runtime_types=>gc_param-stripe_table )
                             ( zif_cd_hck_runtime_types=>gc_param-stripe_intent_field )

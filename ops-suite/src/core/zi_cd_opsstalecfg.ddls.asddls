@@ -4,7 +4,7 @@
 //          MON_STALE_AFTER_MIN_<area> of area CD_OPS (table consolidation 2026-11-08, was ZCD_OPS_MONCFG)
 //          - the maintained value (ZCA_PARAM_VAL, row 1 of a kind-P parameter), else the definition
 //          default (ZCA_PARAM_DEF); one row per defined area. CDS cannot call the parameter API
-//          (ZIF_CD_OPS_PARAMS), so this view reads the framework's own tables directly, read-only, with
+//          (ZIF_CA_OPS_PARAMS), so this view reads the framework's own tables directly, read-only, with
 //          the API's resolution (value, else definition default); the HCK self-check reads the same
 //          parameters through the API, so dashboards and self-check agree. The area code and the
 //          parameter-name prefix are literals compared with ZIF_CD_OPS_TYPES (portable check

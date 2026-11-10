@@ -25,7 +25,7 @@ CLASS zcl_cd_fmon_adapter_prism DEFINITION
     INTERFACES zif_cd_fmon_adapter.
 
     "! Stored events -> status records (pure apart from the configuration check)
-    "! @raising zcx_cd_ops_error | a required role is not configured (204) or a configured
+    "! @raising zcx_ca_ops_error | a required role is not configured (204) or a configured
     "!                             field is not a column of ZCD_FMON_PRISM (201)
     CLASS-METHODS to_records
       IMPORTING
@@ -34,7 +34,7 @@ CLASS zcl_cd_fmon_adapter_prism DEFINITION
       RETURNING
         VALUE(rt_records) TYPE zif_cd_fmon_types=>tt_src_record
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
   PRIVATE SECTION.
     CONSTANTS gc_table TYPE zif_cd_fmon_types=>ty_tabname VALUE 'ZCD_FMON_PRISM'.
@@ -47,7 +47,7 @@ CLASS zcl_cd_fmon_adapter_prism DEFINITION
       RETURNING
         VALUE(rv_value) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 
@@ -60,9 +60,9 @@ CLASS zcl_cd_fmon_adapter_prism IMPLEMENTATION.
     DATA lv_to TYPE timestampl.
     " Same half-open window as the generic adapter (audit A52), on the time SAP received the call:
     " an event that arrives late is still read once it is in SAP
-    CONVERT DATE is_request-date_from TIME zif_cd_ops_types=>gc_time-day_start
+    CONVERT DATE is_request-date_from TIME zif_ca_ops_types=>gc_time-day_start
       INTO TIME STAMP lv_from TIME ZONE is_request-time_zone.
-    CONVERT DATE is_request-date_to + 1 TIME zif_cd_ops_types=>gc_time-day_start
+    CONVERT DATE is_request-date_to + 1 TIME zif_ca_ops_types=>gc_time-day_start
       INTO TIME STAMP lv_to TIME ZONE is_request-time_zone.
     rt_records = to_records( is_request = is_request
                              it_rows    = zcl_cd_fmon_factory=>get_prism_dao( )->read_unprocessed(

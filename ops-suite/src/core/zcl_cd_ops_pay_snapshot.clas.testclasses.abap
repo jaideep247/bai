@@ -284,7 +284,7 @@ CLASS ltd_outcome DEFINITION FINAL FOR TESTING.
     DATA ms_config TYPE zif_cd_ops_payout_types=>ty_config.
     DATA mt_verdicts TYPE zif_cd_ops_payout_types=>tt_verdict.
     DATA mt_sources TYPE zif_cd_ops_payout_types=>tt_fin_source.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
     "! Documents asked for, per call
     DATA mt_asked TYPE zif_cd_ops_trace_types=>tt_docno.
     DATA mv_calls TYPE i.
@@ -414,34 +414,34 @@ ENDCLASS.
 
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
-    DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
+    INTERFACES zif_ca_ops_store PARTIALLY IMPLEMENTED.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
+    DATA ms_finished TYPE zif_ca_ops_types=>ty_run.
     DATA mv_commits TYPE i.
     DATA mv_rollbacks TYPE i.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~start_run.
+  METHOD zif_ca_ops_store~start_run.
     rs_run-pe_area   = iv_pe_area.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~save_findings.
+  METHOD zif_ca_ops_store~save_findings.
     INSERT LINES OF it_findings INTO TABLE mt_findings.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~finish_run.
+  METHOD zif_ca_ops_store~finish_run.
     ms_finished = is_run.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~commit.
+  METHOD zif_ca_ops_store~commit.
     mv_commits = mv_commits + 1.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~rollback.
+  METHOD zif_ca_ops_store~rollback.
     mv_rollbacks = mv_rollbacks + 1.
   ENDMETHOD.
 ENDCLASS.
@@ -449,19 +449,19 @@ ENDCLASS.
 
 CLASS ltd_lock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_lock.
+    INTERFACES zif_ca_ops_lock.
     DATA mv_releases TYPE i.
-    DATA mv_variant TYPE zif_cd_ops_types=>ty_variant.
+    DATA mv_variant TYPE zif_ca_ops_types=>ty_variant.
 ENDCLASS.
 
 CLASS ltd_lock IMPLEMENTATION.
-  METHOD zif_cd_ops_lock~acquire.
+  METHOD zif_ca_ops_lock~acquire.
     CLEAR ev_holder.
     mv_variant = iv_variant.
     rv_acquired = abap_true.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_lock~release.
+  METHOD zif_ca_ops_lock~release.
     mv_releases += 1.
   ENDMETHOD.
 ENDCLASS.
@@ -469,17 +469,17 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_clock PARTIALLY IMPLEMENTED.
     CONSTANTS gc_today TYPE d VALUE '20261111'.
     DATA mv_now TYPE timestampl VALUE '20261111120000'.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = gc_today.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = mv_now.
   ENDMETHOD.
 ENDCLASS.
@@ -511,8 +511,8 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
         parallel  TYPE string VALUE `4`,
         serial    TYPE string VALUE `1`,
         "! Runs of other modes with package rows before the run
-        sweep_run TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000E1',
-        fast_run  TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000E2',
+        sweep_run TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000E1',
+        fast_run  TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000E2',
         one       TYPE string VALUE `1`,
         wait_sec  TYPE string VALUE `30`,
         second    TYPE i VALUE 2,
@@ -603,9 +603,9 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
     METHODS source_finding
       IMPORTING
         is_result         TYPE zcl_cd_ops_pay_snapshot=>ty_result
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! Parameters of the run: parallel packages, package size, wait (seed values, else delivered)
     METHODS parameters
@@ -629,7 +629,7 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
       IMPORTING
         iv_source  TYPE zif_cd_ops_payout_types=>ty_source_id DEFAULT zif_cd_ops_payout_types=>gc_source-documents
         iv_outcome TYPE zif_cd_ops_payout_types=>ty_outcome
-        iv_finding TYPE zif_cd_ops_types=>ty_check_code OPTIONAL
+        iv_finding TYPE zif_ca_ops_types=>ty_check_code OPTIONAL
         iv_valut   TYPE d DEFAULT ltd_clock=>gc_today.
 
     "! A current row of the scenario's payment (written by an earlier run)
@@ -637,14 +637,14 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
       IMPORTING
         is_scenario TYPE zcl_cd_ops_pay_fixture=>ty_scenario
         iv_outcome  TYPE zif_cd_ops_payout_types=>ty_outcome
-        iv_finding  TYPE zif_cd_ops_types=>ty_check_code OPTIONAL
+        iv_finding  TYPE zif_ca_ops_types=>ty_check_code OPTIONAL
         iv_laufi    TYPE clike OPTIONAL.
 
     "! A current request row (written by an earlier run)
     METHODS current_request
       IMPORTING
         iv_outcome TYPE zif_cd_ops_payout_types=>ty_outcome
-        iv_finding TYPE zif_cd_ops_types=>ty_check_code OPTIONAL.
+        iv_finding TYPE zif_ca_ops_types=>ty_check_code OPTIONAL.
 
     METHODS act
       IMPORTING
@@ -653,7 +653,7 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zcl_cd_ops_pay_snapshot=>ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -674,9 +674,9 @@ CLASS ltc_snapshot IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_pay_outcome_dao( mo_dao ).
     zcl_cd_ops_injector=>inject_pay_outcome( mo_outcome ).
     zcl_cd_ops_injector=>inject_pay_request( mo_request ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
-    zcl_cd_ops_injector=>inject_lock( mo_lock ).
-    zcl_cd_ops_injector=>inject_clock( mo_clock ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_lock( mo_lock ).
+    zcl_ca_ops_injector=>inject_clock( mo_clock ).
     zcl_cd_hck_injector=>inject_dao( mo_hck ).
     " PAYOUT_PARALLEL 1: the scenarios below run one package after the other, as before
     parameters( gc_par-serial ).
@@ -792,7 +792,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
                     valid_to      = zif_cd_ops_payout_types=>gc_valid_to_open
                     outcome       = iv_outcome
                     finding       = iv_finding
-                    severity      = COND #( WHEN iv_finding IS NOT INITIAL THEN zif_cd_ops_types=>gc_severity-error )
+                    severity      = COND #( WHEN iv_finding IS NOT INITIAL THEN zif_ca_ops_types=>gc_severity-error )
                     evidence_kind = zif_cd_ops_payout_types=>gc_req_stage-not_in_run
                     due_date      = gc_req-due ) INTO TABLE mo_dao->mt_versions.
   ENDMETHOD.
@@ -841,7 +841,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
           act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-wm_date
           exp = VALUE d( ) msg = 'Watermark not advanced' ).
         DATA(ls_finding) = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'First failure: a warning, the next run retries' ).
         cl_abap_unit_assert=>assert_equals(
           act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-fail_count
@@ -884,7 +884,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
         mo_dao->mv_stale = abap_true.
         DATA(ls_result) = act( ).
         DATA(ls_finding) = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Escalated to an error' ).
         cl_abap_unit_assert=>assert_char_cp(
           act = ls_finding-message
@@ -896,7 +896,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals(
           act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-fail_count
           exp = zif_cd_ops_payout_types=>gc_param_default-fail_escalate msg = 'Counted' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-error
+        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_ca_ops_types=>gc_run_status-error
                                             msg = 'Run in error' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -932,7 +932,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
         mo_outcome->mv_no_source = abap_true.
         DATA(ls_result) = act( ).
         DATA(ls_finding) = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-config_failed ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'A configuration finding, an error at once' ).
         cl_abap_unit_assert=>assert_initial(
           act = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed )
@@ -1094,7 +1094,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_inserted ) exp = 1 msg = 'One row' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-finding
                                             exp = zif_cd_hck_runtime_types=>gc_code-payment_not_clear msg = 'Late: exception' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Beyond RED: critical' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-flow_class exp = gc_late-key
                                             msg = 'Flow + method class of the row' ).
@@ -1102,7 +1102,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
         CLEAR: mo_outcome->mt_verdicts, mo_dao->mt_inserted, mo_dao->mt_events, mo_dao->mt_watermarks, mo_dao->mt_versions.
         given_payment( iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight iv_valut = gc_late-two_ago ).
         act( ).
-        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Beyond AMBER: late' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1227,7 +1227,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_inserted ) exp = 1 msg = 'The exception' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-finding
                                             exp = zif_cd_ops_payout_types=>gc_code-request_not_paid msg = 'PRQ_NOT_PAID' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'RED from the morning after the due date' ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_deleted ) exp = 1 msg = 'The open row replaced' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1472,7 +1472,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
           exp = CONV zif_cd_ops_payout_types=>ty_wm_key( gc_par-doc_a )
           msg = 'Watermark before the abandoned package' ).
         " 2026-11-10: a first failed run of the source is a warning, error from PAYOUT_FAIL_ESCALATE on
-        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_ca_ops_types=>gc_run_status-warning
                                             msg = 'Run in warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1628,7 +1628,7 @@ CLASS ltc_snapshot IMPLEMENTATION.
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed ] ) )
           msg = 'PAY_OUTCOME_FAILED reported' ).
         " 2026-11-10: a first failed run is a warning (the next run retries); error from PAYOUT_FAIL_ESCALATE on
-        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_ca_ops_types=>gc_run_status-warning
                                             msg = 'Run in warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

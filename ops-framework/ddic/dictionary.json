@@ -1,0 +1,5 @@
+{
+  "_comment": "Domains and data elements of the operations framework. None of its own: the area of a run, finding, alert rule, lock and purge target is ZCA_PARAM_AREA_ID of the parameter framework (one area register); the other fields use built-in types and SAP data elements. tools/abapgit_serialize.py writes src/<name>.doma.xml / .dtel.xml for every entry added here.",
+  "domains": [],
+  "data_elements": []
+}

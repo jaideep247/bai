@@ -55,13 +55,13 @@ CLASS zcl_cd_fmon_chk_deadline DEFINITION
         it_files       TYPE zif_cd_fmon_types=>tt_file
         is_evidence    TYPE zif_cd_fmon_types=>ty_stmt_evidence
       RETURNING
-        VALUE(rv_cond) TYPE zif_cd_ops_types=>ty_group.
+        VALUE(rv_cond) TYPE zif_ca_ops_types=>ty_group.
 
     METHODS message
       IMPORTING
         is_ctx         TYPE zif_cd_fmon_types=>ty_check_ctx
         is_deadline    TYPE zif_cd_fmon_types=>ty_sla
-        iv_cond        TYPE zif_cd_ops_types=>ty_group
+        iv_cond        TYPE zif_ca_ops_types=>ty_group
         is_evidence    TYPE zif_cd_fmon_types=>ty_stmt_evidence
       RETURNING
         VALUE(rv_text) TYPE string.
@@ -75,7 +75,7 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
   METHOD zif_cd_fmon_check~execute.
     DATA lt_day TYPE zif_cd_fmon_types=>tt_file.
     DATA ls_missed TYPE zif_cd_fmon_types=>ty_sla.
-    DATA lv_severity TYPE zif_cd_ops_types=>ty_severity.
+    DATA lv_severity TYPE zif_ca_ops_types=>ty_severity.
     DATA lv_stage TYPE zif_cd_fmon_types=>ty_stage.
     DATA lv_due TYPE timestampl.
 
@@ -105,11 +105,11 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
         IF is_ctx-now < lv_due OR reached( it_files = lt_day iv_stage = lv_stage ) = abap_true.
           CONTINUE.
         ENDIF.
-        DATA(lv_row_severity) = COND zif_cd_ops_types=>ty_severity(
+        DATA(lv_row_severity) = COND zif_ca_ops_types=>ty_severity(
                                   WHEN ls_row-severity IS NOT INITIAL THEN ls_row-severity
                                   WHEN is_check-severity IS NOT INITIAL THEN is_check-severity
-                                  ELSE zif_cd_ops_types=>gc_severity-error ).
-        IF zcl_cd_ops_util=>severity_rank( lv_row_severity ) > zcl_cd_ops_util=>severity_rank( lv_severity ).
+                                  ELSE zif_ca_ops_types=>gc_severity-error ).
+        IF zcl_ca_ops_util=>severity_rank( lv_row_severity ) > zcl_ca_ops_util=>severity_rank( lv_severity ).
           lv_severity = lv_row_severity.
         ENDIF.
         IF ls_missed IS INITIAL OR ls_row-due_time > ls_missed-due_time.
@@ -123,7 +123,7 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
       DATA(ls_evidence) = VALUE #( is_ctx-statements[ iface_id      = <ls_expect>-iface_id
                                                       business_date = is_ctx-business_date ] OPTIONAL ).
       DATA(lv_direction) = VALUE #( is_ctx-ifaces[ iface_id = <ls_expect>-iface_id ]-direction OPTIONAL ).
-      DATA(lv_cond) = COND zif_cd_ops_types=>ty_group(
+      DATA(lv_cond) = COND zif_ca_ops_types=>ty_group(
                         WHEN lv_direction = zif_cd_fmon_types=>gc_direction-inbound
                          AND zcl_cd_fmon_status=>direction_of( ls_missed-stage ) = zif_cd_fmon_types=>gc_direction-inbound
                         THEN condition( it_files = lt_day is_evidence = ls_evidence )
@@ -207,7 +207,7 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
     DATA lv_tail TYPE string.
     DATA(lv_date) = |{ is_ctx-business_date DATE = ISO }|.
     DATA(lv_due) = |{ is_deadline-due_time TIME = ISO }|.
-    DATA(lv_msgno) = SWITCH zif_cd_ops_types=>ty_msgno( iv_cond
+    DATA(lv_msgno) = SWITCH zif_ca_ops_types=>ty_msgno( iv_cond
                        WHEN zif_cd_fmon_types=>gc_deadline_cond-not_received THEN zif_cd_fmon_types=>gc_msg-deadline_not_received
                        WHEN zif_cd_fmon_types=>gc_deadline_cond-not_imported THEN zif_cd_fmon_types=>gc_msg-deadline_not_imported
                        WHEN zif_cd_fmon_types=>gc_deadline_cond-not_posted   THEN zif_cd_fmon_types=>gc_msg-deadline_not_posted

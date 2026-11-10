@@ -41,7 +41,7 @@ CLASS zcl_cd_ebs_r_r21_lookup DEFINITION
         is_lookup         TYPE zif_cd_ebs_types=>ty_lookup_cfg
         is_line           TYPE zif_cd_ebs_types=>ty_line
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
 ENDCLASS.
 
@@ -61,10 +61,10 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e050(zcd_ops) WITH zif_cd_ebs_types=>gc_lookup_table is_rule-param1.
     ENDIF.
-    DATA(lv_not_found) = COND zif_cd_ops_types=>ty_check_code( WHEN ls_lookup-not_found_code IS NOT INITIAL
+    DATA(lv_not_found) = COND zif_ca_ops_types=>ty_check_code( WHEN ls_lookup-not_found_code IS NOT INITIAL
                                                               THEN ls_lookup-not_found_code
                                                               ELSE zif_cd_ebs_types=>gc_check_code-lookup_not_found ).
-    DATA(lv_status_code) = COND zif_cd_ops_types=>ty_check_code( WHEN ls_lookup-status_code IS NOT INITIAL
+    DATA(lv_status_code) = COND zif_ca_ops_types=>ty_check_code( WHEN ls_lookup-status_code IS NOT INITIAL
                                                                 THEN ls_lookup-status_code
                                                                 ELSE zif_cd_ebs_types=>gc_check_code-lookup_status ).
     DATA(lt_allowed) = value_list( ls_lookup-allowed_values ).

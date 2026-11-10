@@ -23,11 +23,11 @@ CLASS ltc_ack_alert DEFINITION FINAL FOR TESTING
         hbkid      TYPE c LENGTH 5 VALUE 'JPMC1',
         file_name  TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_JPMC_20261110_01.txt',
         count      TYPE i VALUE 120,
-        total      TYPE zif_cd_ops_types=>ty_amount VALUE '1234567.80',
+        total      TYPE zif_ca_ops_types=>ty_amount VALUE '1234567.80',
         run_count  TYPE i VALUE 118,
-        run_amount TYPE zif_cd_ops_types=>ty_amount VALUE '99000.00',
-        usd        TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
-        cad        TYPE zif_cd_ops_types=>ty_currency VALUE 'CAD',
+        run_amount TYPE zif_ca_ops_types=>ty_amount VALUE '99000.00',
+        usd        TYPE zif_ca_ops_types=>ty_currency VALUE 'USD',
+        cad        TYPE zif_ca_ops_types=>ty_currency VALUE 'CAD',
       END OF gc_test.
 
     METHODS house_bank_from_group_fields FOR TESTING.
@@ -42,14 +42,14 @@ CLASS ltc_ack_alert DEFINITION FINAL FOR TESTING
     METHODS file
       IMPORTING
         iv_count       TYPE i DEFAULT gc_test-count
-        iv_total       TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_test-total
+        iv_total       TYPE zif_ca_ops_types=>ty_amount DEFAULT gc_test-total
       RETURNING
         VALUE(rs_file) TYPE zif_cd_fmon_types=>ty_file.
 
     METHODS value_of
       IMPORTING
         iv_text         TYPE string
-        iv_label        TYPE zif_cd_ops_types=>ty_msgno
+        iv_label        TYPE zif_ca_ops_types=>ty_msgno
       RETURNING
         VALUE(rv_value) TYPE string.
 ENDCLASS.
@@ -174,7 +174,7 @@ CLASS ltc_ack_alert IMPLEMENTATION.
 
   " A missed deadline is an ACK alert only when its stage is ACK_RECEIVED
   METHOD ack_deadline_recognised.
-    DATA ls_finding TYPE zif_cd_ops_types=>ty_finding.
+    DATA ls_finding TYPE zif_ca_ops_types=>ty_finding.
     ls_finding-check_code = zif_cd_fmon_types=>gc_check_code-deadline_missed.
     ls_finding-details    = zcl_cd_fmon_ack_alert=>missed_stage_line( zif_cd_fmon_types=>gc_stage-ack ).
     cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_ack_alert=>is_ack_deadline( ls_finding )

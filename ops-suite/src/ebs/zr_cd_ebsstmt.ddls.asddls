@@ -27,7 +27,7 @@ define root view entity ZR_CD_EbsStmt
 {
   key Stmt.Kukey,
       Stmt.StmtObjectKey,
-      cast( 'EBS' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_EBS' as abap.char( 16 ) )                       as PaymentEngineArea,
       Stmt.CompanyCode,
       Stmt.HouseBank,
       Stmt.HouseBankAccount,

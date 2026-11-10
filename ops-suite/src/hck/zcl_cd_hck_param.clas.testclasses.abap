@@ -36,7 +36,7 @@ CLASS ltc_param IMPLEMENTATION.
 
   " Rule: every list item is a PCRE pattern (matched to the complete value, case ignored)
   METHOD list_items_are_pcre.
-    DATA lt_exp TYPE zif_cd_ops_types=>tt_pcre.
+    DATA lt_exp TYPE zif_ca_ops_types=>tt_pcre.
     TRY.
         INSERT `zcd_paym_.*` INTO TABLE lt_exp.
         INSERT `ZCD_POST_GL` INTO TABLE lt_exp.
@@ -66,7 +66,7 @@ CLASS ltc_param IMPLEMENTATION.
         zcl_cd_hck_param=>check_patterns( it_patterns = zcl_cd_hck_param=>patterns( 'ZCD_.*, ZCD_(PAYM' )
                                           iv_check_id = 'B_TECH_JOBS' ).
         cl_abap_unit_assert=>fail( msg = 'An invalid pattern must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '373'
                                             msg = 'Message 373 names the invalid pattern' ).
     ENDTRY.

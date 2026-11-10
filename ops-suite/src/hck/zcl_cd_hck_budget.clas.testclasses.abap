@@ -8,18 +8,18 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
     DATA mv_now TYPE timestampl.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = mv_now.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     CLEAR rv_date.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     CLEAR rv_time.
   ENDMETHOD.
 ENDCLASS.
@@ -47,7 +47,7 @@ CLASS ltc_budget IMPLEMENTATION.
 
   METHOD setup.
     mo_clock = NEW #( ).
-    zcl_cd_ops_injector=>inject_clock( mo_clock ).
+    zcl_ca_ops_injector=>inject_clock( mo_clock ).
   ENDMETHOD.
 
 

@@ -1,0 +1,16 @@
+{
+  "starting_folder": "/src/",
+  "master_language": "E",
+  "packages": {
+    "": ["ZCA_OPS", "Cross-application operations framework"],
+    "ui": ["ZCA_OPS_UI", "Operations framework: apps (RAP)"]
+  },
+  "ddic_package_folder": "",
+  "draft_package_folder": "ui",
+  "message_class": {
+    "name": "ZCA_OPS",
+    "text": "Cross-application operations framework",
+    "source": "config/zca_ops_messages.md",
+    "folder": ""
+  }
+}

@@ -26,7 +26,7 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     INTERFACES zif_cd_ebs_parser.
 
   PRIVATE SECTION.
-    TYPES ty_amount TYPE zif_cd_ops_types=>ty_amount.
+    TYPES ty_amount TYPE zif_ca_ops_types=>ty_amount.
     TYPES ty_name   TYPE string.
 
     TYPES:
@@ -43,7 +43,7 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
       BEGIN OF ty_tx,
         has_amount    TYPE abap_bool,
         amount        TYPE ty_amount,
-        currency      TYPE zif_cd_ops_types=>ty_currency,
+        currency      TYPE zif_ca_ops_types=>ty_currency,
         cdi           TYPE zif_cd_ebs_types=>ty_cdi,
         btc           TYPE ty_btc,
         end_to_end_id TYPE zif_cd_ebs_types=>ty_text35,
@@ -59,7 +59,7 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     TYPES:
       BEGIN OF ty_entry,
         amount       TYPE ty_amount,
-        currency     TYPE zif_cd_ops_types=>ty_currency,
+        currency     TYPE zif_ca_ops_types=>ty_currency,
         cdi          TYPE zif_cd_ebs_types=>ty_cdi,
         reversal     TYPE abap_bool,
         booking_date TYPE d,
@@ -112,9 +112,9 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     "! Target object and wording of a finding
     TYPES:
       BEGIN OF ty_check,
-        object_type TYPE zif_cd_ops_types=>ty_object_type,
-        object_key  TYPE zif_cd_ops_types=>ty_object_key,
-        check_code  TYPE zif_cd_ops_types=>ty_check_code,
+        object_type TYPE zif_ca_ops_types=>ty_object_type,
+        object_key  TYPE zif_ca_ops_types=>ty_object_key,
+        check_code  TYPE zif_ca_ops_types=>ty_check_code,
         label       TYPE string,
       END OF ty_check.
 
@@ -213,40 +213,40 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
 
     CONSTANTS:
       BEGIN OF gc_rule,
-        structure     TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S00',
-        control_total TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S06',
-        empty         TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S11',
-        count         TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S12',
+        structure     TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S00',
+        control_total TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S06',
+        empty         TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S11',
+        count         TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S12',
       END OF gc_rule.
 
     CONSTANTS:
       BEGIN OF gc_check,
-        sum_mismatch    TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_SUM_MISMATCH',
-        net_mismatch    TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_NET_MISMATCH',
-        cdt_sum         TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_CDT_SUM_MISMATCH',
-        dbt_sum         TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DBT_SUM_MISMATCH',
-        entry_count     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_ENTRY_COUNT',
-        cdt_entry_count TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_CDT_ENTRY_COUNT',
-        dbt_entry_count TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DBT_ENTRY_COUNT',
-        empty_file      TYPE zif_cd_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
-        no_entries      TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_ENTRIES',
-        invalid_amount  TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_AMOUNT',
-        invalid_date    TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_DATE',
+        sum_mismatch    TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_SUM_MISMATCH',
+        net_mismatch    TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_NET_MISMATCH',
+        cdt_sum         TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_CDT_SUM_MISMATCH',
+        dbt_sum         TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_DBT_SUM_MISMATCH',
+        entry_count     TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_ENTRY_COUNT',
+        cdt_entry_count TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_CDT_ENTRY_COUNT',
+        dbt_entry_count TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_DBT_ENTRY_COUNT',
+        empty_file      TYPE zif_ca_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
+        no_entries      TYPE zif_ca_ops_types=>ty_check_code VALUE 'NO_ENTRIES',
+        invalid_amount  TYPE zif_ca_ops_types=>ty_check_code VALUE 'INVALID_AMOUNT',
+        invalid_date    TYPE zif_ca_ops_types=>ty_check_code VALUE 'INVALID_DATE',
         "! A94: namespace / version, message body or statement element not accepted
-        camt_document   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DOCUMENT',
-        invalid_count   TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_COUNT',
+        camt_document   TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_DOCUMENT',
+        invalid_count   TYPE zif_ca_ops_types=>ty_check_code VALUE 'INVALID_COUNT',
         "! A93: entry not booked (PDNG / INFO / missing status) - quarantined
-        not_booked      TYPE zif_cd_ops_types=>ty_check_code VALUE 'ENTRY_NOT_BOOKED',
+        not_booked      TYPE zif_ca_ops_types=>ty_check_code VALUE 'ENTRY_NOT_BOOKED',
         "! A92: transaction details do not reconcile to their entry / a detail has no amount
-        batch_mismatch  TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_BATCH_MISMATCH',
-        detail_amount   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DETAIL_AMOUNT_MISSING',
+        batch_mismatch  TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_BATCH_MISMATCH',
+        detail_amount   TYPE zif_ca_ops_types=>ty_check_code VALUE 'CAMT_DETAIL_AMOUNT_MISSING',
       END OF gc_check.
 
     CONSTANTS:
       BEGIN OF gc_object,
-        file      TYPE zif_cd_ops_types=>ty_object_type VALUE 'FILE',
-        statement TYPE zif_cd_ops_types=>ty_object_type VALUE 'STMT',
-        line      TYPE zif_cd_ops_types=>ty_object_type VALUE 'LINE',
+        file      TYPE zif_ca_ops_types=>ty_object_type VALUE 'FILE',
+        statement TYPE zif_ca_ops_types=>ty_object_type VALUE 'STMT',
+        line      TYPE zif_ca_ops_types=>ty_object_type VALUE 'LINE',
       END OF gc_object.
 
     "! A93: the approved posting profile - only booked entries become postable lines
@@ -295,7 +295,7 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     DATA mv_ntry_depth TYPE i.
     DATA mv_tx_depth TYPE i.
     DATA mv_stmt_index TYPE i.
-    DATA mv_amt_ccy TYPE zif_cd_ops_types=>ty_currency.
+    DATA mv_amt_ccy TYPE zif_ca_ops_types=>ty_currency.
     DATA mv_receiver_by_id TYPE abap_bool.
     "! A94: namespace of the Document element
     DATA mv_namespace TYPE string.
@@ -318,26 +318,26 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
       IMPORTING
         iv_content TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS process_node
       IMPORTING
         io_node TYPE REF TO if_sxml_node
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS open_element
       IMPORTING
         io_element TYPE REF TO if_sxml_open_element
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS check_document
       IMPORTING
         iv_name  TYPE ty_name
         iv_depth TYPE i
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS open_anchor
       IMPORTING
@@ -356,7 +356,7 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     "! A92: why the transaction details of the entry cannot be posted as lines (check code)
     METHODS detail_problem
       RETURNING
-        VALUE(rv_check_code) TYPE zif_cd_ops_types=>ty_check_code.
+        VALUE(rv_check_code) TYPE zif_ca_ops_types=>ty_check_code.
 
     METHODS attribute_value
       IMPORTING
@@ -408,8 +408,8 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
       IMPORTING
         is_declared   TYPE ty_side
         is_parsed     TYPE ty_side
-        iv_count_code TYPE zif_cd_ops_types=>ty_check_code
-        iv_sum_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_count_code TYPE zif_ca_ops_types=>ty_check_code
+        iv_sum_code   TYPE zif_ca_ops_types=>ty_check_code
         iv_label      TYPE string.
 
     METHODS on_balance_value
@@ -456,7 +456,7 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
       IMPORTING
         is_tx       TYPE ty_tx
         iv_amount   TYPE ty_amount
-        iv_currency TYPE zif_cd_ops_types=>ty_currency.
+        iv_currency TYPE zif_ca_ops_types=>ty_currency.
 
     METHODS apply_code
       IMPORTING
@@ -485,20 +485,20 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     METHODS add_finding
       IMPORTING
         is_check    TYPE ty_check
-        iv_rule_id  TYPE zif_cd_ops_types=>ty_rule_id
-        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_rule_id  TYPE zif_ca_ops_types=>ty_rule_id
+        iv_severity TYPE zif_ca_ops_types=>ty_severity
         iv_message  TYPE string
         iv_amount   TYPE ty_amount OPTIONAL.
 
     METHODS file_check
       IMPORTING
-        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code   TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
         VALUE(rs_check) TYPE ty_check.
 
     METHODS stmt_check
       IMPORTING
-        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code   TYPE zif_ca_ops_types=>ty_check_code
         iv_label        TYPE string OPTIONAL
       RETURNING
         VALUE(rs_check) TYPE ty_check.
@@ -506,13 +506,13 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     "! Statement check inside Stmt/Ntfctn, else file check
     METHODS current_check
       IMPORTING
-        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code   TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
         VALUE(rs_check) TYPE ty_check.
 
     METHODS file_key
       RETURNING
-        VALUE(rv_key) TYPE zif_cd_ops_types=>ty_object_key.
+        VALUE(rv_key) TYPE zif_ca_ops_types=>ty_object_key.
 
     METHODS to_amount
       IMPORTING
@@ -561,7 +561,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     IF is_blank( iv_content ) = abap_true.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_is_empty_expected_camt
                                                         iv_v1    = file_key( ) ) ).
       rs_file = ms_file.
@@ -571,7 +571,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     IF ms_file-statements IS INITIAL.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_at_least_on_2
                                                         iv_v1    = file_key( ) ) ).
     ENDIF.
@@ -676,7 +676,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     DATA(lv_stem) = gc_ns_prefix && lv_type && gc_variant.
     DATA(lv_version) = COND string( WHEN find( val = lv_namespace sub = lv_stem ) = 0
                                     THEN substring( val = lv_namespace off = strlen( lv_stem ) ) ).
-    DATA(lt_approved) = zcl_cd_ops_util=>split_list( gc_approved_versions ).
+    DATA(lt_approved) = zcl_ca_ops_util=>split_list( gc_approved_versions ).
     IF lv_version IS INITIAL OR NOT line_exists( lt_approved[ table_line = lv_version ] ).
       document_finding( iv_reason = gc_doc_reason-namespace iv_value = lv_namespace ).
     ENDIF.
@@ -686,7 +686,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
   METHOD document_finding.
     add_finding( is_check    = file_check( gc_check-camt_document )
                  iv_rule_id  = gc_rule-structure
-                 iv_severity = zif_cd_ops_types=>gc_severity-block
+                 iv_severity = zif_ca_ops_types=>gc_severity-block
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-camt_document
                                                       iv_v1    = file_key( )
                                                       iv_v2    = iv_reason
@@ -797,7 +797,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
         ENDIF.
       WHEN OTHERS.
         " MsgRcpt/Id/...: the first identifier wins over the name
-        IF zcl_cd_ops_util=>pcre_match( iv_value = iv_path iv_pattern = gc_path-rcpt_id_pattern ) = abap_true
+        IF zcl_ca_ops_util=>pcre_match( iv_value = iv_path iv_pattern = gc_path-rcpt_id_pattern ) = abap_true
            AND mv_receiver_by_id = abap_false.
           ms_file-receiver_id = iv_value.
           mv_receiver_by_id = abap_true.
@@ -885,7 +885,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     IF ms_stmt-entries = 0.
       add_finding( is_check    = stmt_check( gc_check-no_entries )
                    iv_rule_id  = gc_rule-empty
-                   iv_severity = zif_cd_ops_types=>gc_severity-warning
+                   iv_severity = zif_ca_ops_types=>gc_severity-warning
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-statement_expected_entries
                                                         iv_v1    = ms_stmt-stmt-stmt_id ) ).
     ENDIF.
@@ -1069,7 +1069,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       ms_stmt-entries -= 1.
       add_finding( is_check    = stmt_check( gc_check-not_booked )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-warning
+                   iv_severity = zif_ca_ops_types=>gc_severity-warning
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-entry_not_booked
                                                         iv_v1    = ms_entry-bank_ref
                                                         iv_v2    = ms_entry-amount
@@ -1107,8 +1107,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
                                           check_code  = lv_problem )
                    iv_rule_id  = gc_rule-control_total
                    iv_severity = COND #( WHEN lv_problem = gc_check-batch_mismatch
-                                         THEN zif_cd_ops_types=>gc_severity-block
-                                         ELSE zif_cd_ops_types=>gc_severity-error )
+                                         THEN zif_ca_ops_types=>gc_severity-block
+                                         ELSE zif_ca_ops_types=>gc_severity-error )
                    iv_message  = COND #( WHEN lv_problem = gc_check-batch_mismatch
                                          THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-batch_mismatch
                                                                      iv_v1    = ms_entry-bank_ref
@@ -1277,7 +1277,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     lv_difference = iv_found - iv_expected.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-control_total
-                 iv_severity = zif_cd_ops_types=>gc_severity-block
+                 iv_severity = zif_ca_ops_types=>gc_severity-block
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found_entries
                                                       iv_v1    = is_check-label
                                                       iv_v2    = iv_expected
@@ -1292,7 +1292,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     ENDIF.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-count
-                 iv_severity = zif_cd_ops_types=>gc_severity-error
+                 iv_severity = zif_ca_ops_types=>gc_severity-error
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found_entries_2
                                                       iv_v1    = is_check-label
                                                       iv_v2    = iv_expected
@@ -1348,7 +1348,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     " A94: an amount that is not a decimal blocks - never a silent zero
     add_finding( is_check    = current_check( gc_check-invalid_amount )
                  iv_rule_id  = gc_rule-structure
-                 iv_severity = zif_cd_ops_types=>gc_severity-block
+                 iv_severity = zif_ca_ops_types=>gc_severity-block
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-element_expected_decimal_am
                                                       iv_v1    = concat_lines_of( table = mt_path sep = gc_path_separator )
                                                       iv_v2    = iv_value ) ).
@@ -1364,7 +1364,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     IF iv_value IS NOT INITIAL.
       add_finding( is_check    = current_check( gc_check-invalid_count )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-invalid_count
                                                         iv_v1    = concat_lines_of( table = mt_path sep = gc_path_separator )
                                                         iv_v2    = iv_value ) ).
@@ -1387,7 +1387,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       CLEAR rv_date.
       add_finding( is_check    = current_check( gc_check-invalid_date )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_ca_ops_types=>gc_severity-error
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-element_expected_date_yyyy
                                                         iv_v1    = concat_lines_of( table = mt_path sep = gc_path_separator )
                                                         iv_v2    = iv_value ) ).

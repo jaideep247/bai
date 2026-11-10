@@ -40,7 +40,7 @@ ENDCLASS.
 CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
 
   METHOD zif_cd_hck_check~execute.
-    DATA lt_patterns TYPE zif_cd_ops_types=>tt_pcre.
+    DATA lt_patterns TYPE zif_ca_ops_types=>tt_pcre.
     DATA lt_invalid TYPE SORTED TABLE OF zif_cd_hck_types=>ty_jobname WITH UNIQUE KEY table_line.
     DATA lv_max_offset TYPE i.
     DATA lv_not_ok TYPE i.
@@ -59,7 +59,7 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
 
     LOOP AT lt_steps INTO DATA(ls_step).
       " An invalid job-name pattern is reported per step below, never read as 'no job'
-      IF zcl_cd_ops_util=>pcre_valid( ls_step-jobname ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_valid( ls_step-jobname ) = abap_false.
         INSERT ls_step-jobname INTO TABLE lt_invalid.
         CONTINUE.
       ENDIF.
@@ -75,8 +75,8 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
     IF lines( lt_runs ) >= zcl_cd_hck_param=>job_rows_cap( ).
       INSERT VALUE #( object_key = is_def-check_id
                       check_code = zif_cd_hck_types=>gc_code-job_read_capped
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_read_capped
                                                           iv_v1    = zcl_cd_hck_param=>job_rows_cap( )
                                                           iv_v2    = is_def-check_id ) )
@@ -94,8 +94,8 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
         IF line_exists( lt_invalid[ table_line = <ls_cycle_step>-jobname ] ).
           INSERT VALUE #( object_key = |{ <ls_cycle_step>-cycle_id }/{ <ls_cycle_step>-step_no }|
                           check_code = zif_cd_hck_types=>gc_code-pattern_invalid
-                          severity   = zif_cd_ops_types=>gc_severity-error
-                          action     = zif_cd_ops_types=>gc_action-exception
+                          severity   = zif_ca_ops_types=>gc_severity-error
+                          action     = zif_ca_ops_types=>gc_action-exception
                           message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_pattern_invalid
                                                               iv_v1    = <ls_cycle_step>-cycle_id
                                                               iv_v2    = <ls_cycle_step>-step_no

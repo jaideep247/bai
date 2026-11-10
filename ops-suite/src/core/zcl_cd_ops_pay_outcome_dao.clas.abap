@@ -151,7 +151,7 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
         valid_from   TYPE zif_cd_ops_payout_types=>ty_timestamp,
         evaluated_at TYPE zif_cd_ops_payout_types=>ty_timestamp,
         outcome      TYPE zif_cd_ops_payout_types=>ty_outcome,
-        finding      TYPE zif_cd_ops_types=>ty_check_code,
+        finding      TYPE zif_ca_ops_types=>ty_check_code,
       END OF ty_stamp.
     TYPES tt_stamp TYPE SORTED TABLE OF ty_stamp WITH NON-UNIQUE KEY table_line.
     "! Rows closed or deleted by a write, by key and start
@@ -163,14 +163,14 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
 
     "! Lock the guard row of the worklist (ZCD_PAY_OUTWM, source WORKLIST) until the caller's commit or
     "! rollback; the first write ever creates it
-    "! @raising zcx_cd_ops_error | the guard row could not be locked
+    "! @raising zcx_ca_ops_error | the guard row could not be locked
     METHODS lock_worklist
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Under the guard: the current rows of every entity written must be the current rows the judgement
     "! was based on, and no row inserted as current may meet a current row of its key that stays
-    "! @raising zcx_cd_ops_error | 780 stale judgement, 781 second current row
+    "! @raising zcx_ca_ops_error | 780 stale judgement, 781 second current row
     METHODS validate
       IMPORTING
         it_basis  TYPE zif_cd_ops_payout_types=>tt_version
@@ -179,7 +179,7 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
         it_delete TYPE zif_cd_ops_payout_types=>tt_version
         it_update TYPE zif_cd_ops_payout_types=>tt_version
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Entity of a row for a message: the payment document, else FIN / source of the request
     CLASS-METHODS entity_text
@@ -890,8 +890,8 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
 
   METHOD method_range.
-    rt_range = VALUE #( FOR lv_method IN it_methods ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                      option = zif_cd_ops_types=>gc_range-option_equal
+    rt_range = VALUE #( FOR lv_method IN it_methods ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                      option = zif_ca_ops_types=>gc_range-option_equal
                                                       low    = lv_method ) ).
   ENDMETHOD.
 

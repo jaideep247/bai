@@ -2,7 +2,7 @@
 // Purpose: Consumption view of the statement lines (service ZUI_CD_EBS_DASH): drill-down from the statement,
 //          chart "lines by BAI code", drill-down to the open findings and the returns / NOC
 //          lot items of the line.
-//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCA_PARAR = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
 //                   2026-11-06 | Payment engine account; totals by BAI code + XBLNR (user decision).
 @AccessControl.authorizationCheck: #CHECK

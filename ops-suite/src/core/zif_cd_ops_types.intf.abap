@@ -2,7 +2,8 @@
 *& Artifact: zif_cd_ops_types.intf.abap
 *& Purpose:
 *& Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
-*& Every finding of every payment engine area is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
+*& Every finding of every payment engine area is written to the framework store (ZCA_OPS_RUN /
+*& ZCA_OPS_FINDING); generic types and constants are in ZIF_CA_OPS_TYPES.
 *& B = block (never post), E = error, W = warning, I = information
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -15,15 +16,15 @@
 *& 2026-11-06 | Plug-in interface names for the factory interface check (audit A62).
 *& 2026-11-06 | Run status NO_DATA (N) for runs without input (audit A68).
 *& 2026-11-06 | Alert message carries intent key and raise time (webhook de-duplication).
-*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Messages 742-747 (PCRE patterns: alert rule pattern invalid, pattern check and migration).
 *& 2026-11-07 | Transactions dashboard date windows GC_TRX_DASHBOARD (single source, cds_abap_parity).
 *& 2026-11-07 | Core parameter names / prefixes / defaults (GC_PARAM, GC_PARAM_PREFIX, GC_PARAM_DEFAULT);
-*&            | TT_PARAM_RANGE and GC_RANGE for ZIF_CD_OPS_PARAMS=>GET_RANGE.
+*&            | TT_PARAM_RANGE and GC_RANGE for ZIF_CA_OPS_PARAMS=>GET_RANGE.
 *& 2026-11-07 | Channel HTTP removed with the webhook channel (read-only scope).
 *& 2026-11-07 | Alert message without INTENT_KEY / OCCURRED_AT (only the removed webhook read them; the claim keeps both).
 *& 2026-11-07 | Parameters in the framework ZCA_PARAM: areas GC_PARAM_AREA, name prefix -> area
-*&            | GC_PARAM_AREA_PREFIX, TT_PARAM_ERROR (ZIF_CD_OPS_PARAMS=>GET_ERRORS); TT_KV removed.
+*&            | GC_PARAM_AREA_PREFIX, TT_PARAM_ERROR (ZIF_CA_OPS_PARAMS=>GET_ERRORS); TT_KV removed.
 *& 2026-11-07 | Transactions dashboard retention (400 days) and date kinds (canonical payment outcome).
 *& 2026-11-08 | Table consolidation: GC_TABWL_PURPOSE (ZCD_OPS_TABWL, one approved-table list per area and
 *&            | purpose).
@@ -40,57 +41,31 @@
 *&            | (messages 816-837), label separator, alert subject and table.
 *& 2026-11-10 | Logical file names / paths (FILE) of the EBS input file and the morning report export,
 *&            | S_DATASET activities (directory traversal fix).
+*& 2026-11-10 | Generic part moved to the reusable framework ZCA_OPS (ZIF_CA_OPS_TYPES: runs, findings,
+*&            | severities, RAG, dispositions, error classes, alerting, framework parameters); this interface
+*&            | keeps the payment engine constants. Areas are parameter areas of ZCA_PARAM (CD_EBS, CD_FMON,
+*&            | CD_HCK, CD_OPS; was EBS / FMON / HCK / CORE), typed ZIF_CA_OPS_TYPES=>TY_AREA.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
-"! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
-"! Every finding of every payment engine area is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
+"! Payment engine constants; the generic types are in ZIF_CA_OPS_TYPES (framework ZCA_OPS).
 INTERFACE zif_cd_ops_types
   PUBLIC.
 
-  TYPES ty_pe_area      TYPE c LENGTH 4.
-  TYPES ty_severity    TYPE c LENGTH 1.
-  TYPES ty_rag         TYPE c LENGTH 1.
-  TYPES ty_run_status  TYPE c LENGTH 1.
-  TYPES ty_rule_id     TYPE c LENGTH 10.
-  TYPES ty_check_code  TYPE c LENGTH 30.
-  TYPES ty_object_type TYPE c LENGTH 10.
-  TYPES ty_object_key  TYPE c LENGTH 70.
-  TYPES ty_group       TYPE c LENGTH 35.
-  TYPES ty_reference   TYPE c LENGTH 35.
-  TYPES ty_message     TYPE c LENGTH 255.
-  TYPES ty_intent_key    TYPE c LENGTH 40.
-  TYPES ty_extnumber     TYPE c LENGTH 100.
-  "! Number of a message of class ZCD_OPS (every user-facing text of the suite is one)
-  TYPES ty_msgno       TYPE n LENGTH 3.
-  "! Message variable (&1 .. &4)
-  TYPES ty_msgv        TYPE c LENGTH 50.
-  "! Message class holding every text of the suite (translatable, SE91)
-  CONSTANTS gc_message_class TYPE c LENGTH 20 VALUE 'ZCD_OPS'.
-  "! Message type used when a text is only built, never shown
-  CONSTANTS gc_msgty_info TYPE c LENGTH 1 VALUE 'I'.
-  CONSTANTS gc_msgty_error TYPE c LENGTH 1 VALUE 'E'.
-  "! Time of day limits and the time zone used for UTC timestamps
-  CONSTANTS:
-    BEGIN OF gc_time,
-      day_start TYPE t VALUE '000000',
-      day_end   TYPE t VALUE '235959',
-    END OF gc_time.
-  CONSTANTS gc_time_zone_utc TYPE tznzone VALUE 'UTC'.
+  "! Message class holding every text of the suite (translatable, SE91); the framework's own texts
+  "! are messages of class ZCA_OPS (ZIF_CA_OPS_TYPES=>GC_MESSAGE_CLASS)
+  CONSTANTS gc_message_class TYPE symsgid VALUE 'ZCD_OPS'.
 
   "! Transactions dashboard (CDS, docs/Dashboard_Transactions.md): KPI cards and the returns / NOC
-  "! items of the last ITEM_WINDOW_DAYS days (ZR_CD_TrxKpi, ZI_CD_TrxItem, cds/ZI_CD_TrxReqWin) and the
-  "! payment runs of the last EVIDENCE_WINDOW_DAYS days. The worklist rows themselves have no window
-  "! (the worklist bounds them, 2026-11-08). CDS cannot read constants: the literals there are compared
-  "! by the portable check cds_abap_parity (tools/cds_abap_parity.py)
+  "! items of the last ITEM_WINDOW_DAYS days and the payment runs of the last EVIDENCE_WINDOW_DAYS
+  "! days. CDS cannot read constants: the literals there are compared by the portable check
+  "! cds_abap_parity (tools/cds_abap_parity.py)
   CONSTANTS:
     BEGIN OF gc_trx_dashboard,
       item_window_days     TYPE i VALUE 30,
       evidence_window_days TYPE i VALUE 45,
     END OF gc_trx_dashboard.
 
-  "! Date kinds of the transactions dashboard filter (ZR_CD_TrxFlow parameter P_DateKind): the
-  "! worklist date (run date of a payment, due date of a request), the payment run date (DPAYH-LAUFD of
-  "! the row), its value date (DPAYH-VALUT), the due date of a payment request
+  "! Date kinds of the transactions dashboard filter (ZR_CD_TrxFlow parameter P_DateKind)
   CONSTANTS:
     BEGIN OF gc_trx_date_kind,
       worklist TYPE c LENGTH 10 VALUE 'WORKLIST',
@@ -99,108 +74,54 @@ INTERFACE zif_cd_ops_types
       due      TYPE c LENGTH 10 VALUE 'DUE',
     END OF gc_trx_date_kind.
 
-  "! Core parameters (area CD_OPS of ZCA_PARAM): alerting, purge, exception SLA
-  CONSTANTS:
-    BEGIN OF gc_param,
-      "! Recipients when ALERT_<route> is blank
-      alert_default    TYPE ty_param_name VALUE 'ALERT_DEFAULT',
-      "! Escalation look-back window of an alert rule in hours [24]
-      alert_window_h   TYPE ty_param_name VALUE 'ALERT_ESCALATION_WINDOW_H',
-      "! Rows deleted per purge package [1000]
-      purge_package    TYPE ty_param_name VALUE 'PURGE_PACKAGE_SIZE',
-      "! SLA days of an exception when SLA_DAYS_<area>_<severity> is blank [1]
-      sla_days_default TYPE ty_param_name VALUE 'SLA_DAYS_DEFAULT',
-    END OF gc_param.
-
-  "! Parameter-name prefixes completed at run time (ALERT_<route>, RETENTION_DAYS_<target>,
-  "! SLA_DAYS_<area>_<severity>, MON_STALE_AFTER_MIN_<area>)
+  "! Payment engine parameter-name prefixes completed at run time (MON_STALE_AFTER_MIN_<area>); the
+  "! framework's prefixes (ALERT_<route>, RETENTION_DAYS_<target>, SLA_DAYS_<area>_<severity>) are in
+  "! ZIF_CA_OPS_TYPES=>GC_PARAM_PREFIX
   CONSTANTS:
     BEGIN OF gc_param_prefix,
-      alert           TYPE ty_param_name VALUE 'ALERT_',
-      retention_days  TYPE ty_param_name VALUE 'RETENTION_DAYS_',
-      sla_days        TYPE ty_param_name VALUE 'SLA_DAYS_',
       "! Minutes after the last completed run of a payment engine area before its monitor is stale
       "! (table consolidation 2026-11-08, was ZCD_OPS_MONCFG): the HCK self-check reads it through
       "! the parameter API, the "as of" CDS views of the dashboards through ZI_CD_OpsStaleCfg
       "! (cds_abap_parity: the CDS holds this prefix and GC_PARAM_AREA-OPS as literals)
-      stale_after_min TYPE ty_param_name VALUE 'MON_STALE_AFTER_MIN_',
+      stale_after_min TYPE zif_ca_ops_types=>ty_param_name VALUE 'MON_STALE_AFTER_MIN_',
     END OF gc_param_prefix.
-
-  "! Delivered defaults of the core parameters
-  CONSTANTS:
-    BEGIN OF gc_param_default,
-      alert_window_h TYPE i VALUE 24,
-      purge_package  TYPE i VALUE 1000,
-      sla_days       TYPE i VALUE 1,
-    END OF gc_param_default.
 
   "! Parameter areas of the suite in the framework ZCA_PARAM (config/param_areas.csv)
   CONSTANTS:
     BEGIN OF gc_param_area,
-      ops  TYPE zif_ca_param_types=>ty_area VALUE 'CD_OPS',
-      ebs  TYPE zif_ca_param_types=>ty_area VALUE 'CD_EBS',
-      fmon TYPE zif_ca_param_types=>ty_area VALUE 'CD_FMON',
-      hck  TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+      ops  TYPE zif_ca_ops_types=>ty_area VALUE 'CD_OPS',
+      ebs  TYPE zif_ca_ops_types=>ty_area VALUE 'CD_EBS',
+      fmon TYPE zif_ca_ops_types=>ty_area VALUE 'CD_FMON',
+      hck  TYPE zif_ca_ops_types=>ty_area VALUE 'CD_HCK',
     END OF gc_param_area.
 
-  "! Name prefixes that decide the area of a parameter (ZCL_CD_OPS_PARAMS_CA=>AREA_OF):
-  "! ALERT_ SLA_ RETENTION_ PURGE_ TRACE_ PAYOUT_ MON_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON,
-  "! HCK_ -> CD_HCK
+  "! Name prefixes that decide the area of a payment engine parameter (registered with the framework
+  "! adapter by ZCL_CD_OPS_FACTORY=>GET_PARAMS, ZCL_CA_OPS_PARAMS=>AREA_OF): TRACE_ PAYOUT_ MON_
+  "! POSTAREA_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON, HCK_ -> CD_HCK; the framework's ALERT_ SLA_
+  "! PURGE_ RETENTION_ -> CA_OPS (purge targets of the suite name their area in ZCA_OPS_PURGE)
   CONSTANTS:
     BEGIN OF gc_param_area_prefix,
-      alert     TYPE ty_param_name VALUE 'ALERT_',
-      sla       TYPE ty_param_name VALUE 'SLA_',
-      retention TYPE ty_param_name VALUE 'RETENTION_',
-      purge     TYPE ty_param_name VALUE 'PURGE_',
-      trace     TYPE ty_param_name VALUE 'TRACE_',
+      trace     TYPE zif_ca_ops_types=>ty_param_name VALUE 'TRACE_',
       "! Payment outcome snapshot (canonical payment outcome, 2026-11-07)
-      payout    TYPE ty_param_name VALUE 'PAYOUT_',
+      payout    TYPE zif_ca_ops_types=>ty_param_name VALUE 'PAYOUT_',
       "! Monitor freshness of every area (table consolidation 2026-11-08, was ZCD_OPS_MONCFG)
-      monitor   TYPE ty_param_name VALUE 'MON_',
+      monitor   TYPE zif_ca_ops_types=>ty_param_name VALUE 'MON_',
       "! Customer posting areas of the mapping tables (2026-11-08, ZIF_CD_OPS_POSTAREA_TYPES)
-      postarea  TYPE ty_param_name VALUE 'POSTAREA_',
-      ebs       TYPE ty_param_name VALUE 'EBS_',
-      fmon      TYPE ty_param_name VALUE 'FMON_',
-      hck       TYPE ty_param_name VALUE 'HCK_',
+      postarea  TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_',
+      ebs       TYPE zif_ca_ops_types=>ty_param_name VALUE 'EBS_',
+      fmon      TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_',
+      hck       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_',
     END OF gc_param_area_prefix.
-  "! SALV exception column values (traffic light)
-  CONSTANTS:
-    BEGIN OF gc_light,
-      red    TYPE c LENGTH 1 VALUE '1',
-      yellow TYPE c LENGTH 1 VALUE '2',
-      green  TYPE c LENGTH 1 VALUE '3',
-    END OF gc_light.
-  TYPES ty_action      TYPE c LENGTH 10.
-  TYPES ty_param_name  TYPE c LENGTH 30.
-  "! Value of a parameter (ZCA_PARAM_VAL-LOW, CHAR 255) and its select-option style view
-  TYPES ty_param_value TYPE c LENGTH 255.
-  TYPES tt_param_range TYPE RANGE OF ty_param_value.
-  "! Sign / option of a select-option style range row (ZIF_CD_OPS_PARAMS=>GET_RANGE)
-  CONSTANTS:
-    BEGIN OF gc_range,
-      sign_include TYPE c LENGTH 1 VALUE 'I',
-      sign_exclude TYPE c LENGTH 1 VALUE 'E',
-      option_equal TYPE c LENGTH 2 VALUE 'EQ',
-    END OF gc_range.
-  TYPES ty_variant     TYPE c LENGTH 30.
-  TYPES ty_amount      TYPE p LENGTH 12 DECIMALS 2.
-  TYPES ty_currency    TYPE c LENGTH 5.
-  TYPES ty_class_name  TYPE c LENGTH 30.
 
-  "! Plug-in interfaces of the core (passed to ZCL_CD_OPS_FACTORY=>GET_PLUGIN, A62)
-  CONSTANTS:
-    BEGIN OF gc_plugin_intf,
-      alert_channel TYPE ty_class_name VALUE 'ZIF_CD_OPS_ALERT_CHANNEL',
-    END OF gc_plugin_intf.
-  TYPES ty_run_id      TYPE x LENGTH 16.
-
+  "! Payment engine areas: parameter areas of ZCA_PARAM (config/param_areas.csv), the area of every
+  "! run, finding, alert rule, lock and authorisation of the suite (one area register, 2026-11-10)
   CONSTANTS:
     BEGIN OF gc_pe_area,
-      health_check TYPE ty_pe_area VALUE 'HCK',
-      file_monitor TYPE ty_pe_area VALUE 'FMON',
-      ebs          TYPE ty_pe_area VALUE 'EBS',
-      "! Cross-payment engine area objects: alerting, parameters, purge (authorisation object ZCD_OPS)
-      core         TYPE ty_pe_area VALUE 'CORE',
+      health_check TYPE zif_ca_ops_types=>ty_area VALUE 'CD_HCK',
+      file_monitor TYPE zif_ca_ops_types=>ty_area VALUE 'CD_FMON',
+      ebs          TYPE zif_ca_ops_types=>ty_area VALUE 'CD_EBS',
+      "! Cross-area objects of the suite: payment worklist, trace, transactions dashboard, purge targets
+      core         TYPE zif_ca_ops_types=>ty_area VALUE 'CD_OPS',
     END OF gc_pe_area.
 
   "! ZCD_OPS_TABWL-PURPOSE: what the reader of the payment engine area does with an approved
@@ -218,45 +139,17 @@ INTERFACE zif_cd_ops_types
       lookup TYPE ty_tabwl_purpose VALUE 'LOOKUP',
     END OF gc_tabwl_purpose.
 
-  "! Error class of a failure (ZCD_OPS_FINDING-ERROR_CLASS): only TRANSIENT may be retried
-  "! (lock, timeout, database); DATA, CONFIG and CODE go to their owner (ZCL_CD_OPS_UTIL=>ERROR_CLASS)
-  TYPES ty_error_class TYPE c LENGTH 10.
-  CONSTANTS:
-    BEGIN OF gc_error_class,
-      transient TYPE ty_error_class VALUE 'TRANSIENT',
-      data      TYPE ty_error_class VALUE 'DATA',
-      config    TYPE ty_error_class VALUE 'CONFIG',
-      code      TYPE ty_error_class VALUE 'CODE',
-    END OF gc_error_class.
-
-  "! Classification of ZCL_CD_OPS_UTIL=>ERROR_CLASS: ZCD_OPS message numbers of lock / timeout and of
-  "! configuration / authorisation failures (comma lists - extend them with every new message of the
-  "! kind), exception classes of the database layer (TRANSIENT) and the prefix of runtime errors (CODE)
+  "! Classification of ZCX_CD_OPS_ERROR=>CLASSIFY (ZCL_CA_OPS_UTIL=>ERROR_CLASS): ZCD_OPS message
+  "! numbers of lock / timeout and of configuration / authorisation failures (comma lists - extend them
+  "! with every new message of the kind); the framework's own messages are in ZIF_CA_OPS_TYPES
   CONSTANTS:
     BEGIN OF gc_error_rule,
-      transient_msgno TYPE string VALUE `040,042,313,335,369,763`,
-      config_msgno    TYPE string
-        VALUE `007,021,027,030,031,032,033,041,050,051,200,201,202,303,304,703,807,808,809,812,813`,
-      transient_class TYPE string VALUE `CX_SY_OPEN_SQL_DB,CX_SQL_EXCEPTION`,
-      code_prefix     TYPE string VALUE `CX_SY_`,
+      transient_msgno TYPE string VALUE `313,335,369,763`,
+      config_msgno    TYPE string VALUE `050,051,200,201,202,303,304,703,812,813`,
     END OF gc_error_rule.
 
-  "! Batch job of a run (SM37 link) and the system it ran in (ZCL_CD_OPS_UTIL=>JOB_LINK)
-  TYPES:
-    BEGIN OF ty_job_link,
-      jobname  TYPE btcjob,
-      jobcount TYPE btcjobcnt,
-      sysid    TYPE sysysid,
-    END OF ty_job_link.
-
-  "! Application server files only through a logical path of transaction FILE (no directory from a
-  "! user): logical path for FILE_GET_NAME_USING_PATH and the logical file name it is validated
-  "! against (FILE_VALIDATE_NAME); created in FILE as a setup step (Implementation_Order.md)
-  TYPES:
-    BEGIN OF ty_logical_file,
-      path TYPE pathintern,
-      file TYPE fileintern,
-    END OF ty_logical_file.
+  "! Logical paths / file names (transaction FILE) of the suite's application server files
+  "! (ZCL_CA_OPS_FILE_PATH=>PHYSICAL); created in FILE as a setup step (Implementation_Order.md)
   CONSTANTS:
     BEGIN OF gc_logical_file,
       "! EBS validation: bank file read before import (ZCD_EBS_VALIDATE)
@@ -270,273 +163,37 @@ INTERFACE zif_cd_ops_types
         file TYPE fileintern VALUE 'ZCD_OPS_HCK_OUT',
       END OF hck_export,
     END OF gc_logical_file.
-  "! S_DATASET activity of AUTHORITY_CHECK_DATASET
-  TYPES ty_dataset_activity TYPE c LENGTH 8.
-  CONSTANTS:
-    BEGIN OF gc_dataset_activity,
-      read  TYPE ty_dataset_activity VALUE 'READ',
-      write TYPE ty_dataset_activity VALUE 'WRITE',
-    END OF gc_dataset_activity.
-
-  "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
-  TYPES ty_disposition TYPE c LENGTH 1.
-  CONSTANTS:
-    BEGIN OF gc_disposition,
-      open        TYPE ty_disposition VALUE 'O',
-      information TYPE ty_disposition VALUE 'I',
-      assigned    TYPE ty_disposition VALUE 'A',
-      resolved    TYPE ty_disposition VALUE 'R',
-      waived      TYPE ty_disposition VALUE 'W',
-      "! Replaced by the same exception in a later run (carry-forward)
-      superseded  TYPE ty_disposition VALUE 'S',
-    END OF gc_disposition.
-
-  "! B = block (never post), E = error, W = warning, I = information
-  CONSTANTS:
-    BEGIN OF gc_severity,
-      block   TYPE ty_severity VALUE 'B',
-      error   TYPE ty_severity VALUE 'E',
-      warning TYPE ty_severity VALUE 'W',
-      info    TYPE ty_severity VALUE 'I',
-    END OF gc_severity.
-
-  CONSTANTS:
-    BEGIN OF gc_rag,
-      red   TYPE ty_rag VALUE 'R',
-      amber TYPE ty_rag VALUE 'A',
-      green TYPE ty_rag VALUE 'G',
-      grey  TYPE ty_rag VALUE ' ',
-    END OF gc_rag.
-
-  CONSTANTS:
-    BEGIN OF gc_run_status,
-      running TYPE ty_run_status VALUE 'R',
-      success TYPE ty_run_status VALUE 'S',
-      warning TYPE ty_run_status VALUE 'W',
-      error   TYPE ty_run_status VALUE 'E',
-      aborted TYPE ty_run_status VALUE 'A',
-      "! Completed, but the source delivered nothing to evaluate (audit A68) - RAG grey, never green
-      no_data TYPE ty_run_status VALUE 'N',
-    END OF gc_run_status.
-
-  "! Action taken for a finding (requirements baseline: ZCD_BTC_RULE-ACTION)
-  CONSTANTS:
-    BEGIN OF gc_action,
-      auto_post  TYPE ty_action VALUE 'AUTO_POST',
-      exception  TYPE ty_action VALUE 'EXCEPTION',
-      block      TYPE ty_action VALUE 'BLOCK',
-      notify     TYPE ty_action VALUE 'NOTIFY',
-      on_account TYPE ty_action VALUE 'ON_ACCOUNT',
-    END OF gc_action.
-
-  TYPES:
-    BEGIN OF ty_finding,
-      object_type TYPE ty_object_type,
-      object_key  TYPE ty_object_key,
-      group1      TYPE ty_group,
-      group2      TYPE ty_group,
-      rule_id     TYPE ty_rule_id,
-      check_code  TYPE ty_check_code,
-      severity    TYPE ty_severity,
-      action      TYPE ty_action,
-      amount      TYPE ty_amount,
-      currency    TYPE ty_currency,
-      reference   TYPE ty_reference,
-      message     TYPE ty_message,
-      details     TYPE string,
-      "! TRANSIENT / DATA / CONFIG / CODE for a finding raised at a catch boundary (else blank)
-      error_class TYPE ty_error_class,
-    END OF ty_finding.
-  TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
-
-  "! Scope of a run for exception reconciliation: object keys or groups (GROUP2) evaluated
-  TYPES tt_object_key TYPE SORTED TABLE OF ty_object_key WITH UNIQUE KEY table_line.
-  TYPES tt_group      TYPE SORTED TABLE OF ty_group WITH UNIQUE KEY table_line.
-
-  TYPES:
-    BEGIN OF ty_run,
-      run_id        TYPE ty_run_id,
-      pe_area        TYPE ty_pe_area,
-      variant       TYPE ty_variant,
-      test_mode     TYPE abap_bool,
-      started_at    TYPE timestampl,
-      ended_at      TYPE timestampl,
-      status        TYPE ty_run_status,
-      rag           TYPE ty_rag,
-      total_items   TYPE i,
-      passed_items  TYPE i,
-      failed_items  TYPE i,
-      blocked_items TYPE i,
-      warning_items TYPE i,
-      finding_count TYPE i,
-      runtime_ms    TYPE i,
-      message       TYPE ty_message,
-      created_by    TYPE syuname,
-      "! Batch job of the run (SM37 link; blank in dialog) and the system it ran in
-      jobname       TYPE btcjob,
-      jobcount      TYPE btcjobcnt,
-      sysid         TYPE sysysid,
-    END OF ty_run.
-  TYPES tt_run TYPE STANDARD TABLE OF ty_run WITH EMPTY KEY.
-
-  "! A parameter that could not be read (ZCX_CA_PARAM): ZIF_CD_OPS_PARAMS=>GET_ERRORS
-  TYPES:
-    BEGIN OF ty_param_error,
-      area  TYPE zif_ca_param_types=>ty_area,
-      name  TYPE ty_param_name,
-      msgno TYPE symsgno,
-      text  TYPE string,
-    END OF ty_param_error.
-  TYPES tt_param_error TYPE SORTED TABLE OF ty_param_error WITH UNIQUE KEY area name.
-
-  "! ---- Alert router (ZCD_OPS_ALRULE / _CHN / _LOG) ----
-  TYPES ty_channel     TYPE c LENGTH 10.
-  "! Alert rule pattern: PCRE, matched to the complete value, case ignored; blank = any
-  TYPES ty_pattern     TYPE c LENGTH 35.
-  "! List of PCRE patterns (each matched to the complete value, case ignored)
-  TYPES tt_pcre        TYPE STANDARD TABLE OF string WITH EMPTY KEY.
-  TYPES ty_alert_dest  TYPE c LENGTH 255.
-
-  CONSTANTS:
-    BEGIN OF gc_channel,
-      email  TYPE ty_channel VALUE 'EMAIL',
-      applog TYPE ty_channel VALUE 'APPLOG',
-    END OF gc_channel.
-
-  "! Delivery status in ZCD_OPS_ALLOG
-  CONSTANTS:
-    BEGIN OF gc_alert_status,
-      sent      TYPE c LENGTH 1 VALUE 'S',
-      failed    TYPE c LENGTH 1 VALUE 'F',
-      throttled TYPE c LENGTH 1 VALUE 'T',
-      quiet     TYPE c LENGTH 1 VALUE 'Q',
-      "! Durable claim written and committed before the external send (audit A17)
-      claimed   TYPE c LENGTH 1 VALUE 'C',
-      "! Only carried-forward exceptions - not alerted again (audit A17)
-      repeat    TYPE c LENGTH 1 VALUE 'R',
-      "! Delivered in part (e.g. application log stopped adding lines, audit A45)
-      partial   TYPE c LENGTH 1 VALUE 'P',
-    END OF gc_alert_status.
-
-  "! One alert rule: which findings of which payment engine area go to which channel
-  TYPES:
-    BEGIN OF ty_alert_rule,
-      rule_id         TYPE ty_rule_id,
-      pe_area          TYPE ty_pe_area,
-      "! Lowest severity that triggers (B, E, W, I)
-      min_severity    TYPE ty_severity,
-      "! CP patterns on the finding; blank = any
-      rule_pattern    TYPE ty_pattern,
-      check_pattern   TYPE ty_pattern,
-      group1_pattern  TYPE ty_pattern,
-      group2_pattern  TYPE ty_pattern,
-      "! Also alert when the run ends with this RAG or worse (blank = no run-level alert)
-      min_rag         TYPE ty_rag,
-      on_abort        TYPE abap_bool,
-      channel         TYPE ty_channel,
-      "! E-mail list or log object - meaning depends on the channel
-      destination     TYPE ty_alert_dest,
-      "! X = one digest per rule and run; blank = one message per finding
-      digest          TYPE abap_bool,
-      max_items       TYPE i,
-      throttle_min    TYPE i,
-      quiet_from      TYPE t,
-      quiet_to        TYPE t,
-      "! After n consecutive alerting runs add the escalation destination
-      escalate_after  TYPE i,
-      escalation_dest TYPE ty_alert_dest,
-      "! X = a due escalation is delivered even inside the throttle window (audit A46)
-      esc_override    TYPE abap_bool,
-      active          TYPE abap_bool,
-    END OF ty_alert_rule.
-  TYPES tt_alert_rule TYPE STANDARD TABLE OF ty_alert_rule WITH EMPTY KEY.
-
-  TYPES:
-    BEGIN OF ty_alert_channel,
-      channel     TYPE ty_channel,
-      class_name  TYPE ty_class_name,
-      "! Default destination when the rule has none
-      destination TYPE ty_alert_dest,
-      active      TYPE abap_bool,
-    END OF ty_alert_channel.
-  TYPES tt_alert_channel TYPE STANDARD TABLE OF ty_alert_channel WITH EMPTY KEY.
-
-  TYPES:
-    BEGIN OF ty_alert_message,
-      alert_id    TYPE ty_run_id,
-      rule_id     TYPE ty_rule_id,
-      channel     TYPE ty_channel,
-      destination TYPE ty_alert_dest,
-      pe_area      TYPE ty_pe_area,
-      run_id      TYPE ty_run_id,
-      severity    TYPE ty_severity,
-      subject     TYPE ty_message,
-      html        TYPE string,
-      text        TYPE string,
-      item_count  TYPE i,
-      "! External ID of the application log (SLG1): payment engine area / run / rule
-      extnumber   TYPE ty_extnumber,
-    END OF ty_alert_message.
-  TYPES tt_alert_message TYPE STANDARD TABLE OF ty_alert_message WITH EMPTY KEY.
-
-  TYPES:
-    BEGIN OF ty_alert_log,
-      alert_id    TYPE ty_run_id,
-      rule_id     TYPE ty_rule_id,
-      channel     TYPE ty_channel,
-      run_id      TYPE ty_run_id,
-      pe_area      TYPE ty_pe_area,
-      sent_at     TYPE timestampl,
-      status      TYPE c LENGTH 1,
-      destination TYPE ty_alert_dest,
-      subject     TYPE ty_message,
-      error       TYPE ty_message,
-      "! Alert intent (rule, run, channel, destination, subject) and attempt: one
-      "! dispatcher per intent and attempt (unique index INT, audit A17)
-      intent_key  TYPE ty_intent_key,
-      attempt     TYPE i,
-    END OF ty_alert_log.
-  TYPES tt_alert_log TYPE STANDARD TABLE OF ty_alert_log WITH EMPTY KEY.
-
-  "! A finding raised again only because an open exception was carried forward
-  TYPES:
-    BEGIN OF ty_repeat_key,
-      object_type TYPE ty_object_type,
-      object_key  TYPE ty_object_key,
-      check_code  TYPE ty_check_code,
-    END OF ty_repeat_key.
-  TYPES tt_repeat_key TYPE HASHED TABLE OF ty_repeat_key WITH UNIQUE KEY object_type object_key check_code.
 
   "! Missing or late bank ACK (user request 2026-11-10): file monitoring writes the evidence of
-  "! the file(s) into ZCD_OPS_FINDING-DETAILS as labelled lines ("<label>: <value>", one block per
-  "! file, blocks separated by an empty line, the marker line first); the alert policy reads the
-  "! same labels back for the ACK table of the e-mail. Labels are ZCD_OPS messages (no variables).
+  "! the file(s) into ZCA_OPS_FINDING-DETAILS as labelled lines ("<label>: <value>", one block per
+  "! file, blocks separated by an empty line, the marker line first); the alert section
+  "! ZCL_CD_OPS_ACK_MAIL reads the same labels back. Labels are ZCD_OPS messages (no variables).
   CONSTANTS:
     BEGIN OF gc_ack_msg,
-      marker        TYPE zif_cd_ops_types=>ty_msgno VALUE '837',
-      house_bank    TYPE zif_cd_ops_types=>ty_msgno VALUE '816',
-      bank          TYPE zif_cd_ops_types=>ty_msgno VALUE '817',
-      file_name     TYPE zif_cd_ops_types=>ty_msgno VALUE '818',
-      iface         TYPE zif_cd_ops_types=>ty_msgno VALUE '819',
-      pay_method    TYPE zif_cd_ops_types=>ty_msgno VALUE '820',
-      payments      TYPE zif_cd_ops_types=>ty_msgno VALUE '821',
-      amount        TYPE zif_cd_ops_types=>ty_msgno VALUE '822',
-      pay_run       TYPE zif_cd_ops_types=>ty_msgno VALUE '823',
-      business_date TYPE zif_cd_ops_types=>ty_msgno VALUE '824',
-      generated     TYPE zif_cd_ops_types=>ty_msgno VALUE '825',
-      sent          TYPE zif_cd_ops_types=>ty_msgno VALUE '826',
-      delivered     TYPE zif_cd_ops_types=>ty_msgno VALUE '827',
-      ack_due       TYPE zif_cd_ops_types=>ty_msgno VALUE '828',
-      overdue       TYPE zif_cd_ops_types=>ty_msgno VALUE '829',
-      ack_level     TYPE zif_cd_ops_types=>ty_msgno VALUE '830',
-      earlier_file  TYPE zif_cd_ops_types=>ty_msgno VALUE '831',
-      missed_stage  TYPE zif_cd_ops_types=>ty_msgno VALUE '832',
+      marker        TYPE zif_ca_ops_types=>ty_msgno VALUE '837',
+      house_bank    TYPE zif_ca_ops_types=>ty_msgno VALUE '816',
+      bank          TYPE zif_ca_ops_types=>ty_msgno VALUE '817',
+      file_name     TYPE zif_ca_ops_types=>ty_msgno VALUE '818',
+      iface         TYPE zif_ca_ops_types=>ty_msgno VALUE '819',
+      pay_method    TYPE zif_ca_ops_types=>ty_msgno VALUE '820',
+      payments      TYPE zif_ca_ops_types=>ty_msgno VALUE '821',
+      amount        TYPE zif_ca_ops_types=>ty_msgno VALUE '822',
+      pay_run       TYPE zif_ca_ops_types=>ty_msgno VALUE '823',
+      business_date TYPE zif_ca_ops_types=>ty_msgno VALUE '824',
+      generated     TYPE zif_ca_ops_types=>ty_msgno VALUE '825',
+      sent          TYPE zif_ca_ops_types=>ty_msgno VALUE '826',
+      delivered     TYPE zif_ca_ops_types=>ty_msgno VALUE '827',
+      ack_due       TYPE zif_ca_ops_types=>ty_msgno VALUE '828',
+      overdue       TYPE zif_ca_ops_types=>ty_msgno VALUE '829',
+      ack_level     TYPE zif_ca_ops_types=>ty_msgno VALUE '830',
+      earlier_file  TYPE zif_ca_ops_types=>ty_msgno VALUE '831',
+      missed_stage  TYPE zif_ca_ops_types=>ty_msgno VALUE '832',
       "! Subject: Missing bank ACK: &1 file(s), &2 payments, &3
-      subject       TYPE zif_cd_ops_types=>ty_msgno VALUE '833',
-      total         TYPE zif_cd_ops_types=>ty_msgno VALUE '834',
-      unknown       TYPE zif_cd_ops_types=>ty_msgno VALUE '835',
+      subject       TYPE zif_ca_ops_types=>ty_msgno VALUE '833',
+      total         TYPE zif_ca_ops_types=>ty_msgno VALUE '834',
+      unknown       TYPE zif_ca_ops_types=>ty_msgno VALUE '835',
       "! &1 h &2 min
-      hours_minutes TYPE zif_cd_ops_types=>ty_msgno VALUE '836',
+      hours_minutes TYPE zif_ca_ops_types=>ty_msgno VALUE '836',
     END OF gc_ack_msg.
   "! Between label and value of a detail line
   CONSTANTS gc_ack_label_separator TYPE string VALUE `: `.
@@ -544,22 +201,8 @@ INTERFACE zif_cd_ops_types
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
     BEGIN OF gc_msg,
-      alert_subject_run           TYPE zif_cd_ops_types=>ty_msgno VALUE '002',
-      alert_subject_count         TYPE zif_cd_ops_types=>ty_msgno VALUE '003',
-      alert_run_line_1            TYPE zif_cd_ops_types=>ty_msgno VALUE '004',
-      alert_run_line_2            TYPE zif_cd_ops_types=>ty_msgno VALUE '005',
-      alert_more_findings         TYPE zif_cd_ops_types=>ty_msgno VALUE '006',
-      channel_inactive            TYPE zif_cd_ops_types=>ty_msgno VALUE '007',
-      passed_on_rerun             TYPE zif_cd_ops_types=>ty_msgno VALUE '008',
-      no_recipient                TYPE zif_cd_ops_types=>ty_msgno VALUE '021',
-      applog_partial              TYPE zif_cd_ops_types=>ty_msgno VALUE '025',
-      alert_pattern_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '742',
-      pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '743',
-      pattern_too_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '744',
-      alert_id_failed             TYPE zif_cd_ops_types=>ty_msgno VALUE '802',
-      alert_run_reference         TYPE zif_cd_ops_types=>ty_msgno VALUE '803',
-      run_aborted                 TYPE zif_cd_ops_types=>ty_msgno VALUE '804',
-      alert_dispatch_failed       TYPE zif_cd_ops_types=>ty_msgno VALUE '805',
+      pattern_invalid             TYPE zif_ca_ops_types=>ty_msgno VALUE '743',
+      pattern_too_long            TYPE zif_ca_ops_types=>ty_msgno VALUE '744',
     END OF gc_msg.
 
 ENDINTERFACE.

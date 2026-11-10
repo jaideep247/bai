@@ -1,6 +1,6 @@
 // Artifact: zc_cd_hcksuppress.dcls.asdcls
 // Purpose: Read access to the suppressions app (service ZUI_CD_HCK_SUP): authorization object
-//          ZCD_OPS with ZCD_PE_AREA HCK and ACTVT 03 (fixed values; every suppression belongs to the
+//          ZCD_OPS with ZCA_PARAR HCK and ACTVT 03 (fixed values; every suppression belongs to the
 //          health check). Create, end and approve keep their checks in the behaviour pool.
 // Modification log: 2026-11-10 | Initial version (read authorisation of the operations apps).
 // VERIFY-ADT: pfcg_auth with an empty element list and fixed field values (7.58).
@@ -8,5 +8,5 @@
 @MappingRole: true
 define role ZC_CD_HckSuppress {
   grant select on ZC_CD_HckSuppress
-    where ( ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA = 'HCK', ACTVT = '03' );
+    where ( ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR = 'CD_HCK', ACTVT = '03' );
 }

@@ -85,7 +85,7 @@ CLASS ltc_chq_status DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -157,7 +157,7 @@ CLASS ltc_chq_status IMPLEMENTATION.
                                             exp = zcl_cd_hck_c_chq_status=>gc_code
                                             msg = 'Check code CHEQUE_STATUS_REGRESSION' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-action
-                                            exp = zif_cd_ops_types=>gc_action-exception
+                                            exp = zif_ca_ops_types=>gc_action-exception
                                             msg = 'Regression is an owned exception' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-value exp = 1 msg = 'Metric counts 1' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->ms_query-date_from exp = gc_from
@@ -200,7 +200,7 @@ CLASS ltc_chq_status IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'Non-whitelisted table must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Whitelist refusal raised' ).
         cl_abap_unit_assert=>assert_initial( act = mo_dao->ms_query msg = 'No SQL issued' ).
     ENDTRY.

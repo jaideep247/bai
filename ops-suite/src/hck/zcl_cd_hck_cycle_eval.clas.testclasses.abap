@@ -285,14 +285,14 @@ CLASS ltc_cycle_eval IMPLEMENTATION.
 
   " Rule: a missed critical step is an error finding
   METHOD critical_missed_is_error.
-    DATA lt_exp TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_exp TYPE zif_ca_ops_types=>tt_finding.
     TRY.
         configure_scenario( VALUE #( now_time = '140100' critical = abap_true ) ).
         INSERT VALUE #( object_type = zif_cd_hck_types=>gc_object_type
                         object_key  = |{ gc_cycle }/{ gc_step }|
                         check_code  = zif_cd_hck_types=>gc_code-step_missed
-                        severity    = zif_cd_ops_types=>gc_severity-error
-                        action      = zif_cd_ops_types=>gc_action-notify
+                        severity    = zif_ca_ops_types=>gc_severity-error
+                        action      = zif_ca_ops_types=>gc_action-notify
                         reference   = gc_pattern
                         message     = |Cycle { gc_cycle } step { gc_step } ({ gc_pattern }): MISSED| )
           INTO TABLE lt_exp.
@@ -315,7 +315,7 @@ CLASS ltc_cycle_eval IMPLEMENTATION.
                                                                  is_status = act( ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_findings ) exp = 1 msg = 'One finding expected' ).
         cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity
-                                            exp = zif_cd_ops_types=>gc_severity-info
+                                            exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'Skippable missed step must be information' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -325,7 +325,7 @@ CLASS ltc_cycle_eval IMPLEMENTATION.
 
   " Rule: a completed step without overrun raises nothing
   METHOD completed_step_no_finding.
-    DATA lt_exp TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_exp TYPE zif_ca_ops_types=>tt_finding.
     TRY.
         configure_scenario( VALUE #( with_run = abap_true job_status = 'F' end_time = '134600' now_time = '150000' ) ).
         cl_abap_unit_assert=>assert_equals(
@@ -354,7 +354,7 @@ CLASS ltc_cycle_eval IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_findings ) exp = 1 msg = 'Only the retry is reported' ).
         cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-check_code exp = zif_cd_hck_types=>gc_code-step_retried
                                             msg = 'STEP_RETRIED, not STEP_FAILED' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-info
+        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'A successful retry is information' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -387,7 +387,7 @@ CLASS ltc_cycle_eval IMPLEMENTATION.
         DATA(lt_findings) = zcl_cd_hck_cycle_eval=>findings_for( is_step = ms_step is_status = ls_status ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( lt_findings[ check_code = zif_cd_hck_types=>gc_code-step_late
-                                                   severity   = zif_cd_ops_types=>gc_severity-warning ] ) )
+                                                   severity   = zif_ca_ops_types=>gc_severity-warning ] ) )
           msg = 'A late completion must be a STEP_LATE warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

@@ -190,7 +190,7 @@ CLASS ltc_feb_dao IMPLEMENTATION.
     TRY.
         mo_cut->get_items( it_kukey = VALUE #( ( '00001001' ) ) is_extras = ls_extras ).
         cl_abap_unit_assert=>fail( msg = 'An unknown FEBEP field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '051'
                                             msg = 'Message 051 (invalid configuration value) expected' ).
     ENDTRY.

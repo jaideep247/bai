@@ -34,7 +34,7 @@ class AuthFieldsTest(unittest.TestCase):
             self.assertEqual(auth_checks.defined_fields(root), {'ACTVT', 'ZCD_PE_AREA', 'BUKRS'})
 
     def test_defined_field_is_accepted(self):
-        code = ("    AUTHORITY-CHECK OBJECT zif_cd_ops_auth=>gc_object\n"
+        code = ("    AUTHORITY-CHECK OBJECT zif_ca_ops_auth=>gc_object\n"
                 "      ID 'ACTVT' FIELD lv_a\n      ID 'ZCD_PE_AREA' FIELD lv_b\n      ID 'BUKRS' DUMMY.\n")
         self.assertEqual(self._failures('zcl_x.clas.abap', code), [])
 

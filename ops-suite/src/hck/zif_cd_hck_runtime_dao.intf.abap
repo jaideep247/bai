@@ -48,7 +48,7 @@ INTERFACE zif_cd_hck_runtime_dao
   "! Entries of a queue source grouped per queue, destination, state and day, with the
   "! oldest time of the day; at most iv_max_rows groups. Names are validated against the
   "! DDIC (and ZCD_OPS_TABWL HCK / READ for a configured table) before the read.
-  "! @raising zcx_cd_ops_error | unknown table / field, wrong field type, not whitelisted
+  "! @raising zcx_ca_ops_error | unknown table / field, wrong field type, not whitelisted
   METHODS get_queue_groups
     IMPORTING
       is_source       TYPE zif_cd_hck_runtime_types=>ty_queue_source
@@ -56,7 +56,7 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_groups) TYPE zif_cd_hck_runtime_types=>tt_queue_group
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Payments of payment runs (DPAYH: DOC1R filled, proposal runs excluded) with run date
   "! in iv_from .. iv_to and one of the payment methods, with the collection indicator of
@@ -106,7 +106,7 @@ INTERFACE zif_cd_hck_runtime_dao
   "! Rows of a configured table whose reference field is one of the values (e.g. the Stripe
   "! payout log ZCD_STRP_POUT_LOG). Table on ZCD_OPS_TABWL (HCK / READ), fields in the DDIC - checked before
   "! the read; at most iv_max_rows rows (reaching it = capped)
-  "! @raising zcx_cd_ops_error | table not whitelisted, unknown field, SQL error
+  "! @raising zcx_ca_ops_error | table not whitelisted, unknown field, SQL error
   METHODS get_reference_rows
     IMPORTING
       is_source      TYPE zif_cd_hck_runtime_types=>ty_ref_source
@@ -115,7 +115,7 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_hck_runtime_types=>tt_ref_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Active clearing / return evidence rules (ZCD_HCK_CLRRULE)
   METHODS get_clearing_rules

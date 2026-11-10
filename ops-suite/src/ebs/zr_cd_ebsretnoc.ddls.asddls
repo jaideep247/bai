@@ -15,7 +15,7 @@ define root view entity ZR_CD_EbsRetNoc
   key Esnum,
   key LotKind,
   key LotItemKey,
-      cast( 'EBS' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_EBS' as abap.char( 16 ) )                       as PaymentEngineArea,
       Reason,
       LotStatus,
       LineObjectKey,

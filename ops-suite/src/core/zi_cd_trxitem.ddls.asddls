@@ -33,7 +33,7 @@ define view entity ZI_CD_TrxItem
   key Item.opupw                                            as RepetitionItem,
   key Item.opupk                                            as ItemNo,
   key Item.opupz                                            as SubItem,
-      cast( 'CORE' as abap.char( 4 ) )                      as PaymentEngineArea,
+      cast( 'CD_OPS' as abap.char( 16 ) )                      as PaymentEngineArea,
       Item.zz_fin_trans_num                                 as FinId,
       Item.zz_billplanid                                    as BillPlanId,
       Item.bukrs                                            as CompanyCode,

@@ -45,7 +45,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | SLA_DAYS_HCK_W | `3` | Due date of HCK warning findings |
 
 Alert routing of findings (channels, recipients, throttling, quiet hours) is customizing of the core
-table `ZCD_OPS_ALRULE` — suggested HCK rule: payment engine area `HCK`, minimum severity `E`, channel `EMAIL`,
+table `ZCA_OPS_ALRULE` — suggested HCK rule: payment engine area `HCK`, minimum severity `E`, channel `EMAIL`,
 digest per run, rule/group pattern blank = any (patterns are PCRE matched to the complete value,
 case ignored; `*` alone is not a valid PCRE - confirm with the core owner).
 
@@ -238,7 +238,7 @@ The EBS configuration app refuses a lookup whose fields are not approved (messag
 | HCK | DRIFT | ZCD_JOB_STEP | (blank) | Job cycle steps | X |
 | HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs: durations and deadlines (ZCD_FMON_DEADL merged) | X |
 | HCK | DRIFT | ZCD_FMON_CAL | (blank) | FMON expected files | X |
-| HCK | DRIFT | ZCD_OPS_ALRULE | (blank) | Alert rules | X |
+| HCK | DRIFT | ZCA_OPS_ALRULE | (blank) | Alert rules | X |
 
 A drift row hashes the whole table; it approves no read (the hash is read by the HCK DAO with its own static rule, `ZCL_CD_HCK_DAO=>COMPUTE_TABLE_HASH`).
 

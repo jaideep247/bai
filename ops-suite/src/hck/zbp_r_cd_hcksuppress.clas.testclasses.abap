@@ -2,7 +2,7 @@
 *& Artifact: zbp_r_cd_hcksuppress.clas.testclasses.abap
 *& Purpose:
 *& Authorization tests of the HCK suppression behaviour pool through EML
-*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION with the ZIF_CD_OPS_AUTH double of
+*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION with the ZIF_CA_OPS_AUTH double of
 *& ZCL_CD_OPS_INJECTOR (activity and payment engine area asked, allowed /
 *& refused). Actions, determinations, validations and the saver need draft or
 *& active EML with COMMIT ENTITIES on doubled tables (QA1 cases RAP_Ops_Apps.md 5);
@@ -13,14 +13,14 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
     DATA mv_allowed TYPE abap_bool.
-    DATA mt_activities TYPE STANDARD TABLE OF zif_cd_ops_auth=>ty_activity WITH EMPTY KEY.
-    DATA mv_pe_area TYPE zif_cd_ops_types=>ty_pe_area.
+    DATA mt_activities TYPE STANDARD TABLE OF zif_ca_ops_auth=>ty_activity WITH EMPTY KEY.
+    DATA mv_pe_area TYPE zif_ca_ops_types=>ty_area.
 ENDCLASS.
 
 CLASS ltd_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_auth~is_allowed.
+  METHOD zif_ca_ops_auth~is_allowed.
     INSERT iv_activity INTO TABLE mt_activities.
     mv_pe_area = iv_pe_area.
     rv_allowed = mv_allowed.
@@ -58,7 +58,7 @@ CLASS ltc_permissions IMPLEMENTATION.
 
   METHOD setup.
     mo_auth = NEW #( ).
-    zcl_cd_ops_injector=>inject_auth( mo_auth ).
+    zcl_ca_ops_injector=>inject_auth( mo_auth ).
   ENDMETHOD.
 
 
@@ -93,10 +93,10 @@ CLASS ltc_permissions IMPLEMENTATION.
                                             exp = if_abap_behv=>auth-allowed
                                             msg = 'Allowed with the activity' ).
         cl_abap_unit_assert=>assert_true(
-          act = xsdbool( line_exists( mo_auth->mt_activities[ table_line = zif_cd_ops_auth=>gc_activity-change ] ) )
+          act = xsdbool( line_exists( mo_auth->mt_activities[ table_line = zif_ca_ops_auth=>gc_activity-change ] ) )
           msg = 'Activity change is checked' ).
         cl_abap_unit_assert=>assert_true(
-          act = xsdbool( line_exists( mo_auth->mt_activities[ table_line = zif_cd_ops_auth=>gc_activity-approve ] ) )
+          act = xsdbool( line_exists( mo_auth->mt_activities[ table_line = zif_ca_ops_auth=>gc_activity-approve ] ) )
           msg = 'Second person activity approve is checked' ).
         cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_pe_area exp = zif_cd_ops_types=>gc_pe_area-health_check
                                             msg = 'Checked for the payment engine area' ).

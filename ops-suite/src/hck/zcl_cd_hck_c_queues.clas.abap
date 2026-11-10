@@ -53,15 +53,15 @@ CLASS zcl_cd_hck_c_queues DEFINITION
     DATA mt_err_states TYPE tt_state.
     DATA mt_hold_states TYPE tt_state.
     DATA mt_wait_states TYPE tt_state.
-    DATA mt_name_patterns TYPE zif_cd_ops_types=>tt_pcre.
-    DATA mt_dest_patterns TYPE zif_cd_ops_types=>tt_pcre.
+    DATA mt_name_patterns TYPE zif_ca_ops_types=>tt_pcre.
+    DATA mt_dest_patterns TYPE zif_ca_ops_types=>tt_pcre.
     DATA mv_stuck_min TYPE i.
 
     METHODS load_config
       IMPORTING
         is_def TYPE zif_cd_hck_types=>ty_check_def
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     CLASS-METHODS sources
       IMPORTING
@@ -88,7 +88,7 @@ CLASS zcl_cd_hck_c_queues DEFINITION
 
     CLASS-METHODS states
       IMPORTING
-        iv_name          TYPE zif_cd_ops_types=>ty_param_name
+        iv_name          TYPE zif_ca_ops_types=>ty_param_name
         iv_default       TYPE string
       RETURNING
         VALUE(rt_states) TYPE tt_state.
@@ -113,8 +113,8 @@ CLASS zcl_cd_hck_c_queues IMPLEMENTATION.
     IF is_def-param4 IS INITIAL.
       INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_queue_kind-bgrfc }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-queue_not_watched
-                      severity   = zif_cd_ops_types=>gc_severity-info
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-info
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-bgrfc_not_watched
                                                           iv_v1    = is_def-check_id ) ) INTO TABLE rs_result-findings.
     ENDIF.
@@ -123,12 +123,12 @@ CLASS zcl_cd_hck_c_queues IMPLEMENTATION.
       TRY.
           DATA(lt_groups) = lo_dao->get_queue_groups( is_source   = <ls_source>
                                                       iv_max_rows = lv_cap ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        CATCH zcx_ca_ops_error INTO DATA(lx_error).
           " A source that cannot be read is reported and measures nothing (never zero entries)
           INSERT VALUE #( object_key = |{ is_def-check_id }/{ <ls_source>-kind }|
                           check_code = zif_cd_hck_runtime_types=>gc_code-queue_config
-                          severity   = zif_cd_ops_types=>gc_severity-warning
-                          action     = zif_cd_ops_types=>gc_action-notify
+                          severity   = zif_ca_ops_types=>gc_severity-warning
+                          action     = zif_ca_ops_types=>gc_action-notify
                           reference  = <ls_source>-tabname
                           message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-queue_source_failed
                                                               iv_v1    = <ls_source>-kind
@@ -140,8 +140,8 @@ CLASS zcl_cd_hck_c_queues IMPLEMENTATION.
       IF lines( lt_groups ) >= lv_cap.
         INSERT VALUE #( object_key = |{ is_def-check_id }/{ <ls_source>-kind }|
                         check_code = zif_cd_hck_runtime_types=>gc_code-read_capped
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-warning
+                        action     = zif_ca_ops_types=>gc_action-notify
                         reference  = <ls_source>-tabname
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-read_capped
                                                             iv_v1    = zif_cd_hck_runtime_types=>gc_param-max_tech_rows
@@ -213,12 +213,12 @@ CLASS zcl_cd_hck_c_queues IMPLEMENTATION.
 
     LOOP AT it_groups ASSIGNING FIELD-SYMBOL(<ls_group>).
       IF mt_name_patterns IS NOT INITIAL
-         AND zcl_cd_ops_util=>pcre_match_any( iv_value    = condense( <ls_group>-name )
+         AND zcl_ca_ops_util=>pcre_match_any( iv_value    = condense( <ls_group>-name )
                                               it_patterns = mt_name_patterns ) = abap_false.
         CONTINUE.
       ENDIF.
       IF mt_dest_patterns IS NOT INITIAL AND is_source-dest_field IS NOT INITIAL
-         AND zcl_cd_ops_util=>pcre_match_any( iv_value    = condense( <ls_group>-dest )
+         AND zcl_ca_ops_util=>pcre_match_any( iv_value    = condense( <ls_group>-dest )
                                               it_patterns = mt_dest_patterns ) = abap_false.
         CONTINUE.
       ENDIF.
@@ -268,9 +268,9 @@ CLASS zcl_cd_hck_c_queues IMPLEMENTATION.
                                              THEN zif_cd_hck_runtime_types=>gc_code-queue_hold
                                              ELSE zif_cd_hck_runtime_types=>gc_code-queue_stuck )
                       severity   = COND #( WHEN <ls_problem>-class = zif_cd_hck_runtime_types=>gc_queue_class-error
-                                           THEN zif_cd_ops_types=>gc_severity-error
-                                           ELSE zif_cd_ops_types=>gc_severity-warning )
-                      action     = zif_cd_ops_types=>gc_action-notify
+                                           THEN zif_ca_ops_types=>gc_severity-error
+                                           ELSE zif_ca_ops_types=>gc_severity-warning )
+                      action     = zif_ca_ops_types=>gc_action-notify
                       reference  = <ls_problem>-name
                       message    = zcl_cd_ops_util=>text(
                                      iv_msgno = zif_cd_hck_runtime_types=>gc_msg-queue_group
@@ -302,7 +302,7 @@ CLASS zcl_cd_hck_c_queues IMPLEMENTATION.
   METHOD states.
     DATA(lv_list) = zcl_cd_ops_factory=>get_params( )->get_param( iv_name    = iv_name
                                                                   iv_default = iv_default ).
-    LOOP AT zcl_cd_ops_util=>split_list( lv_list ) ASSIGNING FIELD-SYMBOL(<lv_state>).
+    LOOP AT zcl_ca_ops_util=>split_list( lv_list ) ASSIGNING FIELD-SYMBOL(<lv_state>).
       INSERT CONV zif_cd_hck_runtime_types=>ty_queue_state( to_upper( <lv_state> ) ) INTO TABLE rt_states.
     ENDLOOP.
   ENDMETHOD.

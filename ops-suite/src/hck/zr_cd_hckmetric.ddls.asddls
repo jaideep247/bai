@@ -19,7 +19,7 @@ define root view entity ZR_CD_HckMetric
   key Met.Metric,
   key Met.Dimension1,
   key Met.Dimension2,
-      cast( 'HCK' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_HCK' as abap.char( 16 ) )                       as PaymentEngineArea,
       Def.description                                       as CheckText,
       Def.category                                          as Category,
       Met.MetricKind,

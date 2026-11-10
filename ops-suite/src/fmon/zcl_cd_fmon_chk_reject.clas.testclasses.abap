@@ -24,7 +24,7 @@ CLASS ltc_reject DEFINITION FINAL
       RETURNING
         VALUE(rt_codes) TYPE string_table
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS add_file
       IMPORTING
@@ -39,9 +39,9 @@ CLASS ltc_reject DEFINITION FINAL
 
     METHODS findings
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     CONSTANTS gc_group TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102/RUN01'.
     CONSTANTS gc_failed TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_PNC_1'.
@@ -113,7 +113,7 @@ CLASS ltc_reject IMPLEMENTATION.
   METHOD findings.
     DATA ls_check TYPE zif_cd_fmon_types=>ty_chk.
     ls_check-check_id = 'F_PRFAIL'.
-    ls_check-severity = zif_cd_ops_types=>gc_severity-error.
+    ls_check-severity = zif_ca_ops_types=>gc_severity-error.
     ls_check-params   = gc_prism_params.
     rt_findings = NEW zcl_cd_fmon_chk_reject( )->zif_cd_fmon_check~execute( is_ctx   = ms_ctx
                                                                            is_check = ls_check ).
@@ -161,7 +161,7 @@ CLASS ltc_reject IMPLEMENTATION.
                                             exp = zif_cd_fmon_types=>gc_check_code-file_replaced
                                             msg = 'Replaced, not failed' ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-severity
-                                            exp = zif_cd_ops_types=>gc_severity-info
+                                            exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'Information only (no exception)' ).
         cl_abap_unit_assert=>assert_char_cp( act = ls_finding-message
                                              exp = |*{ gc_regen }*|

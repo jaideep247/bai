@@ -30,7 +30,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
 
   PUBLIC SECTION.
 
-    "! @raising zcx_cd_ops_error | 302 not whitelisted, 303 no fields, 304 unknown field,
+    "! @raising zcx_ca_ops_error | 302 not whitelisted, 303 no fields, 304 unknown field,
     "! 305 operator, 306 non-numeric value, 307 invalid date mode, 309 not a date, 317/318 SUM
     CLASS-METHODS build
       IMPORTING
@@ -41,7 +41,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RETURNING
         VALUE(rs_query) TYPE zif_cd_hck_types=>ty_agg_query
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! METRIC = AGG_ID, DIM1 = group value ('*' without grouping or rows),
     "! DIM2 = counted day in DAY mode; VALUE = COUNT or SUM.
@@ -57,7 +57,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
 
     "! Validate one definition (whitelist + DDIC via the DAO) and run it. A failure raises
     "! and measures nothing - it is never reported as zero volume (A103)
-    "! @raising zcx_cd_ops_error | validation (302-318) or SQL error (308)
+    "! @raising zcx_ca_ops_error | validation (302-318) or SQL error (308)
     CLASS-METHODS measure
       IMPORTING
         is_def            TYPE zif_cd_hck_types=>ty_agg_def
@@ -67,7 +67,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RETURNING
         VALUE(rt_metrics) TYPE zif_cd_hck_types=>tt_metric
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! One DDIC-checked condition (EQ NE GT LT GE LE IN) with a quoted literal;
     "! also used by ZCL_CD_HCK_VALUE_QUERY (USAA known-table checks)
@@ -81,7 +81,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RETURNING
         VALUE(rv_sql) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     "! Quoted DATS literal for a WHERE clause
     CLASS-METHODS date_literal
       IMPORTING
@@ -116,7 +116,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RETURNING
         VALUE(rv_kind) TYPE zif_cd_hck_types=>ty_type_kind
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     CLASS-METHODS is_numeric_kind
       IMPORTING
@@ -132,7 +132,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RETURNING
         VALUE(rv_literal) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 
 
@@ -337,7 +337,7 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
     DATA(lv_operator) = to_upper( iv_operator ).
 
     IF lv_operator = zif_cd_hck_types=>gc_operator-in_set.
-      LOOP AT zcl_cd_ops_util=>split_list( iv_value ) ASSIGNING FIELD-SYMBOL(<lv_token>).
+      LOOP AT zcl_ca_ops_util=>split_list( iv_value ) ASSIGNING FIELD-SYMBOL(<lv_token>).
         INSERT literal( iv_value = <lv_token> iv_field = lv_field iv_kind = lv_kind ) INTO TABLE lt_literals.
       ENDLOOP.
       IF lt_literals IS INITIAL.
@@ -374,7 +374,7 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
 
 
   METHOD expected_groups.
-    LOOP AT zcl_cd_ops_util=>split_list( iv_list ) INTO DATA(lv_token).
+    LOOP AT zcl_ca_ops_util=>split_list( iv_list ) INTO DATA(lv_token).
       DATA(lv_group) = CONV zif_cd_hck_types=>ty_group_value( lv_token ).
       IF NOT line_exists( rt_groups[ table_line = lv_group ] ).
         INSERT lv_group INTO TABLE rt_groups.

@@ -89,7 +89,7 @@ CLASS ltc_prq_cancel DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -158,7 +158,7 @@ CLASS ltc_prq_cancel IMPLEMENTATION.
                                             exp = zcl_cd_hck_c_prq_cancel=>gc_code
                                             msg = 'Check code PRQ_PAID_CANCELLED' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-action
-                                            exp = zif_cd_ops_types=>gc_action-exception
+                                            exp = zif_ca_ops_types=>gc_action-exception
                                             msg = 'Owned exception' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-value exp = 1 msg = 'Metric counts 1' ).
       CATCH cx_root INTO DATA(lx_error).

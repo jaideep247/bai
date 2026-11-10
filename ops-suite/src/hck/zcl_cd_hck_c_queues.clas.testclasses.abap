@@ -83,7 +83,7 @@ CLASS ltc_queues DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS metric
       IMPORTING
         is_result       TYPE zif_cd_hck_types=>ty_check_result
@@ -94,9 +94,9 @@ CLASS ltc_queues DEFINITION FINAL FOR TESTING
     METHODS finding
       IMPORTING
         is_result         TYPE zif_cd_hck_types=>ty_check_result
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 ENDCLASS.
 
 
@@ -166,7 +166,7 @@ CLASS ltc_queues IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_queues=>gc_metric-oldest )
                                             exp = 31 msg = 'Oldest age in minutes' ).
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-queue_error ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Error state: error' ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_finding-message
@@ -197,7 +197,7 @@ CLASS ltc_queues IMPLEMENTATION.
                                             exp = gc_entries msg = 'Q_HOLD QIN = entries' ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-queue_hold )-severity
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Hold: warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -238,7 +238,7 @@ CLASS ltc_queues IMPLEMENTATION.
                                             msg = 'Outbound qRFC table' ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-queue_not_watched )-severity
-          exp = zif_cd_ops_types=>gc_severity-info
+          exp = zif_ca_ops_types=>gc_severity-info
           msg = 'bgRFC not monitored: information' ).
         cl_abap_unit_assert=>assert_equals( act = lines( ls_result-findings ) exp = 1 msg = 'Nothing else reported' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -283,7 +283,7 @@ CLASS ltc_queues IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-queue_config )-severity
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Source not read: warning' ).
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( ls_result-metrics[ dim1 = zif_cd_hck_runtime_types=>gc_queue_kind-inbound ] ) )
@@ -330,7 +330,7 @@ CLASS ltc_queues IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals(
           act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-read_capped )-reference
-          exp = CONV zif_cd_ops_types=>ty_reference( zif_cd_hck_runtime_types=>gc_trfcqout-tabname )
+          exp = CONV zif_ca_ops_types=>ty_reference( zif_cd_hck_runtime_types=>gc_trfcqout-tabname )
           msg = 'Capped source named' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -343,7 +343,7 @@ CLASS ltc_queues IMPLEMENTATION.
     TRY.
         act( iv_names = 'ZCD_(' ).
         cl_abap_unit_assert=>fail( msg = 'Invalid pattern must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Configuration error raised' ).
     ENDTRY.
   ENDMETHOD.

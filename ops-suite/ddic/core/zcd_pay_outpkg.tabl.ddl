@@ -5,7 +5,7 @@
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_pay_outpkg {
   key mandt     : abap.clnt not null;
-  // snapshot run (ZCD_OPS_RUN-RUN_ID) that planned the package
+  // snapshot run (ZCA_OPS_RUN-RUN_ID) that planned the package
   key run_id    : sysuuid_x16 not null;
   // evidence source (ZIF_CD_OPS_PAYOUT_TYPES=>GC_SOURCE) and position of the package in it
   key source    : abap.char(10) not null;

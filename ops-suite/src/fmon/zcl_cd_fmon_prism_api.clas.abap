@@ -8,7 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, user decision 2026-11-06).
 *& 2026-11-06 | Instant processing: bgPF unit queued in the LUW of the stored event.
-*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CA_OPS_PARAMS).
 *& 2026-11-07 | Comment: FMON_PRISM_MAX_BYTES in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *& 2026-11-10 | 500 answer carries the error code and event ID only (no internal exception text); the
 *&            | detail is kept server-side: run PRISM_API with a PRISM_STORE_FAILED finding (trace, class).
@@ -85,7 +85,7 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    IF zcl_cd_ops_factory=>get_auth( )->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-create
+    IF zcl_ca_ops_factory=>get_auth( )->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-create
                                                     iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor )
        = abap_false.
       rs_response = respond( iv_status_code = zif_cd_fmon_prism_types=>gc_http-forbidden
@@ -93,7 +93,7 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
                              it_errors      = VALUE #( ( zcl_cd_fmon_prism_event=>new_error(
                                                            iv_code  = zif_cd_fmon_prism_types=>gc_error-not_authorized
                                                            iv_msgno = zif_cd_fmon_prism_types=>gc_msg-not_authorized
-                                                           iv_v1    = zif_cd_ops_auth=>gc_activity-create
+                                                           iv_v1    = zif_ca_ops_auth=>gc_activity-create
                                                            iv_v2    = zif_cd_ops_types=>gc_pe_area-file_monitor ) ) ) ).
       RETURN.
     ENDIF.
@@ -124,11 +124,11 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
     DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
     DATA(ls_mapped) = zcl_cd_fmon_prism_event=>map(
                         is_parsed  = zcl_cd_fmon_prism_event=>parse( is_request-body )
-                        is_context = VALUE #( now       = zcl_cd_ops_factory=>get_clock( )->now( )
+                        is_context = VALUE #( now       = zcl_ca_ops_factory=>get_clock( )->now( )
                                               user      = sy-uname
                                               time_zone = CONV #( lo_params->get_param(
                                                                     iv_name    = zif_cd_fmon_types=>gc_param-time_zone
-                                                                    iv_default = CONV #( zif_cd_ops_types=>gc_time_zone_utc ) ) ) ) ).
+                                                                    iv_default = CONV #( zif_ca_ops_types=>gc_time_zone_utc ) ) ) ) ).
     IF ls_mapped-errors IS NOT INITIAL.
       rs_response = respond( iv_status_code = zif_cd_fmon_prism_types=>gc_http-bad_request
                              iv_status      = zif_cd_fmon_prism_types=>gc_api_status-rejected
@@ -142,10 +142,10 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
 
 
   METHOD store.
-    DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
+    DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     TRY.
         DATA(lv_result) = zcl_cd_fmon_factory=>get_prism_dao( )->insert_event( is_row ).
-      CATCH zcx_cd_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
         " Nothing half-written stays; PRISM retries the same event ID
         lo_store->rollback( ).
         " The caller gets the error code and the event ID only - the internal text stays here
@@ -166,7 +166,7 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
         " if it cannot be registered the event is still stored - the 5-minute run applies it
         TRY.
             zcl_cd_fmon_factory=>get_prism_queue( )->enqueue( is_row-event_id ).
-          CATCH zcx_cd_ops_error ##NO_HANDLER.
+          CATCH zcx_ca_ops_error ##NO_HANDLER.
         ENDTRY.
         " Durable before PRISM is told: 202 only after the commit
         lo_store->commit( ).
@@ -191,30 +191,30 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
 
 
   METHOD record_failure.
-    DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
+    DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     TRY.
         DATA(ls_run) = lo_store->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor
                                             iv_variant = zif_cd_fmon_prism_types=>gc_api_variant ).
-        DATA(lt_findings) = VALUE zif_cd_ops_types=>tt_finding(
+        DATA(lt_findings) = VALUE zif_ca_ops_types=>tt_finding(
           ( object_type = zif_cd_fmon_prism_types=>gc_object_type_event
             object_key  = is_row-event_id
             reference   = is_row-event_id
             check_code  = zif_cd_fmon_prism_types=>gc_check_store_failed
-            severity    = zif_cd_ops_types=>gc_severity-error
-            action      = zif_cd_ops_types=>gc_action-notify
+            severity    = zif_ca_ops_types=>gc_severity-error
+            action      = zif_ca_ops_types=>gc_action-notify
             message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_prism_types=>gc_msg-store_failed
                                                  iv_v1    = is_row-event_id
                                                  iv_tail  = ix_error->get_text( ) )
-            details     = zcl_cd_ops_util=>exception_trace( ix_error )
-            error_class = zcl_cd_ops_util=>error_class( ix_error ) ) ).
+            details     = zcl_ca_ops_util=>exception_trace( ix_error )
+            error_class = zcl_ca_ops_util=>error_class( ix_error ) ) ).
         lo_store->save_findings( EXPORTING it_findings = lt_findings CHANGING cs_run = ls_run ).
-        ls_run-status   = zif_cd_ops_types=>gc_run_status-error.
-        ls_run-rag      = zif_cd_ops_types=>gc_rag-red.
-        ls_run-ended_at = zcl_cd_ops_factory=>get_clock( )->now( ).
+        ls_run-status   = zif_ca_ops_types=>gc_run_status-error.
+        ls_run-rag      = zif_ca_ops_types=>gc_rag-red.
+        ls_run-ended_at = zcl_ca_ops_factory=>get_clock( )->now( ).
         ls_run-message  = lt_findings[ 1 ]-message.
         lo_store->finish_run( ls_run ).
         lo_store->commit( ).
-      CATCH zcx_cd_ops_error cx_sy_open_sql_db.
+      CATCH zcx_ca_ops_error cx_sy_open_sql_db.
         " the database refuses this record too: PRISM retries the event ID, the 500 is answered
         lo_store->rollback( ).
     ENDTRY.
@@ -239,7 +239,7 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
 
 
   METHOD max_bytes.
-    rv_bytes = zcl_cd_ops_util=>to_decimal(
+    rv_bytes = zcl_ca_ops_util=>to_decimal(
                  iv_value   = zcl_cd_ops_factory=>get_params( )->get_param(
                                 iv_name    = zif_cd_fmon_prism_types=>gc_param_max_bytes
                                 iv_default = |{ zif_cd_fmon_prism_types=>gc_default_max_bytes }| )

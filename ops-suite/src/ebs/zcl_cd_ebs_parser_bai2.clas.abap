@@ -30,7 +30,7 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
     TYPES ty_rec_type   TYPE c LENGTH 2.
     TYPES ty_type_code  TYPE c LENGTH 3.
     TYPES ty_funds_type TYPE c LENGTH 1.
-    TYPES ty_amount     TYPE zif_cd_ops_types=>ty_amount.
+    TYPES ty_amount     TYPE zif_ca_ops_types=>ty_amount.
 
     TYPES:
       BEGIN OF ty_record,
@@ -74,7 +74,7 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
         group_no      TYPE i,
         originator    TYPE zif_cd_ebs_types=>ty_text35,
         as_of_date    TYPE d,
-        currency      TYPE zif_cd_ops_types=>ty_currency,
+        currency      TYPE zif_ca_ops_types=>ty_currency,
         "! Sum of the account totals (49 declared, computed when 49 is missing)
         child_total   TYPE ty_amount,
         account_count TYPE i,
@@ -84,9 +84,9 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
     "! Target object and wording of a finding
     TYPES:
       BEGIN OF ty_check,
-        object_type TYPE zif_cd_ops_types=>ty_object_type,
-        object_key  TYPE zif_cd_ops_types=>ty_object_key,
-        check_code  TYPE zif_cd_ops_types=>ty_check_code,
+        object_type TYPE zif_ca_ops_types=>ty_object_type,
+        object_key  TYPE zif_ca_ops_types=>ty_object_key,
+        check_code  TYPE zif_ca_ops_types=>ty_check_code,
         label       TYPE string,
       END OF ty_check.
 
@@ -181,42 +181,42 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
 
     CONSTANTS:
       BEGIN OF gc_rule,
-        structure     TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S00',
-        control_total TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S06',
-        empty         TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S11',
-        count         TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S12',
+        structure     TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S00',
+        control_total TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S06',
+        empty         TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S11',
+        count         TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S12',
       END OF gc_rule.
 
     CONSTANTS:
       BEGIN OF gc_check,
-        acct_ctrl_total  TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_ACCT_CTRL_TOTAL',
-        group_ctrl_total TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_GROUP_CTRL_TOTAL',
-        file_ctrl_total  TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_FILE_CTRL_TOTAL',
-        credit_sum       TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_CDT_SUM_MISMATCH',
-        debit_sum        TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_DBT_SUM_MISMATCH',
-        record_count     TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_RECORD_COUNT',
-        item_count       TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_ITEM_COUNT',
-        account_count    TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_ACCOUNT_COUNT',
-        group_count      TYPE zif_cd_ops_types=>ty_check_code VALUE 'BAI2_GROUP_COUNT',
-        empty_file       TYPE zif_cd_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
-        no_entries       TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_ENTRIES',
-        unknown_record   TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNKNOWN_RECORD',
-        missing_trailer  TYPE zif_cd_ops_types=>ty_check_code VALUE 'MISSING_TRAILER',
-        record_order     TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNEXPECTED_RECORD_ORDER',
-        invalid_amount   TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_AMOUNT',
-        invalid_date     TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_DATE',
-        invalid_code     TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_TYPE_CODE',
-        info_skipped     TYPE zif_cd_ops_types=>ty_check_code VALUE 'INFO_CODE_SKIPPED',
+        acct_ctrl_total  TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_ACCT_CTRL_TOTAL',
+        group_ctrl_total TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_GROUP_CTRL_TOTAL',
+        file_ctrl_total  TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_FILE_CTRL_TOTAL',
+        credit_sum       TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_CDT_SUM_MISMATCH',
+        debit_sum        TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_DBT_SUM_MISMATCH',
+        record_count     TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_RECORD_COUNT',
+        item_count       TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_ITEM_COUNT',
+        account_count    TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_ACCOUNT_COUNT',
+        group_count      TYPE zif_ca_ops_types=>ty_check_code VALUE 'BAI2_GROUP_COUNT',
+        empty_file       TYPE zif_ca_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
+        no_entries       TYPE zif_ca_ops_types=>ty_check_code VALUE 'NO_ENTRIES',
+        unknown_record   TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNKNOWN_RECORD',
+        missing_trailer  TYPE zif_ca_ops_types=>ty_check_code VALUE 'MISSING_TRAILER',
+        record_order     TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNEXPECTED_RECORD_ORDER',
+        invalid_amount   TYPE zif_ca_ops_types=>ty_check_code VALUE 'INVALID_AMOUNT',
+        invalid_date     TYPE zif_ca_ops_types=>ty_check_code VALUE 'INVALID_DATE',
+        invalid_code     TYPE zif_ca_ops_types=>ty_check_code VALUE 'INVALID_TYPE_CODE',
+        info_skipped     TYPE zif_ca_ops_types=>ty_check_code VALUE 'INFO_CODE_SKIPPED',
         "! A86: a required total/count of a present 49/98/99 trailer is empty
-        trailer_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'TRAILER_FIELD_MISSING',
+        trailer_missing  TYPE zif_ca_ops_types=>ty_check_code VALUE 'TRAILER_FIELD_MISSING',
         "! A96: funds type not supported, distribution count malformed or fields missing
-        funds_layout     TYPE zif_cd_ops_types=>ty_check_code VALUE 'FUNDS_LAYOUT',
+        funds_layout     TYPE zif_ca_ops_types=>ty_check_code VALUE 'FUNDS_LAYOUT',
       END OF gc_check.
 
     CONSTANTS:
       BEGIN OF gc_object,
-        file      TYPE zif_cd_ops_types=>ty_object_type VALUE 'FILE',
-        statement TYPE zif_cd_ops_types=>ty_object_type VALUE 'STMT',
+        file      TYPE zif_ca_ops_types=>ty_object_type VALUE 'FILE',
+        statement TYPE zif_ca_ops_types=>ty_object_type VALUE 'STMT',
       END OF gc_object.
 
     CONSTANTS gc_delimiter TYPE c LENGTH 1 VALUE ','.
@@ -267,7 +267,7 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
       IMPORTING
         iv_first_line TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS build_records
       IMPORTING
@@ -484,14 +484,14 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
     METHODS field_missing
       IMPORTING
         is_check    TYPE ty_check
-        iv_rule_id  TYPE zif_cd_ops_types=>ty_rule_id
-        iv_severity TYPE zif_cd_ops_types=>ty_severity.
+        iv_rule_id  TYPE zif_ca_ops_types=>ty_rule_id
+        iv_severity TYPE zif_ca_ops_types=>ty_severity.
 
     METHODS add_finding
       IMPORTING
         is_check    TYPE ty_check
-        iv_rule_id  TYPE zif_cd_ops_types=>ty_rule_id
-        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_rule_id  TYPE zif_ca_ops_types=>ty_rule_id
+        iv_severity TYPE zif_ca_ops_types=>ty_severity
         iv_message  TYPE string
         iv_amount   TYPE ty_amount OPTIONAL.
 
@@ -501,14 +501,14 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
 
     METHODS file_check
       IMPORTING
-        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code   TYPE zif_ca_ops_types=>ty_check_code
         iv_label        TYPE string OPTIONAL
       RETURNING
         VALUE(rs_check) TYPE ty_check.
 
     METHODS stmt_check
       IMPORTING
-        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code   TYPE zif_ca_ops_types=>ty_check_code
         iv_label        TYPE string OPTIONAL
       RETURNING
         VALUE(rs_check) TYPE ty_check.
@@ -516,13 +516,13 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
     "! Statement check while an account is open, else file check
     METHODS current_check
       IMPORTING
-        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code   TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
         VALUE(rs_check) TYPE ty_check.
 
     METHODS file_key
       RETURNING
-        VALUE(rv_key) TYPE zif_cd_ops_types=>ty_object_key.
+        VALUE(rv_key) TYPE zif_ca_ops_types=>ty_object_key.
 
     METHODS split_fields
       IMPORTING
@@ -593,7 +593,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF lt_lines IS INITIAL.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_is_empty_expected_bai2
                                                         iv_v1    = file_key( ) ) ).
       rs_file = ms_file.
@@ -903,7 +903,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF lv_layout IS NOT INITIAL.
       add_finding( is_check    = stmt_check( gc_check-funds_layout )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-funds_layout
                                                         iv_v1    = lv_code
                                                         iv_v2    = is_record-line_no
@@ -950,14 +950,14 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF code_number( iv_code ) > gc_range-debit_max.
       add_finding( is_check    = stmt_check( gc_check-info_skipped )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-info
+                   iv_severity = zif_ca_ops_types=>gc_severity-info
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-type_code_in_line_is
                                                         iv_v1    = iv_code
                                                         iv_v2    = iv_line_no ) ).
     ELSE.
       add_finding( is_check    = stmt_check( gc_check-invalid_code )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_ca_ops_types=>gc_severity-error
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-type_code_in_line_is_2
                                                         iv_v1    = iv_code
                                                         iv_v2    = iv_line_no ) ).
@@ -1099,7 +1099,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     count_record( is_record-phys_count ).
     add_finding( is_check    = current_check( gc_check-unknown_record )
                  iv_rule_id  = gc_rule-structure
-                 iv_severity = zif_cd_ops_types=>gc_severity-error
+                 iv_severity = zif_ca_ops_types=>gc_severity-error
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unknown_record
                                                       iv_v1    = excerpt( is_record-raw )
                                                       iv_v2    = is_record-line_no ) ).
@@ -1124,7 +1124,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       " A95: a missing mandatory trailer blocks - totals and counts of the account are unproven
       add_finding( is_check    = stmt_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_expected_account_tr
                                                         iv_v1    = zcl_cd_ops_util=>account_label( iv_account = ms_account-stmt-account_no
                                                                                                    iv_hbkid   = ms_account-stmt-hbkid
@@ -1135,7 +1135,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF ms_account-lines IS INITIAL.
       add_finding( is_check    = stmt_check( gc_check-no_entries )
                    iv_rule_id  = gc_rule-empty
-                   iv_severity = zif_cd_ops_types=>gc_severity-warning
+                   iv_severity = zif_ca_ops_types=>gc_severity-warning
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_statement_without_d
                                                         iv_v1    = zcl_cd_ops_util=>account_label( iv_account = ms_account-stmt-account_no
                                                                                                    iv_hbkid   = ms_account-stmt-hbkid
@@ -1196,7 +1196,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF iv_has_trailer = abap_false.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-group_trailer_missing
                                                         iv_v1    = ms_group-group_no
                                                         iv_v2    = ms_group-originator
@@ -1214,14 +1214,14 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF mv_file_closed = abap_false.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_file_trailer
                                                         iv_v1    = file_key( ) ) ).
     ENDIF.
     IF ms_file-statements IS INITIAL.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
-                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_severity = zif_ca_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_at_least_one
                                                         iv_v1    = file_key( ) ) ).
     ENDIF.
@@ -1236,7 +1236,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     lv_difference = iv_found - iv_expected.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-control_total
-                 iv_severity = zif_cd_ops_types=>gc_severity-block
+                 iv_severity = zif_ca_ops_types=>gc_severity-block
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found_records
                                                       iv_v1    = is_check-label
                                                       iv_v2    = iv_expected
@@ -1251,7 +1251,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     ENDIF.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-count
-                 iv_severity = zif_cd_ops_types=>gc_severity-error
+                 iv_severity = zif_ca_ops_types=>gc_severity-error
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found
                                                       iv_v1    = is_check-label
                                                       iv_v2    = iv_expected
@@ -1263,7 +1263,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF strlen( condense( iv_raw ) ) = 0.
       field_missing( is_check    = is_check
                      iv_rule_id  = gc_rule-control_total
-                     iv_severity = zif_cd_ops_types=>gc_severity-block ).
+                     iv_severity = zif_ca_ops_types=>gc_severity-block ).
       rv_amount = iv_found.
       RETURN.
     ENDIF.
@@ -1276,7 +1276,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF strlen( condense( iv_raw ) ) = 0.
       field_missing( is_check    = is_check
                      iv_rule_id  = gc_rule-count
-                     iv_severity = zif_cd_ops_types=>gc_severity-error ).
+                     iv_severity = zif_ca_ops_types=>gc_severity-error ).
       RETURN.
     ENDIF.
     check_count( is_check = is_check iv_expected = to_count( iv_raw ) iv_found = iv_found ).
@@ -1295,7 +1295,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
 
 
   METHOD add_finding.
-    DATA(lv_currency) = COND zif_cd_ops_types=>ty_currency(
+    DATA(lv_currency) = COND zif_ca_ops_types=>ty_currency(
       WHEN iv_amount IS INITIAL THEN space
       WHEN ms_account-is_open = abap_true THEN ms_account-stmt-currency
       ELSE ms_group-currency ).
@@ -1313,7 +1313,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
   METHOD add_order_finding.
     add_finding( is_check    = current_check( gc_check-record_order )
                  iv_rule_id  = gc_rule-structure
-                 iv_severity = zif_cd_ops_types=>gc_severity-error
+                 iv_severity = zif_ca_ops_types=>gc_severity-error
                  iv_message  = iv_message ).
   ENDMETHOD.
 
@@ -1425,7 +1425,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF lv_digits IS INITIAL OR lv_digits CN gc_digits OR strlen( lv_digits ) > gc_max_amount_digits.
       add_finding( is_check    = current_check( gc_check-invalid_amount )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_ca_ops_types=>gc_severity-error
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-line_expected_amount_of_dig
                                                         iv_v1    = mv_line_no
                                                         iv_v2    = lv_value ) ).
@@ -1457,7 +1457,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       CLEAR rv_date.
       add_finding( is_check    = current_check( gc_check-invalid_date )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_ca_ops_types=>gc_severity-error
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-line_expected_date_yymmdd_f
                                                         iv_v1    = mv_line_no
                                                         iv_v2    = iv_value ) ).
@@ -1484,7 +1484,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     ENDIF.
     add_finding( is_check    = current_check( gc_check-invalid_date )
                  iv_rule_id  = gc_rule-structure
-                 iv_severity = zif_cd_ops_types=>gc_severity-error
+                 iv_severity = zif_ca_ops_types=>gc_severity-error
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-line_expected_time_hhmm_fou
                                                       iv_v1    = mv_line_no
                                                       iv_v2    = iv_value ) ).

@@ -231,11 +231,11 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_clock PARTIALLY IMPLEMENTED.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = '20261111'.
   ENDMETHOD.
 ENDCLASS.
@@ -272,10 +272,10 @@ CLASS ltd_evidence IMPLEMENTATION.
       IF <ls_payment>-doc1r = mv_anomaly_doc.
         INSERT VALUE #( doc1r    = <ls_payment>-doc1r
                         anomaly  = zif_cd_hck_runtime_types=>gc_code-unexpected_seq
-                        severity = zif_cd_ops_types=>gc_severity-warning
+                        severity = zif_ca_ops_types=>gc_severity-warning
                         more     = COND #( WHEN mv_more = abap_true
                                            THEN VALUE #( ( code     = zif_cd_hck_runtime_types=>gc_code-pending_overdue
-                                                           severity = zif_cd_ops_types=>gc_severity-error ) ) ) )
+                                                           severity = zif_ca_ops_types=>gc_severity-error ) ) ) )
           INTO TABLE rs_result-evidence.
       ENDIF.
     ENDLOOP.
@@ -358,8 +358,8 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       "! House bank account of the test cheques and of every test statement line
       gc_chq_bank    TYPE zif_cd_hck_runtime_types=>ty_hbkid VALUE 'JPMC1',
       gc_chq_account TYPE c LENGTH 5 VALUE 'CHK01',
-      gc_usd      TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
-      gc_amount   TYPE zif_cd_ops_types=>ty_amount VALUE '-250.00',
+      gc_usd      TYPE zif_ca_ops_types=>ty_currency VALUE 'USD',
+      gc_amount   TYPE zif_ca_ops_types=>ty_amount VALUE '-250.00',
       "! Wednesday; Tuesday 2026-11-10 is a holiday of the US test calendar, Monday of the UK one
       gc_today    TYPE d VALUE '20261111',
       gc_holiday  TYPE d VALUE '20261110',
@@ -376,9 +376,9 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       gc_doc5     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300005',
       gc_doc6     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300006',
       "! Names of the test evidence kinds (injected plug-ins)
-      gc_ev_a     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_A',
-      gc_ev_b     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_B',
-      gc_ev_c     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_C',
+      gc_ev_a     TYPE zif_ca_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_A',
+      gc_ev_b     TYPE zif_ca_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_B',
+      gc_ev_c     TYPE zif_ca_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_C',
       "! Morning report time of the status-lag tests (grace 120 min: limit 06:00 today)
       gc_morning  TYPE t VALUE '080000',
       "! Payment-level ACK source as the payment trace configures it (test names)
@@ -511,7 +511,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_laufd    TYPE d
         iv_outcome  TYPE zif_cd_ops_payout_types=>ty_outcome
         iv_payments TYPE i
-        iv_finding  TYPE zif_cd_ops_types=>ty_check_code OPTIONAL
+        iv_finding  TYPE zif_ca_ops_types=>ty_check_code OPTIONAL
         iv_due      TYPE abap_bool DEFAULT abap_false.
     "! A collection ACH payment in flight (test kind A finds nothing) of a Friday run with its status
     METHODS add_collection
@@ -538,7 +538,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       IMPORTING
         is_result     TYPE zif_cd_hck_types=>ty_check_result
       RETURNING
-        VALUE(rt_lag) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_lag) TYPE zif_ca_ops_types=>tt_finding.
     "! A wire in flight (test kind A finds nothing) with its DPAYH status and an optional bank ACK
     METHODS add_acked_wire
       IMPORTING
@@ -568,7 +568,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_key      TYPE zif_cd_hck_runtime_types=>ty_flow_class
         iv_purpose  TYPE zif_cd_hck_runtime_types=>ty_purpose DEFAULT zif_cd_hck_runtime_types=>gc_purpose-cleared
         iv_seq      TYPE zif_cd_hck_runtime_types=>ty_rule_seq
-        iv_class    TYPE zif_cd_ops_types=>ty_class_name
+        iv_class    TYPE zif_ca_ops_types=>ty_class_name
         iv_param1   TYPE clike OPTIONAL
         iv_required TYPE zif_cd_hck_runtime_types=>ty_required DEFAULT zif_cd_hck_runtime_types=>gc_required-must_hold.
     "! Delivered seed rules of user rules 1-4 (real evidence plug-ins) instead of the test kinds
@@ -585,7 +585,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_laufd      TYPE d DEFAULT gc_friday
         iv_valut      TYPE d OPTIONAL
         iv_collection TYPE abap_bool DEFAULT abap_false
-        iv_currency   TYPE zif_cd_ops_types=>ty_currency DEFAULT gc_usd
+        iv_currency   TYPE zif_ca_ops_types=>ty_currency DEFAULT gc_usd
         iv_hbkid      TYPE zif_cd_hck_runtime_types=>ty_hbkid OPTIONAL
         iv_laufi      TYPE clike OPTIONAL.
     METHODS add_line
@@ -594,7 +594,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_code  TYPE clike OPTIONAL
         iv_budat TYPE d DEFAULT gc_friday
         iv_esnum TYPE i DEFAULT 1
-        iv_kwbtr TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_amount.
+        iv_kwbtr TYPE zif_ca_ops_types=>ty_amount DEFAULT gc_amount.
     METHODS act
       IMPORTING
         iv_calendar      TYPE zif_cd_hck_types=>ty_param DEFAULT gc_calendar
@@ -603,7 +603,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS metric
       IMPORTING
         is_result       TYPE zif_cd_hck_types=>ty_check_result
@@ -623,13 +623,13 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS finding
       IMPORTING
         is_result         TYPE zif_cd_hck_types=>ty_check_result
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code DEFAULT zif_cd_hck_runtime_types=>gc_code-payment_not_clear
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code DEFAULT zif_cd_hck_runtime_types=>gc_code-payment_not_clear
         iv_key            TYPE zif_cd_hck_runtime_types=>ty_flow_class DEFAULT gc_key-d_wire
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
     METHODS lists
       IMPORTING
-        is_finding    TYPE zif_cd_ops_types=>ty_finding
+        is_finding    TYPE zif_ca_ops_types=>ty_finding
         iv_doc        TYPE clike
       RETURNING
         VALUE(rv_yes) TYPE abap_bool.
@@ -651,7 +651,7 @@ CLASS ltc_inflight IMPLEMENTATION.
     zcl_cd_hck_injector=>inject_dao( mo_hck_dao ).
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     " FMON as configured for the file-level ACK: source REGUT with its payment run fields, the
     " collection interface acknowledged per file, a disbursement interface acknowledged per payment
     mo_fmon = NEW #( ).
@@ -676,9 +676,9 @@ CLASS ltc_inflight IMPLEMENTATION.
     mo_ev_a = NEW #( ).
     mo_ev_b = NEW #( ).
     mo_ev_c = NEW #( ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_ev_a io_instance = mo_ev_a ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_ev_b io_instance = mo_ev_b ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_ev_c io_instance = mo_ev_c ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_ev_a io_instance = mo_ev_a ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_ev_b io_instance = mo_ev_b ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_ev_c io_instance = mo_ev_c ).
     " Classes as seeded (collections ACH also by the CAMT methods; card = Stripe B)
     add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-disbursement iv_class = gc_class-wire iv_methods = gc_wire ).
     add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-disbursement iv_class = gc_class-ach iv_methods = |A,{ gc_ach }| ).
@@ -897,7 +897,7 @@ CLASS ltc_inflight IMPLEMENTATION.
             rv_count = rv_count + 1.
           ENDIF.
         ENDLOOP.
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         CLEAR rv_count.
     ENDTRY.
   ENDMETHOD.
@@ -927,7 +927,7 @@ CLASS ltc_inflight IMPLEMENTATION.
                                             exp = 2 msg = 'Oldest: 2 business days' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_count )
                                             exp = 1 msg = 'Value date today is not late' ).
-        cl_abap_unit_assert=>assert_equals( act = finding( ls_result )-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = finding( ls_result )-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Critical payment: error' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-crit_amount
@@ -947,7 +947,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
                                             exp = 1 msg = 'Holiday not counted' ).
-        cl_abap_unit_assert=>assert_equals( act = finding( ls_result )-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = finding( ls_result )-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Late, not critical: warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -965,7 +965,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_hck_dao->mv_calls exp = 0 msg = 'No calendar read' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                                                          severity   = zif_cd_ops_types=>gc_severity-warning ] ) )
+                                                          severity   = zif_ca_ops_types=>gc_severity-warning ] ) )
           msg = 'Missing calendar: warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1114,7 +1114,7 @@ CLASS ltc_inflight IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'Ambiguous mapping must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Configuration error raised' ).
     ENDTRY.
   ENDMETHOD.
@@ -1129,7 +1129,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-limits_missing ]-severity OPTIONAL )
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Limits missing: warning' ).
         cl_abap_unit_assert=>assert_initial( act = finding( is_result = ls_result iv_key = gc_key-c_ach )
                                              msg = 'Not judged without limits' ).
@@ -1139,7 +1139,7 @@ CLASS ltc_inflight IMPLEMENTATION.
                                             exp = 1 msg = 'Still counted' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                                                          severity   = zif_cd_ops_types=>gc_severity-info ] ) )
+                                                          severity   = zif_ca_ops_types=>gc_severity-info ] ) )
           msg = 'Class without payment methods: listed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1238,7 +1238,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
         DATA(ls_result) = act( ).
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Inconsistency: error' ).
         cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_ev_a ) msg = 'Names what held' ).
         cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_ev_b ) msg = 'Names what is missing' ).
@@ -1338,7 +1338,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         mo_ev_a->mv_anomaly_doc = gc_doc1.
         DATA(ls_result) = act( ).
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-unexpected_seq ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Severity of the evidence' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
                                             exp = 0 msg = 'Not aged' ).
@@ -1390,7 +1390,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config ]-severity OPTIONAL )
-          exp = zif_cd_ops_types=>gc_severity-info
+          exp = zif_ca_ops_types=>gc_severity-info
           msg = 'Not configured: information' ).
         cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'Kind A alone decides' ).
@@ -1426,11 +1426,11 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-undetermined ).
         cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc1 )
                                           msg = 'Undetermined payment listed' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Undetermined: warning' ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config ]-severity OPTIONAL )
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Mandatory kind not configured: configuration warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1512,7 +1512,7 @@ CLASS ltc_inflight IMPLEMENTATION.
                                            msg = 'Card not measured' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                                                          severity   = zif_cd_ops_types=>gc_severity-info ] ) )
+                                                          severity   = zif_ca_ops_types=>gc_severity-info ] ) )
           msg = 'Listed as not monitored' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1545,7 +1545,7 @@ CLASS ltc_inflight IMPLEMENTATION.
                                                           iv_key    = gc_key-c_cheque )
                                             exp = 52 msg = 'Open one aged in calendar days' ).
         cl_abap_unit_assert=>assert_equals( act = finding( is_result = ls_result iv_key = gc_key-c_cheque )-severity
-                                            exp = zif_cd_ops_types=>gc_severity-error
+                                            exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Late beyond its own limits' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1740,7 +1740,7 @@ CLASS ltc_inflight IMPLEMENTATION.
           msg = 'Clearing not determinable: Stripe evidence not configured' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                                                          severity   = zif_cd_ops_types=>gc_severity-warning ] ) )
+                                                          severity   = zif_ca_ops_types=>gc_severity-warning ] ) )
           msg = 'Stripe evidence not configured: warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1772,7 +1772,7 @@ CLASS ltc_inflight IMPLEMENTATION.
                                             exp = 1 msg = 'BSEG decides by configuration choice' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                                                          severity   = zif_cd_ops_types=>gc_severity-info ] ) )
+                                                          severity   = zif_ca_ops_types=>gc_severity-info ] ) )
           msg = 'Stripe evidence not configured: information' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1929,7 +1929,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_finding-details
                                                                sub = zcl_cd_ops_pay_fixture=>gc_stopped_cashed ) >= 0 )
                                           msg = 'Detail: stopped cheque cashed' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Error' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1945,7 +1945,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(lo_fixture) = load_fixtures( ).
         DATA(ls_result) = act( iv_time = gc_morning ).
         DATA(lv_doc) = lo_fixture->scenario( zcl_cd_ops_pay_fixture=>gc_scenario-return_lag )-augbl.
-        DATA(lt_lag) = VALUE zif_cd_ops_types=>tt_finding( ).
+        DATA(lt_lag) = VALUE zif_ca_ops_types=>tt_finding( ).
         LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
              WHERE check_code = zif_cd_hck_runtime_types=>gc_code-status_lag.
           INSERT <ls_finding> INTO TABLE lt_lag.
@@ -1953,7 +1953,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'One lagging payment in the fixtures' ).
         cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_lag[ 1 ] iv_doc = lv_doc )
                                             msg = 'The return whose status lags' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Warning' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details
                                                                sub = condense( gc_status-confirmed ) ) >= 0 )
@@ -2019,7 +2019,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         add_acked_wire( iv_doc = gc_doc4 iv_status = gc_status-issued iv_ack_status = gc_status-nack
                         iv_ack_date = gc_holiday iv_ack_time = '100000' ).
         DATA(ls_result) = act( iv_time = gc_morning ).
-        DATA(lt_lag) = VALUE zif_cd_ops_types=>tt_finding( ).
+        DATA(lt_lag) = VALUE zif_ca_ops_types=>tt_finding( ).
         LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
              WHERE check_code = zif_cd_hck_runtime_types=>gc_code-status_lag.
           INSERT <ls_finding> INTO TABLE lt_lag.
@@ -2039,12 +2039,12 @@ CLASS ltc_inflight IMPLEMENTATION.
     TRY.
         add_acked_wire( iv_doc = gc_doc1 iv_status = gc_status-issued ).
         DATA(ls_result) = act( iv_time = gc_morning ).
-        DATA(lv_key) = CONV zif_cd_ops_types=>ty_object_key( |{ gc_check }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
+        DATA(lv_key) = CONV zif_ca_ops_types=>ty_object_key( |{ gc_check }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
                                                              |{ zif_cd_ops_trace_types=>gc_param-src_ack }| ).
         DATA(ls_info) = VALUE #( ls_result-findings[ object_key = lv_key ] OPTIONAL ).
         cl_abap_unit_assert=>assert_equals( act = ls_info-check_code exp = zif_cd_hck_runtime_types=>gc_code-inflight_config
                                             msg = 'ACK source not configured: configuration finding' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_info-severity exp = zif_cd_ops_types=>gc_severity-info
+        cl_abap_unit_assert=>assert_equals( act = ls_info-severity exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'Information' ).
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_result-findings[
                                                             check_code = zif_cd_hck_runtime_types=>gc_code-status_lag ] ) )
@@ -2109,7 +2109,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'One lagging collection' ).
         cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_lag[ 1 ] iv_doc = gc_doc1 )
                                             msg = 'The collection whose status lags' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Warning' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details sub = condense( gc_status-issued ) ) >= 0 )
                                           msg = 'The status that did not follow is named' ).
@@ -2216,7 +2216,7 @@ CLASS ltc_inflight IMPLEMENTATION.
                   iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' )
                   iv_ack   = local_ts( iv_date = gc_holiday iv_time = '100000' ) ).
         DATA(ls_result) = act( iv_time = gc_morning ).
-        DATA(lv_key) = CONV zif_cd_ops_types=>ty_object_key( |{ gc_check }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
+        DATA(lv_key) = CONV zif_ca_ops_types=>ty_object_key( |{ gc_check }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
                                                              |{ zif_cd_hck_runtime_types=>gc_param-ack_file_src }| ).
         DATA(lv_count) = 0.
         LOOP AT ls_result-findings TRANSPORTING NO FIELDS WHERE object_key = lv_key.
@@ -2226,7 +2226,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_config) = ls_result-findings[ object_key = lv_key ].
         cl_abap_unit_assert=>assert_equals( act = ls_config-check_code exp = zif_cd_hck_runtime_types=>gc_code-inflight_config
                                             msg = 'Configuration finding' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_config-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_config-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Not evaluable: warning' ).
         cl_abap_unit_assert=>assert_initial( act = lags( ls_result ) msg = 'No lag without the link' ).
         cl_abap_unit_assert=>assert_equals( act = mo_fmon->mv_reads exp = 0 msg = 'No group read' ).
@@ -2370,7 +2370,7 @@ CLASS ltc_inflight IMPLEMENTATION.
                                             exp = |{ gc_check }/{ gc_key-d_wire }/| &&
                                                   |{ zif_cd_hck_runtime_types=>gc_code-payment_not_clear }/{ gc_old_wire }|
                                             msg = 'One finding per flow + class + code + run date, stable key' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_late-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_late-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Critical: error' ).
         cl_abap_unit_assert=>assert_equals( act = ls_late-amount exp = abs( gc_amount ) * 3 msg = 'Amount of the day' ).
         cl_abap_unit_assert=>assert_true(
@@ -2404,7 +2404,7 @@ CLASS ltc_inflight IMPLEMENTATION.
           INSERT ls_example INTO TABLE mo_out->mt_examples.
         ENDDO.
         DATA(ls_result) = act( ).
-        DATA(lt_rows) = VALUE zif_cd_ops_types=>tt_finding( ).
+        DATA(lt_rows) = VALUE zif_ca_ops_types=>tt_finding( ).
         LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
              WHERE check_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
           INSERT <ls_finding> INTO TABLE lt_rows.
@@ -2469,7 +2469,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( iv_time = gc_morning iv_fresh = abap_false ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-snapshot_stale ]-severity OPTIONAL )
-          exp = zif_cd_ops_types=>gc_severity-warning
+          exp = zif_ca_ops_types=>gc_severity-warning
           msg = 'Two hours behind: stale' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-evidence exp = zif_cd_hck_types=>gc_evidence-partial
                                             msg = 'Evidence PARTIAL' ).

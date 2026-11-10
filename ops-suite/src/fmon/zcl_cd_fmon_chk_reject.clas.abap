@@ -44,7 +44,7 @@ CLASS zcl_cd_fmon_chk_reject DEFINITION
         is_check           TYPE zif_cd_fmon_types=>ty_chk
         is_file            TYPE zif_cd_fmon_types=>ty_file
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 
     "! File name, else reference
     CLASS-METHODS name_of
@@ -111,7 +111,7 @@ CLASS zcl_cd_fmon_chk_reject IMPLEMENTATION.
                  is_file     = is_file
                  is_check    = is_check
                  iv_code     = ls_verdict-code
-                 iv_severity = zif_cd_ops_types=>gc_severity-info
+                 iv_severity = zif_ca_ops_types=>gc_severity-info
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-file_replaced
                                                       iv_v1    = lv_name
                                                       iv_v2    = name_of( ls_verdict-replaced_by )

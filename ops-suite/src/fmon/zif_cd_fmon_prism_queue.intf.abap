@@ -12,11 +12,11 @@ INTERFACE zif_cd_fmon_prism_queue
   PUBLIC.
 
   "! Register the background unit for the event in the current LUW (starts at COMMIT WORK)
-  "! @raising zcx_cd_ops_error | the unit could not be registered (the 5-minute run applies the event)
+  "! @raising zcx_ca_ops_error | the unit could not be registered (the 5-minute run applies the event)
   METHODS enqueue
     IMPORTING
       iv_event_id TYPE zif_cd_fmon_prism_types=>ty_event_id
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

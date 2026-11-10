@@ -42,7 +42,7 @@ CLASS zcl_cd_hck_score DEFINITION
 
     CLASS-METHODS points
       IMPORTING
-        iv_rag           TYPE zif_cd_ops_types=>ty_rag
+        iv_rag           TYPE zif_ca_ops_types=>ty_rag
         is_rules         TYPE zif_cd_hck_types=>ty_score_rules
       RETURNING
         VALUE(rv_points) TYPE i.
@@ -96,12 +96,12 @@ CLASS zcl_cd_hck_score IMPLEMENTATION.
       lv_weighted = lv_weighted + lv_weight * points( iv_rag   = ls_result-rag
                                                       is_rules = is_rules ).
       CASE ls_result-rag.
-        WHEN zif_cd_ops_types=>gc_rag-red.
+        WHEN zif_ca_ops_types=>gc_rag-red.
           rs_summary-critical_count = rs_summary-critical_count + 1.
           IF ls_result-priority = zif_cd_hck_types=>gc_priority-high.
             lv_red_high = abap_true.
           ENDIF.
-        WHEN zif_cd_ops_types=>gc_rag-amber.
+        WHEN zif_ca_ops_types=>gc_rag-amber.
           rs_summary-high_count = rs_summary-high_count + 1.
       ENDCASE.
 
@@ -113,33 +113,33 @@ CLASS zcl_cd_hck_score IMPLEMENTATION.
         INSERT ls_category INTO TABLE rs_summary-categories ASSIGNING <ls_category>.
       ENDIF.
       <ls_category>-check_count = <ls_category>-check_count + 1.
-      <ls_category>-rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = <ls_category>-rag
+      <ls_category>-rag = zcl_ca_ops_util=>worse_rag( iv_rag1 = <ls_category>-rag
                                                       iv_rag2 = ls_result-rag ).
       CASE ls_result-rag.
-        WHEN zif_cd_ops_types=>gc_rag-red.
+        WHEN zif_ca_ops_types=>gc_rag-red.
           <ls_category>-red_count = <ls_category>-red_count + 1.
-        WHEN zif_cd_ops_types=>gc_rag-amber.
+        WHEN zif_ca_ops_types=>gc_rag-amber.
           <ls_category>-amber_count = <ls_category>-amber_count + 1.
-        WHEN zif_cd_ops_types=>gc_rag-green.
+        WHEN zif_ca_ops_types=>gc_rag-green.
           <ls_category>-green_count = <ls_category>-green_count + 1.
       ENDCASE.
     ENDLOOP.
 
     IF lv_weights = 0.
-      rs_summary-overall_rag = zif_cd_ops_types=>gc_rag-grey.
+      rs_summary-overall_rag = zif_ca_ops_types=>gc_rag-grey.
       RETURN.
     ENDIF.
 
     " integer arithmetic rounds commercially to a whole score
     rs_summary-score = lv_weighted / lv_weights.
-    rs_summary-overall_rag = COND #( WHEN rs_summary-score >= is_rules-green_min THEN zif_cd_ops_types=>gc_rag-green
-                                     WHEN rs_summary-score >= is_rules-amber_min THEN zif_cd_ops_types=>gc_rag-amber
-                                     ELSE zif_cd_ops_types=>gc_rag-red ).
+    rs_summary-overall_rag = COND #( WHEN rs_summary-score >= is_rules-green_min THEN zif_ca_ops_types=>gc_rag-green
+                                     WHEN rs_summary-score >= is_rules-amber_min THEN zif_ca_ops_types=>gc_rag-amber
+                                     ELSE zif_ca_ops_types=>gc_rag-red ).
     IF lv_red_high = abap_true.
-      rs_summary-overall_rag = zif_cd_ops_types=>gc_rag-red.
+      rs_summary-overall_rag = zif_ca_ops_types=>gc_rag-red.
     ELSEIF rs_summary-critical_count > 0.
-      rs_summary-overall_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = rs_summary-overall_rag
-                                                           iv_rag2 = zif_cd_ops_types=>gc_rag-amber ).
+      rs_summary-overall_rag = zcl_ca_ops_util=>worse_rag( iv_rag1 = rs_summary-overall_rag
+                                                           iv_rag2 = zif_ca_ops_types=>gc_rag-amber ).
     ENDIF.
   ENDMETHOD.
 
@@ -155,8 +155,8 @@ CLASS zcl_cd_hck_score IMPLEMENTATION.
   METHOD points.
     " grey (not evaluated) scores like red: unknown is not healthy
     rv_points = SWITCH #( iv_rag
-                          WHEN zif_cd_ops_types=>gc_rag-green THEN is_rules-points_green
-                          WHEN zif_cd_ops_types=>gc_rag-amber THEN is_rules-points_amber
+                          WHEN zif_ca_ops_types=>gc_rag-green THEN is_rules-points_green
+                          WHEN zif_ca_ops_types=>gc_rag-amber THEN is_rules-points_amber
                           ELSE is_rules-points_red ).
   ENDMETHOD.
 

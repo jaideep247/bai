@@ -29,7 +29,7 @@ CLASS zcl_cd_hck_report_html DEFINITION
 
     CLASS-METHODS rag_chip
       IMPORTING
-        iv_rag         TYPE zif_cd_ops_types=>ty_rag
+        iv_rag         TYPE zif_ca_ops_types=>ty_rag
         "! A102: baseline warm-up - grey chip labelled WARM-UP instead of N/A
         iv_warmup      TYPE abap_bool DEFAULT abap_false
       RETURNING
@@ -37,7 +37,7 @@ CLASS zcl_cd_hck_report_html DEFINITION
 
     CLASS-METHODS rag_text
       IMPORTING
-        iv_rag         TYPE zif_cd_ops_types=>ty_rag
+        iv_rag         TYPE zif_ca_ops_types=>ty_rag
       RETURNING
         VALUE(rv_text) TYPE string.
 
@@ -201,11 +201,11 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
 
   METHOD rag_chip.
     DATA(lv_colour) = SWITCH string( iv_rag
-                                     WHEN zif_cd_ops_types=>gc_rag-red   THEN gc_colour-red
-                                     WHEN zif_cd_ops_types=>gc_rag-amber THEN gc_colour-amber
-                                     WHEN zif_cd_ops_types=>gc_rag-green THEN gc_colour-green
+                                     WHEN zif_ca_ops_types=>gc_rag-red   THEN gc_colour-red
+                                     WHEN zif_ca_ops_types=>gc_rag-amber THEN gc_colour-amber
+                                     WHEN zif_ca_ops_types=>gc_rag-green THEN gc_colour-green
                                      ELSE gc_colour-grey ).
-    DATA(lv_label) = COND string( WHEN iv_warmup = abap_true AND iv_rag = zif_cd_ops_types=>gc_rag-grey
+    DATA(lv_label) = COND string( WHEN iv_warmup = abap_true AND iv_rag = zif_ca_ops_types=>gc_rag-grey
                                   THEN TEXT-r05
                                   ELSE rag_text( iv_rag ) ).
     rv_html = gc_html-chip_open && lv_colour && gc_html-attr_close && lv_label && gc_html-span_close.
@@ -214,9 +214,9 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
 
   METHOD rag_text.
     rv_text = SWITCH #( iv_rag
-                        WHEN zif_cd_ops_types=>gc_rag-red   THEN TEXT-r01
-                        WHEN zif_cd_ops_types=>gc_rag-amber THEN TEXT-r02
-                        WHEN zif_cd_ops_types=>gc_rag-green THEN TEXT-r03
+                        WHEN zif_ca_ops_types=>gc_rag-red   THEN TEXT-r01
+                        WHEN zif_ca_ops_types=>gc_rag-amber THEN TEXT-r02
+                        WHEN zif_ca_ops_types=>gc_rag-green THEN TEXT-r03
                         ELSE TEXT-r04 ).
   ENDMETHOD.
 
@@ -275,7 +275,7 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
 
 
   METHOD esc.
-    rv_text = zcl_cd_ops_util=>html_escape( |{ iv_text }| ).
+    rv_text = zcl_ca_ops_util=>html_escape( |{ iv_text }| ).
   ENDMETHOD.
 
 
@@ -336,7 +336,7 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
              && cell( esc( <ls_pe_area>-pe_area ) )
              && cell( COND #( WHEN <ls_pe_area>-last_run_at IS INITIAL THEN esc( TEXT-011 )
                               ELSE esc( |{ <ls_pe_area>-last_run_at TIMESTAMP = ISO }| ) ) )
-             && cell( rag_chip( COND #( WHEN <ls_pe_area>-stale = abap_true THEN zif_cd_ops_types=>gc_rag-red
+             && cell( rag_chip( COND #( WHEN <ls_pe_area>-stale = abap_true THEN zif_ca_ops_types=>gc_rag-red
                                         ELSE <ls_pe_area>-rag ) ) )
              && cell( esc( <ls_pe_area>-error_count ) )
              && cell( esc( <ls_pe_area>-warning_count ) )

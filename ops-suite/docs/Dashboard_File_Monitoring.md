@@ -27,7 +27,7 @@ Everything is **read-only**: no behaviour definition, no action, no write. Excep
 > **Analogy:** a thermometer reading is useless without the time it was read.
 
 - The dashboard reads what `ZCD_FMON_MONITOR` stored; it does not read source tables live. It is refreshed by every monitor run (native SAP periodic job `ZCD_FMON_MONITOR_ALL` in SM36, every 5 minutes). PRISM milestones arrive faster: each PRISM status API call is processed within seconds by a background unit (bgPF), so PRISM stages and the SLA status they affect are near-instant (`PRISM_Status_API.md`).
-- **As of** = `ENDED_AT` of the last **completed full** FMON run in `ZCD_OPS_RUN`: area `FMON`, variant `ALL` (whole monitor, `ZCL_CD_FMON_ENGINE`), not test mode, status S, W or E (`ZIF_CD_OPS_TYPES=>GC_RUN_STATUS`; E = finished with error findings, still a complete look). A running (R) or aborted (A) run, a test run and a single-interface run never advance the as-of time.
+- **As of** = `ENDED_AT` of the last **completed full** FMON run in `ZCA_OPS_RUN`: area `FMON`, variant `ALL` (whole monitor, `ZCL_CD_FMON_ENGINE`), not test mode, status S, W or E (`ZIF_CD_OPS_TYPES=>GC_RUN_STATUS`; E = finished with error findings, still a complete look). A running (R) or aborted (A) run, a test run and a single-interface run never advance the as-of time.
 - **Stale** when the as-of time is older than the parameter `MON_STALE_AFTER_MIN_<area>` (ZCA_PARAM area `CD_OPS`: value row, else definition default, read through `ZI_CD_OpsStaleCfg`; was the `ZCD_OPS_MONCFG` row until the table consolidation of 2026-11-08; the morning report self-check reads the same parameter), or there is no completed run at all; without a definition **15 minutes** (3 × the 5-minute cadence; fallback literal in `ZR_CD_FmonAsOf` = `ZIF_CD_FMON_TYPES=>GC_DASHBOARD-STALE_AFTER_MIN`, portable check `cds_abap_parity`). Delivered definition default FMON = 15. `AgeMinutes` and `StaleAfterMinutes` are exposed.
 - Every dashboard row carries `AsOfAt`, `AsOfRunId`, `MonitorAgeMinutes`, `MonitorIsStale`; the entity `MonitorAsOf` holds the one as-of row (also when no file exists).
 - Times are UTC time stamps; the browser shows them in the user's time zone.
@@ -166,7 +166,7 @@ Existing classes are unchanged. `tools/abapgit_serialize.py` now also writes DCL
 
 ## 11. Tests
 
-ABAP Unit in `ZCL_CD_FMON_FLOW_CDS_TEST` (test include; `cl_cds_test_environment` doubles of ZCD_FMON_FILE, ZCD_FMON_IFACE, ZCD_OPS_FINDING, ZCD_OPS_RUN; not executed offline):
+ABAP Unit in `ZCL_CD_FMON_FLOW_CDS_TEST` (test include; `cl_cds_test_environment` doubles of ZCD_FMON_FILE, ZCD_FMON_IFACE, ZCA_OPS_FINDING, ZCA_OPS_RUN; not executed offline):
 
 | Class | Tests |
 |---|---|
@@ -189,7 +189,7 @@ The DCL is not covered by the unit tests (they select the `ZR_` views); QA case 
 | FMD-07 | File with an open NO_BANK_ACK exception, then resolve it in the exceptions app and re-run | SLA BREACHED (red) → NO_FINDINGS |
 | FMD-08 | User with ZCD_OPS ZCD_PE_AREA = HCK only | No rows in any entity (DCL); with FMON / 03: rows visible |
 | FMD-09 | Filter source PCLM, LOB, payment method ACH, bank PNC, business date today | Chart and table restricted; totals equal SE16 sums on ZCD_FMON_FILE for the same filter (with the interface → bank mapping) |
-| FMD-10 | Drill to a file → events → open exceptions | Events equal ZCD_FMON_EVENT for the file ID; exceptions equal the open ZCD_OPS_FINDING rows with that reference |
+| FMD-10 | Drill to a file → events → open exceptions | Events equal ZCD_FMON_EVENT for the file ID; exceptions equal the open ZCA_OPS_FINDING rows with that reference |
 | FMD-11 | Expected file not received (FILE_MISSING) | Not a file row; tile *Missing files* = 1; listed under OpenException |
-| FMD-12 | ST05 while using the page, tiles and drill-down | SELECT only on ZCD_FMON_FILE / _IFACE / _EVENT, ZCD_OPS_FINDING / _RUN; no write, no lock, no job, no business table read |
+| FMD-12 | ST05 while using the page, tiles and drill-down | SELECT only on ZCD_FMON_FILE / _IFACE / _EVENT, ZCA_OPS_FINDING / _RUN; no write, no lock, no job, no business table read |
 | FMD-13 | When the PRISM status API ships: a file with PRISM_RECEIVED, PRISM_DELIVERED, PRISM_FAILED | Buckets AT_PRISM, SENT (out) / RECEIVED (in), REJECTED |

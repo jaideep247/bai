@@ -3,7 +3,7 @@
 //          service ZUI_CD_HCK_DASH): active checks with their status in the last completed morning report run,
 //          default aggregation of every measure, drill-down to the metric history and the
 //          findings of the check. UI annotations in the metadata extension ZC_CD_HCKCHECK.
-//          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCD_PE_AREA = HCK, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCA_PARAR = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
 //                   2026-11-07 | Persisted verdict: completion, evidence, scope, baseline mode, summary, failed count.
 @AccessControl.authorizationCheck: #CHECK

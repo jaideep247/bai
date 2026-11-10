@@ -445,7 +445,7 @@ CLASS ltc_postarea_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_bai-flow_type exp = zif_cd_ebs_types=>gc_flow-any
                                             msg = 'Flow * = any flow' ).
         cl_abap_unit_assert=>assert_equals( act = ls_bai-category exp = gc_test-category msg = 'Category' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_bai-action exp = zif_cd_ops_types=>gc_action-auto_post
+        cl_abap_unit_assert=>assert_equals( act = ls_bai-action exp = zif_ca_ops_types=>gc_action-auto_post
                                             msg = 'Action' ).
         cl_abap_unit_assert=>assert_true( act = ls_bai-active msg = 'An entry that exists applies' ).
         cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_map[ btc_code = gc_test-family ]-bank_key OPTIONAL )

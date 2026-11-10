@@ -3,7 +3,7 @@
 //          service ZUI_CD_EBS_DASH): imported statements with validation status, default aggregation
 //          of every measure, drill-down to lines and open findings. UI annotations in the
 //          metadata extension ZC_CD_EBSSTMT.
-//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCA_PARAR = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
 //                   2026-11-06 | Payment engine account (from XBLNR).
 @AccessControl.authorizationCheck: #CHECK

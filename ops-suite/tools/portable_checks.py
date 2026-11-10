@@ -10,7 +10,7 @@ import csv, json, os, re, subprocess, sys, datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
-COMMIT_ALLOWED = {'zcl_cd_ops_store.clas.abap', 'zcl_cd_ops_chn_email.clas.abap'}
+COMMIT_ALLOWED = {'zcl_ca_ops_store.clas.abap', 'zcl_ca_ops_chn_email.clas.abap'}
 
 def abap_files():
     for d, _, files in os.walk(SRC):
@@ -150,7 +150,7 @@ check('no_cp_patterns', name_checks.cp_pattern_failures(ROOT),
 # Authorisation object ZCD_OPS: only the fields SU20 / SU21 define (tools/auth_checks.py)
 import auth_checks  # noqa: E402
 check('auth_fields_defined', auth_checks.failures(ROOT),
-      'Every AUTHORITY-CHECK on ZCD_OPS (zif_cd_ops_auth=>gc_object) and every pfcg_auth( ZCD_OPS, ... ) '
+      'Every AUTHORITY-CHECK on ZCD_OPS (zif_ca_ops_auth=>gc_object) and every pfcg_auth( ZCD_OPS, ... ) '
       'in a DCL (src/ and cds/) names only the fields config/auth_zcd_ops.md defines (section 1 field, '
       'section 2 object field list).')
 
@@ -172,7 +172,7 @@ check('param_definitions_complete', param_definitions.failures(ROOT),
       f'{sum(sum(c.values()) for c in _counts.values())} delivered definitions in {len(_counts)} areas '
       '(config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone '
       'gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area '
-      'is the one ZCL_CD_OPS_PARAMS_CA derives from the prefix, the default equals the default the code '
+      'is the one ZCL_CA_OPS_PARAMS derives from the prefix, the default equals the default the code '
       'delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated '
       'from the seed files.')
 

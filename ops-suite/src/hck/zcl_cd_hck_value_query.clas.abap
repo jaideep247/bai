@@ -34,7 +34,7 @@ CLASS zcl_cd_hck_value_query DEFINITION
       RETURNING
         VALUE(rv_value) TYPE string.
 
-    "! @raising zcx_cd_ops_error | 302 not whitelisted, 303 no fields, 304 unknown field,
+    "! @raising zcx_ca_ops_error | 302 not whitelisted, 303 no fields, 304 unknown field,
     "! 203 result field not character-like, 323 no date restriction, 305/306 conditions
     CLASS-METHODS build
       IMPORTING
@@ -48,7 +48,7 @@ CLASS zcl_cd_hck_value_query DEFINITION
       RETURNING
         VALUE(rs_query) TYPE zif_cd_hck_value_types=>ty_value_query
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Validate (whitelist + DDIC through the DAO), build and run a value query
     CLASS-METHODS read
@@ -63,7 +63,7 @@ CLASS zcl_cd_hck_value_query DEFINITION
       RETURNING
         VALUE(rt_rows) TYPE zif_cd_hck_value_types=>tt_value_row
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! First value of each row as a key set
     CLASS-METHODS keys

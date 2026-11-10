@@ -29,7 +29,7 @@ CLASS zcl_cd_ebs_btc_resolver DEFINITION
   CREATE PUBLIC.
 
   PUBLIC SECTION.
-    CONSTANTS gc_rule_unmapped TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R14'.
+    CONSTANTS gc_rule_unmapped TYPE zif_ca_ops_types=>ty_rule_id VALUE 'R14'.
     "! PCRE, complete issuer, case ignored: the issuer names BAI anywhere
     CONSTANTS gc_issuer_bai TYPE zif_cd_ebs_types=>ty_text35 VALUE '.*BAI.*'.
 
@@ -52,7 +52,7 @@ CLASS zcl_cd_ebs_btc_resolver DEFINITION
       CHANGING
         ct_lines           TYPE zif_cd_ebs_types=>tt_line
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 
   PRIVATE SECTION.
     "! A proprietary BAI code: three digits (the field may carry trailing blanks)
@@ -156,7 +156,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
     mt_patterns = it_patterns.
     SORT mt_patterns BY priority pattern.
     LOOP AT mt_patterns ASSIGNING FIELD-SYMBOL(<ls_pattern>).
-      IF zcl_cd_ops_util=>pcre_valid( <ls_pattern>-pattern ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_valid( <ls_pattern>-pattern ) = abap_false.
         INSERT <ls_pattern>-pattern INTO TABLE mt_invalid.
       ENDIF.
     ENDLOOP.
@@ -203,8 +203,8 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
                    is_line       = <ls_line>
                    iv_rule_id    = gc_rule_unmapped
                    iv_check_code = zif_cd_ebs_types=>gc_check_code-flow_pattern_invalid
-                   iv_severity   = zif_cd_ops_types=>gc_severity-block
-                   iv_action     = zif_cd_ops_types=>gc_action-block
+                   iv_severity   = zif_ca_ops_types=>gc_severity-block
+                   iv_action     = zif_ca_ops_types=>gc_action-block
                    iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-flow_pattern_invalid
                                                           iv_v1    = ls_derived-invalid
                                                           iv_v2    = ls_derived-priority ) )
@@ -224,8 +224,8 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
                  is_line       = <ls_line>
                  iv_rule_id    = gc_rule_unmapped
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-map_conflict
-                 iv_severity   = zif_cd_ops_types=>gc_severity-block
-                 iv_action     = zif_cd_ops_types=>gc_action-block
+                 iv_severity   = zif_ca_ops_types=>gc_severity-block
+                 iv_action     = zif_ca_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-map_conflict
                                                         iv_v1    = ls_map-scheme
                                                         iv_v2    = ls_map-btc_code
@@ -242,8 +242,8 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
                  is_line       = <ls_line>
                  iv_rule_id    = gc_rule_unmapped
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-unmapped_btc
-                 iv_severity   = zif_cd_ops_types=>gc_severity-block
-                 iv_action     = zif_cd_ops_types=>gc_action-block
+                 iv_severity   = zif_ca_ops_types=>gc_severity-block
+                 iv_action     = zif_ca_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unmapped_btc
                                                         iv_v1    = <ls_line>-scheme
                                                         iv_v2    = <ls_line>-btc_code
@@ -261,14 +261,14 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
       <ls_line>-map_posting = ls_map-posting_rule.
       <ls_line>-not_posted  = xsdbool( ls_map-disposition = zif_cd_ebs_types=>gc_disposition-not_posted ).
 
-      IF ls_map-action = zif_cd_ops_types=>gc_action-block.
+      IF ls_map-action = zif_ca_ops_types=>gc_action-block.
         <ls_line>-blocked = abap_true.
         INSERT zcl_cd_ebs_finding=>for_line(
                  is_line       = <ls_line>
                  iv_rule_id    = gc_rule_unmapped
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-map_action_block
-                 iv_severity   = zif_cd_ops_types=>gc_severity-info
-                 iv_action     = zif_cd_ops_types=>gc_action-block
+                 iv_severity   = zif_ca_ops_types=>gc_severity-info
+                 iv_action     = zif_ca_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-map_action_block
                                                         iv_v1    = ls_map-category ) )
           INTO TABLE rt_findings.
@@ -299,7 +299,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
           rs_derived-priority = <ls_pattern>-priority.
           RETURN.
         ENDIF.
-        IF zcl_cd_ops_util=>pcre_match( iv_value = is_line-xblnr iv_pattern = <ls_pattern>-pattern ) = abap_true.
+        IF zcl_ca_ops_util=>pcre_match( iv_value = is_line-xblnr iv_pattern = <ls_pattern>-pattern ) = abap_true.
           rs_derived-flow = <ls_pattern>-flow_type.
           RETURN.
         ENDIF.
@@ -362,7 +362,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
 
   METHOD is_bai_code.
     " US banks deliver BAI type codes in CAMT BkTxCd/Prtry with issuer BAI
-    rv_bai = xsdbool( zcl_cd_ops_util=>pcre_match( iv_value = is_line-prtry_issuer iv_pattern = gc_issuer_bai ) = abap_true
+    rv_bai = xsdbool( zcl_ca_ops_util=>pcre_match( iv_value = is_line-prtry_issuer iv_pattern = gc_issuer_bai ) = abap_true
                       OR ( strlen( condense( is_line-prtry_code ) ) = 3
                            AND is_line-prtry_code CO gc_digits_or_blank ) ).
   ENDMETHOD.

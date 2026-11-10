@@ -108,7 +108,7 @@ CLASS ltc_threshold IMPLEMENTATION.
                                                               is_threshold    = zscore_row( )
                                                               it_history      = history_flat( )
                                                               iv_flat_tol_pct = 10 ).
-        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_cd_ops_types=>gc_rag-green
+        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_ca_ops_types=>gc_rag-green
                                             msg = 'Unchanged value against a flat baseline must stay green' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -127,7 +127,7 @@ CLASS ltc_threshold IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_evaluation-check_code
                                             exp = zif_cd_hck_types=>gc_code-baseline_outlier
                                             msg = '+50 % against a flat baseline of 100 must be an outlier' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_cd_ops_types=>gc_rag-amber
+        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_ca_ops_types=>gc_rag-amber
                                             msg = 'A baseline outlier is at least amber' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -142,7 +142,7 @@ CLASS ltc_threshold IMPLEMENTATION.
                                                               is_threshold    = zscore_row( )
                                                               it_history      = history_flat( )
                                                               iv_flat_tol_pct = 10 ).
-        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_cd_ops_types=>gc_rag-green
+        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_ca_ops_types=>gc_rag-green
                                             msg = 'A favourable change must not be flagged' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -209,7 +209,7 @@ CLASS ltc_threshold IMPLEMENTATION.
     DATA lt_history TYPE zif_cd_hck_types=>tt_value.
     DATA ls_exp TYPE zif_cd_hck_types=>ty_evaluation.
     TRY.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-red.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-red.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-threshold_red.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_threshold=>evaluate( iv_value     = 10
@@ -228,7 +228,7 @@ CLASS ltc_threshold IMPLEMENTATION.
     DATA lt_history TYPE zif_cd_hck_types=>tt_value.
     DATA ls_exp TYPE zif_cd_hck_types=>ty_evaluation.
     TRY.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-amber.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-amber.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-threshold_amber.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_threshold=>evaluate( iv_value     = 3
@@ -247,7 +247,7 @@ CLASS ltc_threshold IMPLEMENTATION.
     DATA lt_history TYPE zif_cd_hck_types=>tt_value.
     DATA ls_exp TYPE zif_cd_hck_types=>ty_evaluation.
     TRY.
-        ls_exp-rag = zif_cd_ops_types=>gc_rag-green.
+        ls_exp-rag = zif_ca_ops_types=>gc_rag-green.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_threshold=>evaluate( iv_value     = 0
                                                 is_threshold = threshold_row( iv_bukrs = gc_bukrs iv_amber = 1 iv_red = 10 )
@@ -267,7 +267,7 @@ CLASS ltc_threshold IMPLEMENTATION.
     TRY.
         DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 100 iv_red = 0 ).
         ls_row-higher_is_worse = abap_false.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-red.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-red.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-threshold_red.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_threshold=>evaluate( iv_value     = 0
@@ -286,7 +286,7 @@ CLASS ltc_threshold IMPLEMENTATION.
     DATA lt_history TYPE zif_cd_hck_types=>tt_value.
     DATA ls_exp TYPE zif_cd_hck_types=>ty_evaluation.
     TRY.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-amber.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-amber.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-threshold_amber.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_threshold=>evaluate( iv_value     = 500
@@ -307,7 +307,7 @@ CLASS ltc_threshold IMPLEMENTATION.
         DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 0 iv_red = 0 ).
         ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
         ls_row-z_limit       = 3.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-amber.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-amber.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-baseline_outlier.
         ls_exp-z_score    = 3.
         ls_exp-mean       = 4.
@@ -338,7 +338,7 @@ CLASS ltc_threshold IMPLEMENTATION.
         ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
         ls_row-z_limit       = 1.
         " A102: baseline-only and too little history -> explicit warm-up, grey (not evaluated)
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-grey.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-grey.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
         ls_exp-points     = 2.
         ls_exp-mean       = 3.
@@ -365,7 +365,7 @@ CLASS ltc_threshold IMPLEMENTATION.
         DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 10 iv_red = 50 ).
         ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
         ls_row-z_limit       = 1.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-red.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-red.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-threshold_red.
         ls_exp-points     = 1.
         ls_exp-mean       = 2.
@@ -391,7 +391,7 @@ CLASS ltc_threshold IMPLEMENTATION.
         INSERT lv_value INTO TABLE lt_history.
         DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 10 iv_red = 50 ).
         ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-iqr.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-green.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-green.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
         ls_exp-points     = 1.
         ls_exp-mean       = 2.
@@ -414,7 +414,7 @@ CLASS ltc_threshold IMPLEMENTATION.
         DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 0 iv_red = 0 ).
         ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-iqr.
         ls_row-z_limit       = '1.5'.
-        ls_exp-rag        = zif_cd_ops_types=>gc_rag-amber.
+        ls_exp-rag        = zif_ca_ops_types=>gc_rag-amber.
         ls_exp-check_code = zif_cd_hck_types=>gc_code-baseline_outlier.
         ls_exp-mean       = 4.
         ls_exp-points     = 3.

@@ -27,8 +27,8 @@
 *&            | (FEB source: returns lot DFKKRP-RLGRD, NOC lot DFKKNRP-FLGRD by INFOF).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN, inline CAST.
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
-*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
-*& 2026-11-07 | r08_zero_flag_off_rows_apart: off = N (a blank value is the default X in ZCL_CD_OPS_STORE).
+*&            | instead of a hand-written store double: the semantics of ZCL_CA_OPS_STORE.
+*& 2026-11-07 | r08_zero_flag_off_rows_apart: off = N (a blank value is the default X in ZCL_CA_OPS_STORE).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED): EBS_ZTNUM_IGNORE_ZEROS is BOOL, off = a
 *&            | value row with blank value (N would be an invalid value).
 *& 2026-11-08 | User decision: BAI166D = ACH retrieval succeeded (R07 RETRIEVED, no returns lot: R07L without
@@ -39,17 +39,17 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = '20261105080000.0000000'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = '20261105'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     rv_time = '080000'.
   ENDMETHOD.
 ENDCLASS.
@@ -62,7 +62,7 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     DATA mt_retrievals TYPE zif_cd_ebs_sap_dao=>tt_retrieval.
     DATA mt_checks     TYPE zif_cd_ebs_sap_dao=>tt_check.
     DATA mt_fi_lines   TYPE zif_cd_ebs_sap_dao=>tt_fi_line.
-    DATA mv_gl_balance TYPE zif_cd_ops_types=>ty_amount.
+    DATA mv_gl_balance TYPE zif_ca_ops_types=>ty_amount.
     DATA mv_gl_reads TYPE i.
     DATA mt_gl_requests TYPE zif_cd_ebs_sap_dao=>tt_gl_request.
     DATA mt_docno_seen TYPE zif_cd_ebs_sap_dao=>tt_docno.
@@ -222,11 +222,11 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
         hbkid    TYPE c LENGTH 5 VALUE 'JPMC1',
         hktid    TYPE c LENGTH 5 VALUE 'DISB1',
         account  TYPE zif_cd_ebs_types=>ty_text35 VALUE '000123456789',
-        usd      TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
+        usd      TYPE zif_ca_ops_types=>ty_currency VALUE 'USD',
         ref      TYPE zif_cd_ebs_types=>ty_text35 VALUE '12345',
         docno    TYPE zif_cd_ebs_sap_dao=>ty_docno VALUE '000000012345',
         today    TYPE d VALUE '20261105',
-        amount   TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
+        amount   TYPE zif_ca_ops_types=>ty_amount VALUE '250.00',
       END OF gc_test.
 
     DATA mo_params    TYPE REF TO zcl_cd_ops_param_seed.
@@ -235,33 +235,33 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
     DATA mo_cfg_dao  TYPE REF TO ltd_cfg_dao.
     DATA mt_lines    TYPE zif_cd_ebs_types=>tt_line.
     DATA mt_stmts    TYPE zif_cd_ebs_types=>tt_statement.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
 
     METHODS prepare_fixture.
     METHODS clear_fixture.
 
     METHODS rule
       IMPORTING
-        iv_rule_id     TYPE zif_cd_ops_types=>ty_rule_id
+        iv_rule_id     TYPE zif_ca_ops_types=>ty_rule_id
         iv_param1      TYPE clike OPTIONAL
         iv_param2      TYPE clike OPTIONAL
         iv_param3      TYPE clike OPTIONAL
-        iv_tolerance   TYPE zif_cd_ops_types=>ty_amount OPTIONAL
+        iv_tolerance   TYPE zif_ca_ops_types=>ty_amount OPTIONAL
         iv_window_days TYPE i OPTIONAL
       RETURNING
         VALUE(rs_rule) TYPE zif_cd_ebs_types=>ty_rule_cfg.
 
     METHODS add_statement
       IMPORTING
-        iv_opening TYPE zif_cd_ops_types=>ty_amount OPTIONAL
-        iv_closing TYPE zif_cd_ops_types=>ty_amount OPTIONAL
+        iv_opening TYPE zif_ca_ops_types=>ty_amount OPTIONAL
+        iv_closing TYPE zif_ca_ops_types=>ty_amount OPTIONAL
         iv_source  TYPE zif_cd_ebs_types=>ty_source DEFAULT zif_cd_ebs_types=>gc_source-feb.
 
     METHODS add_line
       IMPORTING
         iv_cdi        TYPE zif_cd_ebs_types=>ty_cdi DEFAULT zif_cd_ebs_types=>gc_cdi-credit
         iv_exp_cdi    TYPE zif_cd_ebs_types=>ty_cdi OPTIONAL
-        iv_amount     TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_test-amount
+        iv_amount     TYPE zif_ca_ops_types=>ty_amount DEFAULT gc_test-amount
         iv_reference  TYPE zif_cd_ebs_types=>ty_text35 DEFAULT gc_test-ref
         iv_belnr      TYPE zif_cd_ebs_types=>ty_line-belnr OPTIONAL
         iv_category   TYPE zif_cd_ebs_types=>ty_category DEFAULT 'D02'
@@ -269,12 +269,12 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
 
     METHODS run
       IMPORTING
-        iv_class TYPE zif_cd_ops_types=>ty_class_name
+        iv_class TYPE zif_ca_ops_types=>ty_class_name
         is_rule  TYPE zif_cd_ebs_types=>ty_rule_cfg.
 
     METHODS assert_one_code
       IMPORTING
-        iv_check_code TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code TYPE zif_ca_ops_types=>ty_check_code
         iv_msg        TYPE string.
 
 ENDCLASS.
@@ -289,7 +289,7 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
     mo_feb_dao = NEW #( ).
     mo_cfg_dao = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ebs_injector=>inject_sap_dao( mo_sap_dao ).
     zcl_cd_ebs_injector=>inject_feb_dao( mo_feb_dao ).
     zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg_dao ).
@@ -314,8 +314,8 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
 
   METHOD rule.
     rs_rule-rule_id     = iv_rule_id.
-    rs_rule-severity    = zif_cd_ops_types=>gc_severity-error.
-    rs_rule-action      = zif_cd_ops_types=>gc_action-exception.
+    rs_rule-severity    = zif_ca_ops_types=>gc_severity-error.
+    rs_rule-action      = zif_ca_ops_types=>gc_action-exception.
     rs_rule-param1      = iv_param1.
     rs_rule-param2      = iv_param2.
     rs_rule-param3      = iv_param3.
@@ -371,7 +371,7 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
 
   METHOD run.
     TRY.
-        mt_findings = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( iv_class ) )->execute(
+        mt_findings = CAST zif_cd_ebs_rule( zcl_ca_ops_factory=>get_plugin( iv_class ) )->execute(
                         is_rule       = is_rule
                         it_statements = mt_stmts
                         it_lines      = mt_lines ).
@@ -1015,7 +1015,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
 
 
   METHOD run_seeded_166d.
-    DATA lt_all TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_all TYPE zif_ca_ops_types=>tt_finding.
     DATA ls_payment TYPE zif_cd_ebs_sap_dao=>ty_payment.
     DATA ls_retrieval TYPE zif_cd_ebs_sap_dao=>ty_retrieval.
     ls_retrieval-augbl  = gc_test-docno.
@@ -1265,9 +1265,9 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( 'R07R' ) ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
                          iv_msg        = 'A lot item not found inside the grace window must await the transfer' ).
-        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Awaiting lot transfer is a warning' ).
-        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-action exp = zif_cd_ops_types=>gc_action-notify
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-action exp = zif_ca_ops_types=>gc_action-notify
                                             msg = 'Awaiting lot transfer only notifies' ).
         cl_abap_unit_assert=>assert_not_initial( act = mt_findings[ 1 ]-details
                                                  msg = 'The original not-found message must be kept' ).
@@ -1399,15 +1399,15 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   " R21: an unknown or inactive lookup ID is a configuration error - raised, so the engine
   " records PLUGIN_ERROR with action BLOCK (fail closed), never a silent pass
   METHOD r21_unknown_lookup_raises.
-    DATA lx_expected TYPE REF TO zcx_cd_ops_error.
+    DATA lx_expected TYPE REF TO zcx_ca_ops_error.
     add_statement( ).
     add_line( ).
     TRY.
-        CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R21_LOOKUP' ) )->execute(
+        CAST zif_cd_ebs_rule( zcl_ca_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R21_LOOKUP' ) )->execute(
           is_rule       = rule( iv_rule_id = 'R21' iv_param1 = 'NOSUCH' )
           it_statements = mt_stmts
           it_lines      = mt_lines ).
-      CATCH zcx_cd_ops_error INTO lx_expected.
+      CATCH zcx_ca_ops_error INTO lx_expected.
         cl_abap_unit_assert=>assert_bound( act = lx_expected msg = 'Unknown lookup must raise' ).
       CATCH cx_root INTO DATA(lx_other).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_other->get_text( ) }| ).
@@ -1712,8 +1712,8 @@ CLASS ltc_r05_lot_reason DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_r05,
-        class      TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R05_REASON',
-        id         TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R05',
+        class      TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R05_REASON',
+        id         TYPE zif_ca_ops_types=>ty_rule_id VALUE 'R05',
         ret_reason TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '001',
         ret_other  TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '002',
         noc_reason TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '051',
@@ -2002,7 +2002,7 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS add_history_item
       IMPORTING
         iv_kukey  TYPE zif_cd_ebs_types=>ty_kukey
-        iv_amount TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_test-amount
+        iv_amount TYPE zif_ca_ops_types=>ty_amount DEFAULT gc_test-amount
         iv_azdat  TYPE d OPTIONAL.
     METHODS run_r22.
     METHODS r22_history_once_per_package FOR TESTING.
@@ -2013,8 +2013,8 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS s04_missing_currency         FOR TESTING.
     METHODS add_second_account_statement
       IMPORTING
-        iv_opening TYPE zif_cd_ops_types=>ty_amount OPTIONAL
-        iv_closing TYPE zif_cd_ops_types=>ty_amount OPTIONAL.
+        iv_opening TYPE zif_ca_ops_types=>ty_amount OPTIONAL
+        iv_closing TYPE zif_ca_ops_types=>ty_amount OPTIONAL.
     METHODS s01_newer_stored_prior_wins  FOR TESTING.
     METHODS s02_arithmetic_break_fails   FOR TESTING.
     METHODS s02_balanced_statement_ok    FOR TESTING.
@@ -2202,7 +2202,7 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
         add_statement( ).
         mt_stmts[ 1 ]-kukey = '00000009'.
         add_line( ).
-        DATA(lo_rule) = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R22_DUP_HISTORY' ) ).
+        DATA(lo_rule) = CAST zif_cd_ebs_rule( zcl_ca_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R22_DUP_HISTORY' ) ).
         DATA(ls_rule) = rule( iv_rule_id = 'R22' iv_window_days = 5 ).
         DATA(lt_first) = lo_rule->execute( is_rule = ls_rule it_statements = mt_stmts it_lines = mt_lines ).
         mt_findings = lo_rule->execute( is_rule = ls_rule it_statements = mt_stmts it_lines = mt_lines ).
@@ -2531,7 +2531,7 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
   " Operating model 2026-11-06: entries the engine marked POSTING_OPEN (expected to post, not
   " posted) give ONE POSTING_INCOMPLETE for their statement, with count and total
   METHOD s13_open_entries_one_finding.
-    DATA lv_open_total TYPE zif_cd_ops_types=>ty_amount.
+    DATA lv_open_total TYPE zif_ca_ops_types=>ty_amount.
     TRY.
         lv_open_total = gc_test-amount * 2.
         add_statement( ).
@@ -2544,11 +2544,11 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_incomplete
                          iv_msg        = 'Unposted entries must give one POSTING_INCOMPLETE per statement' ).
         cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-object_key
-                                            exp = CONV zif_cd_ops_types=>ty_object_key( gc_test-stmt_key )
+                                            exp = CONV zif_ca_ops_types=>ty_object_key( gc_test-stmt_key )
                                             msg = 'The finding names the statement' ).
         cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-amount exp = lv_open_total
                                             msg = 'The amount is the total of the unposted entries' ).
-        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Severity comes from the rule configuration' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

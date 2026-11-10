@@ -17,7 +17,7 @@ INTERFACE zif_cd_hck_check
   "! @parameter it_thresholds | Thresholds of this check (all company-code rows)
   "! @parameter is_context    | Report date, current time, run id, test mode
   "! @parameter rs_result     | Metrics, findings, optional RAG and step states
-  "! @raising zcx_cd_ops_error | Configuration or read error; engine records PLUGIN_ERROR
+  "! @raising zcx_ca_ops_error | Configuration or read error; engine records PLUGIN_ERROR
   METHODS execute
     IMPORTING
       is_def           TYPE zif_cd_hck_types=>ty_check_def
@@ -26,6 +26,6 @@ INTERFACE zif_cd_hck_check
     RETURNING
       VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

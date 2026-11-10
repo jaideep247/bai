@@ -28,7 +28,7 @@ ENDCLASS.
 CLASS zcl_cd_ebs_r_s05_date IMPLEMENTATION.
 
   METHOD zif_cd_ebs_rule~execute.
-    DATA(lv_today) = zcl_cd_ops_factory=>get_clock( )->today( ).
+    DATA(lv_today) = zcl_ca_ops_factory=>get_clock( )->today( ).
     DATA(lv_window) = COND i( WHEN is_rule-window_days > 0 THEN is_rule-window_days ELSE gc_default_window ).
     LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>).
       IF <ls_statement>-stmt_date IS INITIAL.

@@ -31,7 +31,7 @@ CLASS zcl_cd_ebs_r_r09_duplicate IMPLEMENTATION.
       BEGIN OF ty_key,
         stmt_key   TYPE zif_cd_ebs_types=>ty_stmt_key,
         reference  TYPE zif_cd_ebs_types=>ty_text35,
-        amount     TYPE zif_cd_ops_types=>ty_amount,
+        amount     TYPE zif_ca_ops_types=>ty_amount,
         cdi        TYPE zif_cd_ebs_types=>ty_cdi,
         btc_code   TYPE zif_cd_ebs_types=>ty_btc_code,
         value_date TYPE d,

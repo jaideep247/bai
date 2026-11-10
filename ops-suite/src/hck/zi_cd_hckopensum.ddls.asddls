@@ -12,7 +12,7 @@
 define view entity ZI_CD_HckOpenSum
   as select from ZI_CD_HckFinding
 {
-      cast( 'HCK' as abap.char( 4 ) )                                                   as PaymentEngineArea,
+      cast( 'CD_HCK' as abap.char( 16 ) )                                                   as PaymentEngineArea,
       cast( count( * ) as abap.int4 )                                                   as OpenFindingCount,
       cast( sum( case when SeverityRank >= 3 then 1 else 0 end ) as abap.int4 )         as OpenRedCount,
       cast( sum( case when SeverityRank = 2 then 1 else 0 end ) as abap.int4 )          as OpenAmberCount,

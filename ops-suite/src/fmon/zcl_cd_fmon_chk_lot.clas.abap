@@ -49,7 +49,7 @@ CLASS zcl_cd_fmon_chk_lot IMPLEMENTATION.
                  is_file     = ls_file
                  is_check    = is_check
                  iv_code     = zif_cd_fmon_types=>gc_check_code-lot_not_found
-                 iv_severity = zif_cd_ops_types=>gc_severity-warning
+                 iv_severity = zif_ca_ops_types=>gc_severity-warning
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-loaded_but_no_lot_found
                                                       iv_v1    = ls_file-file_name
                                                       iv_v2    = <ls_lot>-lot_type ) )

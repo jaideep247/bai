@@ -15,7 +15,7 @@
 *&            | not found = NOT_APPLICABLE, never changes the verdict. Full chain lists the NOC row.
 *& 2026-11-06 | Modern-syntax sweep: string templates.
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
-*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*&            | instead of a hand-written store double: the semantics of ZCL_CA_OPS_STORE.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | Bank lines carry their statement account; a cheque number on another house bank
 *&            | account is not the cheque's encashment (shared cheque link, design review).
@@ -35,7 +35,7 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ops_trace_dao.
     TYPES:
       BEGIN OF ty_cfg,
-        param TYPE zif_cd_ops_types=>ty_param_name,
+        param TYPE zif_ca_ops_types=>ty_param_name,
         row   TYPE zif_cd_ops_trace_types=>ty_cfg_row,
       END OF ty_cfg.
     DATA mt_cfg TYPE STANDARD TABLE OF ty_cfg WITH EMPTY KEY.
@@ -189,12 +189,12 @@ ENDCLASS.
 
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
     DATA mt_denied TYPE STANDARD TABLE OF bukrs WITH EMPTY KEY.
 ENDCLASS.
 
 CLASS ltd_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_auth~is_allowed.
+  METHOD zif_ca_ops_auth~is_allowed.
     rv_allowed = xsdbool( NOT line_exists( mt_denied[ table_line = iv_bukrs ] ) ).
   ENDMETHOD.
 ENDCLASS.
@@ -350,11 +350,11 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
         VALUE(rt_statuses) TYPE tt_status.
     METHODS param
       IMPORTING
-        iv_name  TYPE zif_cd_ops_types=>ty_param_name
+        iv_name  TYPE zif_ca_ops_types=>ty_param_name
         iv_value TYPE string.
     METHODS add_cfg
       IMPORTING
-        iv_param TYPE zif_cd_ops_types=>ty_param_name
+        iv_param TYPE zif_ca_ops_types=>ty_param_name
         is_row   TYPE zif_cd_ops_trace_types=>ty_cfg_row.
 
     METHODS ach_full_chain_is_complete    FOR TESTING.
@@ -401,7 +401,7 @@ CLASS ltc_trace IMPLEMENTATION.
     mo_auth  = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_dao ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_auth( mo_auth ).
+    zcl_ca_ops_injector=>inject_auth( mo_auth ).
     " The canonical outcome is tested in ltc_outcome: no verdict here, the evidence chain unchanged
     zcl_cd_ops_injector=>inject_pay_outcome( NEW ltd_no_outcome( ) ).
     " The request rule is tested in ZCL_CD_OPS_PAY_REQUEST: here only what it says is shown
@@ -1393,12 +1393,12 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_clock PARTIALLY IMPLEMENTED.
     CONSTANTS gc_today TYPE d VALUE '20261111'.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = gc_today.
   ENDMETHOD.
 ENDCLASS.
@@ -1453,8 +1453,8 @@ CLASS ltc_outcome IMPLEMENTATION.
     mo_runtime->mt_roles    = mo_fixture->roles( ).
     mo_runtime->mt_outcomes = mo_fixture->outcomes( ).
     zcl_cd_hck_injector=>inject_runtime_dao( mo_runtime ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
-    zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_auth( NEW ltd_auth( ) ).
     zcl_cd_ops_injector=>inject_pay_request( NEW ltd_request( ) ).
     mo_params = NEW #( ).
     mo_params->set( iv_name = zif_cd_ops_trace_types=>gc_param-src_request iv_value = gc_request_spec ).

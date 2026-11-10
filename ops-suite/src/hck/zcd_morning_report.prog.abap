@@ -13,7 +13,7 @@
 *& 2026-11-06 | Modern-syntax sweep: string templates.
 *& 2026-11-10 | In background an error ends the job with a type E message (was S: the job ended green).
 *& 2026-11-10 | Export: P_FILE is a file name only, resolved in logical path ZCD_OPS_HCK_OUT (FILE), validated
-*&            | and checked with S_DATASET WRITE (ZCL_CD_OPS_FILE_PATH); temporary file and the delete on
+*&            | and checked with S_DATASET WRITE (ZCL_CA_OPS_FILE_PATH); temporary file and the delete on
 *&            | error work only on that validated path.
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
@@ -74,9 +74,9 @@ CLASS lcl_app DEFINITION FINAL.
         category     TYPE zif_cd_hck_types=>ty_category,
         cat_text     TYPE zif_cd_hck_types=>ty_text,
         priority     TYPE zif_cd_hck_types=>ty_priority,
-        rag          TYPE zif_cd_ops_types=>ty_rag,
+        rag          TYPE zif_ca_ops_types=>ty_rag,
         description  TYPE zif_cd_hck_types=>ty_text,
-        summary      TYPE zif_cd_ops_types=>ty_message,
+        summary      TYPE zif_ca_ops_types=>ty_message,
         findings     TYPE i,
         metrics      TYPE i,
         runtime_ms   TYPE i,
@@ -87,11 +87,11 @@ CLASS lcl_app DEFINITION FINAL.
 
     TYPES:
       BEGIN OF ty_alv_finding,
-        severity   TYPE zif_cd_ops_types=>ty_severity,
-        check_code TYPE zif_cd_ops_types=>ty_check_code,
-        object_key TYPE zif_cd_ops_types=>ty_object_key,
-        reference  TYPE zif_cd_ops_types=>ty_reference,
-        message    TYPE zif_cd_ops_types=>ty_message,
+        severity   TYPE zif_ca_ops_types=>ty_severity,
+        check_code TYPE zif_ca_ops_types=>ty_check_code,
+        object_key TYPE zif_ca_ops_types=>ty_object_key,
+        reference  TYPE zif_ca_ops_types=>ty_reference,
+        message    TYPE zif_ca_ops_types=>ty_message,
       END OF ty_alv_finding.
     TYPES tt_alv_finding TYPE STANDARD TABLE OF ty_alv_finding WITH EMPTY KEY.
 
@@ -133,7 +133,7 @@ CLASS lcl_app DEFINITION FINAL.
 
     METHODS light
       IMPORTING
-        iv_rag          TYPE zif_cd_ops_types=>ty_rag
+        iv_rag          TYPE zif_ca_ops_types=>ty_rag
       RETURNING
         VALUE(rv_light) TYPE char1.
 
@@ -159,9 +159,9 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD run.
     TRY.
-        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
+        zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
                                                 iv_pe_area   = zif_cd_ops_types=>gc_pe_area-health_check ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_auth).
+      CATCH zcx_ca_ops_error INTO DATA(lx_auth).
         " B9: in background the job ends cancelled (Control-M red), never green
         IF sy-batch = abap_true.
           MESSAGE lx_auth TYPE 'E'.
@@ -176,7 +176,7 @@ CLASS lcl_app IMPLEMENTATION.
 
     TRY.
         ms_report = zcl_cd_hck_factory=>get_engine( )->run( selection( ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         " B9: in background the job ends cancelled (Control-M red), never green
         IF sy-batch = abap_true.
           MESSAGE lx_error TYPE 'E'.
@@ -184,7 +184,7 @@ CLASS lcl_app IMPLEMENTATION.
         MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.
-    IF zcl_cd_ops_run_guard=>was_refused( VALUE #( ms_report-results[ 1 ]-findings OPTIONAL ) ) = abap_true.
+    IF zcl_ca_ops_run_guard=>was_refused( VALUE #( ms_report-results[ 1 ]-findings OPTIONAL ) ) = abap_true.
       " Run lock held: background job ends in error so Control-M shows it
       IF sy-batch = abap_true.
         MESSAGE ms_report-run-message TYPE 'E'.
@@ -223,7 +223,7 @@ CLASS lcl_app IMPLEMENTATION.
     TRY.
         DATA(lv_count) = zcl_cd_hck_factory=>get_engine( )->take_baseline( p_test ).
         MESSAGE s314(zcd_ops) WITH lv_count COND string( WHEN p_test = abap_true THEN TEXT-t01 ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         " B9: in background the job ends cancelled (Control-M red), never green
         IF sy-batch = abap_true.
           MESSAGE lx_error TYPE 'E'.
@@ -390,10 +390,10 @@ CLASS lcl_app IMPLEMENTATION.
     " Directory traversal: only a file name, resolved in the logical path of the export,
     " validated and authorised for WRITE - the temporary file and a delete on error stay in it
     TRY.
-        DATA(lv_file) = zcl_cd_ops_file_path=>physical( is_logical   = zif_cd_ops_types=>gc_logical_file-hck_export
+        DATA(lv_file) = zcl_ca_ops_file_path=>physical( is_logical   = zif_cd_ops_types=>gc_logical_file-hck_export
                                                         iv_file_name = p_file
-                                                        iv_activity  = zif_cd_ops_types=>gc_dataset_activity-write ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_path).
+                                                        iv_activity  = zif_ca_ops_types=>gc_dataset_activity-write ).
+      CATCH zcx_ca_ops_error INTO DATA(lx_path).
         IF sy-batch = abap_true.
           MESSAGE lx_path TYPE 'E'.
         ENDIF.
@@ -407,7 +407,7 @@ CLASS lcl_app IMPLEMENTATION.
                                   it_lines = zcl_cd_hck_report_html=>render_csv( ms_report )
                                   io_file  = NEW zcl_cd_hck_dataset( ) ).
         MESSAGE s315(zcd_ops) WITH lv_file.
-      CATCH zcx_cd_ops_error INTO DATA(lx_file).
+      CATCH zcx_ca_ops_error INTO DATA(lx_file).
         " B9: in background the job ends cancelled (Control-M red), never green
         IF sy-batch = abap_true.
           MESSAGE lx_file TYPE 'E'.
@@ -420,9 +420,9 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD light.
     " SALV exception column: 1 red, 2 yellow, 3 green, space = none
     rv_light = SWITCH #( iv_rag
-                         WHEN zif_cd_ops_types=>gc_rag-red   THEN gc_light-red
-                         WHEN zif_cd_ops_types=>gc_rag-amber THEN gc_light-yellow
-                         WHEN zif_cd_ops_types=>gc_rag-green THEN gc_light-green
+                         WHEN zif_ca_ops_types=>gc_rag-red   THEN gc_light-red
+                         WHEN zif_ca_ops_types=>gc_rag-amber THEN gc_light-yellow
+                         WHEN zif_ca_ops_types=>gc_rag-green THEN gc_light-green
                          ELSE gc_light-none ).
   ENDMETHOD.
 

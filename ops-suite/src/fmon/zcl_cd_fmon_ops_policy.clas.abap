@@ -26,18 +26,18 @@ CLASS zcl_cd_fmon_ops_policy DEFINITION
     CLASS-METHODS check_manual
       IMPORTING
         iv_stage           TYPE zif_cd_fmon_types=>ty_stage
-        iv_reason          TYPE zif_cd_ops_exc_types=>ty_reason
+        iv_reason          TYPE zif_ca_ops_exc_types=>ty_reason
         is_file            TYPE zif_cd_fmon_types=>ty_file
       RETURNING
-        VALUE(rs_decision) TYPE zif_cd_ops_exc_types=>ty_decision.
+        VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
 
     CLASS-METHODS check_handled
       IMPORTING
         iv_request_ref     TYPE zif_cd_fmon_types=>ty_file_ref
-        iv_reference       TYPE zif_cd_ops_exc_types=>ty_reference
-        iv_reason          TYPE zif_cd_ops_exc_types=>ty_reason
+        iv_reference       TYPE zif_ca_ops_exc_types=>ty_reference
+        iv_reason          TYPE zif_ca_ops_exc_types=>ty_reason
       RETURNING
-        VALUE(rs_decision) TYPE zif_cd_ops_exc_types=>ty_decision.
+        VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
 ENDCLASS.
 
 

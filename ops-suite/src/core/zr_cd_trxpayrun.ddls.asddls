@@ -18,7 +18,7 @@ define root view entity ZR_CD_TrxPayRun
   key laufd                                                 as RunDate,
   key laufi                                                 as RunId,
   key doc1r                                                 as PaymentDocument,
-      cast( 'CORE' as abap.char( 4 ) )                      as PaymentEngineArea,
+      cast( 'CD_OPS' as abap.char( 16 ) )                      as PaymentEngineArea,
       zz_payment_status                                     as PaymentStatus,
       case when laufd = $session.system_date
            then cast( 'X' as abap_boolean )

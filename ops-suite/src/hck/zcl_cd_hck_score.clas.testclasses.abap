@@ -12,10 +12,10 @@ CLASS ltc_score DEFINITION FINAL FOR TESTING
 
   PRIVATE SECTION.
     CONSTANTS:
-      gc_green TYPE zif_cd_ops_types=>ty_rag VALUE 'G',
-      gc_amber TYPE zif_cd_ops_types=>ty_rag VALUE 'A',
-      gc_red   TYPE zif_cd_ops_types=>ty_rag VALUE 'R',
-      gc_grey  TYPE zif_cd_ops_types=>ty_rag VALUE ' '.
+      gc_green TYPE zif_ca_ops_types=>ty_rag VALUE 'G',
+      gc_amber TYPE zif_ca_ops_types=>ty_rag VALUE 'A',
+      gc_red   TYPE zif_ca_ops_types=>ty_rag VALUE 'R',
+      gc_grey  TYPE zif_ca_ops_types=>ty_rag VALUE ' '.
 
     DATA mt_results TYPE zif_cd_hck_types=>tt_check_result.
 
@@ -32,12 +32,12 @@ CLASS ltc_score DEFINITION FINAL FOR TESTING
         iv_check_id TYPE zif_cd_hck_types=>ty_check_id
         iv_category TYPE zif_cd_hck_types=>ty_category
         iv_priority TYPE zif_cd_hck_types=>ty_priority
-        iv_rag      TYPE zif_cd_ops_types=>ty_rag.
+        iv_rag      TYPE zif_ca_ops_types=>ty_rag.
 
     METHODS category_row
       IMPORTING
         iv_category   TYPE zif_cd_hck_types=>ty_category
-        iv_rag        TYPE zif_cd_ops_types=>ty_rag
+        iv_rag        TYPE zif_ca_ops_types=>ty_rag
         iv_red        TYPE i DEFAULT 0
         iv_amber      TYPE i DEFAULT 0
         iv_green      TYPE i DEFAULT 0

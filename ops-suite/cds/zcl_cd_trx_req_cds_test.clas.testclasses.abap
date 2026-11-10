@@ -176,8 +176,8 @@ CLASS ltc_request IMPLEMENTATION.
     CLEAR mt_log.
     go_env->insert_test_data( i_data = mo_fixture->dfkkop_rows( rs_scenario ) ).
     go_env->insert_test_data( i_data = mo_fixture->dpayh_rows( rs_scenario ) ).
-    CONVERT DATE ms_param-as_of_date - 1 TIME zif_cd_ops_types=>gc_time-day_start
-      INTO TIME STAMP lv_from TIME ZONE zif_cd_ops_types=>gc_time_zone_utc.
+    CONVERT DATE ms_param-as_of_date - 1 TIME zif_ca_ops_types=>gc_time-day_start
+      INTO TIME STAMP lv_from TIME ZONE zif_ca_ops_types=>gc_time_zone_utc.
     go_env->insert_test_data( i_data = mo_fixture->outcome_rows( is_scenario = rs_scenario iv_valid_from = lv_from ) ).
     " The request date window covers every attempt of the scenario
     LOOP AT rs_scenario-requests ASSIGNING <ls_request>.

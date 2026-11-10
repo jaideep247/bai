@@ -17,8 +17,8 @@ INTERFACE zif_cd_fmon_check
       is_ctx             TYPE zif_cd_fmon_types=>ty_check_ctx
       is_check           TYPE zif_cd_fmon_types=>ty_chk
     RETURNING
-      VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding
+      VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

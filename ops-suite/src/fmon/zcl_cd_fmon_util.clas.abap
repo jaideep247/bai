@@ -25,11 +25,11 @@ CLASS zcl_cd_fmon_util DEFINITION
       IMPORTING
         is_file           TYPE zif_cd_fmon_types=>ty_file
         is_check          TYPE zif_cd_fmon_types=>ty_chk
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
         iv_message        TYPE clike
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity OPTIONAL
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity OPTIONAL
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! Finding without a registered file (expected file, source, check)
     CLASS-METHODS new_key_finding
@@ -37,11 +37,11 @@ CLASS zcl_cd_fmon_util DEFINITION
         iv_iface_id       TYPE zif_cd_fmon_types=>ty_iface_id OPTIONAL
         iv_object_key     TYPE clike
         is_check          TYPE zif_cd_fmon_types=>ty_chk
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
         iv_message        TYPE clike
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity OPTIONAL
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity OPTIONAL
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! Value of NAME in a 'NAME=VALUE;NAME2=VALUE2' parameter string
     CLASS-METHODS param
@@ -113,13 +113,13 @@ CLASS zcl_cd_fmon_util DEFINITION
         iv_iface_id   TYPE zif_cd_fmon_types=>ty_iface_id
         iv_date       TYPE d
       RETURNING
-        VALUE(rv_key) TYPE zif_cd_ops_types=>ty_object_key.
+        VALUE(rv_key) TYPE zif_ca_ops_types=>ty_object_key.
 
     CLASS-METHODS file_hex
       IMPORTING
         iv_file_id    TYPE zif_cd_fmon_types=>ty_file_id
       RETURNING
-        VALUE(rv_hex) TYPE zif_cd_ops_types=>ty_reference.
+        VALUE(rv_hex) TYPE zif_ca_ops_types=>ty_reference.
 
   PRIVATE SECTION.
     CONSTANTS gc_number_pattern TYPE string VALUE `^[+-]?[0-9]+([.][0-9]+)?[+-]?$`.
@@ -159,10 +159,10 @@ CLASS zcl_cd_fmon_util IMPLEMENTATION.
     rs_finding-check_code  = iv_code.
     rs_finding-severity    = COND #( WHEN iv_severity IS NOT INITIAL THEN iv_severity
                                      WHEN is_check-severity IS NOT INITIAL THEN is_check-severity
-                                     ELSE zif_cd_ops_types=>gc_severity-error ).
-    rs_finding-action      = COND #( WHEN zcl_cd_ops_util=>severity_rank( rs_finding-severity ) >= 2
-                                     THEN zif_cd_ops_types=>gc_action-exception
-                                     ELSE zif_cd_ops_types=>gc_action-notify ).
+                                     ELSE zif_ca_ops_types=>gc_severity-error ).
+    rs_finding-action      = COND #( WHEN zcl_ca_ops_util=>severity_rank( rs_finding-severity ) >= 2
+                                     THEN zif_ca_ops_types=>gc_action-exception
+                                     ELSE zif_ca_ops_types=>gc_action-notify ).
     rs_finding-message     = iv_message.
   ENDMETHOD.
 
@@ -183,7 +183,7 @@ CLASS zcl_cd_fmon_util IMPLEMENTATION.
 
 
   METHOD param_int.
-    rv_value = zcl_cd_ops_util=>to_decimal( iv_value   = param( iv_params = iv_params iv_name = iv_name )
+    rv_value = zcl_ca_ops_util=>to_decimal( iv_value   = param( iv_params = iv_params iv_name = iv_name )
                                             iv_default = iv_default ).
   ENDMETHOD.
 

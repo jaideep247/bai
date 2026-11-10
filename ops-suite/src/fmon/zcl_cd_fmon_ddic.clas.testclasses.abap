@@ -12,13 +12,13 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
     DATA mv_allowed TYPE abap_bool.
 ENDCLASS.
 
 
 CLASS ltd_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_auth~may_read_table.
+  METHOD zif_ca_ops_auth~may_read_table.
     rv_allowed = mv_allowed.
   ENDMETHOD.
 ENDCLASS.
@@ -74,7 +74,7 @@ CLASS ltc_ddic IMPLEMENTATION.
     TRY.
         mo_cut->describe_table( iv_table ).
         cl_abap_unit_assert=>fail( msg = 'Describe must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = iv_msgno
                                             msg = 'Raised with the expected message' ).
@@ -119,8 +119,8 @@ CLASS ltc_ddic IMPLEMENTATION.
   " Rule: S_TABU_NAM display decides whether the dynamic reader may read the table
   METHOD authorised_table_may_read.
     TRY.
-        zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
-        CAST ltd_auth( zcl_cd_ops_factory=>get_auth( ) )->mv_allowed = abap_true.
+        zcl_ca_ops_injector=>inject_auth( NEW ltd_auth( ) ).
+        CAST ltd_auth( zcl_ca_ops_factory=>get_auth( ) )->mv_allowed = abap_true.
         cl_abap_unit_assert=>assert_true( act = mo_cut->may_read( gc_table ) msg = 'Authorised table may be read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -131,7 +131,7 @@ CLASS ltc_ddic IMPLEMENTATION.
   " Rule: without S_TABU_NAM display the table is not read
   METHOD refused_table_may_not_read.
     TRY.
-        zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
+        zcl_ca_ops_injector=>inject_auth( NEW ltd_auth( ) ).
         cl_abap_unit_assert=>assert_false( act = mo_cut->may_read( gc_table ) msg = 'Refused table is not read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

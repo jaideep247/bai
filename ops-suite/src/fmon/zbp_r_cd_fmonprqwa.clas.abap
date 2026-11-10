@@ -3,7 +3,7 @@
 *& Purpose:
 *& Behaviour pool of ZR_CD_FmonPrqWa (PRISM payment request handled
 *& manually, design 6.5 - record only). Rules in ZCL_CD_FMON_OPS_POLICY,
-*& exception closure through ZIF_CD_OPS_EXC_DAO.
+*& exception closure through ZIF_CA_OPS_EXC_DAO.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *&---------------------------------------------------------------------*

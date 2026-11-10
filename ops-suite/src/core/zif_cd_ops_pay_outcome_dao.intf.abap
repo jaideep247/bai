@@ -42,7 +42,7 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     IMPORTING
       is_watermark TYPE zif_cd_ops_payout_types=>ty_watermark
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Payment documents (and, for STATEMENT, statement references; for NIGHTLYREQ, payment requests)
   "! with new evidence of the source after the watermark, in watermark order, at most iv_max keys; the
@@ -107,7 +107,7 @@ INTERFACE zif_cd_ops_pay_outcome_dao
   "! it_basis (key, VALID_FROM, EVALUATED_AT, OUTCOME, FINDING), and no row inserted as current may meet
   "! a current row of its key that is not closed or deleted here - else nothing is written
   "! @parameter it_basis | the rows the judgement was based on (GET_VERSIONS / GET_REQUEST_VERSIONS)
-  "! @raising zcx_cd_ops_error | the judgement is stale (780: another run changed the rows, 781: a second
+  "! @raising zcx_ca_ops_error | the judgement is stale (780: another run changed the rows, 781: a second
   "! current row) or a row could not be written - the caller rolls back, the next run retries
   METHODS save_versions
     IMPORTING
@@ -117,7 +117,7 @@ INTERFACE zif_cd_ops_pay_outcome_dao
       it_delete TYPE zif_cd_ops_payout_types=>tt_version OPTIONAL
       it_update TYPE zif_cd_ops_payout_types=>tt_version OPTIONAL
     RAISING
-      zcx_cd_ops_error
+      zcx_ca_ops_error
       "! Technical database error: the caller (package boundary) rolls back
       cx_sy_open_sql_db.
 
@@ -143,12 +143,12 @@ INTERFACE zif_cd_ops_pay_outcome_dao
   " ------------------------------------------------------------ parallel packages (ZCD_PAY_OUTPKG)
   "! Plan the packages of a run (status P, mode) with their documents and requests (ZCD_PAY_OUTPKGM),
   "! no commit
-  "! @raising zcx_cd_ops_error | a package or member row could not be written
+  "! @raising zcx_ca_ops_error | a package or member row could not be written
   METHODS save_packages
     IMPORTING
       it_packages TYPE zif_cd_ops_payout_types=>tt_package
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Lock the package row for this LUW (SELECT FOR UPDATE) and tell whether it is still planned:
   "! an abandoned package writes nothing
@@ -159,12 +159,12 @@ INTERFACE zif_cd_ops_pay_outcome_dao
       VALUE(rv_claimed) TYPE abap_bool.
 
   "! Status, counts and message of a package (D or F), no commit
-  "! @raising zcx_cd_ops_error | the package row could not be written
+  "! @raising zcx_ca_ops_error | the package row could not be written
   METHODS finish_package
     IMPORTING
       is_package TYPE zif_cd_ops_payout_types=>ty_package
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! One package as its unit judges it: the key, the run time and the documents and requests planned for
   "! it (ZCD_PAY_OUTPKGM) - the bgPF unit carries the key only (2026-11-10)
@@ -177,7 +177,7 @@ INTERFACE zif_cd_ops_pay_outcome_dao
   "! Packages of a run with status and counts (no document lists)
   METHODS get_packages
     IMPORTING
-      iv_run_id          TYPE zif_cd_ops_types=>ty_run_id
+      iv_run_id          TYPE zif_ca_ops_types=>ty_run_id
     RETURNING
       VALUE(rt_packages) TYPE zif_cd_ops_payout_types=>tt_package.
 
@@ -185,7 +185,7 @@ INTERFACE zif_cd_ops_pay_outcome_dao
   "! commit; the number of packages abandoned
   METHODS abandon_packages
     IMPORTING
-      iv_run_id       TYPE zif_cd_ops_types=>ty_run_id
+      iv_run_id       TYPE zif_ca_ops_types=>ty_run_id
     RETURNING
       VALUE(rv_count) TYPE i.
 
@@ -194,27 +194,27 @@ INTERFACE zif_cd_ops_pay_outcome_dao
   "! commit; rows deleted (package rows and members)
   METHODS delete_packages
     IMPORTING
-      iv_keep_run_id  TYPE zif_cd_ops_types=>ty_run_id
+      iv_keep_run_id  TYPE zif_ca_ops_types=>ty_run_id
       iv_mode         TYPE zif_cd_ops_payout_types=>ty_mode
     RETURNING
       VALUE(rv_count) TYPE i.
 
   "! Consecutive failed runs of a source (ZCD_PAY_OUTWM-FAIL_COUNT; a source without watermark row gets one
   "! without position - its next run is still a first run), no commit
-  "! @raising zcx_cd_ops_error | the row could not be written
+  "! @raising zcx_ca_ops_error | the row could not be written
   METHODS save_failures
     IMPORTING
       iv_source TYPE zif_cd_ops_payout_types=>ty_source_id
       iv_count  TYPE i
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Versions written by a run (VALID_FROM = the run time) with a finding, with the method and flow
   "! indicator of the payment (DPAYH by key, TFK042Z) - aggregated findings of parallel packages
   METHODS get_new_versions
     IMPORTING
       iv_valid_from      TYPE zif_cd_ops_payout_types=>ty_timestamp
-      iv_finding         TYPE zif_cd_ops_types=>ty_check_code
+      iv_finding         TYPE zif_ca_ops_types=>ty_check_code
     RETURNING
       VALUE(rt_versions) TYPE zif_cd_ops_payout_types=>tt_new_version.
 

@@ -19,6 +19,6 @@ INTERFACE zif_cd_fmon_lot_reader
     RETURNING
       VALUE(rt_status) TYPE zif_cd_fmon_types=>tt_lot_status
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Generate the four RAP configuration apps of the ops suite (design 5,
-docs/RAP_Apps_Design.md) from the customizing-table DDLs in ddic/<pe_area>/.
+"""Generate the RAP configuration apps (design 5, docs/RAP_Apps_Design.md) from the customizing-table
+DDLs: the operations framework's app (ZCA_OPS: alert rules, alert channels, purge targets - written into
+../ops-framework, prefix CA) and the suite's apps (EBS, FMON, HCK, approved tables - prefix CD).
 
 Shape (SAP business-configuration maintenance object, ABAP platform 2023):
 singleton root (virtual, unmanaged save, SingletonID = 1, draft) with every
@@ -18,7 +19,12 @@ Writes (checked in, regenerate after a table change):
   src/<mod>/zbp_r_cd_<root>.clas.testclasses.abap        authorization tests (EML GET PERMISSIONS)
 Then run tools/abapgit_serialize.py for the abapGit XML.
 
-Usage: python3 tools/rap_generate.py
+Each app names its base folder (BASE, relative to ops-suite), its DDIC / source sub-folders and its
+prefix (CD or CA): names, the field-check message types and the message class follow the prefix
+(LOCALIZE). Generic checks call the framework (ZCL_CA_OPS_CFG_CHECKS, ZCL_CA_OPS_UTIL); the
+payment engine checks (thresholds, R21 lookup approval, value checks of an area) call the suite.
+
+Usage: python3 tools/rap_generate.py [--check]
 """
 import os, re
 
@@ -30,8 +36,11 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
                   '\n*& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).'
                   '\n*& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).'
                   '\n*& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).'
-                  '\n*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).'
-                  '\n*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).')
+                  '\n*& 2026-11-08 | Authorisation per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).'
+                  '\n*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (customer posting areas, FQC0).'
+                  '\n*& 2026-11-10 | Generator parameterised (framework ZCA_OPS): authorisation object ZCA_OPS with the area of'
+                  '\n*&            | the app (parameter area of ZCA_PARAM), generic checks of ZCL_CA_OPS_CFG_CHECKS, transport'
+                  '\n*&            | messages of class ZCA_OPS; area and parameter checks (messages 435 / 434).')
 
 # ---------------------------------------------------------------------------
 # Spec: pe_area -> app; per table: alias, draft table, labels, keys that may be
@@ -52,6 +61,10 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         ('required', field) must be filled - message 422; ('blank', field) must be blank - 423;
 #         ('reserved', field, 'A,B') must not be a value of the other usage - 424;
 #         ('form', field, pcre) must match the PCRE (whole value, case ignored) - 425
+#         ('area', field, any): an active parameter area of ZCA_PARAM_AREA, or * when any is True
+#         (ZCL_CA_OPS_CFG_CHECKS=>AREA_VALID; one area register) - message 435 (framework app)
+#         ('param', area_field, name_field): the parameter is defined in ZCA_PARAM
+#         (ZCL_CA_OPS_CFG_CHECKS=>PARAM_EXISTS) - message 434 (framework app)
 #         ('approved', field, table_field): the field of the table must be approved for the EBS
 #         lookup rule R21 in ZCD_OPS_TABWL (area EBS, purpose LOOKUP, field-level;
 #         ZCL_CD_OPS_CFG_CHECKS=>LOOKUP_APPROVED, the runtime check) - message 812
@@ -68,7 +81,7 @@ ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
 # (morning report D_POSTAREA_INVALID). Rule groups of ZBTM are checked there against ZCD_BTC_RULE.
 SPEC = {
     'ebs': dict(
-        folder='ebs', pe_area='EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
+        folder='ebs', pe_area='CD_EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
         title='EBS rules and mapping', tables=[
             ('zcd_btc_rule', 'BtcRule', 'zcd_d_btcrule', 'Rule assignment', 'Rule assignments', [],
              [('enum', 'severity', ',' + SEV), ('enum', 'action', ',' + ACTIONS)]),
@@ -86,7 +99,7 @@ SPEC = {
               ('approved', 'key_field', 'table_name'), ('approved', 'status_field', 'table_name')]),
         ]),
     'fmon': dict(
-        folder='fmon', pe_area='FMON', root='FmonCfgAll', draft='zcd_d_fmoncfg', service='ZUI_CD_FMON_CFG',
+        folder='fmon', pe_area='CD_FMON', root='FmonCfgAll', draft='zcd_d_fmoncfg', service='ZUI_CD_FMON_CFG',
         title='File monitoring setup', tables=[
             ('zcd_fmon_iface', 'FmonIface', 'zcd_d_fmiface', 'Interface', 'Interfaces', [],
              [('enum', 'direction', 'I,O'), ('pcre', 'name_pattern')]),
@@ -119,7 +132,7 @@ SPEC = {
              [('window', 'window_from', 'window_to')]),
         ]),
     'hck': dict(
-        folder='hck', pe_area='HCK', root='HckCfgAll', draft='zcd_d_hckcfg', service='ZUI_CD_HCK_CFG',
+        folder='hck', pe_area='CD_HCK', root='HckCfgAll', draft='zcd_d_hckcfg', service='ZUI_CD_HCK_CFG',
         title='Health check setup', tables=[
             ('zcd_hck_def', 'HckCheckDef', 'zcd_d_hckdef', 'Check', 'Checks', [],
              [('class', 'class_name', 'ZIF_CD_HCK_CHECK'), ('enum', 'category', 'A,B,C,D,E'),
@@ -159,28 +172,40 @@ SPEC = {
              [('enum', 'kind', 'THREEWAY,ACH_ZUONR,STRIPE'), ('enum', 'side', 'C,D')]),
         ]),
     'core': dict(
-        folder='core', pe_area='CORE', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
-        title='Alerting and approved tables', tables=[
-            ('zcd_ops_alrule', 'AlertRule', 'zcd_d_alrule', 'Alert rule', 'Alert rules', [],
-             [('enum', 'pe_area', ',*,EBS,FMON,HCK'), ('enum', 'min_severity', ',' + SEV),
-              ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to'),
-              ('pcre', 'rule_pattern'), ('pcre', 'check_pattern'), ('pcre', 'group1_pattern'),
-              ('pcre', 'group2_pattern'), ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
-            ('zcd_ops_alchn', 'AlertChannel', 'zcd_d_alchn', 'Channel', 'Alert channels', [],
-             [('class', 'class_name', 'ZIF_CD_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination')]),
+        folder='core', pe_area='CD_OPS', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
+        title='Approved tables', tables=[
             # Runtime parameters are maintained in the framework app ZUI_CA_PARAM (ZCA_PARAM), not here -
-            # also the stale threshold per monitor (MON_STALE_AFTER_MIN_<area>, was ZCD_OPS_MONCFG, 2026-11-08)
+            # also the stale threshold per monitor (MON_STALE_AFTER_MIN_<area>, was ZCD_OPS_MONCFG, 2026-11-08).
+            # Alert rules and channels are the framework's app (ZUI_CA_OPS_CFG, 2026-11-10).
             # Table consolidation 2026-11-08: one approved-table list for every dynamic reader (was
             # ZCD_FMON_TABWL, ZCD_HCK_TABWL, ZCD_HCK_DRIFT) - a cross-area security boundary, so it
             # lives in the core app; area + purpose say which reader may use a row
             ('zcd_ops_tabwl', 'ApprovedTable', 'zcd_d_opstabwl', 'Approved table', 'Approved tables per reader',
              ['field_name'],
-             [('enum', 'pe_area', 'FMON,HCK,EBS'),
-              ('when', 'pe_area', 'FMON', [('enum', 'purpose', 'SOURCE')]),
-              ('when', 'pe_area', 'HCK', [('enum', 'purpose', 'READ,DRIFT'), ('blank', 'field_name')]),
+             [('enum', 'pe_area', 'CD_FMON,CD_HCK,CD_EBS'),
+              ('when', 'pe_area', 'CD_FMON', [('enum', 'purpose', 'SOURCE')]),
+              ('when', 'pe_area', 'CD_HCK', [('enum', 'purpose', 'READ,DRIFT'), ('blank', 'field_name')]),
               # EBS lookup rule R21 (2026-11-10): approved per field (key and status field of ZCD_EBS_LOOKUP)
-              ('when', 'pe_area', 'EBS', [('enum', 'purpose', 'LOOKUP'), ('required', 'field_name')]),
+              ('when', 'pe_area', 'CD_EBS', [('enum', 'purpose', 'LOOKUP'), ('required', 'field_name')]),
               ('table', 'table_name'), ('field', 'field_name', 'table_name')]),
+        ]),
+    # The operations framework's own app (ZCA_OPS, 2026-11-10): written into ../ops-framework (sub-package
+    # ZCA_OPS_UI, folder ui), prefix CA, messages of class ZCA_OPS, area CA_OPS
+    'framework': dict(
+        base=os.path.join('..', 'ops-framework'), ddic='', draft_ddic='ui', prefix='ca',
+        folder='ui', pe_area='CA_OPS', root='OpsCfgAll', draft='zca_d_opscfg', service='ZUI_CA_OPS_CFG',
+        title='Alerting and purge targets', tables=[
+            ('zca_ops_alrule', 'AlertRule', 'zca_d_alrule', 'Alert rule', 'Alert rules', [],
+             [('area', 'area', True), ('enum', 'min_severity', ',' + SEV),
+              ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to'),
+              ('pcre', 'rule_pattern'), ('pcre', 'check_pattern'), ('pcre', 'group1_pattern'),
+              ('pcre', 'group2_pattern'), ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
+            ('zca_ops_alchn', 'AlertChannel', 'zca_d_alchn', 'Channel', 'Alert channels', [],
+             [('class', 'class_name', 'ZIF_CA_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination')]),
+            # Purge targets of consumers (registry, 2026-11-10): plug-in class and retention parameter
+            ('zca_ops_purge', 'PurgeTarget', 'zca_d_purge', 'Purge target', 'Purge targets of consumers', [],
+             [('class', 'class_name', 'ZIF_CA_OPS_PURGE_TARGET'), ('area', 'param_area', False),
+              ('param', 'param_area', 'param_name')]),
         ]),
 }
 
@@ -198,6 +223,9 @@ TOKENS = {'btc': 'BTC', 'bai2': 'BAI2', 'cdi': 'credit/debit', 'id': 'ID', 'sla'
           'rag': 'RAG', 'xblnr': 'XBLNR', 'gl': 'G/L', 'z': 'Z', 'exp': 'expected', 'chn': 'channel',
           'msg': 'message', 'pay': 'payment', 'ret': 'return', 'rsn': 'reason', 'lot': 'lot'}
 LABELS = {'pe_area': 'Payment engine area',  # design D-6
+          # Framework app (2026-11-10): the area is a parameter area of ZCA_PARAM
+          'area': 'Area (* = every area)', 'param_area': 'Area of the retention parameter',
+          'param_name': 'Retention parameter (ZCA_PARAM)', 'target': 'Purge target',
           'last_changed_by': 'Last changed by', 'last_changed_at': 'Last changed at',
           'local_last_changed_at': 'Changed at (instance)', 'changed_by': 'Changed by (SM30)',
           'changed_at': 'Changed at (SM30)', 'flow_type': 'Flow (D/C/*)', 'exp_cdi': 'Expected direction',
@@ -242,8 +270,25 @@ def label(field):
     return (text[0].upper() + text[1:])[:60]
 
 
-def read_table(pe_area, table):
-    text = open(os.path.join(ROOT, 'ddic', pe_area, table + '.tabl.ddl'), encoding='utf-8').read()
+def base(app):
+    """Folder of an app's component (ops-suite or ../ops-framework)."""
+    return os.path.normpath(os.path.join(ROOT, app.get('base', '.')))
+
+
+def localize(text, app):
+    """The suite's names (prefix CD) become the framework's (prefix CA) for an app of the framework."""
+    if app.get('prefix', 'cd') == 'cd':
+        return text
+    for old, new in (('ZR_CD_', 'ZR_CA_'), ('ZC_CD_', 'ZC_CA_'), ('ZI_CD_', 'ZI_CA_'), ('zr_cd_', 'zr_ca_'),
+                     ('zc_cd_', 'zc_ca_'), ('zi_cd_', 'zi_ca_'), ('zbp_r_cd_', 'zbp_r_ca_'),
+                     ('lsc_zr_cd_', 'lsc_zr_ca_'), ('zif_cd_ops_cfg_types=>gc_msg', 'zif_ca_ops_cfg_types=>gc_msg'),
+                     ('zif_cd_ops_types=>gc_message_class', 'zif_ca_ops_types=>gc_message_class')):
+        text = text.replace(old, new)
+    return text
+
+
+def read_table(app, table):
+    text = open(os.path.join(base(app), 'ddic', app['ddic'], table + '.tabl.ddl'), encoding='utf-8').read()
     fields = []
     for line in text.split('{', 1)[1].split('}', 1)[0].splitlines():
         m = FIELD.match(line.split('//')[0])
@@ -252,8 +297,19 @@ def read_table(pe_area, table):
     return fields
 
 
-def write(rel, text):
-    path = os.path.join(ROOT, rel)
+CHECK_ONLY = False
+STALE = []
+
+
+def write(rel, text, app=None):
+    rel = localize(rel, app) if app else rel
+    path = os.path.normpath(os.path.join(base(app) if app else ROOT, rel))
+    text = localize(text, app) if app else text
+    if CHECK_ONLY:
+        if not os.path.exists(path) or open(path, encoding='utf-8').read() != text:
+            STALE.append(os.path.relpath(path, ROOT))
+            return 1
+        return 0
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if not os.path.exists(path) or open(path, encoding='utf-8').read() != text:
         open(path, 'w', encoding='utf-8', newline='\n').write(text)
@@ -471,7 +527,7 @@ def bdef_r(app, tables):
                 'with additional save',
                 f"draft table {t['draft']}",
                 f"lock dependent by _{root}",
-                '// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root',
+                '// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root',
                 '// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).',
                 'authorization master ( global )',
                 'etag master LocalLastChangedAt',
@@ -552,7 +608,7 @@ def abap_check(t, chk, root, when=None):
             head = [f"    IF ls_row-{e} IS NOT INITIAL."]
         else:
             lst = const('when', f"{t['alias']}_{chk[1]}_{cond}", cond)
-            head = [f"    IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-{e} )",
+            head = [f"    IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-{e} )",
                     f"                                      iv_list  = {lst} ) = abap_true."]
         body = []
         for sub in subs:
@@ -570,7 +626,7 @@ def abap_check(t, chk, root, when=None):
         e, values = fmap[chk[1]], chk[2]
         lst = const('val', f"{t['alias']}_{e}_reserved", values)
         return [f"    IF ls_row-{e} IS NOT INITIAL",
-                f"       AND zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-{e} )",
+                f"       AND zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-{e} )",
                 f"                                          iv_list  = {lst} ) = abap_true.",
                 f"      INSERT VALUE #( number = {msg}value_reserved v1 = ls_row-{e}",
                 f"                      v2 = {el(e)} v3 = {lst}",
@@ -579,7 +635,7 @@ def abap_check(t, chk, root, when=None):
     if kind == 'form':
         e, pattern = fmap[chk[1]], chk[2]
         pcre = const('form', f"{t['alias']}_{e}", pattern)
-        return [f"    IF zcl_cd_ops_util=>pcre_match( iv_value   = ls_row-{e}",
+        return [f"    IF zcl_ca_ops_util=>pcre_match( iv_value   = ls_row-{e}",
                 f"                                    iv_pattern = {pcre} ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}form_invalid v1 = ls_row-{e}",
                 f"                      v2 = {el(e)} v3 = {pcre}",
@@ -588,7 +644,7 @@ def abap_check(t, chk, root, when=None):
     if kind == 'enum':
         e, allowed = fmap[chk[1]], chk[2]
         lst = const('val', f"{t['alias']}_{e}{tag}"[:30], allowed)
-        return [f"    IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-{e} )",
+        return [f"    IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-{e} )",
                 f"                                      iv_list  = {lst} ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}value_invalid v1 = ls_row-{e}",
                 f"                      v2 = {el(e)} v3 = {lst}",
@@ -598,7 +654,7 @@ def abap_check(t, chk, root, when=None):
         e, intf = fmap[chk[1]], chk[2]
         ic = const('if', intf, intf)
         return [f"    IF ls_row-{e} IS NOT INITIAL",
-                f"       AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-{e} )",
+                f"       AND zcl_ca_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-{e} )",
                 f"                                              iv_interface = CONV #( {ic} ) ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}class_invalid v1 = ls_row-{e} v2 = {ic}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
@@ -606,14 +662,14 @@ def abap_check(t, chk, root, when=None):
     if kind == 'table':
         e = fmap[chk[1]]
         return [f"    IF ls_row-{e} IS NOT INITIAL",
-                f"       AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-{e} ) ) = abap_false.",
+                f"       AND zcl_ca_ops_cfg_checks=>table_exists( CONV #( ls_row-{e} ) ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}table_invalid v1 = ls_row-{e}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'field':
         e, tab = fmap[chk[1]], fmap[chk[2]]
         return [f"    IF ls_row-{e} IS NOT INITIAL AND ls_row-{tab} IS NOT INITIAL",
-                f"       AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-{tab} )",
+                f"       AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-{tab} )",
                 f"                                                iv_field = CONV #( ls_row-{e} ) ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}field_invalid v1 = ls_row-{e} v2 = ls_row-{tab}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
@@ -628,24 +684,24 @@ def abap_check(t, chk, root, when=None):
                 '    ENDIF.']
     if kind == 'window':
         a, b = fmap[chk[1]], fmap[chk[2]]
-        return [f"    IF zcl_cd_ops_cfg_checks=>window_complete( iv_from = ls_row-{a}",
+        return [f"    IF zcl_ca_ops_cfg_checks=>window_complete( iv_from = ls_row-{a}",
                 f"                                              iv_to   = ls_row-{b} ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}window_incomplete v1 = {el(a)} v2 = {el(b)}",
                 f"                      element = {el(b)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'pcre':
         e = fmap[chk[1]]
-        return [f"    IF zcl_cd_ops_util=>pcre_valid( ls_row-{e} ) = abap_false.",
+        return [f"    IF zcl_ca_ops_util=>pcre_valid( ls_row-{e} ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}pattern_invalid v1 = ls_row-{e}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'dest':
         src_kind, src = chk[1][0], fmap[chk[1][1]]
         dests = [fmap[d] for d in chk[2:]]
-        cls = (f"zcl_cd_ops_cfg_checks=>channel_class( ls_row-{src} )" if src_kind == 'channel'
+        cls = (f"zcl_ca_ops_cfg_checks=>channel_class( ls_row-{src} )" if src_kind == 'channel'
                else f"CONV #( ls_row-{src} )")
         joined = ','.join('{ ls_row-' + d + ' }' for d in dests)
-        return ["    DATA(lv_dest_invalid) = zcl_cd_ops_cfg_checks=>invalid_destination(",
+        return ["    DATA(lv_dest_invalid) = zcl_ca_ops_cfg_checks=>invalid_destination(",
                 f"                              iv_class       = {cls}",
                 f"                              iv_destination = CONV #( |{joined}| ) ).",
                 "    IF lv_dest_invalid IS NOT INITIAL.",
@@ -657,6 +713,20 @@ def abap_check(t, chk, root, when=None):
         return [f"    IF {method}( ls_row-{e} ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}{name} v1 = ls_row-{e}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
+                '    ENDIF.']
+    if kind == 'area':
+        e, any_allowed = fmap[chk[1]], chk[2]
+        return [f"    IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-{e}",
+                f"                                         iv_any_allowed = {'abap_true' if any_allowed else 'abap_false'} ) = abap_false.",
+                f"      INSERT VALUE #( number = {msg}area_invalid v1 = ls_row-{e}",
+                f"                      element = {el(e)} ) INTO TABLE lt_msg.",
+                '    ENDIF.']
+    if kind == 'param':
+        a, n = fmap[chk[1]], fmap[chk[2]]
+        return [f"    IF zcl_ca_ops_cfg_checks=>param_exists( iv_area = ls_row-{a}",
+                f"                                           iv_name = ls_row-{n} ) = abap_false.",
+                f"      INSERT VALUE #( number = {msg}param_invalid v1 = ls_row-{n} v2 = ls_row-{a}",
+                f"                      element = {el(n)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'positive':
         e = fmap[chk[1]]
@@ -683,7 +753,7 @@ def bp_global(app):
         '*& Purpose:',
         f"*& Behaviour pool of ZR_CD_{app['root']} ({app['title']}). Handlers and",
         '*& saver are in the local implementations; all decisions are delegated to',
-        '*& ZCL_CD_OPS_CFG_GATE / ZCL_CD_OPS_CFG_CHECKS.',
+        '*& ZCL_CA_OPS_CFG_GATE / ZCL_CD_OPS_CFG_CHECKS.',
         '*& Modification log:',
         HDR_LOG,
         '*&---------------------------------------------------------------------*',
@@ -700,21 +770,21 @@ def bp_locals(app, tables):
     o = ['*&---------------------------------------------------------------------*',
          f'*& Artifact: zbp_r_cd_{low}.clas.locals_imp.abap',
          '*& Purpose:',
-         f"*& Handlers and saver of {app['title']}: ZCD_OPS authorisation, create /",
+         f"*& Handlers and saver of {app['title']}: ZCA_OPS authorisation, create /",
          '*& delete per client policy (D-3), field checks, customizing request check',
          '*& and transport recording. Thin: every decision is made by the gate / checks.',
          '*& Modification log:',
          HDR_LOG_LOCALS,
          '*&---------------------------------------------------------------------*',
-         '"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers',
+         '"! ZCA_OPS answers of this app (area of the app) for the RAP handlers',
          'CLASS lcl_auth DEFINITION FINAL.',
          '  PUBLIC SECTION.',
-         f"    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE '{app['pe_area']}'.",
+         f"    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE '{app['pe_area']}'.",
          '',
          '    "! Allowed when the user has the activity for the area (create 01, change 02, delete 06)',
          '    CLASS-METHODS answer',
          '      IMPORTING',
-         '        iv_actvt       TYPE zif_cd_ops_cfg_types=>ty_actvt',
+         '        iv_actvt       TYPE zif_ca_ops_cfg_types=>ty_actvt',
          '      RETURNING',
          '        VALUE(rv_auth) TYPE abp_behv_auth.',
          '',
@@ -725,14 +795,14 @@ def bp_locals(app, tables):
          'ENDCLASS.', '', '',
          'CLASS lcl_auth IMPLEMENTATION.', '',
          '  METHOD answer.',
-         '    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized( iv_pe_area = gc_pe_area',
-         '                                                                               iv_actvt   = iv_actvt )',
+         '    rv_auth = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->is_authorized( iv_area  = gc_area',
+         '                                                                               iv_actvt = iv_actvt )',
          '                           = abap_true',
          '                      THEN if_abap_behv=>auth-allowed',
          '                      ELSE if_abap_behv=>auth-unauthorized ).',
          '  ENDMETHOD.', '', '',
          '  METHOD edit.',
-         '    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->may_edit( gc_pe_area ) = abap_true',
+         '    rv_auth = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->may_edit( gc_area ) = abap_true',
          '                      THEN if_abap_behv=>auth-allowed',
          '                      ELSE if_abap_behv=>auth-unauthorized ).',
          '  ENDMETHOD.', '', 'ENDCLASS.', '', '',
@@ -746,7 +816,7 @@ def bp_locals(app, tables):
          'ENDCLASS.', '', '',
          f'CLASS lhc_{rl} IMPLEMENTATION.', '',
          '  METHOD get_global_authorizations.',
-         '    " ZCD_OPS for the payment engine area (2026-11-08): editing the singleton needs 01, 02 or 06;',
+         '    " ZCA_OPS for the area of the app (2026-11-08): editing the singleton needs 01, 02 or 06;',
          '    " a new child row needs 01 - change (02) and delete (06) are answered by each child entity',
          '    IF requested_authorizations-%update = if_abap_behv=>mk-on.',
          '      result-%update = lcl_auth=>edit( ).',
@@ -756,12 +826,12 @@ def bp_locals(app, tables):
          '    ENDIF.']
     for t in tables:
         o.append(f"    IF requested_authorizations-%assoc-_{t['alias']} = if_abap_behv=>mk-on.")
-        o.append(f"      result-%assoc-_{t['alias']} = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).")
+        o.append(f"      result-%assoc-_{t['alias']} = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).")
         o.append('    ENDIF.')
     o += ['  ENDMETHOD.', '', '',
          '  METHOD get_global_features.',
          '    " D-3: new entries only where the client records changes (DV1)',
-         '    DATA(lv_create) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed( ) = abap_true',
+         '    DATA(lv_create) = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->create_allowed( ) = abap_true',
          '                              THEN if_abap_behv=>fc-o-enabled',
          '                              ELSE if_abap_behv=>fc-o-disabled ).']
     for t in tables:
@@ -792,25 +862,25 @@ def bp_locals(app, tables):
               'ENDCLASS.', '', '',
               f'CLASS lhc_{al} IMPLEMENTATION.', '',
               '  METHOD get_global_authorizations.',
-              '    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)',
+              '    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)',
               '    IF requested_authorizations-%update = if_abap_behv=>mk-on.',
-              '      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).',
+              '      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).',
               '    ENDIF.',
               '    IF requested_authorizations-%delete = if_abap_behv=>mk-on.',
-              '      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).',
+              '      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).',
               '    ENDIF.',
               '  ENDMETHOD.', '', '',
               '  METHOD get_global_features.',
               '    " D-3: delete only where new entries are allowed (DV1); production keeps rows',
               '    IF requested_features-%delete = if_abap_behv=>mk-on.',
-              '      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true',
+              '      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true',
               '                               THEN if_abap_behv=>fc-o-enabled',
               '                               ELSE if_abap_behv=>fc-o-disabled ).',
               '    ENDIF.',
               '  ENDMETHOD.', '']
         if t['checks']:
             o += ['', '  METHOD validatefields.',
-                  '    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.']
+                  '    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.']
             o += ['',
                   f'    READ ENTITIES OF zr_cd_{low} IN LOCAL MODE',
                   f'      ENTITY {a}',
@@ -853,7 +923,7 @@ def bp_locals(app, tables):
               '        FIELDS ( TransportRequestID )',
               '        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )',
               '      RESULT DATA(lt_root).',
-              '    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(',
+              '    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(',
               '                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).',
               '    LOOP AT keys INTO DATA(ls_key).',
               f'      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-{al}.',
@@ -863,7 +933,7 @@ def bp_locals(app, tables):
               f'      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-{al}.',
               f'      INSERT VALUE #( %tky        = ls_key-%tky',
               '                      %state_area = gc_area_transport',
-              "                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class",
+              "                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class",
               '                                                 number   = ls_msg-number',
               '                                                 severity = if_abap_behv_message=>severity-error',
               '                                                 v1       = ls_msg-v1 )',
@@ -885,9 +955,9 @@ def bp_locals(app, tables):
           '    " The root is virtual (singleton): nothing to persist. Children are saved by',
           '    " the framework; here they are recorded on the customizing request where the',
           '    " client records changes (DV1). Production: no-op (change log via table logging).',
-          f'    DATA(lv_request) = VALUE zif_cd_ops_cfg_types=>ty_request( update-{rl}[ 1 ]-TransportRequestID OPTIONAL ).',
+          f'    DATA(lv_request) = VALUE zif_ca_ops_cfg_types=>ty_request( update-{rl}[ 1 ]-TransportRequestID OPTIONAL ).',
           '    TRY.',
-          '        zcl_cd_ops_cfg_factory=>get_gate( )->record(',
+          '        zcl_ca_ops_cfg_factory=>get_gate( )->record(',
           '          iv_request   = lv_request',
           '          it_relations = VALUE #(',
           rels + ' )',
@@ -911,7 +981,7 @@ def bp_locals(app, tables):
             iface.append(f"      {name:<30} TYPE string VALUE `{value}`,")
         iface.append(f'    END OF gc_{sec}' + ('.' if k == len(secs) - 1 else ','))
     iface += ['ENDINTERFACE.', '', '']
-    idx = o.index('"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers')
+    idx = o.index('"! ZCA_OPS answers of this app (area of the app) for the RAP handlers')
     o[idx:idx] = iface
     return '\n'.join(o)
 
@@ -919,7 +989,7 @@ def bp_locals(app, tables):
 def bp_tests(app):
     """Test include of a generated behaviour pool: global authorization through EML
     GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (the handler runs, nothing is read or written),
-    with the configuration-gate doubles of ZCL_CD_OPS_CFG_INJECTOR. ZCD_OPS per child entity
+    with the configuration-gate doubles of ZCL_CA_OPS_CFG_INJECTOR. ZCA_OPS per child entity
     (2026-11-08): create 01 (association of the root), change 02 and delete 06 (the child, here
     the first child of the app), editing the singleton with one of them."""
     low = app['root'].lower()
@@ -929,13 +999,13 @@ def bp_tests(app):
          f'*& Artifact: zbp_r_cd_{low}.clas.testclasses.abap',
          '*& Purpose:',
          f"*& Permission tests of the {app['title']} behaviour pool through EML",
-         '*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCD_OPS of the payment engine',
-         '*& area per activity: edit with 01 / 02 / 06, create 01 on the root association,',
+         '*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCA_OPS of the area of the app',
+         '*& per activity: edit with 01 / 02 / 06, create 01 on the root association,',
          '*& change 02 and delete 06 on a child entity; gate doubles of',
-         '*& ZCL_CD_OPS_CFG_INJECTOR). Global features, validations and the saver need GET',
+         '*& ZCL_CA_OPS_CFG_INJECTOR). Global features, validations and the saver need GET',
          '*& PERMISSIONS ... FEATURES (not parsed by the offline lint) or draft EML with',
          '*& COMMIT ENTITIES on doubled tables: DV1 cases RAP_Config_Apps.md 6; their',
-         '*& decisions are tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY. VERIFY-ADT:',
+         '*& decisions are tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY. VERIFY-ADT:',
          '*& result component GLOBAL and %ASSOC on SAP_BASIS 7.58 SP01.',
          '*& Does not prove live SAP runtime behavior.',
          '*& Modification log:',
@@ -944,27 +1014,27 @@ def bp_tests(app):
          '*&---------------------------------------------------------------------*',
          'CLASS ltd_client DEFINITION FINAL FOR TESTING.',
          '  PUBLIC SECTION.',
-         '    INTERFACES zif_cd_ops_cfg_client PARTIALLY IMPLEMENTED.',
+         '    INTERFACES zif_ca_ops_cfg_client PARTIALLY IMPLEMENTED.',
          'ENDCLASS.', '',
          'CLASS ltd_client IMPLEMENTATION.',
          'ENDCLASS.', '', '',
          'CLASS ltd_transport DEFINITION FINAL FOR TESTING.',
          '  PUBLIC SECTION.',
-         '    INTERFACES zif_cd_ops_cfg_transport PARTIALLY IMPLEMENTED.',
+         '    INTERFACES zif_ca_ops_cfg_transport PARTIALLY IMPLEMENTED.',
          'ENDCLASS.', '',
          'CLASS ltd_transport IMPLEMENTATION.',
          'ENDCLASS.', '', '',
          'CLASS ltd_auth DEFINITION FINAL FOR TESTING.',
          '  PUBLIC SECTION.',
-         '    INTERFACES zif_cd_ops_cfg_auth.',
+         '    INTERFACES zif_ca_ops_cfg_auth.',
          '    "! Activities the user holds for the area',
-         '    DATA mt_actvt TYPE STANDARD TABLE OF zif_cd_ops_cfg_types=>ty_actvt WITH EMPTY KEY.',
-         '    "! Payment engine areas asked',
-         '    DATA mt_pe_area TYPE STANDARD TABLE OF zif_cd_ops_cfg_types=>ty_pe_area WITH EMPTY KEY.',
+         '    DATA mt_actvt TYPE STANDARD TABLE OF zif_ca_ops_cfg_types=>ty_actvt WITH EMPTY KEY.',
+         '    "! Areas asked',
+         '    DATA mt_area TYPE STANDARD TABLE OF zif_ca_ops_types=>ty_area WITH EMPTY KEY.',
          'ENDCLASS.', '',
          'CLASS ltd_auth IMPLEMENTATION.',
-         '  METHOD zif_cd_ops_cfg_auth~is_authorized.',
-         '    INSERT iv_pe_area INTO TABLE mt_pe_area.',
+         '  METHOD zif_ca_ops_cfg_auth~is_authorized.',
+         '    INSERT iv_area INTO TABLE mt_area.',
          '    rv_allowed = xsdbool( line_exists( mt_actvt[ table_line = iv_actvt ] ) ).',
          '  ENDMETHOD.',
          'ENDCLASS.', '', '',
@@ -972,7 +1042,7 @@ def bp_tests(app):
          '  RISK LEVEL HARMLESS',
          '  DURATION SHORT.', '',
          '  PRIVATE SECTION.',
-         f"    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE '{app['pe_area']}'.", '',
+         f"    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE '{app['pe_area']}'.", '',
          '    TYPES:',
          '      BEGIN OF ty_flags,',
          '        create TYPE abap_bool,',
@@ -1005,23 +1075,23 @@ def bp_tests(app):
          'CLASS ltc_permissions IMPLEMENTATION.', '',
          '  METHOD setup.',
          '    mo_auth = NEW #( ).',
-         '    zcl_cd_ops_cfg_injector=>inject_client( NEW ltd_client( ) ).',
-         '    zcl_cd_ops_cfg_injector=>inject_transport( NEW ltd_transport( ) ).',
-         '    zcl_cd_ops_cfg_injector=>inject_auth( mo_auth ).',
+         '    zcl_ca_ops_cfg_injector=>inject_client( NEW ltd_client( ) ).',
+         '    zcl_ca_ops_cfg_injector=>inject_transport( NEW ltd_transport( ) ).',
+         '    zcl_ca_ops_cfg_injector=>inject_auth( mo_auth ).',
          '  ENDMETHOD.', '', '',
          '  METHOD teardown.',
-         '    zcl_cd_ops_cfg_injector=>reset( ).',
+         '    zcl_ca_ops_cfg_injector=>reset( ).',
          '    CLEAR mo_auth.',
          '  ENDMETHOD.', '', '',
          '  METHOD configure_scenario.',
          '    IF is_flags-create = abap_true.',
-         '      INSERT zif_cd_ops_cfg_types=>gc_actvt-create INTO TABLE mo_auth->mt_actvt.',
+         '      INSERT zif_ca_ops_cfg_types=>gc_actvt-create INTO TABLE mo_auth->mt_actvt.',
          '    ENDIF.',
          '    IF is_flags-change = abap_true.',
-         '      INSERT zif_cd_ops_cfg_types=>gc_actvt-change INTO TABLE mo_auth->mt_actvt.',
+         '      INSERT zif_ca_ops_cfg_types=>gc_actvt-change INTO TABLE mo_auth->mt_actvt.',
          '    ENDIF.',
          '    IF is_flags-delete = abap_true.',
-         '      INSERT zif_cd_ops_cfg_types=>gc_actvt-delete INTO TABLE mo_auth->mt_actvt.',
+         '      INSERT zif_ca_ops_cfg_types=>gc_actvt-delete INTO TABLE mo_auth->mt_actvt.',
          '    ENDIF.',
          '  ENDMETHOD.', '', '',
          '  METHOD answers.',
@@ -1057,9 +1127,9 @@ def bp_tests(app):
          '                                         change = if_abap_behv=>auth-allowed',
          '                                         delete = if_abap_behv=>auth-unauthorized ).',
          "        cl_abap_unit_assert=>assert_equals( act = ls_act exp = ls_exp msg = '02 only: edit and change' ).",
-         '        cl_abap_unit_assert=>assert_equals( act = line_exists( mo_auth->mt_pe_area[ table_line = gc_pe_area ] )',
+         '        cl_abap_unit_assert=>assert_equals( act = line_exists( mo_auth->mt_area[ table_line = gc_area ] )',
          '                                            exp = abap_true',
-         "                                            msg = 'Checked for the payment engine area of the app' ).",
+         "                                            msg = 'Checked for the area of the app' ).",
          '      CATCH cx_root INTO DATA(lx_error).',
          '        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).',
          '    ENDTRY.',
@@ -1115,13 +1185,19 @@ def bp_tests(app):
 
 # ---------------------------------------------------------------------------
 def main():
+    global CHECK_ONLY
+    import sys
+    CHECK_ONLY = '--check' in sys.argv
     changed = 0
     for mod, app in SPEC.items():
+        app.setdefault('ddic', mod)
         app['chg'] = app['root'].replace('All', 'Chg')
         folder = app['folder']
+        ddic = app['ddic']
+        draft_ddic = app.get('draft_ddic', ddic)
         tables = []
         for (table, alias, draft, singular, plural, blank_keys, checks) in app['tables']:
-            fields = read_table(mod, table)
+            fields = read_table(app, table)
             for f in fields:
                 f['el'] = camel(f['name'])
             tables.append(dict(table=table, alias=alias, draft=draft, singular=singular, plural=plural,
@@ -1129,27 +1205,32 @@ def main():
             draft_fields = [dict(key=f['key'], el=f['el'], type=f['type']) for f in fields if f['key']]
             draft_fields.append(dict(key=False, el='SingletonID', type='abap.int1'))
             draft_fields += [dict(key=False, el=f['el'], type=f['type']) for f in fields if not f['key']]
-            changed += write(f'ddic/{mod}/{draft}.tabl.ddl', draft_table(draft, f'Draft: {plural}', draft_fields))
-            changed += write(f'src/{folder}/zr_cd_{alias.lower()}.ddls.asddls', child_r(app, tables[-1], fields))
-            changed += write(f'src/{folder}/zc_cd_{alias.lower()}.ddls.asddls', child_c(app, tables[-1], fields))
-            changed += write(f'src/{folder}/zc_cd_{alias.lower()}.ddlx.asddlxs', child_ddlx(app, tables[-1], fields))
+            changed += write(f'ddic/{draft_ddic}/{draft}.tabl.ddl', draft_table(draft, f'Draft: {plural}', draft_fields), app)
+            changed += write(f'src/{folder}/zr_cd_{alias.lower()}.ddls.asddls', child_r(app, tables[-1], fields), app)
+            changed += write(f'src/{folder}/zc_cd_{alias.lower()}.ddls.asddls', child_c(app, tables[-1], fields), app)
+            changed += write(f'src/{folder}/zc_cd_{alias.lower()}.ddlx.asddlxs', child_ddlx(app, tables[-1], fields), app)
         root_fields = [dict(key=True, el='SingletonID', type='abap.int1'),
                        dict(key=False, el='LastChangedAtMax', type='abp_lastchange_tstmpl'),
                        dict(key=False, el='TransportRequestID', type='trkorr')]
-        changed += write(f"ddic/{mod}/{app['draft']}.tabl.ddl",
-                         draft_table(app['draft'], f"Draft: {app['title']} (singleton)", root_fields))
+        changed += write(f"ddic/{draft_ddic}/{app['draft']}.tabl.ddl",
+                         draft_table(app['draft'], f"Draft: {app['title']} (singleton)", root_fields), app)
         r = app['root'].lower()
-        changed += write(f"src/{folder}/zi_cd_{app['chg'].lower()}.ddls.asddls", chg_view(app, tables))
-        changed += write(f'src/{folder}/zr_cd_{r}.ddls.asddls', root_r(app, tables))
-        changed += write(f'src/{folder}/zc_cd_{r}.ddls.asddls', root_c(app, tables))
-        changed += write(f'src/{folder}/zc_cd_{r}.ddlx.asddlxs', root_ddlx(app, tables))
-        changed += write(f'src/{folder}/zr_cd_{r}.bdef.asbdef', bdef_r(app, tables))
-        changed += write(f'src/{folder}/zc_cd_{r}.bdef.asbdef', bdef_c(app, tables))
-        changed += write(f"src/{folder}/{app['service'].lower()}.srvd.srvdsrv", srvd(app, tables))
-        changed += write(f'src/{folder}/zbp_r_cd_{r}.clas.abap', bp_global(app))
-        changed += write(f'src/{folder}/zbp_r_cd_{r}.clas.locals_imp.abap', bp_locals(app, tables))
-        changed += write(f'src/{folder}/zbp_r_cd_{r}.clas.testclasses.abap', bp_tests(app))
+        changed += write(f"src/{folder}/zi_cd_{app['chg'].lower()}.ddls.asddls", chg_view(app, tables), app)
+        changed += write(f'src/{folder}/zr_cd_{r}.ddls.asddls', root_r(app, tables), app)
+        changed += write(f'src/{folder}/zc_cd_{r}.ddls.asddls', root_c(app, tables), app)
+        changed += write(f'src/{folder}/zc_cd_{r}.ddlx.asddlxs', root_ddlx(app, tables), app)
+        changed += write(f'src/{folder}/zr_cd_{r}.bdef.asbdef', bdef_r(app, tables), app)
+        changed += write(f'src/{folder}/zc_cd_{r}.bdef.asbdef', bdef_c(app, tables), app)
+        changed += write(f"src/{folder}/{app['service'].lower()}.srvd.srvdsrv", srvd(app, tables), app)
+        changed += write(f'src/{folder}/zbp_r_cd_{r}.clas.abap', bp_global(app), app)
+        changed += write(f'src/{folder}/zbp_r_cd_{r}.clas.locals_imp.abap', bp_locals(app, tables), app)
+        changed += write(f'src/{folder}/zbp_r_cd_{r}.clas.testclasses.abap', bp_tests(app), app)
 
+    if CHECK_ONLY:
+        for f in STALE:
+            print('STALE ' + f)
+        print(f'{changed} file(s) out of date for {len(SPEC)} apps')
+        sys.exit(1 if changed else 0)
     print(f'{changed} file(s) written/updated for {len(SPEC)} apps')
 
 

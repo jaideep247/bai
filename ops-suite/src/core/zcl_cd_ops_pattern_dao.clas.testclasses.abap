@@ -71,8 +71,8 @@ CLASS ltc_pattern_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_EBS_FLOW_PAT' ) ( 'ZCD_FMON_IFACE' ) ( 'ZCD_JOB_STEP' )
-                                   ( 'ZCD_OPS_ALRULE' ) ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_SUPPRESS' )
-                                   ( 'ZCD_FMON_FILE' ) ( 'TBTCO' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_RUN' )
+                                   ( 'ZCA_OPS_ALRULE' ) ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_SUPPRESS' )
+                                   ( 'ZCD_FMON_FILE' ) ( 'TBTCO' ) ( 'ZCA_OPS_FINDING' ) ( 'ZCA_OPS_RUN' )
                                    ( 'FEBEP' ) ( 'FEBKO' ) ( 'ZCD_EBS_ACCT' ) ) ).
   ENDMETHOD.
 
@@ -244,10 +244,10 @@ CLASS ltc_pattern_dao IMPLEMENTATION.
 
   " Suppression keys: object keys of HCK findings of runs started in the window
   METHOD finding_keys_of_hck_runs.
-    DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
-    DATA ls_run TYPE zcd_ops_run.
-    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
-    DATA ls_finding TYPE zcd_ops_finding.
+    DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
+    DATA ls_run TYPE zca_ops_run.
+    DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA ls_finding TYPE zca_ops_finding.
     TRY.
         ls_run-run_id     = '000000000000000000000000000000E1'.
         ls_run-started_at = gc_test-run_in.

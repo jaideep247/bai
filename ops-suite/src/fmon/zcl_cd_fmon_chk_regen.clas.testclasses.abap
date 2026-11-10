@@ -47,9 +47,9 @@ CLASS ltc_regen_check DEFINITION FINAL
 
     METHODS act
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS delivered_twice_is_critical FOR TESTING.
     METHODS peer_outside_run_is_used FOR TESTING.
@@ -91,7 +91,7 @@ CLASS ltc_regen_check IMPLEMENTATION.
   METHOD act.
     DATA ls_check TYPE zif_cd_fmon_types=>ty_chk.
     ls_check-check_id = 'F_REGEN'.
-    ls_check-severity = zif_cd_ops_types=>gc_severity-block.
+    ls_check-severity = zif_ca_ops_types=>gc_severity-block.
     rt_findings = NEW zcl_cd_fmon_chk_regen( )->zif_cd_fmon_check~execute( is_ctx   = ms_ctx
                                                                           is_check = ls_check ).
   ENDMETHOD.
@@ -115,7 +115,7 @@ CLASS ltc_regen_check IMPLEMENTATION.
                                             exp = gc_name-second
                                             msg = 'On the regenerated file' ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-severity
-                                            exp = zif_cd_ops_types=>gc_severity-block
+                                            exp = zif_ca_ops_types=>gc_severity-block
                                             msg = 'Severity of the check row (seed B)' ).
         cl_abap_unit_assert=>assert_char_cp( act = ls_finding-message
                                              exp = |*{ gc_name-first }*|

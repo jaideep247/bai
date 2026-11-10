@@ -18,6 +18,10 @@
     {
       "folder": "/../param-framework/src",
       "files": "/**/*.*"
+    },
+    {
+      "folder": "/../ops-framework/src",
+      "files": "/**/*.*"
     }
   ],
   "syntax": {

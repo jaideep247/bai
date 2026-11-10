@@ -57,7 +57,7 @@ define root view entity ZR_CD_TrxReqFlow
   key Req.CompanyCode,
   key Req.ClearingDoc,
   key Req.PaymentMethod,
-      cast( 'CORE' as abap.char( 4 ) )                      as PaymentEngineArea,
+      cast( 'CD_OPS' as abap.char( 16 ) )                      as PaymentEngineArea,
       Req.RequestDate,
       Req.LastAttemptDate,
       Req.RequestOutcome,

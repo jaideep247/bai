@@ -47,7 +47,7 @@ CLASS ltc_ev_pay_status DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_runtime_types=>ty_evidence_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS listed_status_found   FOR TESTING.
     METHODS other_status_shown    FOR TESTING.
     METHODS newest_run_decides    FOR TESTING.
@@ -173,7 +173,7 @@ CLASS ltc_ev_pay_status IMPLEMENTATION.
     TRY.
         collect( iv_param1 = space ).
         cl_abap_unit_assert=>fail( msg = 'Blank PARAM1 must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Raised' ).
     ENDTRY.
   ENDMETHOD.

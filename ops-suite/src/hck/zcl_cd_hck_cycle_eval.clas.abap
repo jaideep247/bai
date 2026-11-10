@@ -50,7 +50,7 @@ CLASS zcl_cd_hck_cycle_eval DEFINITION
         is_step            TYPE zif_cd_hck_types=>ty_cycle_step
         is_status          TYPE zif_cd_hck_types=>ty_step_status
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 
     "! Whole minutes between two date/time points (negative when reversed)
     CLASS-METHODS minutes_between
@@ -83,7 +83,7 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
     rs_status-cycle_date = iv_cycle_date.
 
     LOOP AT it_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
-      IF zcl_cd_ops_util=>pcre_match( iv_value = <ls_run>-jobname iv_pattern = is_step-jobname ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_match( iv_value = <ls_run>-jobname iv_pattern = is_step-jobname ) = abap_false.
         CONTINUE.
       ENDIF.
       IF <ls_run>-status <> zif_cd_hck_types=>gc_job_status-running
@@ -163,12 +163,12 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
 
 
   METHOD findings_for.
-    DATA ls_finding TYPE zif_cd_ops_types=>ty_finding.
+    DATA ls_finding TYPE zif_ca_ops_types=>ty_finding.
 
     ls_finding-object_type = zif_cd_hck_types=>gc_object_type.
     ls_finding-object_key  = |{ is_status-cycle_id }/{ is_status-step_no }|.
     ls_finding-reference   = is_status-jobname.
-    ls_finding-action      = zif_cd_ops_types=>gc_action-notify.
+    ls_finding-action      = zif_ca_ops_types=>gc_action-notify.
     ls_finding-message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-cycle_step
                                                     iv_v1    = is_status-cycle_id
                                                     iv_v2    = is_status-step_no
@@ -178,16 +178,16 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
     CASE is_status-state.
       WHEN zif_cd_hck_types=>gc_step_state-missed.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_missed.
-        ls_finding-severity   = COND #( WHEN is_step-critical = abap_true  THEN zif_cd_ops_types=>gc_severity-error
-                                        WHEN is_step-skippable = abap_true THEN zif_cd_ops_types=>gc_severity-info
-                                        ELSE zif_cd_ops_types=>gc_severity-warning ).
+        ls_finding-severity   = COND #( WHEN is_step-critical = abap_true  THEN zif_ca_ops_types=>gc_severity-error
+                                        WHEN is_step-skippable = abap_true THEN zif_ca_ops_types=>gc_severity-info
+                                        ELSE zif_ca_ops_types=>gc_severity-warning ).
       WHEN zif_cd_hck_types=>gc_step_state-failed.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_failed.
-        ls_finding-severity   = COND #( WHEN is_step-critical = abap_true THEN zif_cd_ops_types=>gc_severity-error
-                                        ELSE zif_cd_ops_types=>gc_severity-warning ).
+        ls_finding-severity   = COND #( WHEN is_step-critical = abap_true THEN zif_ca_ops_types=>gc_severity-error
+                                        ELSE zif_ca_ops_types=>gc_severity-warning ).
       WHEN zif_cd_hck_types=>gc_step_state-stuck.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_stuck.
-        ls_finding-severity   = zif_cd_ops_types=>gc_severity-error.
+        ls_finding-severity   = zif_ca_ops_types=>gc_severity-error.
         ls_finding-message    = |{ ls_finding-message } {
                                  zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-after_min_max
                                                         iv_v1    = is_status-runtime_min
@@ -197,7 +197,7 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
         DATA(ls_base) = ls_finding.
         IF is_status-late_start = abap_true.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-step_late.
-          ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
+          ls_finding-severity   = zif_ca_ops_types=>gc_severity-warning.
           ls_finding-message    = |{ ls_base-message } {
                                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_started_late
                                                           iv_v1    = |{ is_status-started_at TIME = ISO }|
@@ -206,7 +206,7 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
         ENDIF.
         IF is_status-retried = abap_true.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-step_retried.
-          ls_finding-severity   = zif_cd_ops_types=>gc_severity-info.
+          ls_finding-severity   = zif_ca_ops_types=>gc_severity-info.
           ls_finding-message    = |{ ls_base-message } {
                                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_retried
                                                           iv_v1    = is_status-attempts
@@ -217,7 +217,7 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
           RETURN.
         ENDIF.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_overrun.
-        ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
+        ls_finding-severity   = zif_ca_ops_types=>gc_severity-warning.
         ls_finding-message    = |{ ls_base-message } {
                                  zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-in_min_max
                                                         iv_v1    = is_status-runtime_min
@@ -227,7 +227,7 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
           RETURN.
         ENDIF.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_blocked.
-        ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
+        ls_finding-severity   = zif_ca_ops_types=>gc_severity-warning.
         ls_finding-message    = |{ ls_finding-message }, {
                                  zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-blocked_by_predecessor
                                                         iv_v1    = is_step-pred_step ) }|.

@@ -236,8 +236,8 @@ INTERFACE zif_cd_hck_runtime_types
       "! House bank (calendar override per bank, ZPMC entry with a house bank)
       hbkid    TYPE ty_hbkid,
       valut    TYPE d,
-      amount   TYPE zif_cd_ops_types=>ty_amount,
-      currency TYPE zif_cd_ops_types=>ty_currency,
+      amount   TYPE zif_ca_ops_types=>ty_amount,
+      currency TYPE zif_ca_ops_types=>ty_currency,
       "! TFK042Z-XEINZ: X = collection, blank = disbursement
       xeinz    TYPE abap_bool,
       "! Set by the check (not read): flow D / C and method class of the payment method
@@ -321,7 +321,7 @@ INTERFACE zif_cd_hck_runtime_types
     END OF gc_rule_param.
 
   "! Interface every evidence plug-in (ZCD_HCK_CLRRULE-EVIDENCE_CLASS) implements
-  CONSTANTS gc_evidence_intf TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_EVIDENCE'.
+  CONSTANTS gc_evidence_intf TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_EVIDENCE'.
 
   "! One active row of ZCD_HCK_CLRRULE: evidence kind and its parameters for flow + method
   "! class + purpose; rows of one purpose are AND-combined (REQUIRED X / N)
@@ -331,7 +331,7 @@ INTERFACE zif_cd_hck_runtime_types
       method_class   TYPE ty_method_class,
       purpose        TYPE ty_purpose,
       seq            TYPE ty_rule_seq,
-      evidence_class TYPE zif_cd_ops_types=>ty_class_name,
+      evidence_class TYPE zif_ca_ops_types=>ty_class_name,
       param1         TYPE ty_rule_param,
       param2         TYPE ty_rule_param,
       param3         TYPE ty_rule_param,
@@ -399,12 +399,12 @@ INTERFACE zif_cd_hck_runtime_types
       "! Pending outcome: calendar days after the last line it may stay (0 = no limit)
       max_age_days    TYPE i,
       "! Severity when the evidence does not match (blank = E)
-      severity        TYPE zif_cd_ops_types=>ty_severity,
+      severity        TYPE zif_ca_ops_types=>ty_severity,
       description     TYPE zif_cd_hck_types=>ty_text,
       "! The row applies only when the register state (DFKKCR-STATE, cheque link) is in this list
       reg_state       TYPE ty_rule_param,
       "! Reaching this outcome is itself a finding with this code (e.g. CHEQUE_CLARIFICATION)
-      finding         TYPE zif_cd_ops_types=>ty_check_code,
+      finding         TYPE zif_ca_ops_types=>ty_check_code,
     END OF ty_seq_outcome.
   TYPES tt_seq_outcome TYPE SORTED TABLE OF ty_seq_outcome WITH UNIQUE KEY flow method_class seq.
 
@@ -444,8 +444,8 @@ INTERFACE zif_cd_hck_runtime_types
     BEGIN OF ty_ref_row,
       ref      TYPE c LENGTH 70,
       rtype    TYPE c LENGTH 40,
-      amount   TYPE zif_cd_ops_types=>ty_amount,
-      currency TYPE zif_cd_ops_types=>ty_currency,
+      amount   TYPE zif_ca_ops_types=>ty_amount,
+      currency TYPE zif_ca_ops_types=>ty_currency,
       grp      TYPE c LENGTH 70,
       rdate    TYPE d,
       status   TYPE c LENGTH 40,
@@ -456,8 +456,8 @@ INTERFACE zif_cd_hck_runtime_types
   "! A further anomaly of the evidence of one payment (every anomaly is reported)
   TYPES:
     BEGIN OF ty_anomaly,
-      code     TYPE zif_cd_ops_types=>ty_check_code,
-      severity TYPE zif_cd_ops_types=>ty_severity,
+      code     TYPE zif_ca_ops_types=>ty_check_code,
+      severity TYPE zif_ca_ops_types=>ty_severity,
       detail   TYPE string,
     END OF ty_anomaly.
   TYPES tt_anomaly TYPE STANDARD TABLE OF ty_anomaly WITH EMPTY KEY.
@@ -471,8 +471,8 @@ INTERFACE zif_cd_hck_runtime_types
       hits       TYPE i,
       "! Anomaly of the evidence itself: finding code (UNEXPECTED_SEQUENCE, RETURN_INCONSISTENT,
       "! PENDING_OUTCOME_MISSING) and its severity; the payment is listed there, never aged
-      anomaly    TYPE zif_cd_ops_types=>ty_check_code,
-      severity   TYPE zif_cd_ops_types=>ty_severity,
+      anomaly    TYPE zif_ca_ops_types=>ty_check_code,
+      severity   TYPE zif_ca_ops_types=>ty_severity,
       "! Short evidence text for the finding (keys, status values, sequence)
       detail     TYPE string,
       "! Anomalies after the primary one (ANOMALY), in the order found; each is its own finding
@@ -503,63 +503,63 @@ INTERFACE zif_cd_hck_runtime_types
   CONSTANTS:
     BEGIN OF gc_code,
       "! Number range interval at or above the amber usage
-      nr_usage_high      TYPE zif_cd_ops_types=>ty_check_code VALUE 'NR_USAGE_HIGH',
+      nr_usage_high      TYPE zif_ca_ops_types=>ty_check_code VALUE 'NR_USAGE_HIGH',
       "! A configured number range object has no internal interval of this or next year
-      nr_no_interval     TYPE zif_cd_ops_types=>ty_check_code VALUE 'NR_NO_INTERVAL',
+      nr_no_interval     TYPE zif_ca_ops_types=>ty_check_code VALUE 'NR_NO_INTERVAL',
       "! Limits or level of an interval are not numeric / not a valid interval
-      nr_not_numeric     TYPE zif_cd_ops_types=>ty_check_code VALUE 'NR_NOT_NUMERIC',
-      queue_error        TYPE zif_cd_ops_types=>ty_check_code VALUE 'QUEUE_ERROR',
-      queue_hold         TYPE zif_cd_ops_types=>ty_check_code VALUE 'QUEUE_HOLD',
-      queue_stuck        TYPE zif_cd_ops_types=>ty_check_code VALUE 'QUEUE_STUCK',
+      nr_not_numeric     TYPE zif_ca_ops_types=>ty_check_code VALUE 'NR_NOT_NUMERIC',
+      queue_error        TYPE zif_ca_ops_types=>ty_check_code VALUE 'QUEUE_ERROR',
+      queue_hold         TYPE zif_ca_ops_types=>ty_check_code VALUE 'QUEUE_HOLD',
+      queue_stuck        TYPE zif_ca_ops_types=>ty_check_code VALUE 'QUEUE_STUCK',
       "! A queue source could not be read (DDIC, whitelist): nothing measured for it
-      queue_config       TYPE zif_cd_ops_types=>ty_check_code VALUE 'QUEUE_CONFIG_INVALID',
+      queue_config       TYPE zif_ca_ops_types=>ty_check_code VALUE 'QUEUE_CONFIG_INVALID',
       "! bgRFC source not configured (PARAM4 blank) - listed, not measured
-      queue_not_watched  TYPE zif_cd_ops_types=>ty_check_code VALUE 'QUEUE_NOT_MONITORED',
+      queue_not_watched  TYPE zif_ca_ops_types=>ty_check_code VALUE 'QUEUE_NOT_MONITORED',
       "! Payments of a flow / method class not cleared on the bank statement past the limit
-      payment_not_clear  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAYMENT_NOT_CLEARED',
+      payment_not_clear  TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAYMENT_NOT_CLEARED',
       "! Payments aged from the run date because the value date is missing
-      value_date_missing TYPE zif_cd_ops_types=>ty_check_code VALUE 'VALUE_DATE_MISSING',
+      value_date_missing TYPE zif_ca_ops_types=>ty_check_code VALUE 'VALUE_DATE_MISSING',
       "! Configuration of the in-flight check incomplete (calendar, method class, rules)
-      inflight_config    TYPE zif_cd_ops_types=>ty_check_code VALUE 'INFLIGHT_CONFIG',
+      inflight_config    TYPE zif_ca_ops_types=>ty_check_code VALUE 'INFLIGHT_CONFIG',
       "! No ZCD_HCK_THRESH limits for a metric the check classifies by - not evaluated
-      limits_missing     TYPE zif_cd_ops_types=>ty_check_code VALUE 'LIMITS_NOT_CONFIGURED',
+      limits_missing     TYPE zif_ca_ops_types=>ty_check_code VALUE 'LIMITS_NOT_CONFIGURED',
       "! A read reached its row cap: the result may be incomplete
-      read_capped        TYPE zif_cd_ops_types=>ty_check_code VALUE 'TECH_READ_CAPPED',
+      read_capped        TYPE zif_ca_ops_types=>ty_check_code VALUE 'TECH_READ_CAPPED',
       "! Some but not all evidence of CLEARED (or VOIDED) holds (user rules 1, 2)
-      clearing_inconsist TYPE zif_cd_ops_types=>ty_check_code VALUE 'CLEARING_INCONSISTENT',
+      clearing_inconsist TYPE zif_ca_ops_types=>ty_check_code VALUE 'CLEARING_INCONSISTENT',
       "! Some but not all evidence of RETURNED holds, amounts differ, several lines (rule 4)
-      return_inconsist   TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETURN_INCONSISTENT',
+      return_inconsist   TYPE zif_ca_ops_types=>ty_check_code VALUE 'RETURN_INCONSISTENT',
       "! A ZCD_HCK_CLRRULE row cannot be used (class, parameters): its purpose is not judged
-      clrrule_invalid    TYPE zif_cd_ops_types=>ty_check_code VALUE 'CLEARING_RULE_INVALID',
+      clrrule_invalid    TYPE zif_ca_ops_types=>ty_check_code VALUE 'CLEARING_RULE_INVALID',
       "! The ordered BAI roles of a payment match no active ZCD_HCK_SEQOUT pattern
-      unexpected_seq     TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNEXPECTED_SEQUENCE',
+      unexpected_seq     TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNEXPECTED_SEQUENCE',
       "! A pending outcome (e.g. redeposit) is older than its MAX_AGE_DAYS
-      pending_overdue    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PENDING_OUTCOME_MISSING',
+      pending_overdue    TYPE zif_ca_ops_types=>ty_check_code VALUE 'PENDING_OUTCOME_MISSING',
       "! Amount of the cheque-paid line differs from the payment amount (manual clearing in FPCHR)
-      cheque_amount      TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_AMOUNT_MISMATCH',
+      cheque_amount      TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHEQUE_AMOUNT_MISMATCH',
       "! A mandatory evidence row (REQUIRED X / C / N) is not configured or not usable: no
       "! positive conclusion for the payment, it stays in flight (design review 2026-11-07)
-      undetermined       TYPE zif_cd_ops_types=>ty_check_code VALUE 'CLEARING_UNDETERMINED',
+      undetermined       TYPE zif_ca_ops_types=>ty_check_code VALUE 'CLEARING_UNDETERMINED',
       "! A monetary statement line of the payment has no role in ZBTR (LIFECYCLE) and is not an
       "! approved exclusion (HCK_BTC_INFO_<scheme>): lifecycle INDETERMINATE
-      btc_role_missing   TYPE zif_cd_ops_types=>ty_check_code VALUE 'BTC_ROLE_MISSING',
+      btc_role_missing   TYPE zif_ca_ops_types=>ty_check_code VALUE 'BTC_ROLE_MISSING',
       "! A statement line fits several cheques of the same house bank account (cheque number
       "! suffix): no cashing evidence is inherited
-      cheque_ambiguous   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_LINK_AMBIGUOUS',
+      cheque_ambiguous   TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHEQUE_LINK_AMBIGUOUS',
       "! The outcome row that matches needs the cheque register state but the payment has no
       "! cheque register row (DFKKCR) for the link of the rule
-      register_missing   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_REGISTER_MISSING',
+      register_missing   TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHEQUE_REGISTER_MISSING',
       "! Outcome findings of cheques (ZCD_HCK_SEQOUT-FINDING): several 581 / 255, correction
-      cheque_clarify     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_CLARIFICATION',
-      manual_clearing    TYPE zif_cd_ops_types=>ty_check_code VALUE 'MANUAL_CLEARING_REQUIRED',
+      cheque_clarify     TYPE zif_ca_ops_types=>ty_check_code VALUE 'CHEQUE_CLARIFICATION',
+      manual_clearing    TYPE zif_ca_ops_types=>ty_check_code VALUE 'MANUAL_CLEARING_REQUIRED',
       "! The bank evidence decides (or the bank ACK is in) but DPAYH-ZZ_PAYMENT_STATUS has not
       "! followed within the grace period (hourly payment status job): one finding per payment
-      status_lag         TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_STATUS_LAG',
+      status_lag         TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_STATUS_LAG',
       "! The payment outcome snapshot is behind more than MON_STALE_AFTER_MIN_CORE (or never ran): the
       "! counts may miss the newest evidence - evidence PARTIAL, never GREEN on stale data
-      snapshot_stale     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_SNAPSHOT_STALE',
+      snapshot_stale     TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_SNAPSHOT_STALE',
       "! Payments the snapshot has not reached (or whose versions all say AMBIGUOUS) evaluated live
-      evaluated_live     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_EVALUATED_LIVE',
+      evaluated_live     TYPE zif_ca_ops_types=>ty_check_code VALUE 'PAY_EVALUATED_LIVE',
     END OF gc_code.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM)
@@ -570,45 +570,45 @@ INTERFACE zif_cd_hck_runtime_types
   CONSTANTS:
     BEGIN OF gc_param,
       "! qRFC / bgRFC states that are an error (comma list)
-      queue_err_states  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_QUEUE_ERR_STATES',
+      queue_err_states  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_QUEUE_ERR_STATES',
       "! States that hold a queue (stopped)
-      queue_hold_states TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_QUEUE_HOLD_STATES',
+      queue_hold_states TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_QUEUE_HOLD_STATES',
       "! States that are normal unless older than the check's age limit (stuck)
-      queue_wait_states TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_QUEUE_WAIT_STATES',
+      queue_wait_states TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_QUEUE_WAIT_STATES',
       "! Rows of one technical read (NRIV intervals, queue groups)
-      max_tech_rows     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_TECH_ROWS',
+      max_tech_rows     TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAX_TECH_ROWS',
       "! Payments read per window (DPAYH)
-      inflight_max_rows TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_MAX_ROWS',
+      inflight_max_rows TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_MAX_ROWS',
       "! Minutes after the bank evidence / the bank ACK before a status that did not follow is a
       "! PAY_STATUS_LAG (the payment status job runs hourly)
-      status_lag_min    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_LAG_MIN',
+      status_lag_min    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_LAG_MIN',
       "! Payment statuses that must have changed once the bank ACK of the payment is received
-      status_ack_open   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_ACK_OPEN',
+      status_ack_open   TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_ACK_OPEN',
       "! Flow + method classes acknowledged per file (comma list, e.g. CACH): their status lag after
       "! the bank ACK uses the ACK of the payment run's file (FMON generation group); every other
       "! class is acknowledged per payment (TRACE_SRC_ACK)
-      ack_file_classes  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_CLASSES',
+      ack_file_classes  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_CLASSES',
       "! FMON source (ZCD_FMON_SRC) whose GROUP_FIELDS name the payment run of a file
-      ack_file_src      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_SRC',
+      ack_file_src      TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_SRC',
       "! Stripe payout evidence (ZCL_CD_HCK_EV_STRIPE; table consolidation 2026-11-08, were the rows
       "! of ZCD_HCK_EVSET set STRIPE): chain payment document (DFKKOP-AUGBL) -> payment intent ID
       "! (DFKKOP field STRIPE_DFKKOP_FIELD) -> payout log row (STRIPE_TABLE, field
       "! STRIPE_INTENT_FIELD). Table / field names are validated against the DDIC and ZCD_OPS_TABWL
       "! (HCK / READ) before each read; delivered blank (landscape-specific, VERIFY-SE11) = the
       "! evidence kind is not configured
-      stripe_table        TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TABLE',
-      stripe_intent_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_INTENT_FIELD',
-      stripe_dfkkop_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_DFKKOP_FIELD',
+      stripe_table        TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TABLE',
+      stripe_intent_field TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_INTENT_FIELD',
+      stripe_dfkkop_field TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_DFKKOP_FIELD',
       "! Optional fields of the payout log: record type, payout ID (filled = in a payout), ACK status
-      stripe_type_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TYPE_FIELD',
-      stripe_payout_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_PAYOUT_FIELD',
-      stripe_ack_field    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FIELD',
+      stripe_type_field   TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TYPE_FIELD',
+      stripe_payout_field TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_PAYOUT_FIELD',
+      stripe_ack_field    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FIELD',
       "! Optional comma lists: record types that count / refund (anomaly), ACK values that count /
       "! partial ACK (anomaly); blank = condition not used
-      stripe_charge       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_CHARGE',
-      stripe_refund       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_REFUND',
-      stripe_ack_full     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FULL',
-      stripe_ack_partial  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_PARTIAL',
+      stripe_charge       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_CHARGE',
+      stripe_refund       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_REFUND',
+      stripe_ack_full     TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FULL',
+      stripe_ack_partial  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_PARTIAL',
     END OF gc_param.
 
   "! Parameter names completed at run time: HCK_BTC_INFO_<scheme> (BAI2, ISO, PRTRY of
@@ -616,7 +616,7 @@ INTERFACE zif_cd_hck_runtime_types
   "! codes that never concern the payment; a line of such a code is ignored by the lifecycle
   CONSTANTS:
     BEGIN OF gc_param_prefix,
-      btc_info TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_BTC_INFO_',
+      btc_info TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_BTC_INFO_',
     END OF gc_param_prefix.
 
   CONSTANTS:
@@ -660,68 +660,68 @@ INTERFACE zif_cd_hck_runtime_types
   " ------------------------------------------------------------ messages (class ZCD_OPS)
   CONSTANTS:
     BEGIN OF gc_msg,
-      nr_usage            TYPE zif_cd_ops_types=>ty_msgno VALUE '376',
-      nr_no_interval      TYPE zif_cd_ops_types=>ty_msgno VALUE '377',
-      nr_not_numeric      TYPE zif_cd_ops_types=>ty_msgno VALUE '378',
-      read_capped         TYPE zif_cd_ops_types=>ty_msgno VALUE '379',
-      queue_group         TYPE zif_cd_ops_types=>ty_msgno VALUE '380',
-      queue_detail        TYPE zif_cd_ops_types=>ty_msgno VALUE '381',
-      queue_source_failed TYPE zif_cd_ops_types=>ty_msgno VALUE '382',
-      bgrfc_not_watched   TYPE zif_cd_ops_types=>ty_msgno VALUE '383',
-      limits_missing      TYPE zif_cd_ops_types=>ty_msgno VALUE '386',
-      no_calendar         TYPE zif_cd_ops_types=>ty_msgno VALUE '387',
-      not_cleared         TYPE zif_cd_ops_types=>ty_msgno VALUE '388',
-      payment_line        TYPE zif_cd_ops_types=>ty_msgno VALUE '389',
-      payment_age         TYPE zif_cd_ops_types=>ty_msgno VALUE '390',
-      run_date_used       TYPE zif_cd_ops_types=>ty_msgno VALUE '391',
-      value_date_missing  TYPE zif_cd_ops_types=>ty_msgno VALUE '392',
-      class_not_watched   TYPE zif_cd_ops_types=>ty_msgno VALUE '393',
-      inconsistent        TYPE zif_cd_ops_types=>ty_msgno VALUE '395',
-      evidence_line       TYPE zif_cd_ops_types=>ty_msgno VALUE '396',
-      evidence_held       TYPE zif_cd_ops_types=>ty_msgno VALUE '397',
-      evidence_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '398',
-      evidence_forbidden  TYPE zif_cd_ops_types=>ty_msgno VALUE '399',
-      evidence_anomaly    TYPE zif_cd_ops_types=>ty_msgno VALUE '650',
-      rule_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '651',
-      no_cleared_rule     TYPE zif_cd_ops_types=>ty_msgno VALUE '652',
-      evidence_info       TYPE zif_cd_ops_types=>ty_msgno VALUE '653',
-      ev_bank_line        TYPE zif_cd_ops_types=>ty_msgno VALUE '655',
-      ev_status           TYPE zif_cd_ops_types=>ty_msgno VALUE '656',
-      ev_return_item      TYPE zif_cd_ops_types=>ty_msgno VALUE '657',
-      ev_gl_line          TYPE zif_cd_ops_types=>ty_msgno VALUE '658',
-      ev_sequence         TYPE zif_cd_ops_types=>ty_msgno VALUE '654',
-      ev_outcome          TYPE zif_cd_ops_types=>ty_msgno VALUE '659',
-      ev_lot_count        TYPE zif_cd_ops_types=>ty_msgno VALUE '660',
-      ev_amount_differs   TYPE zif_cd_ops_types=>ty_msgno VALUE '661',
-      ev_no_pattern       TYPE zif_cd_ops_types=>ty_msgno VALUE '662',
-      ev_pending_age      TYPE zif_cd_ops_types=>ty_msgno VALUE '663',
-      ev_lot_no_line      TYPE zif_cd_ops_types=>ty_msgno VALUE '664',
-      evidence_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '667',
-      ev_ref_row          TYPE zif_cd_ops_types=>ty_msgno VALUE '668',
-      ev_zuonr            TYPE zif_cd_ops_types=>ty_msgno VALUE '669',
-      ev_zuonr_changed    TYPE zif_cd_ops_types=>ty_msgno VALUE '670',
-      ev_cheque           TYPE zif_cd_ops_types=>ty_msgno VALUE '672',
-      ev_cheque_amount    TYPE zif_cd_ops_types=>ty_msgno VALUE '673',
-      evidence_mandatory  TYPE zif_cd_ops_types=>ty_msgno VALUE '674',
-      undetermined        TYPE zif_cd_ops_types=>ty_msgno VALUE '675',
-      unusable_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '676',
-      unusable_invalid    TYPE zif_cd_ops_types=>ty_msgno VALUE '677',
-      ev_role_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '678',
-      ev_indeterminate    TYPE zif_cd_ops_types=>ty_msgno VALUE '679',
-      ev_other_cheque     TYPE zif_cd_ops_types=>ty_msgno VALUE '680',
-      ev_register_missing TYPE zif_cd_ops_types=>ty_msgno VALUE '681',
-      evidence_pending    TYPE zif_cd_ops_types=>ty_msgno VALUE '682',
-      lag_bank            TYPE zif_cd_ops_types=>ty_msgno VALUE '683',
-      lag_ack             TYPE zif_cd_ops_types=>ty_msgno VALUE '684',
-      lag_ack_unconfig    TYPE zif_cd_ops_types=>ty_msgno VALUE '685',
-      lag_ack_failed      TYPE zif_cd_ops_types=>ty_msgno VALUE '686',
-      lag_detail          TYPE zif_cd_ops_types=>ty_msgno VALUE '687',
-      lag_file_ack        TYPE zif_cd_ops_types=>ty_msgno VALUE '688',
-      lag_file_detail     TYPE zif_cd_ops_types=>ty_msgno VALUE '689',
-      file_ack_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '301',
-      file_ack_field      TYPE zif_cd_ops_types=>ty_msgno VALUE '312',
-      file_ack_no_iface   TYPE zif_cd_ops_types=>ty_msgno VALUE '346',
-      evaluated_live      TYPE zif_cd_ops_types=>ty_msgno VALUE '374',
+      nr_usage            TYPE zif_ca_ops_types=>ty_msgno VALUE '376',
+      nr_no_interval      TYPE zif_ca_ops_types=>ty_msgno VALUE '377',
+      nr_not_numeric      TYPE zif_ca_ops_types=>ty_msgno VALUE '378',
+      read_capped         TYPE zif_ca_ops_types=>ty_msgno VALUE '379',
+      queue_group         TYPE zif_ca_ops_types=>ty_msgno VALUE '380',
+      queue_detail        TYPE zif_ca_ops_types=>ty_msgno VALUE '381',
+      queue_source_failed TYPE zif_ca_ops_types=>ty_msgno VALUE '382',
+      bgrfc_not_watched   TYPE zif_ca_ops_types=>ty_msgno VALUE '383',
+      limits_missing      TYPE zif_ca_ops_types=>ty_msgno VALUE '386',
+      no_calendar         TYPE zif_ca_ops_types=>ty_msgno VALUE '387',
+      not_cleared         TYPE zif_ca_ops_types=>ty_msgno VALUE '388',
+      payment_line        TYPE zif_ca_ops_types=>ty_msgno VALUE '389',
+      payment_age         TYPE zif_ca_ops_types=>ty_msgno VALUE '390',
+      run_date_used       TYPE zif_ca_ops_types=>ty_msgno VALUE '391',
+      value_date_missing  TYPE zif_ca_ops_types=>ty_msgno VALUE '392',
+      class_not_watched   TYPE zif_ca_ops_types=>ty_msgno VALUE '393',
+      inconsistent        TYPE zif_ca_ops_types=>ty_msgno VALUE '395',
+      evidence_line       TYPE zif_ca_ops_types=>ty_msgno VALUE '396',
+      evidence_held       TYPE zif_ca_ops_types=>ty_msgno VALUE '397',
+      evidence_missing    TYPE zif_ca_ops_types=>ty_msgno VALUE '398',
+      evidence_forbidden  TYPE zif_ca_ops_types=>ty_msgno VALUE '399',
+      evidence_anomaly    TYPE zif_ca_ops_types=>ty_msgno VALUE '650',
+      rule_invalid        TYPE zif_ca_ops_types=>ty_msgno VALUE '651',
+      no_cleared_rule     TYPE zif_ca_ops_types=>ty_msgno VALUE '652',
+      evidence_info       TYPE zif_ca_ops_types=>ty_msgno VALUE '653',
+      ev_bank_line        TYPE zif_ca_ops_types=>ty_msgno VALUE '655',
+      ev_status           TYPE zif_ca_ops_types=>ty_msgno VALUE '656',
+      ev_return_item      TYPE zif_ca_ops_types=>ty_msgno VALUE '657',
+      ev_gl_line          TYPE zif_ca_ops_types=>ty_msgno VALUE '658',
+      ev_sequence         TYPE zif_ca_ops_types=>ty_msgno VALUE '654',
+      ev_outcome          TYPE zif_ca_ops_types=>ty_msgno VALUE '659',
+      ev_lot_count        TYPE zif_ca_ops_types=>ty_msgno VALUE '660',
+      ev_amount_differs   TYPE zif_ca_ops_types=>ty_msgno VALUE '661',
+      ev_no_pattern       TYPE zif_ca_ops_types=>ty_msgno VALUE '662',
+      ev_pending_age      TYPE zif_ca_ops_types=>ty_msgno VALUE '663',
+      ev_lot_no_line      TYPE zif_ca_ops_types=>ty_msgno VALUE '664',
+      evidence_unconfig   TYPE zif_ca_ops_types=>ty_msgno VALUE '667',
+      ev_ref_row          TYPE zif_ca_ops_types=>ty_msgno VALUE '668',
+      ev_zuonr            TYPE zif_ca_ops_types=>ty_msgno VALUE '669',
+      ev_zuonr_changed    TYPE zif_ca_ops_types=>ty_msgno VALUE '670',
+      ev_cheque           TYPE zif_ca_ops_types=>ty_msgno VALUE '672',
+      ev_cheque_amount    TYPE zif_ca_ops_types=>ty_msgno VALUE '673',
+      evidence_mandatory  TYPE zif_ca_ops_types=>ty_msgno VALUE '674',
+      undetermined        TYPE zif_ca_ops_types=>ty_msgno VALUE '675',
+      unusable_unconfig   TYPE zif_ca_ops_types=>ty_msgno VALUE '676',
+      unusable_invalid    TYPE zif_ca_ops_types=>ty_msgno VALUE '677',
+      ev_role_missing     TYPE zif_ca_ops_types=>ty_msgno VALUE '678',
+      ev_indeterminate    TYPE zif_ca_ops_types=>ty_msgno VALUE '679',
+      ev_other_cheque     TYPE zif_ca_ops_types=>ty_msgno VALUE '680',
+      ev_register_missing TYPE zif_ca_ops_types=>ty_msgno VALUE '681',
+      evidence_pending    TYPE zif_ca_ops_types=>ty_msgno VALUE '682',
+      lag_bank            TYPE zif_ca_ops_types=>ty_msgno VALUE '683',
+      lag_ack             TYPE zif_ca_ops_types=>ty_msgno VALUE '684',
+      lag_ack_unconfig    TYPE zif_ca_ops_types=>ty_msgno VALUE '685',
+      lag_ack_failed      TYPE zif_ca_ops_types=>ty_msgno VALUE '686',
+      lag_detail          TYPE zif_ca_ops_types=>ty_msgno VALUE '687',
+      lag_file_ack        TYPE zif_ca_ops_types=>ty_msgno VALUE '688',
+      lag_file_detail     TYPE zif_ca_ops_types=>ty_msgno VALUE '689',
+      file_ack_unconfig   TYPE zif_ca_ops_types=>ty_msgno VALUE '301',
+      file_ack_field      TYPE zif_ca_ops_types=>ty_msgno VALUE '312',
+      file_ack_no_iface   TYPE zif_ca_ops_types=>ty_msgno VALUE '346',
+      evaluated_live      TYPE zif_ca_ops_types=>ty_msgno VALUE '374',
     END OF gc_msg.
 
 ENDINTERFACE.

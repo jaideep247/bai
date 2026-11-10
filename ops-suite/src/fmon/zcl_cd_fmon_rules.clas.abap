@@ -84,7 +84,7 @@ CLASS zcl_cd_fmon_rules DEFINITION
         iv_now         TYPE timestampl
         iv_grace_min   TYPE i
       RETURNING
-        VALUE(rv_code) TYPE zif_cd_ops_types=>ty_check_code.
+        VALUE(rv_code) TYPE zif_ca_ops_types=>ty_check_code.
 
     CLASS-METHODS arrived_late
       IMPORTING
@@ -163,7 +163,7 @@ CLASS zcl_cd_fmon_rules DEFINITION
         iv_stage       TYPE zif_cd_fmon_types=>ty_stage
         iv_state       TYPE zif_cd_fmon_types=>ty_sla_state
       RETURNING
-        VALUE(rv_code) TYPE zif_cd_ops_types=>ty_check_code.
+        VALUE(rv_code) TYPE zif_ca_ops_types=>ty_check_code.
 
     "! Record count known, ACK/NACK count reported (ACK_KNOWN) and ACK + NACK <> record count
     CLASS-METHODS ack_count_mismatch
@@ -176,7 +176,7 @@ CLASS zcl_cd_fmon_rules DEFINITION
     CLASS-METHODS ack_amount_mismatch
       IMPORTING
         is_file            TYPE zif_cd_fmon_types=>ty_file
-        iv_tolerance       TYPE zif_cd_ops_types=>ty_amount
+        iv_tolerance       TYPE zif_ca_ops_types=>ty_amount
       RETURNING
         VALUE(rv_mismatch) TYPE abap_bool.
 
@@ -194,7 +194,7 @@ CLASS zcl_cd_fmon_rules DEFINITION
         is_file        TYPE zif_cd_fmon_types=>ty_file
         is_iface       TYPE zif_cd_fmon_types=>ty_iface
       RETURNING
-        VALUE(rv_code) TYPE zif_cd_ops_types=>ty_check_code.
+        VALUE(rv_code) TYPE zif_ca_ops_types=>ty_check_code.
 
     "! Outcome derived from lot completeness: open > 0 PARTIALLY, else FULLY;
     "! blank when no lot was found
@@ -209,7 +209,7 @@ CLASS zcl_cd_fmon_rules DEFINITION
       IMPORTING
         is_lot         TYPE zif_cd_fmon_types=>ty_lot_status
       RETURNING
-        VALUE(rv_code) TYPE zif_cd_ops_types=>ty_check_code.
+        VALUE(rv_code) TYPE zif_ca_ops_types=>ty_check_code.
 
     "! Item status is in the comma list (case-insensitive; <BLANK> = initial)
     CLASS-METHODS is_done
@@ -417,14 +417,14 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     LOOP AT it_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WHERE active = abap_true.
       DATA(lv_pattern) = condense( CONV string( <ls_iface>-name_pattern ) ).
       IF lv_pattern IS INITIAL
-         OR zcl_cd_ops_util=>pcre_match( iv_value = lv_name iv_pattern = lv_pattern ) = abap_false.
+         OR zcl_ca_ops_util=>pcre_match( iv_value = lv_name iv_pattern = lv_pattern ) = abap_false.
         CONTINUE.
       ENDIF.
       IF dimension_matches( iv_configured = <ls_iface>-source_sys iv_actual = iv_source ) = abap_false
          OR dimension_matches( iv_configured = <ls_iface>-lob iv_actual = iv_lob ) = abap_false.
         CONTINUE.
       ENDIF.
-      DATA(lv_score) = zcl_cd_ops_util=>pcre_literals( lv_pattern ) * 4.
+      DATA(lv_score) = zcl_ca_ops_util=>pcre_literals( lv_pattern ) * 4.
       IF is_specific( iv_configured = <ls_iface>-source_sys iv_actual = iv_source ) = abap_true.
         lv_score += 2.
       ENDIF.
@@ -462,7 +462,7 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
       rv_day_type = zif_cd_fmon_types=>gc_day_type-month_end.
     ELSE.
       rv_day_type = zif_cd_fmon_types=>gc_day_type-normal.
-      DATA(lt_days) = zcl_cd_ops_util=>split_list( iv_returns_days ).
+      DATA(lt_days) = zcl_ca_ops_util=>split_list( iv_returns_days ).
       DATA(lv_weekday) = |{ weekday( iv_date ) }|.
       IF line_exists( lt_days[ table_line = lv_weekday ] ).
         rv_day_type = zif_cd_fmon_types=>gc_day_type-returns_day.
@@ -614,7 +614,7 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     IF lv_method IS INITIAL OR lv_method = zif_cd_fmon_types=>gc_wildcard.
       RETURN.
     ENDIF.
-    LOOP AT zcl_cd_ops_util=>split_list( is_throttle-methods ) ASSIGNING FIELD-SYMBOL(<lv_method>).
+    LOOP AT zcl_ca_ops_util=>split_list( is_throttle-methods ) ASSIGNING FIELD-SYMBOL(<lv_method>).
       IF to_upper( <lv_method> ) = lv_method.
         rv_throttled = abap_true.
         RETURN.
@@ -815,7 +815,7 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     IF lv_status IS INITIAL.
       lv_status = zif_cd_fmon_types=>gc_blank_token.
     ENDIF.
-    LOOP AT zcl_cd_ops_util=>split_list( iv_done_values ) ASSIGNING FIELD-SYMBOL(<lv_token>).
+    LOOP AT zcl_ca_ops_util=>split_list( iv_done_values ) ASSIGNING FIELD-SYMBOL(<lv_token>).
       IF to_upper( <lv_token> ) = lv_status.
         rv_done = abap_true.
         RETURN.
@@ -969,7 +969,7 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lt_codes) = zcl_cd_ops_util=>split_list( is_regen-dup_codes ).
+    DATA(lt_codes) = zcl_ca_ops_util=>split_list( is_regen-dup_codes ).
     LOOP AT it_failures ASSIGNING FIELD-SYMBOL(<ls_failure>)
          WHERE file_ref = is_file-file_ref AND occurred_at >= is_file-first_event_at.
       DATA(lv_code) = to_upper( condense( CONV string( <ls_failure>-error_code ) ) ).

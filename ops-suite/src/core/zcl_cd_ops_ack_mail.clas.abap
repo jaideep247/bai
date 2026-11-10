@@ -12,14 +12,19 @@
 *& was not known is shown as such and never counted as 0.
 *& Modification log:
 *& 2026-11-10 | Initial version (missing bank ACK alert, user request 2026-11-10).
+*& 2026-11-10 | Alert section plug-in of the framework ZCA_OPS (ZIF_CA_OPS_ALERT_SECTION, parameter
+*&            | ALERT_SECTION_CLASS): the framework's alert policy no longer calls this class directly.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - missing bank ACK alert table</p>
 CLASS zcl_cd_ops_ack_mail DEFINITION
   PUBLIC
   FINAL
-  CREATE PRIVATE.
+  CREATE PUBLIC.
 
   PUBLIC SECTION.
+    "! The alert section of missing / late bank ACK findings (configured in ALERT_SECTION_CLASS)
+    INTERFACES zif_ca_ops_alert_section.
+
     "! One file of a missing / late ACK finding as shown in the e-mail
     TYPES:
       BEGIN OF ty_row,
@@ -32,7 +37,7 @@ CLASS zcl_cd_ops_ack_mail DEFINITION
         payments_known TYPE abap_bool,
         amount         TYPE string,
         amount_value   TYPE decfloat34,
-        currency       TYPE zif_cd_ops_types=>ty_currency,
+        currency       TYPE zif_ca_ops_types=>ty_currency,
         amount_known   TYPE abap_bool,
         pay_run        TYPE string,
         generated      TYPE string,
@@ -44,7 +49,7 @@ CLASS zcl_cd_ops_ack_mail DEFINITION
 
     TYPES:
       BEGIN OF ty_currency_total,
-        currency TYPE zif_cd_ops_types=>ty_currency,
+        currency TYPE zif_ca_ops_types=>ty_currency,
         amount   TYPE decfloat34,
       END OF ty_currency_total.
     TYPES tt_currency_total TYPE SORTED TABLE OF ty_currency_total WITH UNIQUE KEY currency.
@@ -66,7 +71,7 @@ CLASS zcl_cd_ops_ack_mail DEFINITION
     "! One detail line: label (ZCD_OPS message without variables), separator, value
     CLASS-METHODS line
       IMPORTING
-        iv_label       TYPE zif_cd_ops_types=>ty_msgno
+        iv_label       TYPE zif_ca_ops_types=>ty_msgno
         iv_value       TYPE clike
       RETURNING
         VALUE(rv_line) TYPE string.
@@ -74,14 +79,14 @@ CLASS zcl_cd_ops_ack_mail DEFINITION
     "! The finding carries missing / late ACK evidence (DETAILS starts with the marker)
     CLASS-METHODS is_ack
       IMPORTING
-        is_finding    TYPE zif_cd_ops_types=>ty_finding
+        is_finding    TYPE zif_ca_ops_types=>ty_finding
       RETURNING
         VALUE(rv_ack) TYPE abap_bool.
 
     "! Rows of every ACK finding, most overdue first (earliest ACK due; unknown due last)
     CLASS-METHODS rows
       IMPORTING
-        it_findings    TYPE zif_cd_ops_types=>tt_finding
+        it_findings    TYPE zif_ca_ops_types=>tt_finding
       RETURNING
         VALUE(rt_rows) TYPE tt_row.
 
@@ -95,8 +100,8 @@ CLASS zcl_cd_ops_ack_mail DEFINITION
     CLASS-METHODS subject
       IMPORTING
         it_rows           TYPE tt_row
-        iv_pe_area        TYPE zif_cd_ops_types=>ty_pe_area
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity
+        iv_pe_area        TYPE zif_ca_ops_types=>ty_area
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity
       RETURNING
         VALUE(rv_subject) TYPE string.
 
@@ -162,7 +167,7 @@ CLASS zcl_cd_ops_ack_mail DEFINITION
 
     CLASS-METHODS label
       IMPORTING
-        iv_msgno       TYPE zif_cd_ops_types=>ty_msgno
+        iv_msgno       TYPE zif_ca_ops_types=>ty_msgno
       RETURNING
         VALUE(rv_text) TYPE string.
 
@@ -171,6 +176,28 @@ ENDCLASS.
 
 
 CLASS zcl_cd_ops_ack_mail IMPLEMENTATION.
+
+  METHOD zif_ca_ops_alert_section~owns.
+    rv_owns = is_ack( is_finding ).
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_section~subject.
+    rv_subject = subject( it_rows     = rows( it_findings )
+                          iv_pe_area  = iv_area
+                          iv_severity = iv_severity ).
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_section~html.
+    rv_html = html( rows( it_findings ) ).
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_section~text.
+    rv_text = text( rows( it_findings ) ).
+  ENDMETHOD.
+
 
   METHOD marker.
     rv_line = label( zif_cd_ops_types=>gc_ack_msg-marker ).
@@ -231,8 +258,8 @@ CLASS zcl_cd_ops_ack_mail IMPLEMENTATION.
               " written as '<currency> <amount with thousands separators>'
               SPLIT lv_value AT gc_blank INTO DATA(lv_currency) DATA(lv_number).
               ls_row-currency     = lv_currency.
-              ls_row-amount_value = zcl_cd_ops_util=>to_decimal(
-                                      replace( val = lv_number sub = zcl_cd_ops_util=>gc_thousands_separator
+              ls_row-amount_value = zcl_ca_ops_util=>to_decimal(
+                                      replace( val = lv_number sub = zcl_ca_ops_util=>gc_thousands_separator
                                                with = `` occ = 0 ) ).
               ls_row-amount_known = abap_true.
             ENDIF.
@@ -293,7 +320,7 @@ CLASS zcl_cd_ops_ack_mail IMPLEMENTATION.
     ENDIF.
     rv_html = gc_html-table_open && gc_html-tr_open.
     LOOP AT columns( ) INTO DATA(lv_title).
-      rv_html = rv_html && gc_html-th_open && zcl_cd_ops_util=>html_escape( lv_title ) && gc_html-th_close.
+      rv_html = rv_html && gc_html-th_open && zcl_ca_ops_util=>html_escape( lv_title ) && gc_html-th_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-tr_close.
     DATA(lv_payments_col) = 5.
@@ -303,7 +330,7 @@ CLASS zcl_cd_ops_ack_mail IMPLEMENTATION.
       LOOP AT cells( <ls_row> ) INTO DATA(lv_cell).
         rv_html = rv_html && COND string( WHEN sy-tabix = lv_payments_col OR sy-tabix = lv_amount_col
                                           THEN gc_html-td_right ELSE gc_html-td_open )
-               && zcl_cd_ops_util=>html_escape( lv_cell ) && gc_html-td_close.
+               && zcl_ca_ops_util=>html_escape( lv_cell ) && gc_html-td_close.
       ENDLOOP.
       rv_html = rv_html && gc_html-tr_close.
     ENDLOOP.
@@ -313,7 +340,7 @@ CLASS zcl_cd_ops_ack_mail IMPLEMENTATION.
       DATA(lv_index) = sy-tabix.
       rv_html = rv_html && COND string( WHEN lv_index = lv_payments_col OR lv_index = lv_amount_col
                                         THEN gc_html-td_right ELSE gc_html-td_open )
-             && replace( val  = zcl_cd_ops_util=>html_escape( lv_cell )
+             && replace( val  = zcl_ca_ops_util=>html_escape( lv_cell )
                          sub  = cl_abap_char_utilities=>newline
                          with = gc_html-line_break
                          occ  = 0 )
@@ -381,7 +408,7 @@ CLASS zcl_cd_ops_ack_mail IMPLEMENTATION.
   METHOD amounts_text.
     DATA lt_parts TYPE string_table.
     LOOP AT it_amounts ASSIGNING FIELD-SYMBOL(<ls_amount>).
-      INSERT |{ <ls_amount>-currency } { zcl_cd_ops_util=>format_amount( <ls_amount>-amount ) }| INTO TABLE lt_parts.
+      INSERT |{ <ls_amount>-currency } { zcl_ca_ops_util=>format_amount( <ls_amount>-amount ) }| INTO TABLE lt_parts.
     ENDLOOP.
     rv_text = COND #( WHEN lt_parts IS INITIAL THEN label( zif_cd_ops_types=>gc_ack_msg-unknown )
                       ELSE concat_lines_of( table = lt_parts sep = iv_separator ) ).

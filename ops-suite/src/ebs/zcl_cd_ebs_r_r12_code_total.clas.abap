@@ -36,7 +36,7 @@ CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
     DATA(ls_register) = check_register( it_lines = it_lines it_statements = it_statements ).
 
     LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_group>) GROUP BY <ls_group>-stmt_key INTO DATA(lv_stmt_key).
-      DATA(lv_bank_total) = CONV zif_cd_ops_types=>ty_amount( 0 ).
+      DATA(lv_bank_total) = CONV zif_ca_ops_types=>ty_amount( 0 ).
       DATA(lv_bank_count) = 0.
       DATA(lv_ambiguous)  = abap_false.
       " A08: two independent populations - bank entries (count, total) against the distinct
@@ -57,8 +57,8 @@ CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
         ENDLOOP.
       ENDLOOP.
       DATA(lv_reg_count) = lines( lt_register ).
-      DATA(lv_reg_total) = REDUCE zif_cd_ops_types=>ty_amount(
-        INIT lv_sum = CONV zif_cd_ops_types=>ty_amount( 0 )
+      DATA(lv_reg_total) = REDUCE zif_ca_ops_types=>ty_amount(
+        INIT lv_sum = CONV zif_ca_ops_types=>ty_amount( 0 )
         FOR ls_row IN lt_register
         NEXT lv_sum = lv_sum + abs( ls_row-amount ) ).
       DATA(ls_statement) = VALUE #( ls_register-statements[ stmt_key = lv_stmt_key ] OPTIONAL ).

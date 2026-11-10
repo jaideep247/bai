@@ -23,7 +23,7 @@ INTERFACE zif_cd_hck_evidence
   "! @parameter it_payments | payments of one or more flow / method classes (flow and class set)
   "! @parameter is_rule | the rule row (PARAM1-3) the kind is evaluated for
   "! @parameter iv_max_rows | row cap of every read of the kind (result capped = flagged)
-  "! @raising zcx_cd_ops_error | parameter missing or invalid, configuration unusable
+  "! @raising zcx_ca_ops_error | parameter missing or invalid, configuration unusable
   METHODS collect
     IMPORTING
       it_payments      TYPE zif_cd_hck_runtime_types=>tt_issued_payment
@@ -32,6 +32,6 @@ INTERFACE zif_cd_hck_evidence
     RETURNING
       VALUE(rs_result) TYPE zif_cd_hck_runtime_types=>ty_evidence_result
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

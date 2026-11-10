@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zbp_r_cd_hckcfgall.clas.locals_imp.abap
 *& Purpose:
-*& Handlers and saver of Health check setup: ZCD_OPS authorisation, create /
+*& Handlers and saver of Health check setup: ZCA_OPS authorisation, create /
 *& delete per client policy (D-3), field checks, customizing request check
 *& and transport recording. Thin: every decision is made by the gate / checks.
 *& Modification log:
@@ -11,8 +11,11 @@
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
-*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).
-*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).
+*& 2026-11-08 | Authorisation per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).
+*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (customer posting areas, FQC0).
+*& 2026-11-10 | Generator parameterised (framework ZCA_OPS): authorisation object ZCA_OPS with the area of
+*&            | the app (parameter area of ZCA_PARAM), generic checks of ZCL_CA_OPS_CFG_CHECKS, transport
+*&            | messages of class ZCA_OPS; area and parameter checks (messages 435 / 434).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
@@ -97,15 +100,15 @@ INTERFACE lif_c.
 ENDINTERFACE.
 
 
-"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers
+"! ZCA_OPS answers of this app (area of the app) for the RAP handlers
 CLASS lcl_auth DEFINITION FINAL.
   PUBLIC SECTION.
-    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'HCK'.
+    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE 'CD_HCK'.
 
     "! Allowed when the user has the activity for the area (create 01, change 02, delete 06)
     CLASS-METHODS answer
       IMPORTING
-        iv_actvt       TYPE zif_cd_ops_cfg_types=>ty_actvt
+        iv_actvt       TYPE zif_ca_ops_cfg_types=>ty_actvt
       RETURNING
         VALUE(rv_auth) TYPE abp_behv_auth.
 
@@ -119,8 +122,8 @@ ENDCLASS.
 CLASS lcl_auth IMPLEMENTATION.
 
   METHOD answer.
-    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized( iv_pe_area = gc_pe_area
-                                                                               iv_actvt   = iv_actvt )
+    rv_auth = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->is_authorized( iv_area  = gc_area
+                                                                               iv_actvt = iv_actvt )
                            = abap_true
                       THEN if_abap_behv=>auth-allowed
                       ELSE if_abap_behv=>auth-unauthorized ).
@@ -128,7 +131,7 @@ CLASS lcl_auth IMPLEMENTATION.
 
 
   METHOD edit.
-    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->may_edit( gc_pe_area ) = abap_true
+    rv_auth = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->may_edit( gc_area ) = abap_true
                       THEN if_abap_behv=>auth-allowed
                       ELSE if_abap_behv=>auth-unauthorized ).
   ENDMETHOD.
@@ -149,7 +152,7 @@ ENDCLASS.
 CLASS lhc_hckcfgall IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area (2026-11-08): editing the singleton needs 01, 02 or 06;
+    " ZCA_OPS for the area of the app (2026-11-08): editing the singleton needs 01, 02 or 06;
     " a new child row needs 01 - change (02) and delete (06) are answered by each child entity
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
       result-%update = lcl_auth=>edit( ).
@@ -158,35 +161,35 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
       result-%action-Edit = lcl_auth=>edit( ).
     ENDIF.
     IF requested_authorizations-%assoc-_HckCheckDef = if_abap_behv=>mk-on.
-      result-%assoc-_HckCheckDef = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_HckCheckDef = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
     IF requested_authorizations-%assoc-_HckThreshold = if_abap_behv=>mk-on.
-      result-%assoc-_HckThreshold = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_HckThreshold = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
     IF requested_authorizations-%assoc-_HckAggregate = if_abap_behv=>mk-on.
-      result-%assoc-_HckAggregate = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_HckAggregate = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
     IF requested_authorizations-%assoc-_JobCycle = if_abap_behv=>mk-on.
-      result-%assoc-_JobCycle = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_JobCycle = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
     IF requested_authorizations-%assoc-_JobStep = if_abap_behv=>mk-on.
-      result-%assoc-_JobStep = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_JobStep = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
     IF requested_authorizations-%assoc-_HckClrRule = if_abap_behv=>mk-on.
-      result-%assoc-_HckClrRule = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_HckClrRule = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
     IF requested_authorizations-%assoc-_HckSeqOutcome = if_abap_behv=>mk-on.
-      result-%assoc-_HckSeqOutcome = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_HckSeqOutcome = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
     IF requested_authorizations-%assoc-_HckReconSet = if_abap_behv=>mk-on.
-      result-%assoc-_HckReconSet = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+      result-%assoc-_HckReconSet = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
   ENDMETHOD.
 
 
   METHOD get_global_features.
     " D-3: new entries only where the client records changes (DV1)
-    DATA(lv_create) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed( ) = abap_true
+    DATA(lv_create) = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->create_allowed( ) = abap_true
                               THEN if_abap_behv=>fc-o-enabled
                               ELSE if_abap_behv=>fc-o-disabled ).
     IF requested_features-%assoc-_HckCheckDef = if_abap_behv=>mk-on.
@@ -240,12 +243,12 @@ ENDCLASS.
 CLASS lhc_hckcheckdef IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -253,7 +256,7 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -261,7 +264,7 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
 
 
   METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
 
     READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
       ENTITY HckCheckDef
@@ -273,18 +276,18 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckcheckdef.
       IF ls_row-ClassName IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-ClassName )
+         AND zcl_ca_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-ClassName )
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_cd_hck_check ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-class_invalid v1 = ls_row-ClassName v2 = lif_c=>gc_if-zif_cd_hck_check
                         element = lif_c=>gc_el-classname ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Category )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Category )
                                         iv_list  = lif_c=>gc_val-hckcheckdef_category ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Category
                         v2 = lif_c=>gc_el-category v3 = lif_c=>gc_val-hckcheckdef_category
                         element = lif_c=>gc_el-category ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Priority )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Priority )
                                         iv_list  = lif_c=>gc_val-hckcheckdef_priority ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Priority
                         v2 = lif_c=>gc_el-priority v3 = lif_c=>gc_val-hckcheckdef_priority
@@ -321,7 +324,7 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckcheckdef.
@@ -331,7 +334,7 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckcheckdef.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -366,12 +369,12 @@ ENDCLASS.
 CLASS lhc_hckthreshold IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -379,7 +382,7 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -387,7 +390,7 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
 
 
   METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
 
     READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
       ENTITY HckThreshold
@@ -405,7 +408,7 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-thresholds_order v1 = ls_row-Amber v2 = ls_row-Red
                         v3 = ls_row-Metric element = lif_c=>gc_el-red ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-BaselineMode )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-BaselineMode )
                                         iv_list  = lif_c=>gc_val-hckthreshold_baselinemode ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-BaselineMode
                         v2 = lif_c=>gc_el-baselinemode v3 = lif_c=>gc_val-hckthreshold_baselinemode
@@ -442,7 +445,7 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckthreshold.
@@ -452,7 +455,7 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckthreshold.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -487,12 +490,12 @@ ENDCLASS.
 CLASS lhc_hckaggregate IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -500,7 +503,7 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -508,7 +511,7 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
 
 
   METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
 
     READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
       ENTITY HckAggregate
@@ -520,71 +523,71 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckaggregate.
       IF ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
+         AND zcl_ca_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-Tabname
                         element = lif_c=>gc_el-tabname ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-SumField IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
+         AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
                                                   iv_field = CONV #( ls_row-SumField ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-SumField v2 = ls_row-Tabname
                         element = lif_c=>gc_el-sumfield ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-DateField IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
+         AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
                                                   iv_field = CONV #( ls_row-DateField ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-DateField v2 = ls_row-Tabname
                         element = lif_c=>gc_el-datefield ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-GroupField IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
+         AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
                                                   iv_field = CONV #( ls_row-GroupField ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-GroupField v2 = ls_row-Tabname
                         element = lif_c=>gc_el-groupfield ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-Cond1Field IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
+         AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
                                                   iv_field = CONV #( ls_row-Cond1Field ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-Cond1Field v2 = ls_row-Tabname
                         element = lif_c=>gc_el-cond1field ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-Cond2Field IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
+         AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
                                                   iv_field = CONV #( ls_row-Cond2Field ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-Cond2Field v2 = ls_row-Tabname
                         element = lif_c=>gc_el-cond2field ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-Cond3Field IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
+         AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
                                                   iv_field = CONV #( ls_row-Cond3Field ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-Cond3Field v2 = ls_row-Tabname
                         element = lif_c=>gc_el-cond3field ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-AggFunc )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-AggFunc )
                                         iv_list  = lif_c=>gc_val-hckaggregate_aggfunc ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-AggFunc
                         v2 = lif_c=>gc_el-aggfunc v3 = lif_c=>gc_val-hckaggregate_aggfunc
                         element = lif_c=>gc_el-aggfunc ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DateMode )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DateMode )
                                         iv_list  = lif_c=>gc_val-hckaggregate_datemode ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DateMode
                         v2 = lif_c=>gc_el-datemode v3 = lif_c=>gc_val-hckaggregate_datemode
                         element = lif_c=>gc_el-datemode ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Cond1Op )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Cond1Op )
                                         iv_list  = lif_c=>gc_val-hckaggregate_cond1op ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Cond1Op
                         v2 = lif_c=>gc_el-cond1op v3 = lif_c=>gc_val-hckaggregate_cond1op
                         element = lif_c=>gc_el-cond1op ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Cond2Op )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Cond2Op )
                                         iv_list  = lif_c=>gc_val-hckaggregate_cond2op ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Cond2Op
                         v2 = lif_c=>gc_el-cond2op v3 = lif_c=>gc_val-hckaggregate_cond2op
                         element = lif_c=>gc_el-cond2op ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Cond3Op )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Cond3Op )
                                         iv_list  = lif_c=>gc_val-hckaggregate_cond3op ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Cond3Op
                         v2 = lif_c=>gc_el-cond3op v3 = lif_c=>gc_val-hckaggregate_cond3op
@@ -632,7 +635,7 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckaggregate.
@@ -642,7 +645,7 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckaggregate.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -673,12 +676,12 @@ ENDCLASS.
 CLASS lhc_jobcycle IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -686,7 +689,7 @@ CLASS lhc_jobcycle IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -701,7 +704,7 @@ CLASS lhc_jobcycle IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-jobcycle.
@@ -711,7 +714,7 @@ CLASS lhc_jobcycle IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-jobcycle.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -746,12 +749,12 @@ ENDCLASS.
 CLASS lhc_jobstep IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -759,7 +762,7 @@ CLASS lhc_jobstep IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -767,7 +770,7 @@ CLASS lhc_jobstep IMPLEMENTATION.
 
 
   METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
 
     READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
       ENTITY JobStep
@@ -778,12 +781,12 @@ CLASS lhc_jobstep IMPLEMENTATION.
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-jobstep.
-      IF zcl_cd_ops_cfg_checks=>window_complete( iv_from = ls_row-WindowFrom
+      IF zcl_ca_ops_cfg_checks=>window_complete( iv_from = ls_row-WindowFrom
                                                 iv_to   = ls_row-WindowTo ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-window_incomplete v1 = lif_c=>gc_el-windowfrom v2 = lif_c=>gc_el-windowto
                         element = lif_c=>gc_el-windowto ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_util=>pcre_valid( ls_row-Jobname ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_valid( ls_row-Jobname ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-Jobname
                         element = lif_c=>gc_el-jobname ) INTO TABLE lt_msg.
       ENDIF.
@@ -818,7 +821,7 @@ CLASS lhc_jobstep IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-jobstep.
@@ -828,7 +831,7 @@ CLASS lhc_jobstep IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-jobstep.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -863,12 +866,12 @@ ENDCLASS.
 CLASS lhc_hckclrrule IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -876,7 +879,7 @@ CLASS lhc_hckclrrule IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -884,7 +887,7 @@ CLASS lhc_hckclrrule IMPLEMENTATION.
 
 
   METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
 
     READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
       ENTITY HckClrRule
@@ -895,26 +898,26 @@ CLASS lhc_hckclrrule IMPLEMENTATION.
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckclrrule.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Flow )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Flow )
                                         iv_list  = lif_c=>gc_val-hckclrrule_flow ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Flow
                         v2 = lif_c=>gc_el-flow v3 = lif_c=>gc_val-hckclrrule_flow
                         element = lif_c=>gc_el-flow ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Purpose )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Purpose )
                                         iv_list  = lif_c=>gc_val-hckclrrule_purpose ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Purpose
                         v2 = lif_c=>gc_el-purpose v3 = lif_c=>gc_val-hckclrrule_purpose
                         element = lif_c=>gc_el-purpose ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Required )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Required )
                                         iv_list  = lif_c=>gc_val-hckclrrule_required ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Required
                         v2 = lif_c=>gc_el-required v3 = lif_c=>gc_val-hckclrrule_required
                         element = lif_c=>gc_el-required ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-EvidenceClass IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-EvidenceClass )
+         AND zcl_ca_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-EvidenceClass )
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_cd_hck_evidence ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-class_invalid v1 = ls_row-EvidenceClass v2 = lif_c=>gc_if-zif_cd_hck_evidence
                         element = lif_c=>gc_el-evidenceclass ) INTO TABLE lt_msg.
@@ -950,7 +953,7 @@ CLASS lhc_hckclrrule IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckclrrule.
@@ -960,7 +963,7 @@ CLASS lhc_hckclrrule IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckclrrule.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -995,12 +998,12 @@ ENDCLASS.
 CLASS lhc_hckseqoutcome IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -1008,7 +1011,7 @@ CLASS lhc_hckseqoutcome IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -1016,7 +1019,7 @@ CLASS lhc_hckseqoutcome IMPLEMENTATION.
 
 
   METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
 
     READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
       ENTITY HckSeqOutcome
@@ -1027,23 +1030,23 @@ CLASS lhc_hckseqoutcome IMPLEMENTATION.
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckseqoutcome.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Flow )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Flow )
                                         iv_list  = lif_c=>gc_val-hckseqoutcome_flow ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Flow
                         v2 = lif_c=>gc_el-flow v3 = lif_c=>gc_val-hckseqoutcome_flow
                         element = lif_c=>gc_el-flow ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_util=>pcre_valid( ls_row-SeqPattern ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_valid( ls_row-SeqPattern ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-SeqPattern
                         element = lif_c=>gc_el-seqpattern ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-ExpectedDfkkrp )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-ExpectedDfkkrp )
                                         iv_list  = lif_c=>gc_val-hckseqoutcome_expecteddfkkrp ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-ExpectedDfkkrp
                         v2 = lif_c=>gc_el-expecteddfkkrp v3 = lif_c=>gc_val-hckseqoutcome_expecteddfkkrp
                         element = lif_c=>gc_el-expecteddfkkrp ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Severity )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Severity )
                                         iv_list  = lif_c=>gc_val-hckseqoutcome_severity ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Severity
                         v2 = lif_c=>gc_el-severity v3 = lif_c=>gc_val-hckseqoutcome_severity
@@ -1088,7 +1091,7 @@ CLASS lhc_hckseqoutcome IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckseqoutcome.
@@ -1098,7 +1101,7 @@ CLASS lhc_hckseqoutcome IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckseqoutcome.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -1133,12 +1136,12 @@ ENDCLASS.
 CLASS lhc_hckreconset IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
     ENDIF.
     IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
     ENDIF.
   ENDMETHOD.
 
@@ -1146,7 +1149,7 @@ CLASS lhc_hckreconset IMPLEMENTATION.
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
     IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
                                THEN if_abap_behv=>fc-o-enabled
                                ELSE if_abap_behv=>fc-o-disabled ).
     ENDIF.
@@ -1154,7 +1157,7 @@ CLASS lhc_hckreconset IMPLEMENTATION.
 
 
   METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
 
     READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
       ENTITY HckReconSet
@@ -1165,13 +1168,13 @@ CLASS lhc_hckreconset IMPLEMENTATION.
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckreconset.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )
                                         iv_list  = lif_c=>gc_val-hckreconset_kind ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Kind
                         v2 = lif_c=>gc_el-kind v3 = lif_c=>gc_val-hckreconset_kind
                         element = lif_c=>gc_el-kind ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Side )
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Side )
                                         iv_list  = lif_c=>gc_val-hckreconset_side ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Side
                         v2 = lif_c=>gc_el-side v3 = lif_c=>gc_val-hckreconset_side
@@ -1208,7 +1211,7 @@ CLASS lhc_hckreconset IMPLEMENTATION.
         FIELDS ( TransportRequestID )
         WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
       RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckreconset.
@@ -1218,7 +1221,7 @@ CLASS lhc_hckreconset IMPLEMENTATION.
       INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckreconset.
       INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                  number   = ls_msg-number
                                                  severity = if_abap_behv_message=>severity-error
                                                  v1       = ls_msg-v1 )
@@ -1244,9 +1247,9 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
     " The root is virtual (singleton): nothing to persist. Children are saved by
     " the framework; here they are recorded on the customizing request where the
     " client records changes (DV1). Production: no-op (change log via table logging).
-    DATA(lv_request) = VALUE zif_cd_ops_cfg_types=>ty_request( update-hckcfgall[ 1 ]-TransportRequestID OPTIONAL ).
+    DATA(lv_request) = VALUE zif_ca_ops_cfg_types=>ty_request( update-hckcfgall[ 1 ]-TransportRequestID OPTIONAL ).
     TRY.
-        zcl_cd_ops_cfg_factory=>get_gate( )->record(
+        zcl_ca_ops_cfg_factory=>get_gate( )->record(
           iv_request   = lv_request
           it_relations = VALUE #(
             ( entity = lif_c=>gc_ent-hckcheckdef table = lif_c=>gc_tab-hckcheckdef )

@@ -128,7 +128,7 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 
 ## 8. Proposed, not built
 
-- **Handover / support notes:** the core exception store (`ZCD_OPS_FINDING` / `ZCD_OPS_EXC_HIST`, owned-exceptions app) records dispositions of *findings*; a trace is not a finding, so storing a note would need a new finding type or note table. Proposed: an action "Record trace finding" that writes one finding (check code `PAYMENT_TRACE_GAP`, object = FIN / clearing ref, masked summary) through `ZIF_CD_OPS_STORE`, so the existing assign / resolve / handover flow applies. Today the copyable summary is message 700 plus the ALV export.
+- **Handover / support notes:** the core exception store (`ZCA_OPS_FINDING` / `ZCA_OPS_EXC_HIST`, owned-exceptions app) records dispositions of *findings*; a trace is not a finding, so storing a note would need a new finding type or note table. Proposed: an action "Record trace finding" that writes one finding (check code `PAYMENT_TRACE_GAP`, object = FIN / clearing ref, masked summary) through `ZIF_CA_OPS_STORE`, so the existing assign / resolve / handover flow applies. Today the copyable summary is message 700 plus the ALV export.
 - **File reference as input:** cheap via `ZCD_FMON_FILE` (reference → events) but the reverse link file → payments needs the ZCDT_REGUT link confirmed first.
 - **PENDING status** from FMON SLA rows; **XRAGL** reset indicator (§4.2).
 

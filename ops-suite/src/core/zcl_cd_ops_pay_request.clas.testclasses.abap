@@ -72,12 +72,12 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_clock PARTIALLY IMPLEMENTED.
     CONSTANTS gc_today TYPE d VALUE '20261111'.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = gc_today.
   ENDMETHOD.
 ENDCLASS.
@@ -115,8 +115,8 @@ CLASS ltc_request DEFINITION FINAL FOR TESTING
         payment    TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000930002',
         block      TYPE c LENGTH 1 VALUE 'A',
         calendar   TYPE zif_cd_hck_types=>ty_param VALUE 'US',
-        amount     TYPE zif_cd_ops_types=>ty_amount VALUE '-250.00',
-        currency   TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
+        amount     TYPE zif_ca_ops_types=>ty_amount VALUE '-250.00',
+        currency   TYPE zif_ca_ops_types=>ty_currency VALUE 'USD',
       END OF gc.
 
     DATA mo_trace TYPE REF TO ltd_trace_dao.
@@ -165,7 +165,7 @@ CLASS ltc_request DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_request) TYPE zif_cd_ops_payout_types=>ty_request
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 ENDCLASS.
 
 
@@ -180,7 +180,7 @@ CLASS ltc_request IMPLEMENTATION.
     INSERT gc-sunday INTO TABLE mo_hck->mt_holidays.
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
     zcl_cd_ops_injector=>inject_pay_outcome_dao( mo_out ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_hck_injector=>inject_dao( mo_hck ).
     mo_params = NEW zcl_cd_ops_param_seed( ).
     mo_params->set( iv_name = zif_cd_ops_trace_types=>gc_param-src_request iv_value = gc-spec ).

@@ -206,18 +206,18 @@ CLASS ltc_recon3 DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS findings_of
       IMPORTING
         is_result       TYPE zif_cd_hck_types=>ty_check_result
-        iv_code         TYPE zif_cd_ops_types=>ty_check_code
+        iv_code         TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
-        VALUE(rt_found) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_found) TYPE zif_ca_ops_types=>tt_finding.
     METHODS worst
       IMPORTING
         is_result     TYPE zif_cd_hck_types=>ty_check_result
       RETURNING
-        VALUE(rv_sev) TYPE zif_cd_ops_types=>ty_severity.
+        VALUE(rv_sev) TYPE zif_ca_ops_types=>ty_severity.
 
     METHODS balanced_day_no_finding    FOR TESTING.
     METHODS break_is_error_with_amount FOR TESTING.
@@ -367,7 +367,7 @@ CLASS ltc_recon3 IMPLEMENTATION.
 
 
   METHOD worst.
-    rv_sev = zcl_cd_ops_util=>worst_severity( is_result-findings ).
+    rv_sev = zcl_ca_ops_util=>worst_severity( is_result-findings ).
   ENDMETHOD.
 
 
@@ -378,9 +378,9 @@ CLASS ltc_recon3 IMPLEMENTATION.
         add_bank( iv_day = gc_test-day5 iv_amount = 100 ).
         add_gl( iv_day = gc_test-day5 iv_amount = 100 ).
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_differs( act = worst( ls_result ) exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_differs( act = worst( ls_result ) exp = zif_ca_ops_types=>gc_severity-error
                                              msg = 'No error' ).
-        cl_abap_unit_assert=>assert_differs( act = worst( ls_result ) exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_differs( act = worst( ls_result ) exp = zif_ca_ops_types=>gc_severity-warning
                                              msg = 'No warning' ).
         DATA(ls_metric) = ls_result-metrics[ metric = zif_cd_hck_recon_types=>gc_metric-diff_bank_gl dim2 = '2026-11-05' ].
         cl_abap_unit_assert=>assert_equals( act = ls_metric-value exp = 0 msg = 'Difference 0 stored' ).
@@ -401,9 +401,9 @@ CLASS ltc_recon3 IMPLEMENTATION.
         add_gl( iv_day = gc_test-day1 iv_amount = 60 ).
         DATA(lt_breaks) = findings_of( is_result = act( ) iv_code = zif_cd_hck_recon_types=>gc_code-recon_break ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_breaks ) exp = 1 msg = 'One break' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_breaks[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = lt_breaks[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Error' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_breaks[ 1 ]-action exp = zif_cd_ops_types=>gc_action-exception
+        cl_abap_unit_assert=>assert_equals( act = lt_breaks[ 1 ]-action exp = zif_ca_ops_types=>gc_action-exception
                                             msg = 'Owned exception' ).
         cl_abap_unit_assert=>assert_equals( act = lt_breaks[ 1 ]-amount exp = 40 msg = 'Residual' ).
         cl_abap_unit_assert=>assert_equals( act = lt_breaks[ 1 ]-currency exp = gc_test-usd msg = 'Currency' ).
@@ -424,10 +424,10 @@ CLASS ltc_recon3 IMPLEMENTATION.
         add_bank( iv_day = gc_test-day3 iv_amount = 100 ).
         DATA(ls_result) = act( ).
         DATA(lt_timing) = findings_of( is_result = ls_result iv_code = zif_cd_hck_recon_types=>gc_code-recon_timing ).
-        cl_abap_unit_assert=>assert_equals( act = lines( VALUE zif_cd_ops_types=>tt_finding(
+        cl_abap_unit_assert=>assert_equals( act = lines( VALUE zif_ca_ops_types=>tt_finding(
                                                     FOR ls_t IN lt_timing WHERE ( object_key CS 'BANK' ) ( ls_t ) ) )
                                             exp = 2 msg = 'Both days listed as timing' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_timing[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-info
+        cl_abap_unit_assert=>assert_equals( act = lt_timing[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'Information' ).
         cl_abap_unit_assert=>assert_initial( act = findings_of( is_result = ls_result
                                                                 iv_code   = zif_cd_hck_recon_types=>gc_code-recon_break )
@@ -454,7 +454,7 @@ CLASS ltc_recon3 IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ metric = zif_cd_hck_recon_types=>gc_metric-bucket
                                                                      dim2   = zif_cd_hck_recon_types=>gc_bucket-redeposit ]-value
                                             exp = 1 msg = 'Bucket count stored' ).
-        cl_abap_unit_assert=>assert_differs( act = worst( ls_result ) exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_differs( act = worst( ls_result ) exp = zif_ca_ops_types=>gc_severity-error
                                              msg = 'Not red' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -517,7 +517,7 @@ CLASS ltc_recon3 IMPLEMENTATION.
         add_gl( iv_day = gc_test-day1 iv_amount = 100 ).
         DATA(lt_variance) = findings_of( is_result = act( ) iv_code = zif_cd_hck_recon_types=>gc_code-recon_variance ).
         DATA(ls_codes) = VALUE #( lt_variance[ details = CONV string( gc_test-unmapped ) ] OPTIONAL ).
-        cl_abap_unit_assert=>assert_equals( act = ls_codes-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_codes-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Unmapped code is a warning' ).
         cl_abap_unit_assert=>assert_equals( act = ls_codes-amount exp = 25 msg = 'Amount of the code' ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_variance ) exp = 2 msg = 'Day variance and code list' ).

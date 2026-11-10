@@ -17,7 +17,7 @@ INTERFACE zif_cd_ops_pattern_types
   TYPES ty_status TYPE c LENGTH 12.
   TYPES ty_name   TYPE c LENGTH 30.
   "! Payment engine areas a caller is authorised for (ZCD_OPS 03)
-  TYPES tt_pe_area TYPE SORTED TABLE OF zif_cd_ops_types=>ty_pe_area WITH UNIQUE KEY table_line.
+  TYPES tt_pe_area TYPE SORTED TABLE OF zif_ca_ops_types=>ty_area WITH UNIQUE KEY table_line.
 
   "! Pattern areas of the pattern check: configured field -> source of real values
   CONSTANTS:
@@ -28,15 +28,15 @@ INTERFACE zif_cd_ops_pattern_types
       fmon_file   TYPE ty_area VALUE 'FMON_FILE',
       "! ZCD_JOB_STEP-JOBNAME and the job-name lists of ZCD_HCK_DEF -> TBTCO-JOBNAME
       hck_job     TYPE ty_area VALUE 'HCK_JOB',
-      "! ZCD_HCK_SUPPRESS-KEY_PATTERN -> object keys of HCK findings (ZCD_OPS_FINDING)
+      "! ZCD_HCK_SUPPRESS-KEY_PATTERN -> object keys of HCK findings (ZCA_OPS_FINDING)
       hck_suppr   TYPE ty_area VALUE 'HCK_SUPPR',
-      "! ZCD_OPS_ALRULE-RULE_PATTERN -> rule IDs of findings
+      "! ZCA_OPS_ALRULE-RULE_PATTERN -> rule IDs of findings
       alert_rule  TYPE ty_area VALUE 'ALERT_RULE',
-      "! ZCD_OPS_ALRULE-CHECK_PATTERN -> check codes of findings
+      "! ZCA_OPS_ALRULE-CHECK_PATTERN -> check codes of findings
       alert_check TYPE ty_area VALUE 'ALERT_CHK',
-      "! ZCD_OPS_ALRULE-GROUP1_PATTERN -> group 1 of findings
+      "! ZCA_OPS_ALRULE-GROUP1_PATTERN -> group 1 of findings
       alert_grp1  TYPE ty_area VALUE 'ALERT_GRP1',
-      "! ZCD_OPS_ALRULE-GROUP2_PATTERN -> group 2 of findings
+      "! ZCA_OPS_ALRULE-GROUP2_PATTERN -> group 2 of findings
       alert_grp2  TYPE ty_area VALUE 'ALERT_GRP2',
     END OF gc_area.
 
@@ -138,7 +138,7 @@ INTERFACE zif_cd_ops_pattern_types
       flow_pattern TYPE ty_name VALUE 'ZCD_EBS_FLOW_PAT',
       fmon_iface   TYPE ty_name VALUE 'ZCD_FMON_IFACE',
       job_step     TYPE ty_name VALUE 'ZCD_JOB_STEP',
-      alert_rule   TYPE ty_name VALUE 'ZCD_OPS_ALRULE',
+      alert_rule   TYPE ty_name VALUE 'ZCA_OPS_ALRULE',
       hck_def      TYPE ty_name VALUE 'ZCD_HCK_DEF',
       suppression  TYPE ty_name VALUE 'ZCD_HCK_SUPPRESS',
     END OF gc_table.
@@ -171,10 +171,10 @@ INTERFACE zif_cd_ops_pattern_types
   "! application log PARAM1 + PARAM2, job cycle PARAM2)
   CONSTANTS:
     BEGIN OF gc_list_class,
-      tech_jobs   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_TECH_JOBS',
-      job_runtime TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_JOB_RUNTIME',
-      applog      TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_APPLOG',
-      job_cycle   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_JOB_CYCLE',
+      tech_jobs   TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_TECH_JOBS',
+      job_runtime TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_JOB_RUNTIME',
+      applog      TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_APPLOG',
+      job_cycle   TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_C_JOB_CYCLE',
     END OF gc_list_class.
 
   "! Default and largest row cap of the value read of the pattern check

@@ -12,8 +12,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 003 | [&1][&2] &3 finding(s) - rule &4 |
 | 004 | Run &1 status &2, RAG &3, items &4, |
 | 005 | failed &1, blocked &2. |
-| 006 | &1 more finding(s): see the exceptions app (Fiori ZUI_CD_OPS_EXC). |
-| 007 | Channel &1 not configured or inactive in ZCD_OPS_ALCHN |
+| 006 | &1 more finding(s): see the exceptions app (Fiori ZUI_CA_OPS_EXC). |
+| 007 | Channel &1 not configured or inactive in ZCA_OPS_ALCHN |
 | 008 | Passed on re-run &1 |
 | 010 | Insert into table &1 failed |
 | 011 | Update of table &1 failed |
@@ -533,7 +533,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 800 | Application log &1/&2 not created (BAL_LOG_CREATE return code &3) |
 | 801 | Application log &1/&2 not saved (BAL_DB_SAVE return code &3) |
 | 802 | Alert log ID could not be generated - alert not delivered |
-| 803 | Run &1, job &2 / &3 - exceptions app ZUI_CD_OPS_EXC |
+| 803 | Run &1, job &2 / &3 - exceptions app ZUI_CA_OPS_EXC |
 | 804 | Run &1 &2 aborted by an error: |
 | 805 | Alert dispatch failed for the run of &1: |
 | 806 | E-mail for &1: SAPconnect commit failed (return code &2) |

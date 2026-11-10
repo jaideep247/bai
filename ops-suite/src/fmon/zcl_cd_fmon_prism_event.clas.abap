@@ -68,7 +68,7 @@ CLASS zcl_cd_fmon_prism_event DEFINITION
       IMPORTING
         iv_code         TYPE zif_cd_fmon_prism_types=>ty_wire_value
         iv_field        TYPE clike OPTIONAL
-        iv_msgno        TYPE zif_cd_ops_types=>ty_msgno
+        iv_msgno        TYPE zif_ca_ops_types=>ty_msgno
         iv_v1           TYPE simple OPTIONAL
         iv_v2           TYPE simple OPTIONAL
         iv_tail         TYPE string OPTIONAL
@@ -375,7 +375,7 @@ CLASS zcl_cd_fmon_prism_event IMPLEMENTATION.
     CONVERT TIME STAMP cs_row-occurred_at TIME ZONE is_context-time_zone
       INTO DATE cs_row-business_date TIME lv_time.
     IF sy-subrc > 4.
-      CONVERT TIME STAMP cs_row-occurred_at TIME ZONE zif_cd_ops_types=>gc_time_zone_utc
+      CONVERT TIME STAMP cs_row-occurred_at TIME ZONE zif_ca_ops_types=>gc_time_zone_utc
         INTO DATE cs_row-business_date TIME lv_time.
     ENDIF.
   ENDMETHOD.
@@ -515,7 +515,7 @@ CLASS zcl_cd_fmon_prism_event IMPLEMENTATION.
     IF CONV i( lv_date ) = 0 OR lv_time+0(2) > 23 OR lv_time+2(2) > 59 OR lv_time+4(2) > 59.
       RETURN.
     ENDIF.
-    CONVERT DATE lv_date TIME lv_time INTO TIME STAMP lv_seconds TIME ZONE zif_cd_ops_types=>gc_time_zone_utc.
+    CONVERT DATE lv_date TIME lv_time INTO TIME STAMP lv_seconds TIME ZONE zif_ca_ops_types=>gc_time_zone_utc.
     IF sy-subrc <> 0.
       RETURN.
     ENDIF.

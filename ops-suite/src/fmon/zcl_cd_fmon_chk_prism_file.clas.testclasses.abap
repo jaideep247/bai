@@ -38,7 +38,7 @@ CLASS ltc_prism_file DEFINITION FINAL
       RETURNING
         VALUE(rt_codes) TYPE string_table
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS add_event
       IMPORTING
@@ -88,7 +88,7 @@ CLASS ltc_prism_file IMPLEMENTATION.
     DATA ls_check TYPE zif_cd_fmon_types=>ty_chk.
     ls_check-check_id   = 'F_PRFILE'.
     ls_check-class_name = 'ZCL_CD_FMON_CHK_PRISM_FILE'.
-    ls_check-severity   = zif_cd_ops_types=>gc_severity-warning.
+    ls_check-severity   = zif_ca_ops_types=>gc_severity-warning.
     DATA(lt_findings) = NEW zcl_cd_fmon_chk_prism_file( )->zif_cd_fmon_check~execute( is_ctx   = ms_ctx
                                                                                      is_check = ls_check ).
     LOOP AT lt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).

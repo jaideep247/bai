@@ -3,7 +3,7 @@
 *& Purpose:
 *& CDS tests of the health check dashboard on cl_cds_test_environment
 *& doubles of the base tables (ZCD_HCK_DEF, ZCD_HCK_RESULT, ZCD_HCK_METRIC,
-*& ZCD_OPS_FINDING, ZCD_OPS_RUN): status of every check in the last
+*& ZCA_OPS_FINDING, ZCA_OPS_RUN): status of every check in the last
 *& completed run as the engine persisted it (RED, AMBER, WARMUP, GREEN,
 *& FAILED, SKIPPED; NO_RESULT without a row), green without metric, scope
 *& of a filtered run, warm-up next to a fixed limit = report, findings of older runs do not change the status
@@ -24,7 +24,7 @@
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    CONSTANTS gc_pe_area TYPE zif_cd_ops_types=>ty_pe_area VALUE 'HCK'.
+    CONSTANTS gc_pe_area TYPE zif_ca_ops_types=>ty_area VALUE 'HCK'.
     CONSTANTS gc_metric TYPE c LENGTH 30 VALUE 'COUNT'.
 
     CLASS-METHODS now
@@ -47,19 +47,19 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
 
     CLASS-METHODS finding
       IMPORTING
-        iv_run_id         TYPE zif_cd_ops_types=>ty_run_id
+        iv_run_id         TYPE zif_ca_ops_types=>ty_run_id
         iv_finding_no     TYPE i
         iv_check_id       TYPE zif_cd_hck_types=>ty_check_id
         iv_category       TYPE zif_cd_hck_types=>ty_category
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity
-        iv_disposition    TYPE zif_cd_ops_types=>ty_disposition DEFAULT zif_cd_ops_types=>gc_disposition-open
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity
+        iv_disposition    TYPE zif_ca_ops_types=>ty_disposition DEFAULT zif_ca_ops_types=>gc_disposition-open
       RETURNING
-        VALUE(rs_finding) TYPE zcd_ops_finding.
+        VALUE(rs_finding) TYPE zca_ops_finding.
 
     CLASS-METHODS metric
       IMPORTING
-        iv_run_id        TYPE zif_cd_ops_types=>ty_run_id
+        iv_run_id        TYPE zif_ca_ops_types=>ty_run_id
         iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
         iv_dim1          TYPE clike
         iv_dim2          TYPE clike OPTIONAL
@@ -69,17 +69,17 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
 
     CLASS-METHODS run
       IMPORTING
-        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
-        iv_status     TYPE zif_cd_ops_types=>ty_run_status
+        iv_run_id     TYPE zif_ca_ops_types=>ty_run_id
+        iv_status     TYPE zif_ca_ops_types=>ty_run_status
         iv_ended_at   TYPE timestampl
         iv_test_mode  TYPE abap_bool DEFAULT abap_false
       RETURNING
-        VALUE(rs_run) TYPE zcd_ops_run.
+        VALUE(rs_run) TYPE zca_ops_run.
 
     "! Persisted verdict of a check in a run (ZCD_HCK_RESULT)
     CLASS-METHODS result
       IMPORTING
-        iv_run_id        TYPE zif_cd_ops_types=>ty_run_id
+        iv_run_id        TYPE zif_ca_ops_types=>ty_run_id
         iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
         iv_status        TYPE zif_cd_hck_types=>ty_check_status
         iv_completion    TYPE zif_cd_hck_types=>ty_completion DEFAULT zif_cd_hck_types=>gc_completion-complete
@@ -164,9 +164,9 @@ CLASS ltc_check DEFINITION FINAL
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_run,
-        old  TYPE zif_cd_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000001',
-        last TYPE zif_cd_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000002',
-        test TYPE zif_cd_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000003',
+        old  TYPE zif_ca_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000001',
+        last TYPE zif_ca_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000002',
+        test TYPE zif_ca_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000003',
       END OF gc_run.
     CONSTANTS:
       BEGIN OF gc_check,
@@ -226,8 +226,8 @@ CLASS ltc_check IMPLEMENTATION.
 
   METHOD setup.
     DATA lt_defs TYPE STANDARD TABLE OF zcd_hck_def WITH EMPTY KEY.
-    DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
-    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
+    DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
     DATA lt_metrics TYPE STANDARD TABLE OF zcd_hck_metric WITH EMPTY KEY.
     DATA lt_results TYPE STANDARD TABLE OF zcd_hck_result WITH EMPTY KEY.
 
@@ -246,40 +246,40 @@ CLASS ltc_check IMPLEMENTATION.
                             iv_active   = abap_false ) INTO TABLE lt_defs.
 
     DATA(ls_last) = ltd_rows=>run( iv_run_id   = gc_run-last
-                                   iv_status   = zif_cd_ops_types=>gc_run_status-error
+                                   iv_status   = zif_ca_ops_types=>gc_run_status-error
                                    iv_ended_at = ltd_rows=>seconds_ago( 60 ) ).
-    ls_last-rag           = zif_cd_ops_types=>gc_rag-red.
+    ls_last-rag           = zif_ca_ops_types=>gc_rag-red.
     ls_last-total_items   = gc_active_checks.
     ls_last-passed_items  = 1.
     ls_last-warning_items = 1.
     ls_last-failed_items  = 1.
     INSERT ls_last INTO TABLE lt_runs.
     INSERT ltd_rows=>run( iv_run_id   = gc_run-old
-                          iv_status   = zif_cd_ops_types=>gc_run_status-success
+                          iv_status   = zif_ca_ops_types=>gc_run_status-success
                           iv_ended_at = ltd_rows=>seconds_ago( 3600 ) ) INTO TABLE lt_runs.
     INSERT ltd_rows=>run( iv_run_id    = gc_run-test
-                          iv_status    = zif_cd_ops_types=>gc_run_status-success
+                          iv_status    = zif_ca_ops_types=>gc_run_status-success
                           iv_ended_at  = ltd_rows=>now( )
                           iv_test_mode = abap_true ) INTO TABLE lt_runs.
 
     INSERT ltd_rows=>finding( iv_run_id   = gc_run-last iv_finding_no = 1
                               iv_check_id = gc_check-red iv_category = zif_cd_hck_types=>gc_category-financial
                               iv_code     = zif_cd_hck_types=>gc_code-threshold_red
-                              iv_severity = zif_cd_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
+                              iv_severity = zif_ca_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
     INSERT ltd_rows=>finding( iv_run_id   = gc_run-last iv_finding_no = 2
                               iv_check_id = gc_check-amber iv_category = zif_cd_hck_types=>gc_category-mass_run
                               iv_code     = zif_cd_hck_types=>gc_code-baseline_outlier
-                              iv_severity = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
+                              iv_severity = zif_ca_ops_types=>gc_severity-warning ) INTO TABLE lt_findings.
     INSERT ltd_rows=>finding( iv_run_id      = gc_run-last iv_finding_no = 3
                               iv_check_id    = gc_check-warmup iv_category = zif_cd_hck_types=>gc_category-config
                               iv_code        = zif_cd_hck_types=>gc_code-baseline_warmup
-                              iv_severity    = zif_cd_ops_types=>gc_severity-info
-                              iv_disposition = zif_cd_ops_types=>gc_disposition-information ) INTO TABLE lt_findings.
+                              iv_severity    = zif_ca_ops_types=>gc_severity-info
+                              iv_disposition = zif_ca_ops_types=>gc_disposition-information ) INTO TABLE lt_findings.
     " An exception of the older run on the green check: still open, not the check's status today
     INSERT ltd_rows=>finding( iv_run_id   = gc_run-old iv_finding_no = 1
                               iv_check_id = gc_check-green iv_category = zif_cd_hck_types=>gc_category-exceptions
                               iv_code     = zif_cd_hck_types=>gc_code-threshold_red
-                              iv_severity = zif_cd_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
+                              iv_severity = zif_ca_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
     INSERT ltd_rows=>metric( iv_run_id = gc_run-last iv_check_id = gc_check-green iv_dim1 = gc_dim1
                              iv_measured_at = ltd_rows=>seconds_ago( 60 ) ) INTO TABLE lt_metrics.
 
@@ -382,7 +382,7 @@ CLASS ltc_check IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_kpi ) exp = 1 msg = 'The KPI entity has one row' ).
         DATA(ls_kpi) = VALUE #( lt_kpi[ 1 ] OPTIONAL ).
         cl_abap_unit_assert=>assert_equals( act = ls_kpi-runid exp = gc_run-last msg = 'KPI of the last completed run' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_kpi-runrag exp = zif_cd_ops_types=>gc_rag-red
+        cl_abap_unit_assert=>assert_equals( act = ls_kpi-runrag exp = zif_ca_ops_types=>gc_rag-red
                                             msg = 'The stored overall RAG is shown' ).
         cl_abap_unit_assert=>assert_equals( act = ls_kpi-redcheckcount exp = 1 msg = 'Run counter of red checks' ).
         cl_abap_unit_assert=>assert_equals( act = ls_kpi-openfindingcount exp = 3
@@ -403,7 +403,7 @@ CLASS ltc_verdict DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_run TYPE zif_cd_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000021'.
+    CONSTANTS gc_run TYPE zif_ca_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000021'.
     CONSTANTS:
       BEGIN OF gc_check,
         no_metric TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_NO_METRIC',
@@ -411,7 +411,7 @@ CLASS ltc_verdict DEFINITION FINAL
         failed    TYPE zif_cd_hck_types=>ty_check_id VALUE 'C_FAILED',
         skipped   TYPE zif_cd_hck_types=>ty_check_id VALUE 'D_SKIPPED',
       END OF gc_check.
-    CONSTANTS gc_scope TYPE zif_cd_ops_types=>ty_message VALUE 'Variant MORNING_A, categories I EQ A, priorities *, checks: *'.
+    CONSTANTS gc_scope TYPE zif_ca_ops_types=>ty_message VALUE 'Variant MORNING_A, categories I EQ A, priorities *, checks: *'.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
 
@@ -446,9 +446,9 @@ CLASS ltc_verdict IMPLEMENTATION.
 
   METHOD setup.
     DATA lt_defs TYPE STANDARD TABLE OF zcd_hck_def WITH EMPTY KEY.
-    DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+    DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
     DATA lt_results TYPE STANDARD TABLE OF zcd_hck_result WITH EMPTY KEY.
-    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
     go_env->clear_doubles( ).
     INSERT ltd_rows=>check( iv_check_id = gc_check-no_metric iv_category = zif_cd_hck_types=>gc_category-financial )
            INTO TABLE lt_defs.
@@ -459,7 +459,7 @@ CLASS ltc_verdict IMPLEMENTATION.
     INSERT ltd_rows=>check( iv_check_id = gc_check-skipped iv_category = zif_cd_hck_types=>gc_category-config )
            INTO TABLE lt_defs.
     INSERT ltd_rows=>run( iv_run_id   = gc_run
-                          iv_status   = zif_cd_ops_types=>gc_run_status-error
+                          iv_status   = zif_ca_ops_types=>gc_run_status-error
                           iv_ended_at = ltd_rows=>seconds_ago( 60 ) ) INTO TABLE lt_runs.
     DATA(ls_result) = ltd_rows=>result( iv_run_id = gc_run iv_check_id = gc_check-no_metric
                                         iv_status = zif_cd_hck_types=>gc_check_status-green ).
@@ -484,13 +484,13 @@ CLASS ltc_verdict IMPLEMENTATION.
     INSERT ltd_rows=>finding( iv_run_id      = gc_run iv_finding_no = 1
                               iv_check_id    = gc_check-warm_lim iv_category = zif_cd_hck_types=>gc_category-mass_run
                               iv_code        = zif_cd_hck_types=>gc_code-baseline_warmup
-                              iv_severity    = zif_cd_ops_types=>gc_severity-info
-                              iv_disposition = zif_cd_ops_types=>gc_disposition-information ) INTO TABLE lt_findings.
+                              iv_severity    = zif_ca_ops_types=>gc_severity-info
+                              iv_disposition = zif_ca_ops_types=>gc_disposition-information ) INTO TABLE lt_findings.
     " The plug-in error of the failed check
     INSERT ltd_rows=>finding( iv_run_id   = gc_run iv_finding_no = 2
                               iv_check_id = gc_check-failed iv_category = zif_cd_hck_types=>gc_category-exceptions
                               iv_code     = zif_cd_hck_types=>gc_code-plugin_error
-                              iv_severity = zif_cd_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
+                              iv_severity = zif_ca_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
     go_env->insert_test_data( i_data = lt_defs ).
     go_env->insert_test_data( i_data = lt_runs ).
     go_env->insert_test_data( i_data = lt_results ).
@@ -575,8 +575,8 @@ CLASS ltc_history DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_run TYPE zif_cd_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000011'.
-    CONSTANTS gc_run_old TYPE zif_cd_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000012'.
+    CONSTANTS gc_run TYPE zif_ca_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000011'.
+    CONSTANTS gc_run_old TYPE zif_ca_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000012'.
     CONSTANTS gc_check TYPE zif_cd_hck_types=>ty_check_id VALUE 'B_VOLUME'.
     CONSTANTS gc_dim1 TYPE c LENGTH 4 VALUE 'PCLM'.
     CONSTANTS gc_series_1 TYPE c LENGTH 4 VALUE 'ACH'.
@@ -627,9 +627,9 @@ CLASS ltc_history IMPLEMENTATION.
     DATA lt_val TYPE STANDARD TABLE OF zca_param_val WITH EMPTY KEY.
     DATA ls_val TYPE zca_param_val.
     TRY.
-        DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+        DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
         INSERT ltd_rows=>run( iv_run_id   = gc_run
-                              iv_status   = zif_cd_ops_types=>gc_run_status-success
+                              iv_status   = zif_ca_ops_types=>gc_run_status-success
                               iv_ended_at = ltd_rows=>seconds_ago( lc_two_hours ) ) INTO TABLE lt_runs.
         go_env->insert_test_data( i_data = lt_runs ).
         ls_def-area          = zif_cd_ops_types=>gc_param_area-ops.
@@ -664,12 +664,12 @@ CLASS ltc_history IMPLEMENTATION.
 
   METHOD stale_without_completed_run.
     TRY.
-        DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+        DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
         INSERT ltd_rows=>run( iv_run_id   = gc_run
-                              iv_status   = zif_cd_ops_types=>gc_run_status-aborted
+                              iv_status   = zif_ca_ops_types=>gc_run_status-aborted
                               iv_ended_at = ltd_rows=>now( ) ) INTO TABLE lt_runs.
         INSERT ltd_rows=>run( iv_run_id    = gc_run_old
-                              iv_status    = zif_cd_ops_types=>gc_run_status-success
+                              iv_status    = zif_ca_ops_types=>gc_run_status-success
                               iv_ended_at  = ltd_rows=>now( )
                               iv_test_mode = abap_true ) INTO TABLE lt_runs.
         go_env->insert_test_data( i_data = lt_runs ).

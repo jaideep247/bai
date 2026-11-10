@@ -43,7 +43,7 @@ INTERFACE zif_cd_hck_recon_types
   TYPES ty_awtyp   TYPE c LENGTH 5.
   "! Debit / credit indicator of a bank line (FEBEP-EPVOZ) or a G/L line (ACDOCA-DRCRK)
   TYPES ty_cdi     TYPE c LENGTH 1.
-  TYPES ty_amount  TYPE zif_cd_ops_types=>ty_amount.
+  TYPES ty_amount  TYPE zif_ca_ops_types=>ty_amount.
   "! Group key of the result (DIM1 of the metrics): BUKRS/HKONT/WAERS
   TYPES ty_group   TYPE c LENGTH 35.
 
@@ -390,19 +390,19 @@ INTERFACE zif_cd_hck_recon_types
   CONSTANTS:
     BEGIN OF gc_code,
       "! Bank <> G/L beyond the tolerance, not explained by a bucket (also unmatched ACH groups)
-      recon_break      TYPE zif_cd_ops_types=>ty_check_code VALUE 'RECON_BREAK',
+      recon_break      TYPE zif_ca_ops_types=>ty_check_code VALUE 'RECON_BREAK',
       "! G/L <> payment engine control total beyond the tolerance
-      subledger_break  TYPE zif_cd_ops_types=>ty_check_code VALUE 'RECON_SUBLEDGER_BREAK',
+      subledger_break  TYPE zif_ca_ops_types=>ty_check_code VALUE 'RECON_SUBLEDGER_BREAK',
       "! Stripe descriptor group <> BAI deposit + fees
-      stripe_break     TYPE zif_cd_ops_types=>ty_check_code VALUE 'STRIPE_GROUP_BREAK',
+      stripe_break     TYPE zif_ca_ops_types=>ty_check_code VALUE 'STRIPE_GROUP_BREAK',
       "! Difference explained by timing, cut-off or a pending redeposit (information)
-      recon_timing     TYPE zif_cd_ops_types=>ty_check_code VALUE 'RECON_TIMING',
+      recon_timing     TYPE zif_ca_ops_types=>ty_check_code VALUE 'RECON_TIMING',
       "! Difference explained by a cheque, unmapped-code or other bucket (warning)
-      recon_variance   TYPE zif_cd_ops_types=>ty_check_code VALUE 'RECON_VARIANCE',
+      recon_variance   TYPE zif_ca_ops_types=>ty_check_code VALUE 'RECON_VARIANCE',
       "! A set without any evidence in the window (information; check grey when no set has any)
-      recon_no_data    TYPE zif_cd_ops_types=>ty_check_code VALUE 'RECON_NO_DATA',
+      recon_no_data    TYPE zif_ca_ops_types=>ty_check_code VALUE 'RECON_NO_DATA',
       "! A set that cannot be evaluated (house bank account, duplicate group, deposit codes)
-      recon_config     TYPE zif_cd_ops_types=>ty_check_code VALUE 'RECON_CONFIG',
+      recon_config     TYPE zif_ca_ops_types=>ty_check_code VALUE 'RECON_CONFIG',
     END OF gc_code.
 
   "! Metrics (ZCD_HCK_METRIC; DIM1 = BUKRS/HKONT/WAERS): differences per day (DIM2 ISO day),
@@ -442,15 +442,15 @@ INTERFACE zif_cd_hck_recon_types
   CONSTANTS:
     BEGIN OF gc_param,
       "! Days before the report date that are reconciled
-      lookback_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_RECON_LOOKBACK_DAYS',
+      lookback_days  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_RECON_LOOKBACK_DAYS',
       "! Days a difference may stay open as timing (statement next day / month)
-      timing_days    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_RECON_TIMING_DAYS',
+      timing_days    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_RECON_TIMING_DAYS',
       "! Days a failed collection (468) may wait for its delayed redeposit without a returns lot
-      redeposit_days TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_RECON_REDEPOSIT_DAYS',
+      redeposit_days TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_RECON_REDEPOSIT_DAYS',
       "! Absolute tolerance per group day when the set has none
-      tolerance      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_RECON_TOLERANCE',
+      tolerance      TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_RECON_TOLERANCE',
       "! Assignment groups of one read (ACH pairs, Stripe groups)
-      max_rows       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_RECON_MAX_ROWS',
+      max_rows       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_RECON_MAX_ROWS',
     END OF gc_param.
 
   CONSTANTS:
@@ -465,17 +465,17 @@ INTERFACE zif_cd_hck_recon_types
   "! Message numbers (class ZCD_OPS)
   CONSTANTS:
     BEGIN OF gc_msg,
-      recon_break      TYPE zif_cd_ops_types=>ty_msgno VALUE '690',
-      subledger_break  TYPE zif_cd_ops_types=>ty_msgno VALUE '691',
-      stripe_break     TYPE zif_cd_ops_types=>ty_msgno VALUE '692',
-      recon_timing     TYPE zif_cd_ops_types=>ty_msgno VALUE '693',
-      recon_variance   TYPE zif_cd_ops_types=>ty_msgno VALUE '694',
-      ach_unmatched    TYPE zif_cd_ops_types=>ty_msgno VALUE '695',
-      no_data          TYPE zif_cd_ops_types=>ty_msgno VALUE '696',
-      unmapped_codes   TYPE zif_cd_ops_types=>ty_msgno VALUE '697',
-      summary          TYPE zif_cd_ops_types=>ty_msgno VALUE '698',
-      set_not_used     TYPE zif_cd_ops_types=>ty_msgno VALUE '699',
-      evidence         TYPE zif_cd_ops_types=>ty_msgno VALUE '838',
+      recon_break      TYPE zif_ca_ops_types=>ty_msgno VALUE '690',
+      subledger_break  TYPE zif_ca_ops_types=>ty_msgno VALUE '691',
+      stripe_break     TYPE zif_ca_ops_types=>ty_msgno VALUE '692',
+      recon_timing     TYPE zif_ca_ops_types=>ty_msgno VALUE '693',
+      recon_variance   TYPE zif_ca_ops_types=>ty_msgno VALUE '694',
+      ach_unmatched    TYPE zif_ca_ops_types=>ty_msgno VALUE '695',
+      no_data          TYPE zif_ca_ops_types=>ty_msgno VALUE '696',
+      unmapped_codes   TYPE zif_ca_ops_types=>ty_msgno VALUE '697',
+      summary          TYPE zif_ca_ops_types=>ty_msgno VALUE '698',
+      set_not_used     TYPE zif_ca_ops_types=>ty_msgno VALUE '699',
+      evidence         TYPE zif_ca_ops_types=>ty_msgno VALUE '838',
     END OF gc_msg.
 
 ENDINTERFACE.

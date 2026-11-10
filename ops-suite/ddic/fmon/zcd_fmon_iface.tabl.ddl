@@ -32,4 +32,4 @@ define table zcd_fmon_iface {
   last_changed_at       : abp_lastchange_tstmpl;
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
-// Alert routing is not maintained here: ZCD_OPS_ALRULE (payment engine area FMON, group1 = IFACE_ID pattern).
+// Alert routing is not maintained here: ZCA_OPS_ALRULE (payment engine area FMON, group1 = IFACE_ID pattern).

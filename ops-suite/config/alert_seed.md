@@ -3,15 +3,15 @@
 > **First principle:** who hears about a problem, how fast and how loud is configuration, never code.
 > **Analogy:** a building's fire panel — zones (rules) are wired to sirens or the control room (channels) by the installer, not by the fire.
 
-## ZCD_OPS_ALCHN
+## ZCA_OPS_ALCHN
 
 | CHANNEL | CLASS_NAME | DESTINATION | ACTIVE |
 |---|---|---|---|
-| EMAIL | ZCL_CD_OPS_CHN_EMAIL | *(blank — rule gives the SO23 list)* | X |
-| APPLOG | ZCL_CD_OPS_CHN_APPLOG | ZCD_OPS/ALERT | X |
+| EMAIL | ZCL_CA_OPS_CHN_EMAIL | *(blank — rule gives the SO23 list)* | X |
+| APPLOG | ZCL_CA_OPS_CHN_APPLOG | ZCD_OPS/ALERT | X |
 
 **SLG1 kept to a minimum (user decision 2026-11-07).** No delivered rule writes the application log: findings are
-already in `ZCD_OPS_FINDING` (dashboards, morning report), alert attempts in `ZCD_OPS_ALLOG`, parameter errors in the
+already in `ZCA_OPS_FINDING` (dashboards, morning report), alert attempts in `ZCA_OPS_ALLOG`, parameter errors in the
 morning check `PARAM_INVALID`. The APPLOG channel stays available for a rule that explicitly needs SLG1 — keep such a
 rule to severity E or higher, DIGEST = X (one log per run, not per finding) and a small MAX_ITEMS.
 
@@ -31,7 +31,7 @@ and the channel refuses the route before anything is sent if a list was deleted 
 | ZCD_RTBSUP | RTB support | HCK_RED, HCK_RECON, ALL_ABORT, RUN_LOCKED, morning report |
 | ZCD_RTBLEAD | RTB lead (escalation) | ESCALATION_DEST of EBS_BLOCK, FMON_PART, FMON_SLA, FMON_BAIDL, FMON_REGEN, HCK_RED, HCK_RECON |
 
-## ZCD_OPS_ALRULE
+## ZCA_OPS_ALRULE
 
 RULE / CHECK / GROUP1 / GROUP2 patterns are **PCRE matched to the complete value, case ignored** (blank = any;
 user decision 2026-11-06): `.*SLA.*` = any check code containing SLA, `RUN_LOCKED` = exactly that code. The
@@ -70,9 +70,9 @@ GROUP2_PATTERN blank (every condition - GROUP2 carries `NOT_RECEIVED` / `NOT_IMP
 second rule may route one condition elsewhere). The deadline rows (`ZCD_FMON_SLA` kind DEADLINE, `config/fmon_seed.md`)
 make the finding due at 10:00 US Central (`FMON_TIME_ZONE` = CST); the 5-minute FMON job raises it in the first run after
 10:00 (10:00-10:05). Later runs carry the open exception forward and are **not alerted again** (status R in
-ZCD_OPS_ALLOG); after 6 consecutive runs (30 minutes) still open the escalation goes to `ZCD_RTBLEAD`.
+ZCA_OPS_ALLOG); after 6 consecutive runs (30 minutes) still open the escalation goes to `ZCD_RTBLEAD`.
 THROTTLE_MIN 0: the first raise is never held back; there is no quiet window. No APPLOG rule is seeded for
-it (SLG1 kept to a minimum - findings in ZCD_OPS_FINDING, e-mail to SO23 lists only). A new rule of this kind
+it (SLG1 kept to a minimum - findings in ZCA_OPS_FINDING, e-mail to SO23 lists only). A new rule of this kind
 is created in DV1 on a customizing request and transported; in PS4 support only edits existing rules
 (SO23 list, severity, ACTIVE; `Operations_Runbook.md` §5h).
 
@@ -88,22 +88,22 @@ ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle 
 EBS_BLOCK and HCK_RED. Escalation counts consecutive runs of the area (a run without an alert of the rule ends
 the series).
 
-ZCD_OPS_ALLOG needs the **unique** secondary index `INT` (MANDT, INTENT_KEY, ATTEMPT) — create it in SE11
+ZCA_OPS_ALLOG needs the **unique** secondary index `INT` (MANDT, INTENT_KEY, ATTEMPT) — create it in SE11
 before go-live; it is what stops two dispatchers sending the same alert (A17). Status values: S sent, F failed,
 T throttled, Q quiet, C claimed (in delivery), R repeat (carried-forward exception, not re-alerted), P partial.
 
 Parameters (ZCA_PARAM area `CD_OPS`) for reports sent with `send( )`: `ALERT_MORNING` (morning report SO23 list, LIST, proposed `ZCD_RTBSUP`; a route other than MORNING in `HCK_MAIL_ROUTE` needs its own definition `ALERT_<route>`), `ALERT_DEFAULT` (fallback), `ALERT_ESCALATION_WINDOW_H` (default 24).
 
-Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUTER` unit tests):
+Rules of behaviour (proved by `ZCL_CA_OPS_ALERT_POLICY` / `ZCL_CA_OPS_ALERT_ROUTER` unit tests):
 - Severity **B** (blocked, never posted) ignores quiet hours.
-- Throttled (T) and quiet-hour (Q) decisions are logged in ZCD_OPS_ALLOG — nothing is silently dropped.
+- Throttled (T) and quiet-hour (Q) decisions are logged in ZCA_OPS_ALLOG — nothing is silently dropped.
 - A failing channel is logged as F and never aborts the run; the morning report's "alert delivery health" check counts F rows.
 - `send( )` without recipients or on an inactive channel logs F **and raises** (A45).
 - An e-mail destination that is not a shared SO23 list is refused before BCS is called (027, logged F).
 - MAX_ITEMS keeps the most severe findings (B > E > W > I); the message names how many were held back (A63).
 - Test-mode runs never alert.
 
-## Core parameters — framework `ZCA_PARAM`, area `CD_OPS` (retention purge, `ZCD_OPS_PURGE`)
+## Core parameters — framework `ZCA_PARAM`, area `CD_OPS` (retention purge, `ZCA_OPS_RETENTION`)
 
 Definitions (value type, limits, delivered default) of every parameter: `config/param_definitions.csv`; example value rows to confirm per landscape: `config/param_values.csv` (format: `param-framework/docs/ONBOARDING.md` section 6a). Maintained in the framework app *Parameter areas* (`ZUI_CA_PARAM`), area `CD_OPS` - ZCD_OPS_PARAM is retired.
 
@@ -116,7 +116,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | RETENTION_DAYS_FMON_PRISM | `400` | PRISM status API events (`ZCD_FMON_PRISM`, by receipt time); the file history stays in the FMON events |
 | PURGE_PACKAGE_SIZE | `1000` | Rows (RUN: runs) deleted per package; commit after each package (INT, at least 1) |
 
-Any value below 30 days is raised to 30 (`ZCL_CD_OPS_PURGE=>GC_MIN_DAYS`). A new purge target needs a definition `RETENTION_DAYS_<target>` (the portable check `param_definitions_complete` enumerates the targets).
+Any value below 30 days is raised to 30 (`ZCL_CA_OPS_PURGE=>GC_MIN_DAYS`). A new purge target needs a definition `RETENTION_DAYS_<target>` (the portable check `param_definitions_complete` enumerates the targets).
 
 ## Monitor freshness — `ZCA_PARAM` `MON_STALE_AFTER_MIN_<area>` (area `CD_OPS`; was `ZCD_OPS_MONCFG`, table consolidation 2026-11-08)
 

@@ -86,7 +86,7 @@ CLASS ltc_export IMPLEMENTATION.
     TRY.
         zcl_cd_hck_export=>write( iv_file = gc_file it_lines = mt_lines io_file = mo_file ).
         cl_abap_unit_assert=>fail( msg = 'The write error must be raised' ).
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( mo_file->mt_opened[ table_line = gc_file ] ) )
                                            msg = 'The target must not be opened after a failed temporary write' ).
         cl_abap_unit_assert=>assert_true(
@@ -102,7 +102,7 @@ CLASS ltc_export IMPLEMENTATION.
     TRY.
         zcl_cd_hck_export=>write( iv_file = gc_file it_lines = mt_lines io_file = mo_file ).
         cl_abap_unit_assert=>fail( msg = 'The write error must be raised' ).
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_file->mt_deleted[ table_line = gc_file ] ) )
                                           msg = 'A partly written target must be deleted' ).
     ENDTRY.

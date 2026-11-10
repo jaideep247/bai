@@ -21,7 +21,7 @@
 *& 2026-11-06 | Baseline history requested per series incl. DIM2 (audit A101).
 *& 2026-11-06 | Baseline warm-up: info finding, check grey not GREEN, not scored (audit A102).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
-*& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Parameter HCK_WATCH_PE_AREAS (was HCK_WATCH_MODULES; matches the documentation).
 *& 2026-11-07 | HCK_MAX_AGE_HOURS default from ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT (was inline 26).
 *& 2026-11-07 | GC_PARAM and inline defaults (300 / 8 / 20, watched areas, mail route, runtime limit) moved to
@@ -40,7 +40,7 @@
 *& 2026-11-08 | Table consolidation: self-check stale threshold from the core parameter
 *&            | MON_STALE_AFTER_MIN_<area> (was ZCD_OPS_MONCFG), then the hours rule as before.
 *& 2026-11-10 | Run boundary: a ZCX_CD_OPS_ERROR / CX_SY_OPEN_SQL_DB after the run started is rolled back, the run
-*&            | closed as aborted (ZCL_CD_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
+*&            | closed as aborted (ZCL_CA_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
 *&            | re-raised - never left in status R. PLUGIN_ERROR and ALERT_FAILED keep the exception trace
 *&            | (DETAILS) and error class.
 *&---------------------------------------------------------------------*
@@ -63,25 +63,25 @@ CLASS zcl_cd_hck_engine DEFINITION
 
 
     "! Run the selected checks and build the morning report
-    "! @raising zcx_cd_ops_error | store errors (start/save/finish run)
+    "! @raising zcx_ca_ops_error | store errors (start/save/finish run)
     METHODS run
       IMPORTING
         is_selection     TYPE zif_cd_hck_types=>ty_selection
       RETURNING
         VALUE(rs_report) TYPE zif_cd_hck_types=>ty_report
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Take a new golden baseline (hash) of every table in ZCD_OPS_TABWL (HCK / DRIFT).
     "! Requires S_TABU_NAM ACTVT 02 for table ZCD_HCK_BASELINE.
-    "! @raising zcx_cd_ops_error | 041 no authorization, 303/311 hash errors
+    "! @raising zcx_ca_ops_error | 041 no authorization, 303/311 hash errors
     METHODS take_baseline
       IMPORTING
         iv_test_mode    TYPE abap_bool
       RETURNING
         VALUE(rv_count) TYPE i
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
   PRIVATE SECTION.
     "! S_TABU_NAM check before a configuration baseline is written
@@ -97,7 +97,7 @@ CLASS zcl_cd_hck_engine DEFINITION
       RETURNING
         VALUE(rs_report) TYPE zif_cd_hck_types=>ty_report
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS release_lock
       IMPORTING
@@ -107,20 +107,20 @@ CLASS zcl_cd_hck_engine DEFINITION
     "! raising them again (scope = check ID in GROUP2); failed checks are excluded
     METHODS reconcile_checks
       IMPORTING
-        is_run     TYPE zif_cd_ops_types=>ty_run
+        is_run     TYPE zif_ca_ops_types=>ty_run
         it_results TYPE zif_cd_hck_types=>tt_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
-    DATA mo_store TYPE REF TO zif_cd_ops_store.
-    DATA mo_params TYPE REF TO zif_cd_ops_params.
+    DATA mo_store TYPE REF TO zif_ca_ops_store.
+    DATA mo_params TYPE REF TO zif_ca_ops_params.
     DATA mo_dao TYPE REF TO zif_cd_hck_dao.
-    DATA mo_clock TYPE REF TO zif_cd_ops_clock.
+    DATA mo_clock TYPE REF TO zif_ca_ops_clock.
     "! Active suppressions of the report day (design 6.3), read once per run
     DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
     DATA mv_today TYPE d.
     "! The current run: excluded from its own watchdog (A06)
-    DATA mv_run_id TYPE zif_cd_ops_types=>ty_run_id.
+    DATA mv_run_id TYPE zif_ca_ops_types=>ty_run_id.
     "! Baseline history is read as of this time (report date end or run start, A58)
     DATA mv_as_of TYPE timestampl.
     DATA mv_flat_tol_pct TYPE zif_cd_hck_types=>ty_value.
@@ -140,7 +140,7 @@ CLASS zcl_cd_hck_engine DEFINITION
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS evaluate_metrics
       IMPORTING
@@ -157,15 +157,15 @@ CLASS zcl_cd_hck_engine DEFINITION
         is_result TYPE zif_cd_hck_types=>ty_check_result
         iv_scope  TYPE string
       CHANGING
-        cs_run    TYPE zif_cd_ops_types=>ty_run
+        cs_run    TYPE zif_ca_ops_types=>ty_run
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! The persisted verdict of a check (ZCD_HCK_RESULT) - the same decision the report shows
     METHODS result_row
       IMPORTING
         is_result     TYPE zif_cd_hck_types=>ty_check_result
-        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
+        iv_run_id     TYPE zif_ca_ops_types=>ty_run_id
         iv_scope      TYPE string
       RETURNING
         VALUE(rs_row) TYPE zif_cd_hck_types=>ty_result_row.
@@ -175,7 +175,7 @@ CLASS zcl_cd_hck_engine DEFINITION
       IMPORTING
         is_selection   TYPE zif_cd_hck_types=>ty_selection
         it_defs        TYPE zif_cd_hck_types=>tt_check_def
-        is_run         TYPE zif_cd_ops_types=>ty_run
+        is_run         TYPE zif_ca_ops_types=>ty_run
         iv_scope       TYPE string
       RETURNING
         VALUE(rt_rows) TYPE zif_cd_hck_types=>tt_result_row.
@@ -227,7 +227,7 @@ CLASS zcl_cd_hck_engine DEFINITION
       CHANGING
         cs_report    TYPE zif_cd_hck_types=>ty_report
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS close_run
       CHANGING
@@ -271,15 +271,15 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF is_selection-test_mode = abap_false.
-      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                              iv_variant = is_selection-variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                          iv_variant = is_selection-variant
                                                          iv_holder  = lv_holder ).
         rs_report-run         = ls_refusal-run.
         rs_report-overall_rag = ls_refusal-run-rag.
-        INSERT VALUE #( check_id = zcl_cd_ops_run_guard=>gc_check_code
+        INSERT VALUE #( check_id = zcl_ca_ops_run_guard=>gc_check_code
                         category = zif_cd_hck_types=>gc_category-technical
                         rag      = ls_refusal-run-rag
                         summary  = ls_refusal-run-message
@@ -298,9 +298,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
 
   METHOD reconcile_checks.
-    DATA lt_scope TYPE zif_cd_ops_types=>tt_group.
+    DATA lt_scope TYPE zif_ca_ops_types=>tt_group.
     LOOP AT it_results ASSIGNING FIELD-SYMBOL(<ls_result>) WHERE plugin_error = abap_false.
-      INSERT CONV zif_cd_ops_types=>ty_group( <ls_result>-check_id ) INTO TABLE lt_scope.
+      INSERT CONV zif_ca_ops_types=>ty_group( <ls_result>-check_id ) INTO TABLE lt_scope.
     ENDLOOP.
     CHECK lt_scope IS NOT INITIAL.
     mo_store->reconcile( is_run    = is_run
@@ -310,16 +310,16 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF is_selection-test_mode = abap_false.
-      zcl_cd_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
+      zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                 iv_variant = is_selection-variant ).
     ENDIF.
   ENDMETHOD.
 
 
   METHOD execute.
-    mo_store  = zcl_cd_ops_factory=>get_store( ).
+    mo_store  = zcl_ca_ops_factory=>get_store( ).
     mo_params = zcl_cd_ops_factory=>get_params( ).
-    mo_clock = zcl_cd_ops_factory=>get_clock( ).
+    mo_clock = zcl_ca_ops_factory=>get_clock( ).
     mo_dao   = zcl_cd_hck_factory=>get_dao( ).
 
     DATA(lv_today) = mo_clock->today( ).
@@ -350,7 +350,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         mv_as_of = history_as_of( iv_report_date = rs_report-report_date
                                   iv_today       = lv_today
                                   iv_started_at  = rs_report-run-started_at ).
-        mv_flat_tol_pct = zcl_cd_ops_util=>param_int( io_params  = mo_params
+        mv_flat_tol_pct = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                       iv_name    = zif_cd_hck_types=>gc_param-flat_tol_pct
                                                       iv_default = CONV #( zcl_cd_hck_threshold=>gc_default_flat_tol_pct ) ).
         mt_suppressions = mo_dao->get_suppressions( lv_today ).
@@ -433,11 +433,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         mo_store->commit( ).
         notify( EXPORTING is_selection = is_selection
                 CHANGING  cs_report    = rs_report ).
-      CATCH zcx_cd_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
-        zcl_cd_ops_run_guard=>abort( EXPORTING ix_error = lx_error
+      CATCH zcx_ca_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
+        zcl_ca_ops_run_guard=>abort( EXPORTING ix_error = lx_error
                                      CHANGING  cs_run   = rs_report-run ).
-        IF lx_error IS INSTANCE OF zcx_cd_ops_error.
-          RAISE EXCEPTION CAST zcx_cd_ops_error( lx_error ).
+        IF lx_error IS INSTANCE OF zcx_ca_ops_error.
+          RAISE EXCEPTION CAST zcx_ca_ops_error( lx_error ).
         ENDIF.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
           MESSAGE e804(zcd_ops) WITH rs_report-run-pe_area rs_report-run-variant
@@ -458,11 +458,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         MESSAGE e041(zcd_ops) WITH gc_baseline_table gc_actvt_change.
     ENDIF.
 
-    mo_store  = zcl_cd_ops_factory=>get_store( ).
+    mo_store  = zcl_ca_ops_factory=>get_store( ).
     mo_params = zcl_cd_ops_factory=>get_params( ).
     " A64: a baseline is taken without a run - it reads the current parameters itself
     mo_params->refresh_params( ).
-    mo_clock = zcl_cd_ops_factory=>get_clock( ).
+    mo_clock = zcl_ca_ops_factory=>get_clock( ).
     mo_dao   = zcl_cd_hck_factory=>get_dao( ).
 
     DATA(lv_now) = mo_clock->now( ).
@@ -486,7 +486,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA(lv_started) = mo_clock->now( ).
     DATA(lt_thresholds) = mo_dao->get_thresholds( is_def-check_id ).
     DATA(lv_timeout_sec) = COND i( WHEN is_def-timeout_sec > 0 THEN is_def-timeout_sec
-                                   ELSE zcl_cd_ops_util=>param_int( io_params  = mo_params
+                                   ELSE zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                                     iv_name    = zif_cd_hck_types=>gc_param-timeout_sec
                                                                     iv_default = zif_cd_hck_types=>gc_param_default-timeout_sec ) ).
     " A18: the check gets its budget as a deadline; item-wise checks stop when it passes.
@@ -500,26 +500,26 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         rs_result = call_plugin( is_def        = is_def
                                  it_thresholds = lt_thresholds
                                  is_context    = ls_context ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+      CATCH zcx_ca_ops_error INTO DATA(lx_ops).
         CLEAR rs_result.
         rs_result-plugin_error = abap_true.
         INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-plugin_error
-                        severity   = zif_cd_ops_types=>gc_severity-error
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-error
+                        action     = zif_ca_ops_types=>gc_action-notify
                         reference  = is_def-class_name
                         message    = lx_ops->get_text( )
-                        details     = zcl_cd_ops_util=>exception_trace( lx_ops )
-                        error_class = zcl_cd_ops_util=>error_class( lx_ops ) ) INTO TABLE rs_result-findings.
+                        details     = zcl_ca_ops_util=>exception_trace( lx_ops )
+                        error_class = zcl_ca_ops_util=>error_class( lx_ops ) ) INTO TABLE rs_result-findings.
       CATCH cx_root INTO DATA(lx_root).
         CLEAR rs_result.
         rs_result-plugin_error = abap_true.
         INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-plugin_error
-                        severity   = zif_cd_ops_types=>gc_severity-error
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-error
+                        action     = zif_ca_ops_types=>gc_action-notify
                         reference  = is_def-class_name
                         message    = lx_root->get_text( )
-                        details     = zcl_cd_ops_util=>exception_trace( lx_root )
-                        error_class = zcl_cd_ops_util=>error_class( lx_root ) ) INTO TABLE rs_result-findings.
+                        details     = zcl_ca_ops_util=>exception_trace( lx_root )
+                        error_class = zcl_ca_ops_util=>error_class( lx_root ) ) INTO TABLE rs_result-findings.
     ENDTRY.
 
     rs_result-check_id    = is_def-check_id.
@@ -527,14 +527,14 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_result-category    = is_def-category.
     rs_result-priority    = is_def-priority.
     rs_result-executed_at = lv_started.
-    rs_result-runtime_ms  = zcl_cd_ops_util=>elapsed_ms( iv_from = lv_started
+    rs_result-runtime_ms  = zcl_ca_ops_util=>elapsed_ms( iv_from = lv_started
                                                          iv_to   = mo_clock->now( ) ).
 
     IF rs_result-runtime_ms > lv_timeout_sec * 1000.
       rs_result-timed_out = abap_true.
       INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-timeout
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-check_ran_ms_timeout_s
                                                           iv_v1    = is_def-check_id
                                                           iv_v2    = rs_result-runtime_ms
@@ -553,7 +553,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   METHOD call_plugin.
     " A62: the factory checks ZIF_CD_HCK_CHECK by RTTI before the class is created
     " (message 032 names class and interface)
-    rs_result = CAST zif_cd_hck_check( zcl_cd_ops_factory=>get_plugin(
+    rs_result = CAST zif_cd_hck_check( zcl_ca_ops_factory=>get_plugin(
                   iv_class_name = is_def-class_name
                   iv_interface  = zif_cd_hck_types=>gc_check_intf ) )->execute( is_def        = is_def
                                                                                it_thresholds = it_thresholds
@@ -564,7 +564,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   METHOD evaluate_metrics.
     DATA lt_history TYPE zif_cd_hck_types=>tt_value.
     DATA lt_modes TYPE SORTED TABLE OF zif_cd_hck_types=>ty_baseline_mode WITH UNIQUE KEY table_line.
-    DATA(lv_default_lookback) = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    DATA(lv_default_lookback) = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                             iv_name    = zif_cd_hck_types=>gc_param-lookback
                                                             iv_default = zif_cd_hck_types=>gc_param_default-lookback ).
 
@@ -601,12 +601,12 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ENDIF.
       " A102: warm-up is information; without a static limit the check has no verdict (grey)
       IF ls_evaluation-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
-        IF ls_evaluation-rag = zif_cd_ops_types=>gc_rag-grey.
+        IF ls_evaluation-rag = zif_ca_ops_types=>gc_rag-grey.
           cs_result-warmup = abap_true.
         ENDIF.
         INSERT VALUE #( object_key = |{ cs_result-check_id }/{ <ls_metric>-metric }/{ <ls_metric>-dim1 }|
                         check_code = ls_evaluation-check_code
-                        severity   = zif_cd_ops_types=>gc_severity-info
+                        severity   = zif_ca_ops_types=>gc_severity-info
                         reference  = <ls_metric>-dim2
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-baseline_warmup
                                                             iv_v1    = <ls_metric>-metric
@@ -625,10 +625,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
           && |(amber { value_text( ls_threshold-amber ) }, red { value_text( ls_threshold-red ) })| ).
       INSERT VALUE #( object_key = |{ cs_result-check_id }/{ <ls_metric>-metric }/{ <ls_metric>-dim1 }|
                       check_code = ls_evaluation-check_code
-                      severity   = COND #( WHEN ls_evaluation-rag = zif_cd_ops_types=>gc_rag-red
-                                           THEN zif_cd_ops_types=>gc_severity-error
-                                           ELSE zif_cd_ops_types=>gc_severity-warning )
-                      action     = zif_cd_ops_types=>gc_action-exception
+                      severity   = COND #( WHEN ls_evaluation-rag = zif_ca_ops_types=>gc_rag-red
+                                           THEN zif_ca_ops_types=>gc_severity-error
+                                           ELSE zif_ca_ops_types=>gc_severity-warning )
+                      action     = zif_ca_ops_types=>gc_action-exception
                       reference  = <ls_metric>-dim2
                       message    = lv_message ) INTO TABLE cs_result-findings.
     ENDLOOP.
@@ -652,33 +652,33 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                         it_suppressions = mt_suppressions
                                                         iv_today        = mv_today ).
     IF cs_result-findings <> lt_before
-       AND zcl_cd_ops_util=>severity_rank( zcl_cd_ops_util=>worst_severity( cs_result-findings ) ) < 2.
-      cs_result-rag = zif_cd_ops_types=>gc_rag-green.
+       AND zcl_ca_ops_util=>severity_rank( zcl_ca_ops_util=>worst_severity( cs_result-findings ) ) < 2.
+      cs_result-rag = zif_ca_ops_types=>gc_rag-green.
     ENDIF.
 
-    cs_result-rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = cs_result-rag
-                                                iv_rag2 = zcl_cd_ops_util=>rag_from_findings( cs_result-findings ) ).
+    cs_result-rag = zcl_ca_ops_util=>worse_rag( iv_rag1 = cs_result-rag
+                                                iv_rag2 = zcl_ca_ops_util=>rag_from_findings( cs_result-findings ) ).
     IF cs_result-plugin_error = abap_true.
-      cs_result-rag = zif_cd_ops_types=>gc_rag-red.
+      cs_result-rag = zif_ca_ops_types=>gc_rag-red.
     ENDIF.
     " A102: a baseline still warming up proves nothing - grey, never an inherited GREEN
-    IF cs_result-warmup = abap_true AND cs_result-rag = zif_cd_ops_types=>gc_rag-green.
-      cs_result-rag = zif_cd_ops_types=>gc_rag-grey.
+    IF cs_result-warmup = abap_true AND cs_result-rag = zif_ca_ops_types=>gc_rag-green.
+      cs_result-rag = zif_ca_ops_types=>gc_rag-grey.
     ELSE.
       cs_result-warmup = abap_false.
     ENDIF.
     " A check that read no evidence at all proves nothing: grey, never GREEN (status GREY)
-    IF cs_result-evidence = zif_cd_hck_types=>gc_evidence-none AND cs_result-rag = zif_cd_ops_types=>gc_rag-green.
-      cs_result-rag = zif_cd_ops_types=>gc_rag-grey.
+    IF cs_result-evidence = zif_cd_hck_types=>gc_evidence-none AND cs_result-rag = zif_ca_ops_types=>gc_rag-green.
+      cs_result-rag = zif_ca_ops_types=>gc_rag-grey.
     ENDIF.
 
-    DATA(lv_worst) = zcl_cd_ops_util=>worst_severity( cs_result-findings ).
+    DATA(lv_worst) = zcl_ca_ops_util=>worst_severity( cs_result-findings ).
     IF cs_result-warmup = abap_true.
       cs_result-summary = VALUE #( cs_result-findings[ check_code = zif_cd_hck_types=>gc_code-baseline_warmup ]-message
                                    OPTIONAL ).
       RETURN.
     ENDIF.
-    IF lv_worst IS INITIAL OR lv_worst = zif_cd_ops_types=>gc_severity-info.
+    IF lv_worst IS INITIAL OR lv_worst = zif_ca_ops_types=>gc_severity-info.
       IF cs_result-summary IS INITIAL.
         cs_result-summary = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-summary_ok iv_v1 = lines( cs_result-metrics ) ).
       ENDIF.
@@ -739,7 +739,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_row-metric_count  = lines( is_result-metrics ).
     rs_row-finding_count = lines( is_result-findings ).
     LOOP AT is_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
-      CASE zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ).
+      CASE zcl_ca_ops_util=>severity_rank( <ls_finding>-severity ).
         WHEN 3 OR 4.
           rs_row-error_count = rs_row-error_count + 1.
         WHEN 2.
@@ -772,9 +772,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_row-check_status = COND #(
       WHEN is_result-plugin_error = abap_true THEN zif_cd_hck_types=>gc_check_status-failed
       WHEN is_result-warmup = abap_true       THEN zif_cd_hck_types=>gc_check_status-warmup
-      WHEN is_result-rag = zif_cd_ops_types=>gc_rag-red   THEN zif_cd_hck_types=>gc_check_status-red
-      WHEN is_result-rag = zif_cd_ops_types=>gc_rag-amber THEN zif_cd_hck_types=>gc_check_status-amber
-      WHEN is_result-rag = zif_cd_ops_types=>gc_rag-green THEN zif_cd_hck_types=>gc_check_status-green
+      WHEN is_result-rag = zif_ca_ops_types=>gc_rag-red   THEN zif_cd_hck_types=>gc_check_status-red
+      WHEN is_result-rag = zif_ca_ops_types=>gc_rag-amber THEN zif_cd_hck_types=>gc_check_status-amber
+      WHEN is_result-rag = zif_ca_ops_types=>gc_rag-green THEN zif_cd_hck_types=>gc_check_status-green
       ELSE zif_cd_hck_types=>gc_check_status-grey ).
   ENDMETHOD.
 
@@ -795,7 +795,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                       executed_at  = lv_now
                       category     = <ls_def>-category
                       priority     = <ls_def>-priority
-                      verdict      = zif_cd_ops_types=>gc_rag-grey
+                      verdict      = zif_ca_ops_types=>gc_rag-grey
                       check_status = zif_cd_hck_types=>gc_check_status-skipped
                       completion   = zif_cd_hck_types=>gc_completion-skipped
                       evidence     = zif_cd_hck_types=>gc_evidence-none
@@ -837,28 +837,28 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA ls_status TYPE zif_cd_hck_types=>ty_pe_area_status.
 
     DATA(lv_now) = mo_clock->now( ).
-    DATA(lv_default_age) = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    DATA(lv_default_age) = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                        iv_name    = zif_cd_hck_types=>gc_param-max_age_hours
                                                        iv_default = zif_cd_hck_types=>gc_param_default-max_age_hours ).
-    DATA(lv_default_run) = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    DATA(lv_default_run) = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                        iv_name    = zif_cd_hck_types=>gc_param-max_run_min
                                                        iv_default = zif_cd_hck_types=>gc_param_default-max_run_min ).
     " Stale threshold: core parameter MON_STALE_AFTER_MIN_<area> first (the dashboards read the same
     " parameter), then HCK_MAX_AGE_H_<area>, then HCK_MAX_AGE_HOURS
-    DATA(lt_pe_areas) = zcl_cd_ops_util=>split_list(
+    DATA(lt_pe_areas) = zcl_ca_ops_util=>split_list(
       mo_params->get_param( iv_name    = zif_cd_hck_types=>gc_param-watch_pe_areas
                             iv_default = zif_cd_hck_types=>gc_param_default-watch_pe_areas ) ).
 
     LOOP AT lt_pe_areas ASSIGNING FIELD-SYMBOL(<lv_pe_area>).
       CLEAR ls_status.
       ls_status-pe_area        = to_upper( <lv_pe_area> ).
-      ls_status-max_age_hours = zcl_cd_ops_util=>param_int(
+      ls_status-max_age_hours = zcl_ca_ops_util=>param_int(
                                   io_params  = mo_params
                                   iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_age && ls_status-pe_area )
                                   iv_default = lv_default_age ).
       " A06: runs still in status R past the area's runtime limit are evaluated on their own,
       " independently of how fresh the last completed run is; the current run is excluded
-      ls_status-max_run_min = zcl_cd_ops_util=>param_int(
+      ls_status-max_run_min = zcl_ca_ops_util=>param_int(
                                 io_params  = mo_params
                                 iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_run && ls_status-pe_area )
                                 iv_default = lv_default_run ).
@@ -870,7 +870,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       DATA(ls_last) = mo_store->get_last_run( ls_status-pe_area ).
       IF ls_last-run_id IS INITIAL.
         ls_status-stale = abap_true.
-        ls_status-rag   = zif_cd_ops_types=>gc_rag-red.
+        ls_status-rag   = zif_ca_ops_types=>gc_rag-red.
         INSERT ls_status INTO TABLE rt_pe_areas.
         CONTINUE.
       ENDIF.
@@ -884,7 +884,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                  iv_to   = lv_now ).
       " The definition delivers the minutes (FMON 15, EBS / HCK 1560); 0 only when the parameter
       " cannot be read (framework error, reported as PARAM_INVALID) - then the hours rule applies
-      ls_status-stale_after_min = zcl_cd_ops_util=>param_int(
+      ls_status-stale_after_min = zcl_ca_ops_util=>param_int(
                                     io_params  = mo_params
                                     iv_name    = CONV #( zif_cd_ops_types=>gc_param_prefix-stale_after_min
                                                          && ls_status-pe_area )
@@ -893,10 +893,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                         THEN xsdbool( ls_status-age_min > ls_status-stale_after_min )
                                         ELSE xsdbool( ls_status-age_hours > ls_status-max_age_hours ) ).
       IF ls_status-hung_runs > 0.
-        ls_status-rag = zif_cd_ops_types=>gc_rag-red.
+        ls_status-rag = zif_ca_ops_types=>gc_rag-red.
       ENDIF.
       LOOP AT mo_store->get_findings( ls_last-run_id ) ASSIGNING FIELD-SYMBOL(<ls_finding>).
-        CASE zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ).
+        CASE zcl_ca_ops_util=>severity_rank( <ls_finding>-severity ).
           WHEN 3 OR 4.
             ls_status-error_count = ls_status-error_count + 1.
           WHEN 2.
@@ -916,8 +916,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     LOOP AT it_pe_areas ASSIGNING FIELD-SYMBOL(<ls_hung>) WHERE hung_runs > 0.
       INSERT VALUE #( object_key = <ls_hung>-pe_area
                       check_code = zif_cd_hck_types=>gc_code-run_hung
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-area_runs_hung
                                                           iv_v1    = <ls_hung>-pe_area
                                                           iv_v2    = <ls_hung>-hung_runs
@@ -927,8 +927,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     LOOP AT it_pe_areas ASSIGNING FIELD-SYMBOL(<ls_pe_area>) WHERE stale = abap_true.
       INSERT VALUE #( object_key = <ls_pe_area>-pe_area
                       check_code = zif_cd_hck_types=>gc_code-pe_area_stale
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = COND #( WHEN <ls_pe_area>-last_run_at IS INITIAL
                                            THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-area_never_ran
                                                                        iv_v1    = <ls_pe_area>-pe_area )
@@ -948,8 +948,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_result-category    = zif_cd_hck_types=>gc_category-technical.
     rs_result-priority    = zif_cd_hck_types=>gc_priority-high.
     INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-no_checks
-                    severity   = zif_cd_ops_types=>gc_severity-error
-                    action     = zif_cd_ops_types=>gc_action-notify
+                    severity   = zif_ca_ops_types=>gc_severity-error
+                    action     = zif_ca_ops_types=>gc_action-notify
                     message    = zcl_cd_ops_util=>text( zif_cd_hck_types=>gc_msg-no_business_checks ) )
       INTO TABLE rs_result-findings.
     finalize_result( CHANGING cs_result = rs_result ).
@@ -970,7 +970,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   METHOD open_exceptions.
     DATA lv_created TYPE d.
     DATA lv_time TYPE t.
-    rt_exceptions = mo_dao->get_open_exceptions( zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rt_exceptions = mo_dao->get_open_exceptions( zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                                              iv_name    = zif_cd_hck_types=>gc_param-top_n
                                                                              iv_default = zif_cd_hck_types=>gc_param_default-top_n ) ).
     LOOP AT rt_exceptions ASSIGNING FIELD-SYMBOL(<ls_exception>).
@@ -987,48 +987,48 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD score_rules.
     rs_rules = zcl_cd_hck_score=>default_rules( ).
-    rs_rules-green_min     = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_rules-green_min     = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                          iv_name    = zif_cd_hck_types=>gc_param-green_min
                                                          iv_default = rs_rules-green_min ).
-    rs_rules-amber_min     = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_rules-amber_min     = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                          iv_name    = zif_cd_hck_types=>gc_param-amber_min
                                                          iv_default = rs_rules-amber_min ).
-    rs_rules-weight_high   = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_rules-weight_high   = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                          iv_name    = zif_cd_hck_types=>gc_param-weight_high
                                                          iv_default = rs_rules-weight_high ).
-    rs_rules-weight_medium = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_rules-weight_medium = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                          iv_name    = zif_cd_hck_types=>gc_param-weight_medium
                                                          iv_default = rs_rules-weight_medium ).
-    rs_rules-weight_low    = zcl_cd_ops_util=>param_int( io_params  = mo_params
+    rs_rules-weight_low    = zcl_ca_ops_util=>param_int( io_params  = mo_params
                                                          iv_name    = zif_cd_hck_types=>gc_param-weight_low
                                                          iv_default = rs_rules-weight_low ).
   ENDMETHOD.
 
 
   METHOD notify.
-    DATA lt_findings TYPE zif_cd_ops_types=>tt_finding.
-    DATA lt_failures TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_findings TYPE zif_ca_ops_types=>tt_finding.
+    DATA lt_failures TYPE zif_ca_ops_types=>tt_finding.
 
     LOOP AT cs_report-results ASSIGNING FIELD-SYMBOL(<ls_result>).
       INSERT LINES OF <ls_result>-findings INTO TABLE lt_findings.
     ENDLOOP.
 
-    DATA(lo_alert) = zcl_cd_ops_factory=>get_alert( ).
-    " alert routing (channels, recipients, throttling) is customizing of ZCD_OPS_ALRULE
+    DATA(lo_alert) = zcl_ca_ops_factory=>get_alert( ).
+    " alert routing (channels, recipients, throttling) is customizing of ZCA_OPS_ALRULE
     TRY.
         lo_alert->dispatch( is_run      = cs_report-run
                             it_findings = lt_findings ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_dispatch).
+      CATCH zcx_ca_ops_error INTO DATA(lx_dispatch).
         INSERT VALUE #( object_type = zif_cd_hck_types=>gc_object_type
                         object_key  = zif_cd_hck_types=>gc_self_check
                         group1      = zif_cd_hck_types=>gc_category-technical
                         group2      = zif_cd_hck_types=>gc_self_check
                         check_code  = zif_cd_hck_types=>gc_code-alert_failed
-                        severity    = zif_cd_ops_types=>gc_severity-warning
-                        action      = zif_cd_ops_types=>gc_action-notify
+                        severity    = zif_ca_ops_types=>gc_severity-warning
+                        action      = zif_ca_ops_types=>gc_action-notify
                         message     = lx_dispatch->get_text( )
-                        details     = zcl_cd_ops_util=>exception_trace( lx_dispatch )
-                        error_class = zcl_cd_ops_util=>error_class( lx_dispatch ) ) INTO TABLE lt_failures.
+                        details     = zcl_ca_ops_util=>exception_trace( lx_dispatch )
+                        error_class = zcl_ca_ops_util=>error_class( lx_dispatch ) ) INTO TABLE lt_failures.
     ENDTRY.
 
     " the morning report e-mail is a report, not an alert: deliberate send to one route
@@ -1039,17 +1039,17 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                      iv_default = CONV #( zif_cd_hck_types=>gc_param_default-mail_route ) ) )
                           iv_subject = zcl_cd_hck_report_html=>subject( cs_report )
                           iv_html    = zcl_cd_hck_report_html=>render( cs_report ) ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_send).
+        CATCH zcx_ca_ops_error INTO DATA(lx_send).
           INSERT VALUE #( object_type = zif_cd_hck_types=>gc_object_type
                           object_key  = zif_cd_hck_types=>gc_param_default-mail_route
                           group1      = zif_cd_hck_types=>gc_category-technical
                           group2      = zif_cd_hck_types=>gc_self_check
                           check_code  = zif_cd_hck_types=>gc_code-alert_failed
-                          severity    = zif_cd_ops_types=>gc_severity-warning
-                          action      = zif_cd_ops_types=>gc_action-notify
+                          severity    = zif_ca_ops_types=>gc_severity-warning
+                          action      = zif_ca_ops_types=>gc_action-notify
                           message     = lx_send->get_text( )
-                          details     = zcl_cd_ops_util=>exception_trace( lx_send )
-                          error_class = zcl_cd_ops_util=>error_class( lx_send ) ) INTO TABLE lt_failures.
+                          details     = zcl_ca_ops_util=>exception_trace( lx_send )
+                          error_class = zcl_ca_ops_util=>error_class( lx_send ) ) INTO TABLE lt_failures.
       ENDTRY.
     ENDIF.
 
@@ -1069,9 +1069,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       CASE <ls_result>-rag.
-        WHEN zif_cd_ops_types=>gc_rag-green.
+        WHEN zif_ca_ops_types=>gc_rag-green.
           cs_report-run-passed_items = cs_report-run-passed_items + 1.
-        WHEN zif_cd_ops_types=>gc_rag-amber.
+        WHEN zif_ca_ops_types=>gc_rag-amber.
           cs_report-run-warning_items = cs_report-run-warning_items + 1.
         WHEN OTHERS.
           cs_report-run-failed_items = cs_report-run-failed_items + 1.
@@ -1081,11 +1081,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     cs_report-run-rag         = cs_report-overall_rag.
     " A60: only GREEN closes as SUCCESS; an unrated (grey) report is an error
     cs_report-run-status      = SWITCH #( cs_report-overall_rag
-                                          WHEN zif_cd_ops_types=>gc_rag-green THEN zif_cd_ops_types=>gc_run_status-success
-                                          WHEN zif_cd_ops_types=>gc_rag-amber THEN zif_cd_ops_types=>gc_run_status-warning
-                                          ELSE zif_cd_ops_types=>gc_run_status-error ).
+                                          WHEN zif_ca_ops_types=>gc_rag-green THEN zif_ca_ops_types=>gc_run_status-success
+                                          WHEN zif_ca_ops_types=>gc_rag-amber THEN zif_ca_ops_types=>gc_run_status-warning
+                                          ELSE zif_ca_ops_types=>gc_run_status-error ).
     cs_report-run-ended_at    = mo_clock->now( ).
-    cs_report-run-runtime_ms  = zcl_cd_ops_util=>elapsed_ms( iv_from = cs_report-run-started_at
+    cs_report-run-runtime_ms  = zcl_ca_ops_util=>elapsed_ms( iv_from = cs_report-run-started_at
                                                              iv_to   = cs_report-run-ended_at ).
     cs_report-run-message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-health_score_100_red_amber
                                                        iv_v1    = cs_report-score

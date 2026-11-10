@@ -59,6 +59,6 @@ define table zcd_pay_outcome {
 // @index FIN: MANDT, FIN_ID, SOURCE
 // @index DOC: MANDT, AUGBL
 // @index DUE: MANDT, DUE_DATE
-// Retention (2026-11-08): ZCD_OPS_PURGE deletes versions closed before the cutoff (exception history:
+// Retention (2026-11-08): ZCA_OPS_RETENTION deletes versions closed before the cutoff (exception history:
 // RETENTION_DAYS_PAY_OUTCOME, 90 days after the exception closed) and a current row with a final
 // outcome whose run is before the cutoff; an open row is never deleted.

@@ -29,7 +29,7 @@ CLASS zcl_cd_ebs_r_r22_dup_history DEFINITION
     TYPES:
       BEGIN OF ty_key,
         reference TYPE string,
-        amount    TYPE zif_cd_ops_types=>ty_amount,
+        amount    TYPE zif_ca_ops_types=>ty_amount,
         cdi       TYPE zif_cd_ebs_types=>ty_cdi,
         btc_code  TYPE zif_cd_ebs_types=>ty_btc_code,
       END OF ty_key.
@@ -186,7 +186,7 @@ CLASS zcl_cd_ebs_r_r22_dup_history IMPLEMENTATION.
 
   METHOD look_back_days.
     rv_days = COND #( WHEN is_rule-window_days > 0 THEN is_rule-window_days
-                      ELSE CONV i( zcl_cd_ops_util=>to_decimal(
+                      ELSE CONV i( zcl_ca_ops_util=>to_decimal(
                                      iv_value   = param( iv_name    = zif_cd_ebs_types=>gc_param-dup_lookback_days
                                                          iv_default = |{ gc_default_days }| )
                                      iv_default = gc_default_days ) ) ).

@@ -25,7 +25,7 @@ ENDCLASS.
 CLASS zcl_cd_fmon_chk_ack_match IMPLEMENTATION.
 
   METHOD zif_cd_fmon_check~execute.
-    DATA(lv_tolerance) = CONV zif_cd_ops_types=>ty_amount( zcl_cd_ops_util=>to_decimal(
+    DATA(lv_tolerance) = CONV zif_ca_ops_types=>ty_amount( zcl_ca_ops_util=>to_decimal(
                            iv_value   = zcl_cd_fmon_util=>param( iv_params = is_check-params iv_name = 'TOLERANCE' )
                            iv_default = '0.01' ) ).
     LOOP AT is_ctx-files ASSIGNING FIELD-SYMBOL(<ls_file>).

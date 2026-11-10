@@ -28,7 +28,7 @@ CLASS zcl_cd_fmon_adapter_generic DEFINITION
     INTERFACES zif_cd_fmon_adapter.
 
     "! Build the DDIC-checked query for a source (pure)
-    "! @raising zcx_cd_ops_error | 204 a required field role is not configured, 284 more than
+    "! @raising zcx_ca_ops_error | 204 a required field role is not configured, 284 more than
     "!                             four generation group fields
     CLASS-METHODS build_query
       IMPORTING
@@ -36,7 +36,7 @@ CLASS zcl_cd_fmon_adapter_generic DEFINITION
       RETURNING
         VALUE(rs_query) TYPE zif_cd_fmon_types=>ty_query
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Translate one legacy row into a status record (pure).
     "! Stage: SRCMAP row of the value, else the '*' row, else blank (unmapped);
@@ -128,7 +128,7 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
       ( role = zif_cd_fmon_types=>gc_role-lob       field = ls_src-lob_field )
       ( role = zif_cd_fmon_types=>gc_role-item_key  field = ls_src-item_key_field ) ).
     " Generation group (regenerated files): the configured fields in their order, roles GROUP_1..4
-    DATA(lt_group) = zcl_cd_ops_util=>split_list( ls_src-group_fields ).
+    DATA(lt_group) = zcl_ca_ops_util=>split_list( ls_src-group_fields ).
     IF lines( lt_group ) > zif_cd_fmon_types=>gc_generation-max_fields.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e284(zcd_ops) WITH ls_src-src_id zif_cd_fmon_types=>gc_generation-max_fields.
@@ -152,11 +152,11 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
     IF ls_src-ts_field IS NOT INITIAL.
       rs_query-date_field = to_upper( condense( ls_src-ts_field ) ).
       rs_query-date_kind  = zif_cd_fmon_types=>gc_date_kind-timestamp.
-      CONVERT DATE is_request-date_from TIME zif_cd_ops_types=>gc_time-day_start
+      CONVERT DATE is_request-date_from TIME zif_ca_ops_types=>gc_time-day_start
         INTO TIME STAMP rs_query-ts_from TIME ZONE is_request-time_zone.
       " Audit A52: half-open range - up to (excluding) the next local midnight, so rows with
       " fractional seconds after 23:59:59 are read; the DAO compares with >= and <
-      CONVERT DATE is_request-date_to + 1 TIME zif_cd_ops_types=>gc_time-day_start
+      CONVERT DATE is_request-date_to + 1 TIME zif_ca_ops_types=>gc_time-day_start
         INTO TIME STAMP rs_query-ts_to TIME ZONE is_request-time_zone.
     ELSE.
       rs_query-date_field = to_upper( condense( ls_src-date_field ) ).
@@ -198,7 +198,7 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
           ENDIF.
         ELSEIF is_raw-ev_date IS NOT INITIAL.
           lv_date = is_raw-ev_date.
-          lv_time = COND #( WHEN is_raw-ev_time IS NOT INITIAL THEN is_raw-ev_time ELSE zif_cd_ops_types=>gc_time-day_start ).
+          lv_time = COND #( WHEN is_raw-ev_time IS NOT INITIAL THEN is_raw-ev_time ELSE zif_ca_ops_types=>gc_time-day_start ).
           rs_record-business_date = lv_date.
           CONVERT DATE lv_date TIME lv_time
             INTO TIME STAMP rs_record-event_at TIME ZONE is_request-time_zone.
@@ -215,7 +215,7 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
     ENDTRY.
     IF is_request-src-count_field IS NOT INITIAL AND is_raw-rec_count IS NOT INITIAL.
       IF zcl_cd_fmon_util=>is_number( is_raw-rec_count ) = abap_true.
-        rs_record-rec_count   = zcl_cd_ops_util=>to_decimal( is_raw-rec_count ).
+        rs_record-rec_count   = zcl_ca_ops_util=>to_decimal( is_raw-rec_count ).
         rs_record-count_known = abap_true.
       ELSE.
         mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-rec_count CHANGING cs_record = rs_record ).
@@ -224,11 +224,11 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
     IF is_raw-amount IS NOT INITIAL AND zcl_cd_fmon_util=>is_number( is_raw-amount ) = abap_false.
       mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-amount CHANGING cs_record = rs_record ).
     ELSE.
-      rs_record-amount = zcl_cd_ops_util=>to_decimal( is_raw-amount ).
+      rs_record-amount = zcl_ca_ops_util=>to_decimal( is_raw-amount ).
     ENDIF.
     IF is_request-src-size_field IS NOT INITIAL AND is_raw-size IS NOT INITIAL.
       IF zcl_cd_fmon_util=>is_number( is_raw-size ) = abap_true.
-        rs_record-size_bytes = zcl_cd_ops_util=>to_decimal( is_raw-size ).
+        rs_record-size_bytes = zcl_ca_ops_util=>to_decimal( is_raw-size ).
         rs_record-size_known = abap_true.
       ELSE.
         mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-size CHANGING cs_record = rs_record ).

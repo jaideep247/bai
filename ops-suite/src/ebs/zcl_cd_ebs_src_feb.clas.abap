@@ -16,7 +16,7 @@
 *&            | headers by HASHED key KUKEY for the currency lookup.
 *& 2026-11-06 | Return reason correction: no FEBEP reason field (EBS_FEB_REASON_FIELD removed) - FEBEP
 *&            | carries no return reason; R05 reads it from the returns lot item DFKKRP-RLGRD.
-*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CA_OPS_PARAMS).
 *& 2026-11-07 | posted_fields( ): one reading of EBS_FEB_POSTED_FIELDS, shared with the statement
 *&            | evidence of file monitoring (ZCL_CD_EBS_STMT_EVIDENCE).
 *& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
@@ -43,7 +43,7 @@ CLASS zcl_cd_ebs_src_feb DEFINITION
       IMPORTING
         is_selection TYPE zif_cd_ebs_feb_dao=>ty_selection
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! FEBEP posting-area flags of EBS_FEB_POSTED_FIELDS (VB1OK / VB2OK, confirmed); empty when
     "! the parameter is OFF (posting state not read). One definition for EBS and file monitoring.
@@ -84,16 +84,16 @@ CLASS zcl_cd_ebs_src_feb DEFINITION
     METHODS map_line
       IMPORTING
         is_item        TYPE zif_cd_ebs_feb_dao=>ty_item
-        iv_currency    TYPE zif_cd_ops_types=>ty_currency
+        iv_currency    TYPE zif_ca_ops_types=>ty_currency
       RETURNING
         VALUE(rs_line) TYPE zif_cd_ebs_types=>ty_line.
 
     METHODS signed
       IMPORTING
-        iv_amount        TYPE zif_cd_ops_types=>ty_amount
+        iv_amount        TYPE zif_ca_ops_types=>ty_amount
         iv_indicator     TYPE char1
       RETURNING
-        VALUE(rv_amount) TYPE zif_cd_ops_types=>ty_amount.
+        VALUE(rv_amount) TYPE zif_ca_ops_types=>ty_amount.
 
 ENDCLASS.
 
@@ -171,7 +171,7 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
                                iv_name    = zif_cd_ebs_types=>gc_param-feb_posted_fields
                                iv_default = zif_cd_ebs_types=>gc_param_default-feb_posted_fields ).
     IF to_upper( condense( lv_posted_fields ) ) <> zif_cd_ebs_types=>gc_param_default-feb_posted_off.
-      rt_fields = zcl_cd_ops_util=>split_list( lv_posted_fields ).
+      rt_fields = zcl_ca_ops_util=>split_list( lv_posted_fields ).
     ENDIF.
   ENDMETHOD.
 

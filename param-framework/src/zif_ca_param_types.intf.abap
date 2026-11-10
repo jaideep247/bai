@@ -9,10 +9,15 @@
 *& config/zca_param_messages.md are compared by tools/checks.py.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-10 | GC_VERSION: release of the framework, read by consumers that need a minimum release.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - types and constants</p>
 INTERFACE zif_ca_param_types
   PUBLIC.
+
+  "! Release of the parameter framework (CHANGELOG.md); consumers compare it with the release
+  "! they need (e.g. the operations framework ZCA_OPS at startup)
+  CONSTANTS gc_version TYPE string VALUE `1.1.0`.
 
   TYPES ty_area        TYPE zca_param_area_id.
   TYPES ty_name        TYPE zca_param_name.

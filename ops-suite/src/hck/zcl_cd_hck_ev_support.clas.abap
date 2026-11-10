@@ -177,7 +177,7 @@ CLASS zcl_cd_hck_ev_support DEFINITION
         VALUE(rv_date) TYPE d.
 
     "! The parameter value of a rule, raising when it is blank
-    "! @raising zcx_cd_ops_error | parameter blank (message 665)
+    "! @raising zcx_ca_ops_error | parameter blank (message 665)
     CLASS-METHODS required_param
       IMPORTING
         iv_value        TYPE clike
@@ -186,7 +186,7 @@ CLASS zcl_cd_hck_ev_support DEFINITION
       RETURNING
         VALUE(rv_value) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Statement lines whose FEBEP-CHECT is one of the references (as given and normalised),
     "! posted on or after iv_from, with the payment document of the reference; one read
@@ -223,8 +223,8 @@ CLASS zcl_cd_hck_ev_support DEFINITION
     CLASS-METHODS add_anomaly
       IMPORTING
         iv_doc1r    TYPE zif_cd_hck_runtime_types=>ty_docno
-        iv_code     TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_code     TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity TYPE zif_ca_ops_types=>ty_severity
         iv_detail   TYPE string
       CHANGING
         ct_evidence TYPE zif_cd_hck_runtime_types=>tt_evidence.
@@ -292,7 +292,7 @@ CLASS zcl_cd_hck_ev_support IMPLEMENTATION.
 
 
   METHOD tokens.
-    LOOP AT zcl_cd_ops_util=>split_list( iv_list ) ASSIGNING FIELD-SYMBOL(<lv_token>).
+    LOOP AT zcl_ca_ops_util=>split_list( iv_list ) ASSIGNING FIELD-SYMBOL(<lv_token>).
       INSERT to_upper( condense( <lv_token> ) ) INTO TABLE rt_tokens.
     ENDLOOP.
   ENDMETHOD.
@@ -453,10 +453,10 @@ CLASS zcl_cd_hck_ev_support IMPLEMENTATION.
 
   METHOD reg_state_valid.
     rv_yes = abap_true.
-    LOOP AT zcl_cd_ops_util=>split_list( iv_value ) ASSIGNING FIELD-SYMBOL(<lv_token>).
+    LOOP AT zcl_ca_ops_util=>split_list( iv_value ) ASSIGNING FIELD-SYMBOL(<lv_token>).
       DATA(lv_token) = condense( <lv_token> ).
       IF lv_token <> zif_cd_hck_runtime_types=>gc_state_blank
-         AND zcl_cd_ops_util=>pcre_match( iv_value = lv_token iv_pattern = gc_pcre_state ) = abap_false.
+         AND zcl_ca_ops_util=>pcre_match( iv_value = lv_token iv_pattern = gc_pcre_state ) = abap_false.
         rv_yes = abap_false.
         RETURN.
       ENDIF.

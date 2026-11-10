@@ -1,7 +1,7 @@
 // Artifact: zc_cd_opscritexc.ddls.asddls
 // Purpose: Consumption view of the open critical exceptions across areas (overview-page list card,
 //          service ZUI_CD_OPS_OVERVIEW): open / assigned B and E findings, overdue first.
-//          Read access: DCL ZC_CD_OPSOVERVIEW (ZCD_OPS, ZCD_PE_AREA of the row, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_OPSOVERVIEW (ZCD_OPS, ZCA_PARAR of the row, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (production-support overview page).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Production support - critical exceptions'

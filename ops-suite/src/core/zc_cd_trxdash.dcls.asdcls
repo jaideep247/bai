@@ -1,6 +1,6 @@
 // Artifact: zc_cd_trxdash.dcls.asdcls
 // Purpose: Read access to the transactions dashboard (service ZUI_CD_TRX_DASH): authorization object
-//          ZCD_OPS with ZCD_PE_AREA = CORE and ACTVT 03 (display) - the area of the 360 degree payment
+//          ZCD_OPS with ZCA_PARAR = CORE and ACTVT 03 (display) - the area of the 360 degree payment
 //          trace, which shows the same evidence per FIN (config/auth_zcd_ops.md section 3a) - and
 //          the company code (BUKRS) of the open item on every entity that has one, as the payment
 //          trace checks each item per company code. Payment run rows (DPAYH) carry no company code
@@ -14,18 +14,18 @@
 //          code the user may not see reaches a visible row.
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
 //                   2026-11-07 | Canonical payment outcome; order of authorisation and aggregation checked.
-// VERIFY-ADT: aspect pfcg_auth with two mapped fields (ZCD_PE_AREA, BUKRS) on a projection (7.58).
+// VERIFY-ADT: aspect pfcg_auth with two mapped fields (ZCA_PARAR, BUKRS) on a projection (7.58).
 @EndUserText.label: 'Transactions dashboard - read access'
 @MappingRole: true
 define role ZC_CD_TrxDash {
   grant select on ZC_CD_TrxFlow
-    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, ACTVT = '03' );
+    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
   grant select on ZC_CD_TrxRetNoc
-    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, ACTVT = '03' );
+    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
   grant select on ZC_CD_TrxKpi
-    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, ACTVT = '03' );
+    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
   grant select on ZC_CD_TrxProblem
-    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, ACTVT = '03' );
+    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
   grant select on ZC_CD_TrxPayRun
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
 }

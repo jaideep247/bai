@@ -14,7 +14,7 @@
 define view entity ZI_CD_PayOutLagMin
   as select from zcd_pay_outwm
 {
-      cast( 'CORE' as abap.char( 4 ) )                     as PaymentEngineArea,
+      cast( 'CD_OPS' as abap.char( 16 ) )                     as PaymentEngineArea,
       min( current_to )                                     as ProcessedTo
 }
 where source     <> 'RECHECK'

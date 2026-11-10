@@ -27,11 +27,11 @@ CLASS zcl_cd_hck_suppression DEFINITION
     "! Findings of one check result with active suppressions applied (group2 = check ID)
     CLASS-METHODS apply
       IMPORTING
-        it_findings        TYPE zif_cd_ops_types=>tt_finding
+        it_findings        TYPE zif_ca_ops_types=>tt_finding
         it_suppressions    TYPE zif_cd_hck_suppress_types=>tt_suppression
         iv_today           TYPE d
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 
     "! More days than allowed without a second user?
     CLASS-METHODS needs_approval
@@ -48,24 +48,24 @@ CLASS zcl_cd_hck_suppression DEFINITION
         iv_created_by      TYPE syuname
         iv_approver        TYPE syuname
       RETURNING
-        VALUE(rs_decision) TYPE zif_cd_ops_exc_types=>ty_decision.
+        VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
 
     "! A request names the check, a reason and a period that does not end before it starts;
     "! a key pattern must be valid PCRE
     CLASS-METHODS check_request
       IMPORTING
         iv_check_id        TYPE zif_cd_hck_types=>ty_check_id
-        iv_reason          TYPE zif_cd_ops_exc_types=>ty_reason
+        iv_reason          TYPE zif_ca_ops_exc_types=>ty_reason
         iv_from            TYPE d
         iv_to              TYPE d
         iv_key_pattern     TYPE clike OPTIONAL
       RETURNING
-        VALUE(rs_decision) TYPE zif_cd_ops_exc_types=>ty_decision.
+        VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
 
   PRIVATE SECTION.
     CLASS-METHODS matches
       IMPORTING
-        is_finding      TYPE zif_cd_ops_types=>ty_finding
+        is_finding      TYPE zif_ca_ops_types=>ty_finding
         is_suppression  TYPE zif_cd_hck_suppress_types=>ty_suppression
         iv_today        TYPE d
       RETURNING
@@ -86,12 +86,12 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
            AND valid_from <= iv_today AND valid_to >= iv_today
            AND key_pattern IS NOT INITIAL.
       IF line_exists( it_findings[ group2 = <ls_invalid>-check_id ] )
-         AND zcl_cd_ops_util=>pcre_valid( <ls_invalid>-key_pattern ) = abap_false.
+         AND zcl_ca_ops_util=>pcre_valid( <ls_invalid>-key_pattern ) = abap_false.
         INSERT VALUE #( object_key = <ls_invalid>-check_id
                         group2     = <ls_invalid>-check_id
                         check_code = zif_cd_hck_types=>gc_code-suppression_invalid
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-warning
+                        action     = zif_ca_ops_types=>gc_action-notify
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-suppression_invalid
                                                             iv_v1    = <ls_invalid>-check_id
                                                             iv_v2    = <ls_invalid>-key_pattern ) )
@@ -99,13 +99,13 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
     LOOP AT rt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
-         WHERE severity <> zif_cd_ops_types=>gc_severity-info.
+         WHERE severity <> zif_ca_ops_types=>gc_severity-info.
       LOOP AT it_suppressions ASSIGNING FIELD-SYMBOL(<ls_suppression>).
         IF matches( is_finding = <ls_finding> is_suppression = <ls_suppression> iv_today = iv_today ) = abap_false.
           CONTINUE.
         ENDIF.
-        <ls_finding>-severity = zif_cd_ops_types=>gc_severity-info.
-        <ls_finding>-action   = zif_cd_ops_types=>gc_action-notify.
+        <ls_finding>-severity = zif_ca_ops_types=>gc_severity-info.
+        <ls_finding>-action   = zif_ca_ops_types=>gc_action-notify.
         <ls_finding>-message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-suppressed_until_by
                                                        iv_v1    = |{ <ls_suppression>-valid_to DATE = ISO }|
                                                        iv_v2    = <ls_suppression>-created_by
@@ -141,7 +141,7 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
       rs_decision-msgno = zif_cd_hck_suppress_types=>gc_msg-no_reason.
     ELSEIF iv_from IS INITIAL OR iv_to IS INITIAL OR iv_to < iv_from.
       rs_decision-msgno = zif_cd_hck_suppress_types=>gc_msg-period_invalid.
-    ELSEIF zcl_cd_ops_util=>pcre_valid( iv_key_pattern ) = abap_false.
+    ELSEIF zcl_ca_ops_util=>pcre_valid( iv_key_pattern ) = abap_false.
       rs_decision-msgno = zif_cd_hck_suppress_types=>gc_msg-pattern_invalid.
       rs_decision-v1    = iv_key_pattern.
     ELSE.
@@ -157,7 +157,7 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
      AND iv_today >= is_suppression-valid_from
      AND iv_today <= is_suppression-valid_to
      AND ( is_suppression-key_pattern IS INITIAL
-           OR zcl_cd_ops_util=>pcre_match( iv_value   = is_finding-object_key
+           OR zcl_ca_ops_util=>pcre_match( iv_value   = is_finding-object_key
                                            iv_pattern = is_suppression-key_pattern ) = abap_true )
      AND ( is_suppression-bukrs IS INITIAL OR is_finding-object_key CS is_suppression-bukrs ) ).
   ENDMETHOD.

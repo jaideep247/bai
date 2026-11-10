@@ -30,8 +30,8 @@ CLASS zcl_cd_ebs_r_s02_balance IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>)
          WHERE has_opening = abap_true AND has_closing = abap_true.
-      DATA(lv_credits) = CONV zif_cd_ops_types=>ty_amount( 0 ).
-      DATA(lv_debits)  = CONV zif_cd_ops_types=>ty_amount( 0 ).
+      DATA(lv_credits) = CONV zif_ca_ops_types=>ty_amount( 0 ).
+      DATA(lv_debits)  = CONV zif_ca_ops_types=>ty_amount( 0 ).
       DATA(lv_unknown) = 0.
       LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>) USING KEY stmt WHERE stmt_key = <ls_statement>-stmt_key.
         CASE <ls_line>-cdi.
@@ -52,7 +52,7 @@ CLASS zcl_cd_ebs_r_s02_balance IMPLEMENTATION.
                                                      iv_v2    = lv_unknown ) ) INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
-      DATA lv_difference TYPE zif_cd_ops_types=>ty_amount.
+      DATA lv_difference TYPE zif_ca_ops_types=>ty_amount.
       lv_difference = <ls_statement>-opening_bal + lv_credits - lv_debits - <ls_statement>-closing_bal.
       IF abs( lv_difference ) > tolerance( is_rule ).
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
@@ -65,7 +65,7 @@ CLASS zcl_cd_ebs_r_s02_balance IMPLEMENTATION.
                                                      iv_v4    = <ls_statement>-closing_bal ) ) INTO TABLE rt_findings.
       ENDIF.
       IF <ls_statement>-has_totals = abap_true.
-        DATA lv_declared TYPE zif_cd_ops_types=>ty_amount.
+        DATA lv_declared TYPE zif_ca_ops_types=>ty_amount.
         lv_declared = <ls_statement>-opening_bal + <ls_statement>-total_credits
                           - <ls_statement>-total_debits - <ls_statement>-closing_bal.
         IF abs( lv_declared ) > tolerance( is_rule ).

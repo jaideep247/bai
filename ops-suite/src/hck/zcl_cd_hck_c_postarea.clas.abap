@@ -40,7 +40,7 @@ CLASS zcl_cd_hck_c_postarea IMPLEMENTATION.
                       group1     = <ls_message>-area
                       check_code = zif_cd_hck_types=>gc_code-postarea_invalid
                       severity   = <ls_message>-severity
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = CONV #( <ls_message>-number )
                                                           iv_v1    = <ls_message>-v1
                                                           iv_v2    = <ls_message>-v2

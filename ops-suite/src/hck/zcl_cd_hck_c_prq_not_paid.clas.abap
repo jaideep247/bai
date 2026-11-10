@@ -34,8 +34,8 @@ CLASS zcl_cd_hck_c_prq_not_paid DEFINITION
   PRIVATE SECTION.
     TYPES:
       BEGIN OF ty_amount,
-        currency TYPE zif_cd_ops_types=>ty_currency,
-        amount   TYPE zif_cd_ops_types=>ty_amount,
+        currency TYPE zif_ca_ops_types=>ty_currency,
+        amount   TYPE zif_ca_ops_types=>ty_amount,
       END OF ty_amount.
     TYPES tt_amount TYPE SORTED TABLE OF ty_amount WITH UNIQUE KEY currency.
 
@@ -85,7 +85,7 @@ CLASS zcl_cd_hck_c_prq_not_paid IMPLEMENTATION.
                                               iv_default = zif_cd_hck_runtime_types=>gc_param_default-inflight_max_rows
                                               iv_ceiling = zif_cd_hck_runtime_types=>gc_max_inflight_rows ).
     mv_examples = nmax( val1 = 1
-                        val2 = zcl_cd_ops_util=>param_int( io_params  = zcl_cd_ops_factory=>get_params( )
+                        val2 = zcl_ca_ops_util=>param_int( io_params  = zcl_cd_ops_factory=>get_params( )
                                                            iv_name    = zif_cd_ops_payout_types=>gc_param-examples
                                                            iv_default = zif_cd_ops_payout_types=>gc_param_default-examples ) ).
 
@@ -95,8 +95,8 @@ CLASS zcl_cd_hck_c_prq_not_paid IMPLEMENTATION.
       rs_result-evidence = zif_cd_hck_types=>gc_evidence-partial.
       INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_ops_payout_types=>gc_code-nightly_missing }|
                       check_code = zif_cd_ops_payout_types=>gc_code-nightly_missing
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-nightly_missing
                                                           iv_v1    = zif_cd_ops_payout_types=>gc_mode-nightly
                                                           iv_v2    = |{ is_context-now_date DATE = ISO }| ) )
@@ -110,8 +110,8 @@ CLASS zcl_cd_hck_c_prq_not_paid IMPLEMENTATION.
       rs_result-completion = zif_cd_hck_types=>gc_completion-partial.
       INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_ops_payout_types=>gc_table-outcome }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-read_capped
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-read_capped
                                                           iv_v1    = zif_cd_ops_payout_types=>gc_table-outcome
                                                           iv_v2    = lv_cap
@@ -184,8 +184,8 @@ CLASS zcl_cd_hck_c_prq_not_paid IMPLEMENTATION.
                       group1     = <ls_cell>-source
                       group2     = <ls_cell>-stage
                       check_code = zif_cd_ops_payout_types=>gc_code-request_not_paid
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-notify
                       amount     = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-amount )
                       currency   = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-currency )
                       reference  = <ls_cell>-source
@@ -204,7 +204,7 @@ CLASS zcl_cd_hck_c_prq_not_paid IMPLEMENTATION.
     DATA lv_day_start TYPE timestampl.
     DATA(lt_watermarks) = zcl_cd_ops_factory=>get_pay_outcome_dao( )->get_watermarks( ).
     DATA(ls_watermark) = VALUE #( lt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-nightly_req ] OPTIONAL ).
-    CONVERT DATE is_context-now_date TIME zif_cd_ops_types=>gc_time-day_start
+    CONVERT DATE is_context-now_date TIME zif_ca_ops_types=>gc_time-day_start
       INTO TIME STAMP lv_day_start TIME ZONE sy-zonlo.
     " CURRENT_TO of a cursor = the run that reached the end of the request rows
     rv_done = xsdbool( ls_watermark-current_to IS NOT INITIAL AND ls_watermark-current_to >= lv_day_start ).
@@ -224,7 +224,7 @@ CLASS zcl_cd_hck_c_prq_not_paid IMPLEMENTATION.
     TRY.
         " The request rule's own read of the request log (the amount of the SUCCESS attempt)
         rt_amounts = zcl_cd_ops_factory=>get_pay_request( )->evaluate( it_keys = lt_keys iv_now = lv_now ).
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         " The request log cannot be read: the findings show the item amounts only
         CLEAR rt_amounts.
     ENDTRY.

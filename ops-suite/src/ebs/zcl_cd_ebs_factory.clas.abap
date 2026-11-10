@@ -6,7 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A62: parser plug-in created with interface check (RTTI before CREATE OBJECT).
-*& 2026-11-07 | Parser parameter through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Parser parameter through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CA_OPS_PARAMS).
 *& 2026-11-07 | Release repository seam removed with the blocked-line release (read-only scope).
 *& 2026-11-07 | Comment: parser class from ZCA_PARAM (CLASS with interface ZIF_CD_EBS_PARSER).
 *& 2026-11-07 | get_stmt_evidence: statement evidence shared with file monitoring (FEB adapter).
@@ -46,7 +46,7 @@ CLASS zcl_cd_ebs_factory DEFINITION
       RETURNING
         VALUE(ro_parser) TYPE REF TO zif_cd_ebs_parser
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
   PRIVATE SECTION.
     CLASS-DATA go_cfg_dao_double TYPE REF TO zif_cd_ebs_cfg_dao.
@@ -97,7 +97,7 @@ CLASS zcl_cd_ebs_factory IMPLEMENTATION.
       iv_name    = CONV #( |{ zif_cd_ebs_types=>gc_param_prefix-parser }{ iv_format }| )
       iv_default = lv_default ).
     TRY.
-        ro_parser = CAST zif_cd_ebs_parser( zcl_cd_ops_factory=>get_plugin(
+        ro_parser = CAST zif_cd_ebs_parser( zcl_ca_ops_factory=>get_plugin(
                                               iv_class_name = CONV #( lv_class )
                                               iv_interface  = zif_cd_ebs_types=>gc_plugin_interface-parser ) ).
       CATCH cx_sy_move_cast_error INTO DATA(lx_error).

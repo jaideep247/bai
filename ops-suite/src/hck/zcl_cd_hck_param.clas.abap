@@ -27,16 +27,16 @@ CLASS zcl_cd_hck_param DEFINITION
       IMPORTING
         iv_list            TYPE clike
       RETURNING
-        VALUE(rt_patterns) TYPE zif_cd_ops_types=>tt_pcre.
+        VALUE(rt_patterns) TYPE zif_ca_ops_types=>tt_pcre.
 
     "! A pattern that is not valid PCRE is a configuration error of the check (E373),
     "! never an empty selection
     CLASS-METHODS check_patterns
       IMPORTING
-        it_patterns TYPE zif_cd_ops_types=>tt_pcre
+        it_patterns TYPE zif_ca_ops_types=>tt_pcre
         iv_check_id TYPE zif_cd_hck_types=>ty_check_id
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     CLASS-METHODS int
       IMPORTING
@@ -50,7 +50,7 @@ CLASS zcl_cd_hck_param DEFINITION
     "! the caller did so before (cap = possibly incomplete result).
     CLASS-METHODS row_cap
       IMPORTING
-        iv_name       TYPE zif_cd_ops_types=>ty_param_name
+        iv_name       TYPE zif_ca_ops_types=>ty_param_name
         iv_default    TYPE i
         iv_ceiling    TYPE i
       RETURNING
@@ -78,12 +78,12 @@ ENDCLASS.
 CLASS zcl_cd_hck_param IMPLEMENTATION.
 
   METHOD patterns.
-    rt_patterns = zcl_cd_ops_util=>split_list( iv_list ).
+    rt_patterns = zcl_ca_ops_util=>split_list( iv_list ).
   ENDMETHOD.
 
 
   METHOD check_patterns.
-    DATA(lv_invalid) = zcl_cd_ops_util=>pcre_first_invalid( it_patterns ).
+    DATA(lv_invalid) = zcl_ca_ops_util=>pcre_first_invalid( it_patterns ).
     IF lv_invalid IS NOT INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e373(zcd_ops) WITH iv_check_id lv_invalid.
@@ -92,13 +92,13 @@ CLASS zcl_cd_hck_param IMPLEMENTATION.
 
 
   METHOD int.
-    rv_value = zcl_cd_ops_util=>to_decimal( iv_value   = iv_value
+    rv_value = zcl_ca_ops_util=>to_decimal( iv_value   = iv_value
                                             iv_default = iv_default ).
   ENDMETHOD.
 
 
   METHOD row_cap.
-    rv_cap = zcl_cd_ops_util=>param_int( io_params  = zcl_cd_ops_factory=>get_params( )
+    rv_cap = zcl_ca_ops_util=>param_int( io_params  = zcl_cd_ops_factory=>get_params( )
                                          iv_name    = iv_name
                                          iv_default = iv_default ).
     IF rv_cap <= 0.

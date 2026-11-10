@@ -32,7 +32,7 @@ INTERFACE zif_cd_ops_pattern_dao
       VALUE(rt_values) TYPE zif_cd_ops_pattern_types=>tt_value.
 
   "! Every non-blank pattern of the configuration tables (ZCD_EBS_FLOW_PAT, ZCD_FMON_IFACE,
-  "! ZCD_JOB_STEP, ZCD_OPS_ALRULE, the pattern-list parameters of ZCD_HCK_DEF,
+  "! ZCD_JOB_STEP, ZCA_OPS_ALRULE, the pattern-list parameters of ZCD_HCK_DEF,
   "! ZCD_HCK_SUPPRESS) with its row key and field length; NEW and STATUS empty
   METHODS get_migration_rows
     IMPORTING
@@ -49,6 +49,6 @@ INTERFACE zif_cd_ops_pattern_dao
     RETURNING
       VALUE(rt_written) TYPE zif_cd_ops_pattern_types=>tt_written
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

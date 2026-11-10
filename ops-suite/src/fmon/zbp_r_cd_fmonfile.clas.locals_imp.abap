@@ -41,8 +41,8 @@ CLASS lhc_fmonfile IMPLEMENTATION.
 
   METHOD get_global_authorizations.
     IF requested_authorizations-%action-setManualStatus = if_abap_behv=>mk-on.
-      result-%action-setManualStatus = COND #( WHEN zcl_cd_ops_factory=>get_auth( )->is_allowed(
-                                                      iv_activity = zif_cd_ops_auth=>gc_activity-change
+      result-%action-setManualStatus = COND #( WHEN zcl_ca_ops_factory=>get_auth( )->is_allowed(
+                                                      iv_activity = zif_ca_ops_auth=>gc_activity-change
                                                       iv_pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ) = abap_true
                                                THEN if_abap_behv=>auth-allowed
                                                ELSE if_abap_behv=>auth-unauthorized ).
@@ -55,7 +55,7 @@ CLASS lhc_fmonfile IMPLEMENTATION.
     READ ENTITIES OF zr_cd_fmonfile IN LOCAL MODE
       ENTITY FmonFile ALL FIELDS WITH CORRESPONDING #( keys )
       RESULT DATA(lt_files).
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
     LOOP AT lt_files INTO DATA(ls_row).
       DATA(ls_key) = keys[ KEY id %tky = ls_row-%tky ].
       CLEAR ls_file.
@@ -116,7 +116,7 @@ CLASS lsc_fmonfile IMPLEMENTATION.
     " One event per manual change - the audit trail of the file (source MANUAL)
     DATA ls_event TYPE zif_cd_fmon_types=>ty_event.
     DATA(lo_dao) = zcl_cd_fmon_factory=>get_dao( ).
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
     LOOP AT lcl_buffer=>gt_manual ASSIGNING FIELD-SYMBOL(<ls_manual>).
       CLEAR ls_event.
       ls_event-file_id    = <ls_manual>-file_id.
@@ -129,7 +129,7 @@ CLASS lsc_fmonfile IMPLEMENTATION.
       ls_event-created_at = lv_now.
       TRY.
           lo_dao->insert_event( ls_event ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        CATCH zcx_ca_ops_error INTO DATA(lx_error).
           " the file must never change without its audit event
           RAISE SHORTDUMP lx_error.
         CATCH cx_sy_open_sql_db INTO DATA(lx_sql).

@@ -28,7 +28,7 @@ INTERFACE zif_cd_ops_pay_outcome
   "! A class is watched when it has payment methods and at least one CLEARED rule.
   "! @parameter iv_context | object-key prefix of the findings (check id of the caller)
   "! @parameter iv_max_rows | row cap of every evidence read (reaching it = TECH_READ_CAPPED)
-  "! @raising zcx_cd_ops_error | no watched method (E384), a method in two classes (E385)
+  "! @raising zcx_ca_ops_error | no watched method (E384), a method in two classes (E385)
   METHODS load
     IMPORTING
       iv_context       TYPE zif_cd_hck_types=>ty_check_id
@@ -36,7 +36,7 @@ INTERFACE zif_cd_ops_pay_outcome
     RETURNING
       VALUE(rs_config) TYPE zif_cd_ops_payout_types=>ty_config
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Flow (TFK042Z-XEINZ) and method class (configuration) of each payment; a payment whose
   "! method is in no watched class is left out
@@ -66,14 +66,14 @@ INTERFACE zif_cd_ops_pay_outcome
   "! Sources of FIN numbers from the payment request log (configured source TRACE_SRC_REQUEST):
   "! the sources with a SUCCESS row, else every source found. A FIN without request row has
   "! one row with a blank source
-  "! @raising zcx_cd_ops_error | request source not configured or not readable
+  "! @raising zcx_ca_ops_error | request source not configured or not readable
   METHODS sources_of
     IMPORTING
       it_fin            TYPE zif_cd_ops_payout_types=>tt_fin
     RETURNING
       VALUE(rt_sources) TYPE zif_cd_ops_payout_types=>tt_fin_source
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! The verdict for one source of the FIN: AMBIGUOUS (finding PAY_SOURCE_AMBIGUOUS, the
   "! evaluated outcome in the reference) when the FIN is in two or more sources

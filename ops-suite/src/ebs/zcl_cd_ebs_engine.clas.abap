@@ -41,7 +41,7 @@
 *& 2026-11-07 | EBS_EMPTY_FEED_OK read through ZCL_CD_OPS_FACTORY=>GET_PARAMS (the store serves no parameters).
 *& 2026-11-07 | Posting-open definition in ZCL_CD_EBS_STMT_EVIDENCE=>IS_POSTING_OPEN (shared with file monitoring).
 *& 2026-11-10 | Run boundary: a ZCX_CD_OPS_ERROR / CX_SY_OPEN_SQL_DB after the run started is rolled back, the run
-*&            | closed as aborted (ZCL_CD_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
+*&            | closed as aborted (ZCL_CA_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
 *&            | re-raised; a failed alert dispatch is an ALERT_FAILED finding (was swallowed); PLUGIN_ERROR keeps the
 *&            | exception trace (DETAILS) and error class.
 *&---------------------------------------------------------------------*
@@ -54,17 +54,17 @@ CLASS zcl_cd_ebs_engine DEFINITION
   PUBLIC SECTION.
     CONSTANTS:
       BEGIN OF gc_check_code,
-        plugin_error TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
+        plugin_error TYPE zif_ca_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
       END OF gc_check_code.
 
     "! A68: run status of a run that selected no statement (RAG grey)
-    CONSTANTS gc_status_no_data TYPE zif_cd_ops_types=>ty_run_status VALUE zif_cd_ops_types=>gc_run_status-no_data.
+    CONSTANTS gc_status_no_data TYPE zif_ca_ops_types=>ty_run_status VALUE zif_ca_ops_types=>gc_run_status-no_data.
 
     TYPES:
       BEGIN OF ty_result,
-        run         TYPE zif_cd_ops_types=>ty_run,
+        run         TYPE zif_ca_ops_types=>ty_run,
         "! Retained findings (EBS_RESULT_MAX); every finding is saved and alerted on
-        findings    TYPE zif_cd_ops_types=>tt_finding,
+        findings    TYPE zif_ca_ops_types=>tt_finding,
         "! Retained lines, exactly EBS_RESULT_MAX at most
         lines       TYPE zif_cd_ebs_types=>tt_line,
         "! A66: lines not evaluated because a rule of their group could not run, plus the
@@ -74,7 +74,7 @@ CLASS zcl_cd_ebs_engine DEFINITION
         "! posting-dependent rules (NEEDS_POSTING) were not evaluated - never passed, never failed
         posting_open TYPE i,
         "! User decision 2026-11-06: imported statements not validated because not every line
-        "! carries an active payment engine account (XBLNR) - no finding; ZCD_OPS_RUN has no
+        "! carries an active payment engine account (XBLNR) - no finding; ZCA_OPS_RUN has no
         "! field for it, the run message carries it (message 546)
         out_of_scope TYPE i,
       END OF ty_result.
@@ -83,52 +83,52 @@ CLASS zcl_cd_ebs_engine DEFINITION
     METHODS run
       IMPORTING
         io_source        TYPE REF TO zif_cd_ebs_source
-        iv_variant       TYPE zif_cd_ops_types=>ty_variant OPTIONAL
+        iv_variant       TYPE zif_ca_ops_types=>ty_variant OPTIONAL
         iv_test_mode     TYPE abap_bool DEFAULT abap_false
       RETURNING
         VALUE(rs_result) TYPE ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Validate one package in memory (no persistence). Lines come back enriched.
     METHODS validate_package
       CHANGING
         cs_package         TYPE zif_cd_ebs_types=>ty_package
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
   PRIVATE SECTION.
     "! The run itself, under the run lock taken by run( )
     METHODS execute
       IMPORTING
         io_source        TYPE REF TO zif_cd_ebs_source
-        iv_variant       TYPE zif_cd_ops_types=>ty_variant
+        iv_variant       TYPE zif_ca_ops_types=>ty_variant
         iv_test_mode     TYPE abap_bool
       RETURNING
         VALUE(rs_result) TYPE ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS release_lock
       IMPORTING
-        iv_variant   TYPE zif_cd_ops_types=>ty_variant
+        iv_variant   TYPE zif_ca_ops_types=>ty_variant
         iv_test_mode TYPE abap_bool.
 
     "! Resolve open exceptions of earlier runs for the package's lines and
     "! statements that passed now. Skipped when a rule could not run.
     METHODS reconcile_package
       IMPORTING
-        is_run      TYPE zif_cd_ops_types=>ty_run
+        is_run      TYPE zif_ca_ops_types=>ty_run
         is_package  TYPE zif_cd_ebs_types=>ty_package
-        it_findings TYPE zif_cd_ops_types=>tt_finding
+        it_findings TYPE zif_ca_ops_types=>tt_finding
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     TYPES:
       BEGIN OF ty_plugin,
-        class_name TYPE zif_cd_ops_types=>ty_class_name,
+        class_name TYPE zif_ca_ops_types=>ty_class_name,
         rule       TYPE REF TO zif_cd_ebs_rule,
       END OF ty_plugin.
     TYPES tt_plugin TYPE HASHED TABLE OF ty_plugin WITH UNIQUE KEY class_name.
@@ -149,14 +149,14 @@ CLASS zcl_cd_ebs_engine DEFINITION
 
     METHODS load_configuration
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 
     METHODS configuration_gaps
       IMPORTING
         it_lines           TYPE zif_cd_ebs_types=>tt_line
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 
     METHODS execute_rule
       IMPORTING
@@ -164,7 +164,7 @@ CLASS zcl_cd_ebs_engine DEFINITION
         it_statements      TYPE zif_cd_ebs_types=>tt_statement
         it_lines           TYPE zif_cd_ebs_types=>tt_line
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 
     "! Worst severity per line; A66: a line whose rule group (or a '*' rule) had a
     "! PLUGIN_ERROR is not evaluated - counted as failed and in cv_unevaluated, never passed.
@@ -174,9 +174,9 @@ CLASS zcl_cd_ebs_engine DEFINITION
     METHODS count_lines
       IMPORTING
         it_lines        TYPE zif_cd_ebs_types=>tt_line
-        it_findings     TYPE zif_cd_ops_types=>tt_finding
+        it_findings     TYPE zif_ca_ops_types=>tt_finding
       CHANGING
-        cs_run          TYPE zif_cd_ops_types=>ty_run
+        cs_run          TYPE zif_ca_ops_types=>ty_run
         cv_unevaluated  TYPE i
         cv_posting_open TYPE i.
 
@@ -205,35 +205,35 @@ CLASS zcl_cd_ebs_engine DEFINITION
 
     METHODS close_run
       IMPORTING
-        iv_rag          TYPE zif_cd_ops_types=>ty_rag
+        iv_rag          TYPE zif_ca_ops_types=>ty_rag
         iv_started      TYPE timestampl
         iv_no_data      TYPE abap_bool DEFAULT abap_false
         iv_unevaluated  TYPE i DEFAULT 0
         iv_posting_open TYPE i DEFAULT 0
         iv_out_of_scope TYPE i DEFAULT 0
       CHANGING
-        cs_run          TYPE zif_cd_ops_types=>ty_run.
+        cs_run          TYPE zif_ca_ops_types=>ty_run.
 
     "! A67: one entry per alert-relevant class of finding (rule, check code, groups,
     "! severity, action) with its count and first finding - complete, independent of the
     "! EBS_RESULT_MAX display cap
     TYPES:
       BEGIN OF ty_summary,
-        rule_id    TYPE zif_cd_ops_types=>ty_rule_id,
-        check_code TYPE zif_cd_ops_types=>ty_check_code,
-        group1     TYPE zif_cd_ops_types=>ty_group,
-        group2     TYPE zif_cd_ops_types=>ty_group,
-        severity   TYPE zif_cd_ops_types=>ty_severity,
-        action     TYPE zif_cd_ops_types=>ty_action,
+        rule_id    TYPE zif_ca_ops_types=>ty_rule_id,
+        check_code TYPE zif_ca_ops_types=>ty_check_code,
+        group1     TYPE zif_ca_ops_types=>ty_group,
+        group2     TYPE zif_ca_ops_types=>ty_group,
+        severity   TYPE zif_ca_ops_types=>ty_severity,
+        action     TYPE zif_ca_ops_types=>ty_action,
         count      TYPE i,
-        sample     TYPE zif_cd_ops_types=>ty_finding,
+        sample     TYPE zif_ca_ops_types=>ty_finding,
       END OF ty_summary.
     TYPES tt_summary TYPE HASHED TABLE OF ty_summary
                      WITH UNIQUE KEY rule_id check_code group1 group2 severity action.
 
     METHODS summarize
       IMPORTING
-        it_findings TYPE zif_cd_ops_types=>tt_finding
+        it_findings TYPE zif_ca_ops_types=>tt_finding
       CHANGING
         ct_summary  TYPE tt_summary.
 
@@ -241,10 +241,10 @@ CLASS zcl_cd_ebs_engine DEFINITION
     "! every summarised class that the cap cut off, so every alert rule sees its match
     METHODS alert_findings
       IMPORTING
-        it_kept            TYPE zif_cd_ops_types=>tt_finding
+        it_kept            TYPE zif_ca_ops_types=>tt_finding
         it_summary         TYPE tt_summary
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 
 
 ENDCLASS.
@@ -257,10 +257,10 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF iv_test_mode = abap_false.
-      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                              iv_variant = iv_variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                          iv_variant = iv_variant
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -281,7 +281,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
 
   METHOD reconcile_package.
-    DATA lt_scope TYPE zif_cd_ops_types=>tt_object_key.
+    DATA lt_scope TYPE zif_ca_ops_types=>tt_object_key.
 
     IF line_exists( it_findings[ check_code = gc_check_code-plugin_error ] ).
       RETURN.
@@ -293,19 +293,19 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       IF line_exists( lt_open_statements[ table_line = <ls_statement>-stmt_key ] ).
         CONTINUE.
       ENDIF.
-      INSERT CONV zif_cd_ops_types=>ty_object_key( <ls_statement>-stmt_key ) INTO TABLE lt_scope.
+      INSERT CONV zif_ca_ops_types=>ty_object_key( <ls_statement>-stmt_key ) INTO TABLE lt_scope.
     ENDLOOP.
     LOOP AT is_package-lines ASSIGNING FIELD-SYMBOL(<ls_line>) WHERE posting_open = abap_false.
       INSERT zcl_cd_ebs_finding=>line_key( <ls_line> ) INTO TABLE lt_scope.
     ENDLOOP.
-    zcl_cd_ops_factory=>get_store( )->reconcile( is_run         = is_run
+    zcl_ca_ops_factory=>get_store( )->reconcile( is_run         = is_run
                                                  it_object_keys = lt_scope ).
   ENDMETHOD.
 
 
   METHOD release_lock.
     IF iv_test_mode = abap_false.
-      zcl_cd_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
+      zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                 iv_variant = iv_variant ).
     ENDIF.
   ENDMETHOD.
@@ -314,14 +314,14 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
   METHOD execute.
     " Findings kept in memory are capped (EBS_RESULT_MAX); every finding is still saved
     " per package, and the run RAG is accumulated over all of them (review 3.5)
-    DATA lt_all_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_all_findings TYPE zif_ca_ops_types=>tt_finding.
     DATA lt_summary      TYPE tt_summary.
-    DATA lv_run_rag      TYPE zif_cd_ops_types=>ty_rag.
+    DATA lv_run_rag      TYPE zif_ca_ops_types=>ty_rag.
     DATA lv_bad_packages TYPE i.
     DATA lv_statements   TYPE i.
 
-    DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
-    DATA(lv_started) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
+    DATA(lv_started) = zcl_ca_ops_factory=>get_clock( )->now( ).
     rs_result-run = lo_store->start_run( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-ebs
                                          iv_variant   = iv_variant
                                          iv_test_mode = iv_test_mode ).
@@ -333,16 +333,16 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     " aborted (ON_ABORT alert rules) and the error goes to the job (cancelled, never green)
     TRY.
         DATA(lo_params)      = zcl_cd_ops_factory=>get_params( ).
-        DATA(lv_cb_percent)  = zcl_cd_ops_util=>param_int( io_params  = lo_params
+        DATA(lv_cb_percent)  = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                            iv_name    = zif_cd_ebs_types=>gc_param-cb_fail_pct
                                                            iv_default = zif_cd_ebs_types=>gc_param_default-cb_fail_pct ).
-        DATA(lv_cb_packages) = zcl_cd_ops_util=>param_int( io_params  = lo_params
+        DATA(lv_cb_packages) = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                            iv_name    = zif_cd_ebs_types=>gc_param-cb_packages
                                                            iv_default = zif_cd_ebs_types=>gc_param_default-cb_packages ).
-        DATA(lv_cb_min)      = zcl_cd_ops_util=>param_int( io_params  = lo_params
+        DATA(lv_cb_min)      = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                            iv_name    = zif_cd_ebs_types=>gc_param-cb_min_lines
                                                            iv_default = zif_cd_ebs_types=>gc_param_default-cb_min_lines ).
-        DATA(lv_keep_max)    = zcl_cd_ops_util=>param_int( io_params  = lo_params
+        DATA(lv_keep_max)    = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                            iv_name    = zif_cd_ebs_types=>gc_param-result_max
                                                            iv_default = zif_cd_ebs_types=>gc_param_default-result_max ).
 
@@ -380,8 +380,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                                it_findings = lt_findings ).
             lo_store->commit( ).
           ENDIF.
-          lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag
-                                                   iv_rag2 = zcl_cd_ops_util=>rag_from_findings( lt_findings ) ).
+          lv_run_rag = zcl_ca_ops_util=>worse_rag( iv_rag1 = lv_run_rag
+                                                   iv_rag2 = zcl_ca_ops_util=>rag_from_findings( lt_findings ) ).
           LOOP AT lt_findings ASSIGNING FIELD-SYMBOL(<ls_keep>) FROM 1 TO lv_keep_max - lines( lt_all_findings ).
             INSERT <ls_keep> INTO TABLE lt_all_findings.
           ENDLOOP.
@@ -404,20 +404,20 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
             CLEAR lv_bad_packages.
           ENDIF.
           IF lv_bad_packages >= lv_cb_packages.
-            DATA(ls_breaker) = VALUE zif_cd_ops_types=>ty_finding(
+            DATA(ls_breaker) = VALUE zif_ca_ops_types=>ty_finding(
               object_type = zcl_cd_ebs_finding=>gc_object_type-run
               rule_id     = 'CB'
               check_code  = zif_cd_ebs_types=>gc_check_code-circuit_breaker
-              severity    = zif_cd_ops_types=>gc_severity-error
-              action      = zif_cd_ops_types=>gc_action-notify
+              severity    = zif_ca_ops_types=>gc_severity-error
+              action      = zif_ca_ops_types=>gc_action-notify
               message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-circuit_breaker
                                                    iv_v1    = lv_bad_packages
                                                    iv_v2    = lv_cb_percent ) ).
             lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING cs_run = rs_result-run ).
             INSERT ls_breaker INTO TABLE lt_all_findings.
             summarize( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING ct_summary = lt_summary ).
-            lv_run_rag = zif_cd_ops_types=>gc_rag-red.
-            rs_result-run-status = zif_cd_ops_types=>gc_run_status-aborted.
+            lv_run_rag = zif_ca_ops_types=>gc_rag-red.
+            rs_result-run-status = zif_ca_ops_types=>gc_run_status-aborted.
             EXIT.
           ENDIF.
           " The package is persisted, counted and kept within EBS_RESULT_MAX: release its buffers
@@ -428,17 +428,17 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         " A68: a run that selected no statement evaluated nothing - NO_DATA (grey), not green,
         " unless the feed is declared intentionally empty (EBS_EMPTY_FEED_OK = X)
         DATA(lv_no_data) = xsdbool( lv_statements = 0
-                                    AND rs_result-run-status <> zif_cd_ops_types=>gc_run_status-aborted
+                                    AND rs_result-run-status <> zif_ca_ops_types=>gc_run_status-aborted
                                     AND zcl_cd_ops_factory=>get_params( )->get_param(
                                           zif_cd_ebs_types=>gc_param-empty_feed_ok ) <> abap_true ).
         IF lv_no_data = abap_true.
-          DATA(ls_no_data) = VALUE zif_cd_ops_types=>ty_finding(
+          DATA(ls_no_data) = VALUE zif_ca_ops_types=>ty_finding(
             object_type = zcl_cd_ebs_finding=>gc_object_type-run
             object_key  = iv_variant
             rule_id     = zif_cd_ebs_types=>gc_engine-rule_id
             check_code  = zif_cd_ebs_types=>gc_check_code-no_data
-            severity    = zif_cd_ops_types=>gc_severity-error
-            action      = zif_cd_ops_types=>gc_action-notify
+            severity    = zif_ca_ops_types=>gc_severity-error
+            action      = zif_ca_ops_types=>gc_action-notify
             message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-no_data
                                                  iv_v1    = iv_variant ) ).
           lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_no_data ) ) CHANGING cs_run = rs_result-run ).
@@ -449,7 +449,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         " Operating model: a run that could not evaluate entries because posting is not complete
         " is never green, whatever severity S13 is configured with
         IF rs_result-posting_open > 0.
-          lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag iv_rag2 = zif_cd_ops_types=>gc_rag-amber ).
+          lv_run_rag = zcl_ca_ops_util=>worse_rag( iv_rag1 = lv_run_rag iv_rag2 = zif_ca_ops_types=>gc_rag-amber ).
         ENDIF.
         close_run( EXPORTING iv_rag          = lv_run_rag
                              iv_started      = lv_started
@@ -462,25 +462,25 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         IF iv_test_mode = abap_false.
           lo_store->commit( ).
           TRY.
-              zcl_cd_ops_factory=>get_alert( )->dispatch( is_run      = rs_result-run
+              zcl_ca_ops_factory=>get_alert( )->dispatch( is_run      = rs_result-run
                                                           it_findings = alert_findings( it_kept    = lt_all_findings
                                                                                         it_summary = lt_summary ) ).
-            CATCH zcx_cd_ops_error INTO DATA(lx_alert).
+            CATCH zcx_ca_ops_error INTO DATA(lx_alert).
               " B11: the run result is already persisted; the failed dispatch is a finding of
               " the run (ALERT_FAILED, with the trace), as in file monitoring and the morning report
-              DATA(lt_alert_error) = VALUE zif_cd_ops_types=>tt_finding(
-                ( zcl_cd_ops_run_guard=>alert_failed( is_run = rs_result-run ix_error = lx_alert ) ) ).
+              DATA(lt_alert_error) = VALUE zif_ca_ops_types=>tt_finding(
+                ( zcl_ca_ops_run_guard=>alert_failed( is_run = rs_result-run ix_error = lx_alert ) ) ).
               lo_store->save_findings( EXPORTING it_findings = lt_alert_error CHANGING cs_run = rs_result-run ).
               lo_store->finish_run( rs_result-run ).
               lo_store->commit( ).
               INSERT LINES OF lt_alert_error INTO TABLE lt_all_findings.
           ENDTRY.
         ENDIF.
-      CATCH zcx_cd_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
-        zcl_cd_ops_run_guard=>abort( EXPORTING ix_error = lx_error
+      CATCH zcx_ca_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
+        zcl_ca_ops_run_guard=>abort( EXPORTING ix_error = lx_error
                                      CHANGING  cs_run   = rs_result-run ).
-        IF lx_error IS INSTANCE OF zcx_cd_ops_error.
-          RAISE EXCEPTION CAST zcx_cd_ops_error( lx_error ).
+        IF lx_error IS INSTANCE OF zcx_ca_ops_error.
+          RAISE EXCEPTION CAST zcx_ca_ops_error( lx_error ).
         ENDIF.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
           MESSAGE e804(zcd_ops) WITH rs_result-run-pe_area rs_result-run-variant
@@ -599,8 +599,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                       group2      = <ls_run_rule>-rule_group
                       rule_id     = <ls_run_rule>-rule_id
                       check_code  = zif_cd_ebs_types=>gc_check_code-rule_unusable
-                      severity    = zif_cd_ops_types=>gc_severity-error
-                      action      = zif_cd_ops_types=>gc_action-block
+                      severity    = zif_ca_ops_types=>gc_severity-error
+                      action      = zif_ca_ops_types=>gc_action-block
                       message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_unusable
                                                            iv_v1    = <ls_run_rule>-rule_id
                                                            iv_v2    = <ls_run_rule>-rule_group ) )
@@ -618,8 +618,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                  is_line       = <ls_line>
                  iv_rule_id    = <ls_rule>-rule_id
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-rule_unusable
-                 iv_severity   = zif_cd_ops_types=>gc_severity-error
-                 iv_action     = zif_cd_ops_types=>gc_action-block
+                 iv_severity   = zif_ca_ops_types=>gc_severity-error
+                 iv_action     = zif_ca_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_unusable
                                                         iv_v1    = <ls_rule>-rule_id
                                                         iv_v2    = <ls_rule>-rule_group ) )
@@ -631,8 +631,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                  is_line       = <ls_line>
                  iv_rule_id    = zif_cd_ebs_types=>gc_engine-rule_id
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-rule_group_empty
-                 iv_severity   = zif_cd_ops_types=>gc_severity-error
-                 iv_action     = zif_cd_ops_types=>gc_action-block
+                 iv_severity   = zif_ca_ops_types=>gc_severity-error
+                 iv_action     = zif_ca_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_group_empty
                                                         iv_v1    = <ls_line>-rule_group ) )
           INTO TABLE rt_findings.
@@ -649,7 +649,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
           lo_rule = <ls_plugin>-rule.
         ELSE.
           " A62: the factory checks the interface by RTTI before CREATE OBJECT
-          lo_rule = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin(
+          lo_rule = CAST zif_cd_ebs_rule( zcl_ca_ops_factory=>get_plugin(
                                             iv_class_name = is_rule-class_name
                                             iv_interface  = zif_cd_ebs_types=>gc_plugin_interface-rule ) ).
           INSERT VALUE #( class_name = is_rule-class_name rule = lo_rule ) INTO TABLE mt_plugins.
@@ -665,24 +665,24 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         group2      = is_rule-rule_group
                         rule_id     = is_rule-rule_id
                         check_code  = gc_check_code-plugin_error
-                        severity    = zif_cd_ops_types=>gc_severity-error
-                        action      = zif_cd_ops_types=>gc_action-block
+                        severity    = zif_ca_ops_types=>gc_severity-error
+                        action      = zif_ca_ops_types=>gc_action-block
                         message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_failed
                                                              iv_v1    = is_rule-rule_id
                                                              iv_v2    = is_rule-class_name
                                                              iv_tail  = lx_error->get_text( ) )
                         " B10 / B12: the whole chain and its error class stay with the finding
-                        details     = zcl_cd_ops_util=>exception_trace( lx_error )
-                        error_class = zcl_cd_ops_util=>error_class( lx_error ) )
+                        details     = zcl_ca_ops_util=>exception_trace( lx_error )
+                        error_class = zcl_ca_ops_util=>error_class( lx_error ) )
           INTO TABLE rt_findings.
     ENDTRY.
   ENDMETHOD.
 
 
   METHOD count_lines.
-    TYPES tt_worst TYPE HASHED TABLE OF zif_cd_ops_types=>ty_finding WITH UNIQUE KEY object_key.
+    TYPES tt_worst TYPE HASHED TABLE OF zif_ca_ops_types=>ty_finding WITH UNIQUE KEY object_key.
     DATA lt_worst TYPE tt_worst.
-    DATA lt_unevaluated TYPE zif_cd_ops_types=>tt_group.
+    DATA lt_unevaluated TYPE zif_ca_ops_types=>tt_group.
 
     LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_error>) WHERE check_code = gc_check_code-plugin_error.
       INSERT <ls_error>-group2 INTO TABLE lt_unevaluated.
@@ -693,7 +693,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       READ TABLE lt_worst ASSIGNING FIELD-SYMBOL(<ls_worst>) WITH TABLE KEY object_key = <ls_finding>-object_key.
       IF sy-subrc <> 0.
         INSERT <ls_finding> INTO TABLE lt_worst.
-      ELSEIF zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ) > zcl_cd_ops_util=>severity_rank( <ls_worst>-severity ).
+      ELSEIF zcl_ca_ops_util=>severity_rank( <ls_finding>-severity ) > zcl_ca_ops_util=>severity_rank( <ls_worst>-severity ).
         <ls_worst>-severity = <ls_finding>-severity.
       ENDIF.
     ENDLOOP.
@@ -702,17 +702,17 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       cs_run-total_items += 1.
       DATA(lv_key) = zcl_cd_ebs_finding=>line_key( <ls_line> ).
       DATA(lv_severity) = VALUE #( lt_worst[ object_key = lv_key ]-severity OPTIONAL ).
-      IF <ls_line>-blocked = abap_true OR lv_severity = zif_cd_ops_types=>gc_severity-block.
+      IF <ls_line>-blocked = abap_true OR lv_severity = zif_ca_ops_types=>gc_severity-block.
         cs_run-blocked_items += 1.
       ELSEIF lv_all_unevaluated = abap_true OR line_exists( lt_unevaluated[ table_line = <ls_line>-rule_group ] ).
         cs_run-failed_items += 1.
         cv_unevaluated += 1.
-      ELSEIF lv_severity = zif_cd_ops_types=>gc_severity-error.
+      ELSEIF lv_severity = zif_ca_ops_types=>gc_severity-error.
         cs_run-failed_items += 1.
       ELSEIF <ls_line>-posting_open = abap_true AND posting_rule_applies( <ls_line> ) = abap_true.
         cv_unevaluated += 1.
         cv_posting_open += 1.
-      ELSEIF lv_severity = zif_cd_ops_types=>gc_severity-warning.
+      ELSEIF lv_severity = zif_ca_ops_types=>gc_severity-warning.
         cs_run-warning_items += 1.
       ELSE.
         cs_run-passed_items += 1.
@@ -722,12 +722,12 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
 
   METHOD close_run.
-    cs_run-ended_at   = zcl_cd_ops_factory=>get_clock( )->now( ).
-    cs_run-runtime_ms = zcl_cd_ops_util=>elapsed_ms( iv_from = iv_started iv_to = cs_run-ended_at ).
-    cs_run-rag        = COND #( WHEN iv_rag IS INITIAL THEN zif_cd_ops_types=>gc_rag-green ELSE iv_rag ).
+    cs_run-ended_at   = zcl_ca_ops_factory=>get_clock( )->now( ).
+    cs_run-runtime_ms = zcl_ca_ops_util=>elapsed_ms( iv_from = iv_started iv_to = cs_run-ended_at ).
+    cs_run-rag        = COND #( WHEN iv_rag IS INITIAL THEN zif_ca_ops_types=>gc_rag-green ELSE iv_rag ).
     IF iv_no_data = abap_true.
       " A68: nothing evaluated - grey unless findings of the source made it worse
-      cs_run-rag     = COND #( WHEN iv_rag IS INITIAL THEN zif_cd_ops_types=>gc_rag-grey ELSE iv_rag ).
+      cs_run-rag     = COND #( WHEN iv_rag IS INITIAL THEN zif_ca_ops_types=>gc_rag-grey ELSE iv_rag ).
       cs_run-status  = gc_status_no_data.
       cs_run-message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-no_data
                                               iv_v1    = cs_run-variant ).
@@ -738,13 +738,13 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       ENDIF.
       RETURN.
     ENDIF.
-    IF cs_run-status <> zif_cd_ops_types=>gc_run_status-aborted.
+    IF cs_run-status <> zif_ca_ops_types=>gc_run_status-aborted.
       cs_run-status = SWITCH #( cs_run-rag
-                                WHEN zif_cd_ops_types=>gc_rag-red   THEN zif_cd_ops_types=>gc_run_status-error
-                                WHEN zif_cd_ops_types=>gc_rag-amber THEN zif_cd_ops_types=>gc_run_status-warning
-                                ELSE zif_cd_ops_types=>gc_run_status-success ).
+                                WHEN zif_ca_ops_types=>gc_rag-red   THEN zif_ca_ops_types=>gc_run_status-error
+                                WHEN zif_ca_ops_types=>gc_rag-amber THEN zif_ca_ops_types=>gc_run_status-warning
+                                ELSE zif_ca_ops_types=>gc_run_status-success ).
     ELSE.
-      cs_run-rag = zif_cd_ops_types=>gc_rag-red.
+      cs_run-rag = zif_ca_ops_types=>gc_rag-red.
     ENDIF.
     cs_run-message = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_1
                                                iv_v1    = cs_run-total_items

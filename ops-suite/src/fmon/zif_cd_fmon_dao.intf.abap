@@ -132,7 +132,7 @@ INTERFACE zif_cd_fmon_dao
     RETURNING
       VALUE(rt_conflicts) TYPE zif_cd_fmon_types=>tt_file_id
     RAISING
-      zcx_cd_ops_error
+      zcx_ca_ops_error
       "! Technical database error: the caller (LUW owner) rolls back (audit A05)
       cx_sy_open_sql_db.
 
@@ -144,7 +144,7 @@ INTERFACE zif_cd_fmon_dao
     RETURNING
       VALUE(rv_inserted) TYPE abap_bool
     RAISING
-      zcx_cd_ops_error
+      zcx_ca_ops_error
       "! Technical database error: the caller (LUW owner) rolls back (audit A05)
       cx_sy_open_sql_db.
 
@@ -156,7 +156,7 @@ INTERFACE zif_cd_fmon_dao
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_fmon_types=>tt_raw_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Fix 8: the rows of the same read counted per distinct combination of the query's fields
   "! (GROUP BY every field, COUNT(*)); same name validation, ZCD_OPS_TABWL approval (FMON / SOURCE) and
@@ -167,6 +167,6 @@ INTERFACE zif_cd_fmon_dao
     RETURNING
       VALUE(rt_counts) TYPE zif_cd_fmon_types=>tt_raw_count
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

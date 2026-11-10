@@ -171,9 +171,9 @@ CLASS ltc_ageing IMPLEMENTATION.
   METHOD rag_from_age_oldest.
     TRY.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->rag_of( iv_key = gc-wire iv_age = gc-amber )
-                                            exp = zif_cd_ops_types=>gc_rag-amber msg = 'Late' ).
+                                            exp = zif_ca_ops_types=>gc_rag-amber msg = 'Late' ).
         cl_abap_unit_assert=>assert_equals( act = mo_cut->rag_of( iv_key = gc-wire iv_age = gc-red )
-                                            exp = zif_cd_ops_types=>gc_rag-red msg = 'Critical' ).
+                                            exp = zif_ca_ops_types=>gc_rag-red msg = 'Critical' ).
         cl_abap_unit_assert=>assert_true( act = mo_cut->limits_set( gc-wire ) msg = 'Limits maintained' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

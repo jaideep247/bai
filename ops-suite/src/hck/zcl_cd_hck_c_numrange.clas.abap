@@ -62,7 +62,7 @@ CLASS zcl_cd_hck_c_numrange IMPLEMENTATION.
     DATA lt_objects TYPE zif_cd_hck_runtime_types=>tt_nr_object.
     DATA lt_found TYPE zif_cd_hck_runtime_types=>tt_nr_object.
 
-    LOOP AT zcl_cd_ops_util=>split_list( is_def-param1 ) ASSIGNING FIELD-SYMBOL(<lv_object>).
+    LOOP AT zcl_ca_ops_util=>split_list( is_def-param1 ) ASSIGNING FIELD-SYMBOL(<lv_object>).
       INSERT CONV zif_cd_hck_runtime_types=>ty_nr_object( to_upper( condense( <lv_object> ) ) ) INTO TABLE lt_objects.
     ENDLOOP.
     IF lt_objects IS INITIAL.
@@ -82,8 +82,8 @@ CLASS zcl_cd_hck_c_numrange IMPLEMENTATION.
     IF lines( lt_intervals ) >= lv_cap.
       INSERT VALUE #( object_key = is_def-check_id
                       check_code = zif_cd_hck_runtime_types=>gc_code-read_capped
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-read_capped
                                                           iv_v1    = zif_cd_hck_runtime_types=>gc_param-max_tech_rows
                                                           iv_v2    = lv_cap
@@ -99,8 +99,8 @@ CLASS zcl_cd_hck_c_numrange IMPLEMENTATION.
     IF lv_limits_set = abap_false.
       INSERT VALUE #( object_key = is_def-check_id
                       check_code = zif_cd_hck_runtime_types=>gc_code-limits_missing
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-limits_missing
                                                           iv_v1    = is_def-check_id
                                                           iv_v2    = gc_metric ) ) INTO TABLE rs_result-findings.
@@ -114,8 +114,8 @@ CLASS zcl_cd_hck_c_numrange IMPLEMENTATION.
       IF ls_usage-valid = abap_false.
         INSERT VALUE #( object_key = |{ is_def-check_id }/{ lv_dim }|
                         check_code = zif_cd_hck_runtime_types=>gc_code-nr_not_numeric
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-warning
+                        action     = zif_ca_ops_types=>gc_action-notify
                         reference  = <ls_interval>-object
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-nr_not_numeric
                                                             iv_v1    = <ls_interval>-object
@@ -132,15 +132,15 @@ CLASS zcl_cd_hck_c_numrange IMPLEMENTATION.
       DATA(lv_rag) = zcl_cd_hck_threshold=>evaluate( iv_value     = ls_usage-pct
                                                      is_threshold = ls_limit
                                                      it_history   = VALUE #( ) )-rag.
-      IF lv_rag <> zif_cd_ops_types=>gc_rag-red AND lv_rag <> zif_cd_ops_types=>gc_rag-amber.
+      IF lv_rag <> zif_ca_ops_types=>gc_rag-red AND lv_rag <> zif_ca_ops_types=>gc_rag-amber.
         CONTINUE.
       ENDIF.
       INSERT VALUE #( object_key = |{ is_def-check_id }/{ lv_dim }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-nr_usage_high
-                      severity   = COND #( WHEN lv_rag = zif_cd_ops_types=>gc_rag-red
-                                           THEN zif_cd_ops_types=>gc_severity-error
-                                           ELSE zif_cd_ops_types=>gc_severity-warning )
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = COND #( WHEN lv_rag = zif_ca_ops_types=>gc_rag-red
+                                           THEN zif_ca_ops_types=>gc_severity-error
+                                           ELSE zif_ca_ops_types=>gc_severity-warning )
+                      action     = zif_ca_ops_types=>gc_action-notify
                       reference  = <ls_interval>-object
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-nr_usage
                                                           iv_v1    = <ls_interval>-object
@@ -157,8 +157,8 @@ CLASS zcl_cd_hck_c_numrange IMPLEMENTATION.
       ENDIF.
       INSERT VALUE #( object_key = |{ is_def-check_id }/{ <lv_configured> }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-nr_no_interval
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
+                      severity   = zif_ca_ops_types=>gc_severity-warning
+                      action     = zif_ca_ops_types=>gc_action-notify
                       reference  = <lv_configured>
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-nr_no_interval
                                                           iv_v1    = <lv_configured>
@@ -174,12 +174,12 @@ CLASS zcl_cd_hck_c_numrange IMPLEMENTATION.
       rs_number-valid = abap_true.
       RETURN.
     ENDIF.
-    IF zcl_cd_ops_util=>pcre_match( iv_value   = lv_text
+    IF zcl_ca_ops_util=>pcre_match( iv_value   = lv_text
                                     iv_pattern = zif_cd_hck_runtime_types=>gc_pcre_digits ) = abap_false.
       RETURN.
     ENDIF.
     rs_number-valid = abap_true.
-    rs_number-value = zcl_cd_ops_util=>to_decimal( lv_text ).
+    rs_number-value = zcl_ca_ops_util=>to_decimal( lv_text ).
   ENDMETHOD.
 
 

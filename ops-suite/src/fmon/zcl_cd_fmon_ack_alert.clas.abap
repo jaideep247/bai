@@ -31,7 +31,7 @@ CLASS zcl_cd_fmon_ack_alert DEFINITION
         "! Payment run totals (fallback); PAYMENTS = 0 = not found
         total         TYPE zif_cd_fmon_types=>ty_payrun_total,
         "! Currency of the control total (FMON_DEFAULT_CURRENCY)
-        currency      TYPE zif_cd_ops_types=>ty_currency,
+        currency      TYPE zif_ca_ops_types=>ty_currency,
         time_zone     TYPE zif_cd_fmon_types=>ty_time_zone,
         generated_at  TYPE timestampl,
         sent_at       TYPE timestampl,
@@ -46,22 +46,22 @@ CLASS zcl_cd_fmon_ack_alert DEFINITION
     TYPES:
       BEGIN OF ty_block,
         text         TYPE string,
-        amount       TYPE zif_cd_ops_types=>ty_amount,
-        currency     TYPE zif_cd_ops_types=>ty_currency,
+        amount       TYPE zif_ca_ops_types=>ty_amount,
+        currency     TYPE zif_ca_ops_types=>ty_currency,
         amount_known TYPE abap_bool,
       END OF ty_block.
 
     "! Codes about one file: no / late ACK (SLA of stage ACK_RECEIVED), ACK count / amount mismatch
     CLASS-METHODS is_ack_code
       IMPORTING
-        iv_code       TYPE zif_cd_ops_types=>ty_check_code
+        iv_code       TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
         VALUE(rv_ack) TYPE abap_bool.
 
     "! A missed stage deadline (interface and day) whose stage is ACK_RECEIVED
     CLASS-METHODS is_ack_deadline
       IMPORTING
-        is_finding    TYPE zif_cd_ops_types=>ty_finding
+        is_finding    TYPE zif_ca_ops_types=>ty_finding
       RETURNING
         VALUE(rv_ack) TYPE abap_bool.
 
@@ -226,7 +226,7 @@ CLASS zcl_cd_fmon_ack_alert IMPLEMENTATION.
       rs_block-amount_known = abap_true.
     ENDIF.
     DATA(lv_amount) = COND string( WHEN rs_block-amount_known = abap_true
-                                   THEN |{ rs_block-currency } { zcl_cd_ops_util=>format_amount( rs_block-amount ) }|
+                                   THEN |{ rs_block-currency } { zcl_ca_ops_util=>format_amount( rs_block-amount ) }|
                                    ELSE unknown( ) ).
     DATA(lv_run) = COND string( WHEN is_input-run_key-laufd IS INITIAL AND is_input-run_key-laufi IS INITIAL
                                 THEN unknown( )

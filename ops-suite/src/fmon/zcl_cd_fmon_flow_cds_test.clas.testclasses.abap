@@ -2,8 +2,8 @@
 *& Artifact: zcl_cd_fmon_flow_cds_test.clas.testclasses.abap
 *& Purpose:
 *& CDS tests of the file monitoring dashboard on cl_cds_test_environment
-*& doubles of the base tables (ZCD_FMON_FILE, ZCD_FMON_IFACE, ZCD_OPS_FINDING,
-*& ZCD_OPS_RUN): flow bucket of every stage (incl. the PRISM status API stages),
+*& doubles of the base tables (ZCD_FMON_FILE, ZCD_FMON_IFACE, ZCA_OPS_FINDING,
+*& ZCA_OPS_RUN): flow bucket of every stage (incl. the PRISM status API stages),
 *& success flag for ACK and no-ACK interfaces, measures per source / LOB /
 *& payment method, SLA status from open exceptions, as-of = last completed
 *& full FMON run, KPI per day and the latest-failures list; does not prove
@@ -22,7 +22,7 @@
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    CONSTANTS gc_variant_all TYPE zif_cd_ops_types=>ty_variant VALUE 'ALL'.
+    CONSTANTS gc_variant_all TYPE zif_ca_ops_types=>ty_variant VALUE 'ALL'.
     CONSTANTS gc_date TYPE d VALUE '20261105'.
 
     CLASS-METHODS file
@@ -48,22 +48,22 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
       IMPORTING
         iv_file_id        TYPE zif_cd_fmon_types=>ty_file_id
         iv_finding_no     TYPE i
-        iv_code           TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity       TYPE zif_cd_ops_types=>ty_severity
-        iv_disposition    TYPE zif_cd_ops_types=>ty_disposition
-        iv_pe_area        TYPE zif_cd_ops_types=>ty_pe_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity
+        iv_disposition    TYPE zif_ca_ops_types=>ty_disposition
+        iv_pe_area        TYPE zif_ca_ops_types=>ty_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor
       RETURNING
-        VALUE(rs_finding) TYPE zcd_ops_finding.
+        VALUE(rs_finding) TYPE zca_ops_finding.
 
     CLASS-METHODS run
       IMPORTING
-        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
-        iv_status     TYPE zif_cd_ops_types=>ty_run_status
+        iv_run_id     TYPE zif_ca_ops_types=>ty_run_id
+        iv_status     TYPE zif_ca_ops_types=>ty_run_status
         iv_ended_at   TYPE timestampl
-        iv_variant    TYPE zif_cd_ops_types=>ty_variant DEFAULT gc_variant_all
+        iv_variant    TYPE zif_ca_ops_types=>ty_variant DEFAULT gc_variant_all
         iv_test_mode  TYPE abap_bool DEFAULT abap_false
       RETURNING
-        VALUE(rs_run) TYPE zcd_ops_run.
+        VALUE(rs_run) TYPE zca_ops_run.
 ENDCLASS.
 
 
@@ -150,7 +150,7 @@ CLASS ltc_flow DEFINITION FINAL
     CONSTANTS gc_iface_in TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'BAI_JPMC_IN'.
     CONSTANTS gc_iface_unknown TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'NOT_REGISTERED'.
     CONSTANTS gc_run_end TYPE timestampl VALUE '20261105103000'.
-    CONSTANTS gc_run_id TYPE zif_cd_ops_types=>ty_run_id VALUE 'A0000000000000000000000000000001'.
+    CONSTANTS gc_run_id TYPE zif_ca_ops_types=>ty_run_id VALUE 'A0000000000000000000000000000001'.
     CONSTANTS:
       BEGIN OF gc_dim,
         pclm   TYPE zif_cd_fmon_types=>ty_system VALUE 'PCLM',
@@ -165,9 +165,9 @@ CLASS ltc_flow DEFINITION FINAL
         records_1 TYPE i VALUE 10,
         records_2 TYPE i VALUE 5,
         records_3 TYPE i VALUE 7,
-        total_1   TYPE zif_cd_ops_types=>ty_amount VALUE '100.50',
-        total_2   TYPE zif_cd_ops_types=>ty_amount VALUE '20.25',
-        total_3   TYPE zif_cd_ops_types=>ty_amount VALUE '7.00',
+        total_1   TYPE zif_ca_ops_types=>ty_amount VALUE '100.50',
+        total_2   TYPE zif_ca_ops_types=>ty_amount VALUE '20.25',
+        total_3   TYPE zif_ca_ops_types=>ty_amount VALUE '7.00',
         nack      TYPE i VALUE 2,
       END OF gc_measure.
 
@@ -182,8 +182,8 @@ CLASS ltc_flow DEFINITION FINAL
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
     DATA mt_files TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
     DATA mt_ifaces TYPE STANDARD TABLE OF zcd_fmon_iface WITH EMPTY KEY.
-    DATA mt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
-    DATA mt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+    DATA mt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA mt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
     DATA mt_expect TYPE STANDARD TABLE OF ty_expect WITH EMPTY KEY.
     DATA mv_next_id TYPE i.
 
@@ -229,14 +229,14 @@ CLASS ltc_flow DEFINITION FINAL
         iv_lob     TYPE zif_cd_fmon_types=>ty_lob
         iv_method  TYPE zif_cd_fmon_types=>ty_pay_method
         iv_records TYPE i
-        iv_total   TYPE zif_cd_ops_types=>ty_amount.
+        iv_total   TYPE zif_ca_ops_types=>ty_amount.
     METHODS add_finding
       IMPORTING
         iv_file_id     TYPE zif_cd_fmon_types=>ty_file_id
-        iv_code        TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity    TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error
-        iv_disposition TYPE zif_cd_ops_types=>ty_disposition DEFAULT zif_cd_ops_types=>gc_disposition-open
-        iv_pe_area     TYPE zif_cd_ops_types=>ty_pe_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor.
+        iv_code        TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity    TYPE zif_ca_ops_types=>ty_severity DEFAULT zif_ca_ops_types=>gc_severity-error
+        iv_disposition TYPE zif_ca_ops_types=>ty_disposition DEFAULT zif_ca_ops_types=>gc_disposition-open
+        iv_pe_area     TYPE zif_ca_ops_types=>ty_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor.
     METHODS persist.
     METHODS success_of
       IMPORTING
@@ -272,7 +272,7 @@ CLASS ltc_flow IMPLEMENTATION.
     INSERT ltd_rows=>iface( iv_iface = gc_iface_in iv_ack_expected = abap_false ) INTO TABLE mt_ifaces.
     " One completed full run: the cross join with the as-of view needs no row, but rows carry it
     INSERT ltd_rows=>run( iv_run_id   = gc_run_id
-                          iv_status   = zif_cd_ops_types=>gc_run_status-success
+                          iv_status   = zif_ca_ops_types=>gc_run_status-success
                           iv_ended_at = gc_run_end ) INTO TABLE mt_runs.
   ENDMETHOD.
 
@@ -566,7 +566,7 @@ CLASS ltc_flow IMPLEMENTATION.
                                 iv_outcome   = zif_cd_fmon_types=>gc_stage-ack ).
         add_finding( iv_file_id  = lv_id
                      iv_code     = zif_cd_fmon_types=>gc_check_code-bank_ack_late
-                     iv_severity = zif_cd_ops_types=>gc_severity-warning ).
+                     iv_severity = zif_ca_ops_types=>gc_severity-warning ).
         persist( ).
 
         cl_abap_unit_assert=>assert_equals( act = sla_of( lv_id ) exp = gc_sla-late
@@ -593,7 +593,7 @@ CLASS ltc_flow IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = condense( CONV string( ls_row-slastatus ) ) exp = gc_sla-ok
                                             msg = 'Open exceptions that are not about the SLA leave it OK' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-openfindingcount exp = 1 msg = 'One open exception' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_row-worstseverity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = ls_row-worstseverity exp = zif_ca_ops_types=>gc_severity-error
                                             msg = 'Worst open severity is shown' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -608,16 +608,16 @@ CLASS ltc_flow IMPLEMENTATION.
                                 iv_stage     = zif_cd_fmon_types=>gc_stage-sent ).
         add_finding( iv_file_id     = lv_id
                      iv_code        = zif_cd_fmon_types=>gc_check_code-no_bank_ack
-                     iv_disposition = zif_cd_ops_types=>gc_disposition-resolved ).
+                     iv_disposition = zif_ca_ops_types=>gc_disposition-resolved ).
         add_finding( iv_file_id     = lv_id
                      iv_code        = zif_cd_fmon_types=>gc_check_code-no_bank_ack
-                     iv_disposition = zif_cd_ops_types=>gc_disposition-superseded ).
+                     iv_disposition = zif_ca_ops_types=>gc_disposition-superseded ).
         add_finding( iv_file_id     = lv_id
                      iv_code        = zif_cd_fmon_types=>gc_check_code-no_bank_ack
-                     iv_disposition = zif_cd_ops_types=>gc_disposition-waived ).
+                     iv_disposition = zif_ca_ops_types=>gc_disposition-waived ).
         add_finding( iv_file_id     = lv_id
                      iv_code        = zif_cd_fmon_types=>gc_check_code-no_bank_ack
-                     iv_disposition = zif_cd_ops_types=>gc_disposition-information ).
+                     iv_disposition = zif_ca_ops_types=>gc_disposition-information ).
         " same reference, other payment engine area: not an FMON exception
         add_finding( iv_file_id = lv_id
                      iv_code    = zif_cd_fmon_types=>gc_check_code-no_bank_ack
@@ -639,8 +639,8 @@ CLASS ltc_flow IMPLEMENTATION.
                                 iv_stage     = zif_cd_fmon_types=>gc_stage-sent ).
         add_finding( iv_file_id     = lv_id
                      iv_code        = zif_cd_fmon_types=>gc_check_code-prism_late
-                     iv_severity    = zif_cd_ops_types=>gc_severity-warning
-                     iv_disposition = zif_cd_ops_types=>gc_disposition-assigned ).
+                     iv_severity    = zif_ca_ops_types=>gc_severity-warning
+                     iv_disposition = zif_ca_ops_types=>gc_disposition-assigned ).
         add_finding( iv_file_id = lv_id iv_code = zif_cd_fmon_types=>gc_check_code-no_bank_ack ).
         persist( ).
 
@@ -693,19 +693,19 @@ CLASS ltc_as_of DEFINITION FINAL
     CONSTANTS gc_t4 TYPE timestampl VALUE '20261105093000'.
     CONSTANTS gc_t5 TYPE timestampl VALUE '20261105100000'.
     CONSTANTS gc_t_old TYPE timestampl VALUE '20200101000000'.
-    CONSTANTS gc_iface_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'ACH_PNC_OUT'.
+    CONSTANTS gc_iface_variant TYPE zif_ca_ops_types=>ty_variant VALUE 'ACH_PNC_OUT'.
     CONSTANTS gc_stale_minutes TYPE i VALUE 15.
     CONSTANTS:
       BEGIN OF gc_run,
-        r1 TYPE zif_cd_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000001',
-        r2 TYPE zif_cd_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000002',
-        r3 TYPE zif_cd_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000003',
-        r4 TYPE zif_cd_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000004',
-        r5 TYPE zif_cd_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000005',
+        r1 TYPE zif_ca_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000001',
+        r2 TYPE zif_ca_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000002',
+        r3 TYPE zif_ca_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000003',
+        r4 TYPE zif_ca_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000004',
+        r5 TYPE zif_ca_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000005',
       END OF gc_run.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
-    DATA mt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+    DATA mt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -720,10 +720,10 @@ CLASS ltc_as_of DEFINITION FINAL
 
     METHODS add_run
       IMPORTING
-        iv_run_id    TYPE zif_cd_ops_types=>ty_run_id
-        iv_status    TYPE zif_cd_ops_types=>ty_run_status
+        iv_run_id    TYPE zif_ca_ops_types=>ty_run_id
+        iv_status    TYPE zif_ca_ops_types=>ty_run_status
         iv_ended_at  TYPE timestampl
-        iv_variant   TYPE zif_cd_ops_types=>ty_variant DEFAULT ltd_rows=>gc_variant_all
+        iv_variant   TYPE zif_ca_ops_types=>ty_variant DEFAULT ltd_rows=>gc_variant_all
         iv_test_mode TYPE abap_bool DEFAULT abap_false.
     METHODS persist.
 ENDCLASS.
@@ -766,10 +766,10 @@ CLASS ltc_as_of IMPLEMENTATION.
 
   METHOD as_of_skips_running_and_abort.
     TRY.
-        add_run( iv_run_id = gc_run-r1 iv_status = zif_cd_ops_types=>gc_run_status-success iv_ended_at = gc_t1 ).
-        add_run( iv_run_id = gc_run-r2 iv_status = zif_cd_ops_types=>gc_run_status-error iv_ended_at = gc_t2 ).
-        add_run( iv_run_id = gc_run-r3 iv_status = zif_cd_ops_types=>gc_run_status-aborted iv_ended_at = gc_t3 ).
-        add_run( iv_run_id = gc_run-r4 iv_status = zif_cd_ops_types=>gc_run_status-running iv_ended_at = gc_t4 ).
+        add_run( iv_run_id = gc_run-r1 iv_status = zif_ca_ops_types=>gc_run_status-success iv_ended_at = gc_t1 ).
+        add_run( iv_run_id = gc_run-r2 iv_status = zif_ca_ops_types=>gc_run_status-error iv_ended_at = gc_t2 ).
+        add_run( iv_run_id = gc_run-r3 iv_status = zif_ca_ops_types=>gc_run_status-aborted iv_ended_at = gc_t3 ).
+        add_run( iv_run_id = gc_run-r4 iv_status = zif_ca_ops_types=>gc_run_status-running iv_ended_at = gc_t4 ).
         persist( ).
 
         SELECT runid, asofat, runstatus FROM zr_cd_fmonasof ORDER BY runid INTO TABLE @DATA(lt_rows).
@@ -779,7 +779,7 @@ CLASS ltc_as_of IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_row-asofat exp = gc_t2
                                             msg = 'As of = end of the last completed run, not aborted / running' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-runid exp = gc_run-r2 msg = 'The completed run is named' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_row-runstatus exp = zif_cd_ops_types=>gc_run_status-error
+        cl_abap_unit_assert=>assert_equals( act = ls_row-runstatus exp = zif_ca_ops_types=>gc_run_status-error
                                             msg = 'A run that finished with error findings is completed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -789,13 +789,13 @@ CLASS ltc_as_of IMPLEMENTATION.
 
   METHOD as_of_skips_test_and_iface_run.
     TRY.
-        add_run( iv_run_id = gc_run-r1 iv_status = zif_cd_ops_types=>gc_run_status-warning iv_ended_at = gc_t1 ).
+        add_run( iv_run_id = gc_run-r1 iv_status = zif_ca_ops_types=>gc_run_status-warning iv_ended_at = gc_t1 ).
         add_run( iv_run_id    = gc_run-r2
-                 iv_status    = zif_cd_ops_types=>gc_run_status-success
+                 iv_status    = zif_ca_ops_types=>gc_run_status-success
                  iv_ended_at  = gc_t2
                  iv_test_mode = abap_true ).
         add_run( iv_run_id   = gc_run-r5
-                 iv_status   = zif_cd_ops_types=>gc_run_status-success
+                 iv_status   = zif_ca_ops_types=>gc_run_status-success
                  iv_ended_at = gc_t5
                  iv_variant  = gc_iface_variant ).
         persist( ).
@@ -814,7 +814,7 @@ CLASS ltc_as_of IMPLEMENTATION.
 
   METHOD stale_when_no_completed_run.
     TRY.
-        add_run( iv_run_id = gc_run-r3 iv_status = zif_cd_ops_types=>gc_run_status-aborted iv_ended_at = gc_t3 ).
+        add_run( iv_run_id = gc_run-r3 iv_status = zif_ca_ops_types=>gc_run_status-aborted iv_ended_at = gc_t3 ).
         persist( ).
 
         SELECT asofat, isstale FROM zr_cd_fmonasof ORDER BY asofat INTO TABLE @DATA(lt_rows).
@@ -833,7 +833,7 @@ CLASS ltc_as_of IMPLEMENTATION.
 
   METHOD stale_when_run_is_old.
     TRY.
-        add_run( iv_run_id = gc_run-r1 iv_status = zif_cd_ops_types=>gc_run_status-success iv_ended_at = gc_t_old ).
+        add_run( iv_run_id = gc_run-r1 iv_status = zif_ca_ops_types=>gc_run_status-success iv_ended_at = gc_t_old ).
         persist( ).
 
         SELECT SINGLE isstale, ageminutes FROM zr_cd_fmonasof INTO @DATA(ls_row).
@@ -860,7 +860,7 @@ CLASS ltc_as_of IMPLEMENTATION.
     TRY.
         GET TIME STAMP FIELD DATA(lv_now).
         add_run( iv_run_id   = gc_run-r1
-                 iv_status   = zif_cd_ops_types=>gc_run_status-success
+                 iv_status   = zif_ca_ops_types=>gc_run_status-success
                  iv_ended_at = cl_abap_tstmp=>subtractsecs( tstmp = CONV timestampl( lv_now ) secs = lc_two_hours ) ).
         persist( ).
         ls_def-area          = zif_cd_ops_types=>gc_param_area-ops.
@@ -889,7 +889,7 @@ CLASS ltc_as_of IMPLEMENTATION.
     TRY.
         GET TIME STAMP FIELD DATA(lv_now).
         add_run( iv_run_id   = gc_run-r1
-                 iv_status   = zif_cd_ops_types=>gc_run_status-success
+                 iv_status   = zif_ca_ops_types=>gc_run_status-success
                  iv_ended_at = CONV timestampl( lv_now ) ).
         persist( ).
 

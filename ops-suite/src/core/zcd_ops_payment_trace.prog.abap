@@ -78,9 +78,9 @@ CLASS lcl_app IMPLEMENTATION.
       RETURN.
     ENDIF.
     TRY.
-        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-display
+        zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-display
                                                 iv_pe_area  = zif_cd_ops_types=>gc_pe_area-core ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+      CATCH zcx_ca_ops_error INTO DATA(lx_ops).
         MESSAGE lx_ops TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.

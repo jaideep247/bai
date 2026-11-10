@@ -61,11 +61,11 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD main.
     TRY.
-        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
+        zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
                                                 iv_pe_area  = zif_cd_ops_types=>gc_pe_area-core ).
         DATA(ls_result) = NEW zcl_cd_ops_pay_snapshot( )->run( iv_test_mode = xsdbool( p_test = abap_true )
                                                                is_selection = selection( ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+      CATCH zcx_ca_ops_error INTO DATA(lx_ops).
         " B9: in background the job ends cancelled (Control-M red), never green
         IF sy-batch = abap_true.
           MESSAGE lx_ops TYPE 'E'.
@@ -87,7 +87,7 @@ CLASS lcl_app IMPLEMENTATION.
     ENDLOOP.
     " The snapshot lag after a FAST run (the production-support freshness row shows the same)
     IF ls_result-mode = zif_cd_ops_payout_types=>gc_mode-fast AND ls_result-lag-known = abap_true.
-      DATA(lv_limit) = zcl_cd_ops_util=>param_int(
+      DATA(lv_limit) = zcl_ca_ops_util=>param_int(
                          io_params  = zcl_cd_ops_factory=>get_params( )
                          iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-stale_after_min }| &&
                                               |{ zif_cd_ops_types=>gc_pe_area-core }| )

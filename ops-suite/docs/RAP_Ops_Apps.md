@@ -9,12 +9,12 @@ Implements design §6 (`RAP_Apps_Design.md`, decision D-4). Status: written and 
 
 | App | Service definition (binding to create) | Root | Table | Area (ZCD_OPS) | Who |
 |---|---|---|---|---|---|
-| Owned exceptions | `ZUI_CD_OPS_EXC` (`ZUI_CD_OPS_EXC_O4`) | `ZR_CD_OpsException` + history child `ZR_CD_OpsExcHist` | ZCD_OPS_FINDING (rank ≥ 2, not superseded), ZCD_OPS_EXC_HIST | per finding (EBS / FMON / HCK / CORE) | Operations, owners; approvers |
+| Owned exceptions | `ZUI_CA_OPS_EXC` (`ZUI_CD_OPS_EXC_O4`) | `ZR_CA_OpsException` + history child `ZR_CA_OpsExcHist` | ZCA_OPS_FINDING (rank ≥ 2, not superseded), ZCA_OPS_EXC_HIST | per finding (EBS / FMON / HCK / CORE) | Operations, owners; approvers |
 | Health check suppressions | `ZUI_CD_HCK_SUP` (`ZUI_CD_HCK_SUP_O4`) | `ZR_CD_HckSuppress` | ZCD_HCK_SUPPRESS | HCK | RTB; RTB lead for > 7 days |
 | Monitored files — manual status | `ZUI_CD_FMON_MAN` (`ZUI_CD_FMON_MAN_O4`) | `ZR_CD_FmonFile` | ZCD_FMON_FILE (+ event in ZCD_FMON_EVENT) | FMON | Operations |
 | PRISM requests handled manually | `ZUI_CD_FMON_PRQ` (`ZUI_CD_FMON_PRQ_O4`) | `ZR_CD_FmonPrqWa` | ZCD_FMON_PRQ_WA | FMON | Disbursement operations |
 
-All four: RAP **managed**, **no draft** (each action is one complete change), operations tables delivery class A (no transport, no change policy, no table log — the history is in the tables themselves), authorisation through `ZCL_CD_OPS_AUTH` (object `ZCD_OPS`, design §1), every decision in a pure policy class with unit tests, behaviour pools thin.
+All four: RAP **managed**, **no draft** (each action is one complete change), operations tables delivery class A (no transport, no change policy, no table log — the history is in the tables themselves), authorisation through `ZCL_CA_OPS_AUTH` (object `ZCD_OPS`, design §1), every decision in a pure policy class with unit tests, behaviour pools thin.
 
 ## 2. What each app does
 
@@ -26,7 +26,7 @@ All four: RAP **managed**, **no draft** (each action is one complete change), op
 | Request waiver | O or A; no request pending; reason; end date not in the past | Requester, time, reason, end date stored; disposition unchanged | 02 |
 | Approve waiver | Request pending; approver ≠ requester (**four-eyes**) | Disposition W until the end date | 85 |
 
-Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, owner, reason, user, time). A waiver request survives a re-run (carry-forward keeps requester, reason and end date); a valid waiver is not reopened by re-runs (phase 1). Buttons are switched off where an action is not allowed (the requester never sees an active *Approve*). **ETag (2026-11-10):** every action sets `LastChangedAt`; an action on a version the batch store changed after the screen was loaded is refused (refresh and act again), and the store never overwrites a user's action (guarded writes, `RAP_Apps_Design.md` §3).
+Every action writes one row in ZCA_OPS_EXC_HIST (action, from / to disposition, owner, reason, user, time). A waiver request survives a re-run (carry-forward keeps requester, reason and end date); a valid waiver is not reopened by re-runs (phase 1). Buttons are switched off where an action is not allowed (the requester never sees an active *Approve*). **ETag (2026-11-10):** every action sets `LastChangedAt`; an action on a version the batch store changed after the screen was loaded is refused (refresh and act again), and the store never overwrites a user's action (guarded writes, `RAP_Apps_Design.md` §3).
 
 ### 2.2 Health check suppressions (design 6.3)
 - **Create** (02): check ID, optional object-key pattern (PCRE, complete key, case ignored: `HCK_C04/.*/US01`; refused with 418 when it does not compile) and company code, period, reason. Up to `HCK_SUPPRESS_MAX_DAYS` (default 7) the suppression is active at once; longer waits for a **second user** (85, *Approve*). *End now* stops it from the next run.
@@ -46,9 +46,9 @@ Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, 
 
 | Object | Level | Tests (written before the code) |
 |---|---|---|
-| `ZCL_CD_OPS_EXC_POLICY` | Domain | 9 — owner required, open/assigned assignable, reason required, closed refused, waiver end not in past, one request at a time, approve needs request, requester cannot approve, second user approves |
-| `ZCL_CD_OPS_EXC_DAO` | OSQL | 2 — only open / assigned found; resolve sets R with user, reason and one history row |
-| `ZCL_CD_OPS_STORE` | OSQL | +1 — `pending_waiver_is_carried` |
+| `ZCL_CA_OPS_EXC_POLICY` | Domain | 9 — owner required, open/assigned assignable, reason required, closed refused, waiver end not in past, one request at a time, approve needs request, requester cannot approve, second user approves |
+| `ZCL_CA_OPS_EXC_DAO` | OSQL | 2 — only open / assigned found; resolve sets R with user, reason and one history row |
+| `ZCL_CA_OPS_STORE` | OSQL | +1 — `pending_waiver_is_carried` |
 | `ZCL_CD_HCK_SUPPRESSION` | Domain | 8 — match → info, pattern, company code, other check, expiry, pending, long period needs approval, creator cannot approve |
 | `ZCL_CD_HCK_DAO` | OSQL | +1 — `only_active_suppressions` |
 | `ZCL_CD_HCK_ENGINE` | Application | +1 — `suppressed_red_is_not_red` |
@@ -58,11 +58,11 @@ Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, 
 
 ## 4. DV1 steps (after the abapGit pull)
 
-1. **VERIFY-ADT:** `internal create` on the history association (`ZR_CD_OpsException`); `READ ENTITIES` of the own BO in `save_modified` (PRISM saver); `RAISE SHORTDUMP` with a `ZCX_CD_OPS_ERROR` instance (manual-status saver).
-2. Activate: tables (ZCD_OPS_EXC_HIST, ZCD_HCK_SUPPRESS, ZCD_FMON_PRQ_WA, ZCD_OPS_FINDING with the waiver-request fields) → abstract entities `ZA_CD_*` → `ZR_CD_*` → `ZC_CD_*` → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions.
+1. **VERIFY-ADT:** `internal create` on the history association (`ZR_CA_OpsException`); `READ ENTITIES` of the own BO in `save_modified` (PRISM saver); `RAISE SHORTDUMP` with a `ZCX_CD_OPS_ERROR` instance (manual-status saver).
+2. Activate: tables (ZCA_OPS_EXC_HIST, ZCD_HCK_SUPPRESS, ZCD_FMON_PRQ_WA, ZCA_OPS_FINDING with the waiver-request fields) → abstract entities `ZA_CD_*` → `ZR_CD_*` → `ZC_CD_*` → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions.
 3. Create and **publish** the OData V4 – UI service bindings `ZUI_CD_OPS_EXC_O4`, `ZUI_CD_HCK_SUP_O4`, `ZUI_CD_FMON_MAN_O4`, `ZUI_CD_FMON_PRQ_O4`; FLP tiles per business role.
 4. Roles: ZCD_OPS 02 per area for operations; **85 only for approvers who are not requesters** (segregation of duties); `S_SERVICE` for the four services.
-5. Read access: the CDS views carry `#NOT_REQUIRED`; restrict reading per area with a DCL on `ZR_CD_OpsException` (`pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )`) if the business roles are not already separated by service — decision for security.
+5. Read access: the CDS views carry `#NOT_REQUIRED`; restrict reading per area with a DCL on `ZR_CA_OpsException` (`pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )`) if the business roles are not already separated by service — decision for security.
 
 ## 5. QA1 cases
 

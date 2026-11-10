@@ -21,6 +21,9 @@
 *&            | area's own (generic keys, lengths, blank keys, one class per payment method, empty area).
 *& 2026-11-10 | LOOKUP_APPROVED: a lookup field of rule R21 must be approved in ZCD_OPS_TABWL (EBS / LOOKUP),
 *&            | read through the EBS SAP DAO (the same check as at runtime).
+*& 2026-11-10 | Generic field checks (DDIC names, tables, fields, plug-in classes, lists, windows, alert
+*&            | destinations) moved to the reusable framework ZCA_OPS (ZCL_CA_OPS_CFG_CHECKS); this class
+*&            | keeps the payment engine checks (R21 lookup approval, threshold order, posting areas).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: field checks</p>
 CLASS zcl_cd_ops_cfg_checks DEFINITION
@@ -29,94 +32,24 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
   CREATE PRIVATE.
 
   PUBLIC SECTION.
-    "! Letters, digits, _ and / only, at most 30 characters (case-insensitive)
-    CLASS-METHODS is_valid_name
-      IMPORTING
-        iv_name         TYPE zif_cd_ops_cfg_types=>ty_name
-      RETURNING
-        VALUE(rv_valid) TYPE abap_bool.
-
-    "! Transparent table or view of the ABAP dictionary
-    CLASS-METHODS table_exists
-      IMPORTING
-        iv_table         TYPE zif_cd_ops_cfg_types=>ty_name
-      RETURNING
-        VALUE(rv_exists) TYPE abap_bool.
-
-    CLASS-METHODS field_exists
-      IMPORTING
-        iv_table         TYPE zif_cd_ops_cfg_types=>ty_name
-        iv_field         TYPE zif_cd_ops_cfg_types=>ty_name
-      RETURNING
-        VALUE(rv_exists) TYPE abap_bool.
-
     "! The field of the table is approved for the EBS lookup rule R21 (ZCD_OPS_TABWL, EBS / LOOKUP,
     "! field-level) - the same check as at runtime (ZIF_CD_EBS_SAP_DAO=>IS_LOOKUP_FIELD_APPROVED)
     CLASS-METHODS lookup_approved
       IMPORTING
-        iv_table           TYPE zif_cd_ops_cfg_types=>ty_name
-        iv_field           TYPE zif_cd_ops_cfg_types=>ty_name
+        iv_table           TYPE zif_ca_ops_cfg_types=>ty_name
+        iv_field           TYPE zif_ca_ops_cfg_types=>ty_name
       RETURNING
         VALUE(rv_approved) TYPE abap_bool.
-
-    "! Global class exists and implements the interface (plug-in contract)
-    CLASS-METHODS implements
-      IMPORTING
-        iv_class          TYPE zif_cd_ops_cfg_types=>ty_name
-        iv_interface      TYPE zif_cd_ops_cfg_types=>ty_name
-      RETURNING
-        VALUE(rv_matches) TYPE abap_bool.
-
-    "! iv_list: comma-separated values; a leading comma allows blank
-    CLASS-METHODS in_list
-      IMPORTING
-        iv_value          TYPE zif_cd_ops_cfg_types=>ty_value
-        iv_list           TYPE zif_cd_ops_cfg_types=>ty_value_list
-      RETURNING
-        VALUE(rv_allowed) TYPE abap_bool.
-
-    "! Both times set or both empty (a window may cross midnight)
-    CLASS-METHODS window_complete
-      IMPORTING
-        iv_from            TYPE t
-        iv_to              TYPE t
-      RETURNING
-        VALUE(rv_complete) TYPE abap_bool.
 
     "! Higher is worse: amber < red; lower is worse: amber > red.
     "! Not checked when either threshold is zero (not maintained).
     CLASS-METHODS thresholds_ordered
       IMPORTING
-        iv_amber           TYPE zif_cd_ops_cfg_types=>ty_amount
-        iv_red             TYPE zif_cd_ops_cfg_types=>ty_amount
+        iv_amber           TYPE zif_ca_ops_cfg_types=>ty_amount
+        iv_red             TYPE zif_ca_ops_cfg_types=>ty_amount
         iv_higher_is_worse TYPE abap_bool
       RETURNING
         VALUE(rv_ordered)  TYPE abap_bool.
-
-    "! Names of it_needed that are not in it_available (each once)
-    CLASS-METHODS missing_names
-      IMPORTING
-        it_needed         TYPE zif_cd_ops_cfg_types=>ty_names
-        it_available      TYPE zif_cd_ops_cfg_types=>ty_names
-      RETURNING
-        VALUE(rt_missing) TYPE zif_cd_ops_cfg_types=>ty_names.
-
-    "! Plug-in class of an alert channel (active configuration); blank = unknown channel
-    CLASS-METHODS channel_class
-      IMPORTING
-        iv_channel      TYPE zif_cd_ops_types=>ty_channel
-      RETURNING
-        VALUE(rv_class) TYPE zif_cd_ops_types=>ty_class_name.
-
-    "! Entries of iv_destination the channel class cannot deliver to (blank = fine).
-    "! Not checked here (blank): no class or a class that is not a channel - the
-    "! class check of the channel row reports those.
-    CLASS-METHODS invalid_destination
-      IMPORTING
-        iv_class          TYPE zif_cd_ops_types=>ty_class_name
-        iv_destination    TYPE zif_cd_ops_types=>ty_alert_dest
-      RETURNING
-        VALUE(rv_invalid) TYPE string.
 
     "! Configuration check of the customer posting areas ZRSN, ZPMC, ZBTM and ZBTR (FQC0 checks
     "! only the domains of the values): what the configuration apps checked before plus what a
@@ -133,7 +66,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! A key or result field of a posting area (keys first, then results, in FQC0 order)
     TYPES:
       BEGIN OF ty_field,
-        name     TYPE zif_cd_ops_cfg_types=>ty_name,
+        name     TYPE zif_ca_ops_cfg_types=>ty_name,
         "! Characters the reader takes (0 = no limit)
         length   TYPE i,
         "! '*' allowed - the reader applies it as FQC0 does
@@ -216,7 +149,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
       IMPORTING
         is_layout   TYPE ty_layout
         is_entry    TYPE zif_cd_ops_postarea_types=>ty_entry
-        iv_name     TYPE zif_cd_ops_cfg_types=>ty_name
+        iv_name     TYPE zif_ca_ops_cfg_types=>ty_name
         iv_list     TYPE string
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
@@ -225,11 +158,11 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
       IMPORTING
         is_layout   TYPE ty_layout
         is_entry    TYPE zif_cd_ops_postarea_types=>ty_entry
-        iv_number   TYPE zif_cd_ops_cfg_types=>ty_msg_number
+        iv_number   TYPE zif_ca_ops_cfg_types=>ty_msg_number
         iv_v1       TYPE csequence OPTIONAL
         iv_v2       TYPE csequence OPTIONAL
         iv_v3       TYPE csequence OPTIONAL
-        iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error
+        iv_severity TYPE zif_ca_ops_types=>ty_severity DEFAULT zif_ca_ops_types=>gc_severity-error
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
 
@@ -238,7 +171,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
       IMPORTING
         is_layout       TYPE ty_layout
         is_entry        TYPE zif_cd_ops_postarea_types=>ty_entry
-        iv_name         TYPE zif_cd_ops_cfg_types=>ty_name
+        iv_name         TYPE zif_ca_ops_cfg_types=>ty_name
       RETURNING
         VALUE(rv_value) TYPE string.
 
@@ -271,13 +204,6 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
         iv_blank       TYPE abap_bool DEFAULT abap_false
       RETURNING
         VALUE(rv_list) TYPE string.
-    "! DDIC / class name: letters, digits, underscore, namespace slashes, max 30
-    CONSTANTS gc_name_pattern TYPE string VALUE `^[A-Z/][A-Z0-9_/]{0,29}$`.
-    CLASS-METHODS describe
-      IMPORTING
-        iv_name        TYPE zif_cd_ops_cfg_types=>ty_name
-      RETURNING
-        VALUE(ro_type) TYPE REF TO cl_abap_typedescr.
 
 ENDCLASS.
 
@@ -285,97 +211,9 @@ ENDCLASS.
 
 CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
 
-  METHOD is_valid_name.
-    DATA(lv_name) = to_upper( condense( iv_name ) ).
-    rv_valid = xsdbool( matches( val = lv_name pcre = gc_name_pattern ) ).
-  ENDMETHOD.
-
-
-  METHOD describe.
-    IF is_valid_name( iv_name ) = abap_false.
-      RETURN.
-    ENDIF.
-    cl_abap_typedescr=>describe_by_name(
-      EXPORTING
-        p_name         = to_upper( condense( iv_name ) )
-      RECEIVING
-        p_descr_ref    = ro_type
-      EXCEPTIONS
-        type_not_found = 1
-        OTHERS         = 2 ).
-    IF sy-subrc <> 0.
-      CLEAR ro_type.
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD table_exists.
-    DATA(lo_type) = describe( iv_table ).
-    IF lo_type IS NOT BOUND.
-      RETURN.
-    ENDIF.
-    rv_exists = xsdbool( lo_type->kind = cl_abap_typedescr=>kind_struct
-                         AND lo_type->is_ddic_type( ) = abap_true ).
-  ENDMETHOD.
-
-
   METHOD lookup_approved.
     rv_approved = zcl_cd_ebs_factory=>get_sap_dao( )->is_lookup_field_approved( iv_table = iv_table
                                                                                 iv_field = iv_field ).
-  ENDMETHOD.
-
-
-  METHOD field_exists.
-    DATA lo_struct TYPE REF TO cl_abap_structdescr.
-    DATA lt_fields TYPE ddfields.
-
-    IF table_exists( iv_table ) = abap_false OR is_valid_name( iv_field ) = abap_false.
-      RETURN.
-    ENDIF.
-    TRY.
-        lo_struct = CAST cl_abap_structdescr( describe( iv_table ) ).
-      CATCH cx_sy_move_cast_error.
-        RETURN.
-    ENDTRY.
-    lo_struct->get_ddic_field_list(
-      RECEIVING
-        p_field_list = lt_fields
-      EXCEPTIONS
-        not_found    = 1
-        no_ddic_type = 2
-        OTHERS       = 3 ).
-    IF sy-subrc <> 0.
-      RETURN.
-    ENDIF.
-    rv_exists = xsdbool( line_exists( lt_fields[ fieldname = to_upper( condense( iv_field ) ) ] ) ).
-  ENDMETHOD.
-
-
-  METHOD implements.
-    DATA lo_class TYPE REF TO cl_abap_classdescr.
-
-    DATA(lo_type) = describe( iv_class ).
-    IF lo_type IS NOT BOUND.
-      RETURN.
-    ENDIF.
-    TRY.
-        lo_class = CAST cl_abap_classdescr( lo_type ).
-      CATCH cx_sy_move_cast_error.
-        RETURN.
-    ENDTRY.
-    rv_matches = xsdbool( line_exists( lo_class->interfaces[ name = to_upper( condense( iv_interface ) ) ] ) ).
-  ENDMETHOD.
-
-
-  METHOD in_list.
-    DATA lt_values TYPE STANDARD TABLE OF string WITH EMPTY KEY.
-    SPLIT iv_list AT ',' INTO TABLE lt_values.
-    rv_allowed = xsdbool( line_exists( lt_values[ table_line = condense( iv_value ) ] ) ).
-  ENDMETHOD.
-
-
-  METHOD window_complete.
-    rv_complete = xsdbool( xsdbool( iv_from IS INITIAL ) = xsdbool( iv_to IS INITIAL ) ).
   ENDMETHOD.
 
 
@@ -386,43 +224,6 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
     ENDIF.
     rv_ordered = COND #( WHEN iv_higher_is_worse = abap_true THEN xsdbool( iv_amber < iv_red )
                          ELSE xsdbool( iv_amber > iv_red ) ).
-  ENDMETHOD.
-
-
-  METHOD missing_names.
-    LOOP AT it_needed ASSIGNING FIELD-SYMBOL(<lv_name>).
-      IF NOT line_exists( it_available[ table_line = <lv_name> ] )
-         AND NOT line_exists( rt_missing[ table_line = <lv_name> ] ).
-        INSERT <lv_name> INTO TABLE rt_missing.
-      ENDIF.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-
-  METHOD channel_class.
-    DATA(lt_channels) = zcl_cd_ops_factory=>get_alert_dao( )->get_channels( ).
-    READ TABLE lt_channels ASSIGNING FIELD-SYMBOL(<ls_channel>)
-      WITH KEY channel = to_upper( condense( iv_channel ) ).
-    IF sy-subrc = 0.
-      rv_class = <ls_channel>-class_name.
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD invalid_destination.
-    DATA lo_channel TYPE REF TO zif_cd_ops_alert_channel.
-    IF iv_class IS INITIAL OR iv_destination IS INITIAL.
-      RETURN.
-    ENDIF.
-    TRY.
-        lo_channel = CAST zif_cd_ops_alert_channel(
-          zcl_cd_ops_factory=>get_plugin( iv_class_name = iv_class
-                                          iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ) ).
-      CATCH zcx_cd_ops_error.
-        RETURN.
-    ENDTRY.
-    rv_invalid = lo_channel->check_destination( iv_destination ).
   ENDMETHOD.
 
 
@@ -554,7 +355,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
                              is_entry    = VALUE #( )
                              iv_number   = zif_cd_ops_cfg_types=>gc_msg-area_empty
                              iv_v1       = is_layout-area
-                             iv_severity = zif_cd_ops_types=>gc_severity-warning
+                             iv_severity = zif_ca_ops_types=>gc_severity-warning
                    CHANGING  ct_messages = ct_messages ).
       RETURN.
     ENDIF.
@@ -727,7 +528,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
 
 
   METHOD check_btc_map.
-    DATA lt_groups TYPE zif_cd_ops_cfg_types=>ty_names.
+    DATA lt_groups TYPE zif_ca_ops_cfg_types=>ty_names.
 
     " Rule groups with an active assignment in ZCD_BTC_RULE (as the configuration app checked)
     LOOP AT zcl_cd_ebs_factory=>get_cfg_dao( )->get_rules( ) ASSIGNING FIELD-SYMBOL(<ls_rule>).
@@ -743,11 +544,11 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
                                                ( CONV #( zif_cd_ebs_types=>gc_cdi-debit ) )
                                                ( CONV #( zif_cd_ebs_types=>gc_cdi-any ) ) )
                           iv_blank  = abap_true ).
-    DATA(lv_actions) = list( it_values = VALUE #( ( CONV #( zif_cd_ops_types=>gc_action-auto_post ) )
-                                                  ( CONV #( zif_cd_ops_types=>gc_action-exception ) )
-                                                  ( CONV #( zif_cd_ops_types=>gc_action-block ) )
-                                                  ( CONV #( zif_cd_ops_types=>gc_action-notify ) )
-                                                  ( CONV #( zif_cd_ops_types=>gc_action-on_account ) ) )
+    DATA(lv_actions) = list( it_values = VALUE #( ( CONV #( zif_ca_ops_types=>gc_action-auto_post ) )
+                                                  ( CONV #( zif_ca_ops_types=>gc_action-exception ) )
+                                                  ( CONV #( zif_ca_ops_types=>gc_action-block ) )
+                                                  ( CONV #( zif_ca_ops_types=>gc_action-notify ) )
+                                                  ( CONV #( zif_ca_ops_types=>gc_action-on_account ) ) )
                              iv_blank  = abap_true ).
     DATA(lv_dispositions) = list( it_values = VALUE #( ( CONV #( zif_cd_ebs_types=>gc_disposition-not_posted ) ) )
                                   iv_blank  = abap_true ).
@@ -778,8 +579,8 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
                           iv_name   = zif_cd_ops_postarea_types=>gc_field-category ).
       ENDIF.
       IF value( is_layout = is_layout is_entry = <ls_entry> iv_name = zif_cd_ops_postarea_types=>gc_field-action )
-           <> zif_cd_ops_types=>gc_action-block
-         AND missing_names( it_needed    = VALUE #( ( CONV #( lv_group ) ) )
+           <> zif_ca_ops_types=>gc_action-block
+         AND zcl_ca_ops_cfg_checks=>missing_names( it_needed    = VALUE #( ( CONV #( lv_group ) ) )
                             it_available = lt_groups ) IS NOT INITIAL.
         add_message( EXPORTING is_layout   = is_layout
                                is_entry    = <ls_entry>
@@ -834,7 +635,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
       CASE lv_usage.
         WHEN zif_cd_hck_types=>gc_btc_usage-lifecycle.
           " SCOPE = flow + method class of ZPMC; an open list of roles, but never a reconciliation role
-          IF zcl_cd_ops_util=>pcre_match( iv_value   = lv_scope
+          IF zcl_ca_ops_util=>pcre_match( iv_value   = lv_scope
                                           iv_pattern = zif_cd_ops_postarea_types=>gc_scope_form ) = abap_false.
             add_message( EXPORTING is_layout   = is_layout
                                    is_entry    = <ls_entry>
@@ -860,7 +661,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
                                    iv_v2       = zif_cd_ops_postarea_types=>gc_field-usage
                                    iv_v3       = lv_usage
                          CHANGING  ct_messages = ct_messages ).
-          ELSEIF in_list( iv_value = CONV #( lv_role ) iv_list = lv_recon_roles ) = abap_true.
+          ELSEIF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( lv_role ) iv_list = lv_recon_roles ) = abap_true.
             add_message( EXPORTING is_layout   = is_layout
                                    is_entry    = <ls_entry>
                                    iv_number   = zif_cd_ops_cfg_types=>gc_msg-value_reserved
@@ -898,7 +699,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
 
   METHOD check_code_parts.
     DATA(lv_scheme) = value( is_layout = is_layout is_entry = is_entry iv_name = zif_cd_ops_postarea_types=>gc_field-scheme ).
-    DATA(lt_parts) = VALUE zif_cd_ops_cfg_types=>ty_names( ( zif_cd_ops_postarea_types=>gc_field-family )
+    DATA(lt_parts) = VALUE zif_ca_ops_cfg_types=>ty_names( ( zif_cd_ops_postarea_types=>gc_field-family )
                                                            ( zif_cd_ops_postarea_types=>gc_field-sub_family ) ).
     LOOP AT lt_parts ASSIGNING FIELD-SYMBOL(<lv_part>).
       DATA(lv_value) = value( is_layout = is_layout is_entry = is_entry iv_name = <lv_part> ).
@@ -930,7 +731,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF lv_value <> zif_cd_ops_postarea_types=>gc_generic
-       AND in_list( iv_value = CONV #( lv_value ) iv_list = iv_list ) = abap_false.
+       AND zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( lv_value ) iv_list = iv_list ) = abap_false.
       add_message( EXPORTING is_layout   = is_layout
                              is_entry    = is_entry
                              iv_number   = zif_cd_ops_cfg_types=>gc_msg-value_invalid

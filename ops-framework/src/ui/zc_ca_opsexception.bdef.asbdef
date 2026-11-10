@@ -1,0 +1,18 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_CA_OpsException alias Exception
+use etag
+{
+  use action assignOwner;
+  use action resolveException;
+  use action requestWaiver;
+  use action approveWaiver;
+
+  use association _History;
+}
+
+define behavior for ZC_CA_OpsExcHist alias History
+{
+  use association _Exception;
+}

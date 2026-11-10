@@ -13,6 +13,7 @@
 *& Modification log:
 *& 2026-11-07 | Initial version.
 *& 2026-11-10 | RAISE keeps the caught conversion error as PREVIOUS (exception chain).
+*& 2026-11-10 | CHECK_AREA (area registered and active, through the area buffer).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - read logic and buffer</p>
 CLASS zcl_ca_param DEFINITION
@@ -249,6 +250,11 @@ CLASS zcl_ca_param IMPLEMENTATION.
   METHOD zif_ca_param~get_definition.
     rs_definition = lookup( iv_area = iv_area
                             iv_name = iv_name )-definition.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_param~check_area.
+    area_data( iv_area ).
   ENDMETHOD.
 
 

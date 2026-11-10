@@ -51,11 +51,11 @@ CLASS zcl_cd_hck_c_config_drift IMPLEMENTATION.
       ENDIF.
       TRY.
           DATA(ls_current) = lo_dao->compute_table_hash( ls_table-tabname ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_hash).
+        CATCH zcx_ca_ops_error INTO DATA(lx_hash).
           INSERT VALUE #( object_key = ls_table-tabname
                           check_code = zif_cd_hck_types=>gc_code-config_drift
-                          severity   = zif_cd_ops_types=>gc_severity-error
-                          action     = zif_cd_ops_types=>gc_action-notify
+                          severity   = zif_ca_ops_types=>gc_severity-error
+                          action     = zif_ca_ops_types=>gc_action-notify
                           message    = lx_hash->get_text( ) ) INTO TABLE rs_result-findings.
           CONTINUE.
       ENDTRY.
@@ -63,8 +63,8 @@ CLASS zcl_cd_hck_c_config_drift IMPLEMENTATION.
       IF sy-subrc <> 0.
         INSERT VALUE #( object_key = ls_table-tabname
                         check_code = zif_cd_hck_types=>gc_code-no_baseline
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-warning
+                        action     = zif_ca_ops_types=>gc_action-notify
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-table_has_no_configuration
                                                             iv_v1    = ls_table-tabname ) )
           INTO TABLE rs_result-findings.
@@ -74,8 +74,8 @@ CLASS zcl_cd_hck_c_config_drift IMPLEMENTATION.
       IF ls_baseline-hash_version <> ls_current-hash_version.
         INSERT VALUE #( object_key = ls_table-tabname
                         check_code = zif_cd_hck_types=>gc_code-baseline_outdated
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
+                        severity   = zif_ca_ops_types=>gc_severity-warning
+                        action     = zif_ca_ops_types=>gc_action-notify
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-baseline_outdated
                                                             iv_v1    = ls_table-tabname
                                                             iv_v2    = ls_baseline-hash_version
@@ -89,8 +89,8 @@ CLASS zcl_cd_hck_c_config_drift IMPLEMENTATION.
       lv_drifted = lv_drifted + 1.
       INSERT VALUE #( object_key = ls_table-tabname
                       check_code = zif_cd_hck_types=>gc_code-config_drift
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-exception
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-exception
                       reference  = ls_baseline-taken_by
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-config_drift
                                                           iv_v1    = ls_table-tabname

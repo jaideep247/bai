@@ -35,7 +35,7 @@ CLASS lhc_suppression DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS auth
       IMPORTING
-        iv_activity    TYPE zif_cd_ops_auth=>ty_activity
+        iv_activity    TYPE zif_ca_ops_auth=>ty_activity
       RETURNING
         VALUE(rv_auth) TYPE if_abap_behv=>t_xflag.
 ENDCLASS.
@@ -45,13 +45,13 @@ CLASS lhc_suppression IMPLEMENTATION.
 
   METHOD get_global_authorizations.
     IF requested_authorizations-%create = if_abap_behv=>mk-on.
-      result-%create = auth( zif_cd_ops_auth=>gc_activity-change ).
+      result-%create = auth( zif_ca_ops_auth=>gc_activity-change ).
     ENDIF.
     IF requested_authorizations-%action-endSuppression = if_abap_behv=>mk-on.
-      result-%action-endSuppression = auth( zif_cd_ops_auth=>gc_activity-change ).
+      result-%action-endSuppression = auth( zif_ca_ops_auth=>gc_activity-change ).
     ENDIF.
     IF requested_authorizations-%action-approveSuppression = if_abap_behv=>mk-on.
-      result-%action-approveSuppression = auth( zif_cd_ops_auth=>gc_activity-approve ).
+      result-%action-approveSuppression = auth( zif_ca_ops_auth=>gc_activity-approve ).
     ENDIF.
   ENDMETHOD.
 
@@ -60,7 +60,7 @@ CLASS lhc_suppression IMPLEMENTATION.
     READ ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
       ENTITY Suppression FIELDS ( Status CreatedBy ValidTo ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
-    DATA(lv_today) = zcl_cd_ops_factory=>get_clock( )->today( ).
+    DATA(lv_today) = zcl_ca_ops_factory=>get_clock( )->today( ).
     LOOP AT lt_rows INTO DATA(ls_row).
       INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE result ASSIGNING FIELD-SYMBOL(<ls_result>).
       " four-eyes: the creator never sees an enabled Approve button
@@ -86,7 +86,7 @@ CLASS lhc_suppression IMPLEMENTATION.
                                          iv_name    = zif_cd_hck_suppress_types=>gc_param_max_days
                                          iv_default = |{ zif_cd_hck_suppress_types=>gc_default_max_days }| )
                           iv_default = zif_cd_hck_suppress_types=>gc_default_max_days ).
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
     MODIFY ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
       ENTITY Suppression
         UPDATE FIELDS ( Status CreatedBy CreatedAt )
@@ -131,7 +131,7 @@ CLASS lhc_suppression IMPLEMENTATION.
     READ ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
       ENTITY Suppression ALL FIELDS WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
     LOOP AT lt_rows INTO DATA(ls_row).
       DATA(ls_decision) = zcl_cd_hck_suppression=>can_approve( iv_status     = ls_row-Status
                                                                iv_created_by = ls_row-CreatedBy
@@ -164,7 +164,7 @@ CLASS lhc_suppression IMPLEMENTATION.
     READ ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
       ENTITY Suppression FIELDS ( ValidFrom ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
-    DATA(lv_yesterday) = CONV d( zcl_cd_ops_factory=>get_clock( )->today( ) - 1 ).
+    DATA(lv_yesterday) = CONV d( zcl_ca_ops_factory=>get_clock( )->today( ) - 1 ).
     MODIFY ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
       ENTITY Suppression
         UPDATE FIELDS ( ValidFrom ValidTo )
@@ -180,7 +180,7 @@ CLASS lhc_suppression IMPLEMENTATION.
 
 
   METHOD auth.
-    rv_auth = COND #( WHEN zcl_cd_ops_factory=>get_auth( )->is_allowed(
+    rv_auth = COND #( WHEN zcl_ca_ops_factory=>get_auth( )->is_allowed(
                              iv_activity = iv_activity
                              iv_pe_area   = zif_cd_ops_types=>gc_pe_area-health_check ) = abap_true
                       THEN if_abap_behv=>auth-allowed

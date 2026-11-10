@@ -47,7 +47,7 @@ CLASS ltc_ev_gl_xref2 DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_runtime_types=>ty_evidence_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS cleared_line_found     FOR TESTING.
     METHODS open_line_not_found    FOR TESTING.
     METHODS one_read_and_cap       FOR TESTING.

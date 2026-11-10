@@ -132,7 +132,7 @@ CLASS ltc_evidence DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_ebs_stmt_evidence=>ty_evidence
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS expected
       IMPORTING
         iv_imported    TYPE i

@@ -8,7 +8,7 @@
 *& PARAM_INVALID (every delivered name must be defined and readable). An
 *& instance is the in-memory parameter store of the unit tests: a
 *& ZCL_CA_PARAM_DAO_MEM with the delivered areas and definitions, set( )
-*& maintains a value row, params( ) returns ZCL_CD_OPS_PARAMS_CA over the
+*& maintains a value row, params( ) returns ZCL_CA_OPS_PARAMS over the
 *& real read logic ZCL_CA_PARAM. Production-safe: no database.
 *& Modification log:
 *& 2026-11-07 | Initial version (generated; parameters moved to ZCA_PARAM).
@@ -40,7 +40,7 @@ CLASS zcl_cd_ops_param_seed DEFINITION
     "! Maintain the value row of a parameter (replaces the rows it had); visible at once
     METHODS set
       IMPORTING
-        iv_name        TYPE zif_cd_ops_types=>ty_param_name
+        iv_name        TYPE zif_ca_ops_types=>ty_param_name
         iv_value       TYPE clike
       RETURNING
         VALUE(ro_self) TYPE REF TO zcl_cd_ops_param_seed.
@@ -48,7 +48,7 @@ CLASS zcl_cd_ops_param_seed DEFINITION
     "! Remove the value rows of a parameter: the definition default applies again
     METHODS remove
       IMPORTING
-        iv_name TYPE zif_cd_ops_types=>ty_param_name.
+        iv_name TYPE zif_ca_ops_types=>ty_param_name.
 
     "! The in-memory data access (e.g. for ZCL_CA_PARAM_INJECTOR=>INJECT_DAO)
     METHODS dao
@@ -58,7 +58,7 @@ CLASS zcl_cd_ops_param_seed DEFINITION
     "! The suite's parameter adapter over the real read logic
     METHODS params
       RETURNING
-        VALUE(ro_params) TYPE REF TO zif_cd_ops_params.
+        VALUE(ro_params) TYPE REF TO zif_ca_ops_params.
 
 
   PRIVATE SECTION.
@@ -2426,7 +2426,7 @@ CLASS zcl_cd_ops_param_seed DEFINITION
 
     DATA mo_dao TYPE REF TO zcl_ca_param_dao_mem.
     DATA mo_param TYPE REF TO zif_ca_param.
-    DATA mo_params TYPE REF TO zif_cd_ops_params.
+    DATA mo_params TYPE REF TO zif_ca_ops_params.
 
 ENDCLASS.
 
@@ -2618,7 +2618,7 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
     DATA ls_value TYPE zif_ca_param_types=>ty_value_row.
 
     remove( iv_name ).
-    ls_value-area = zcl_cd_ops_params_ca=>area_of( iv_name ).
+    ls_value-area = zcl_ca_ops_params=>area_of( iv_name ).
     ls_value-name = iv_name.
     ls_value-numb = 1.
     ls_value-sign = zif_ca_param_types=>gc_sign-include.
@@ -2630,7 +2630,7 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
 
 
   METHOD remove.
-    mo_dao->remove_values( iv_area = zcl_cd_ops_params_ca=>area_of( iv_name )
+    mo_dao->remove_values( iv_area = zcl_ca_ops_params=>area_of( iv_name )
                            iv_name = iv_name ).
     " the read logic buffers per area: the next read sees the change
     mo_param->refresh( ).
@@ -2644,7 +2644,7 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
 
   METHOD params.
     IF mo_params IS NOT BOUND.
-      mo_params = NEW zcl_cd_ops_params_ca( io_param = mo_param ).
+      mo_params = NEW zcl_ca_ops_params( io_param = mo_param ).
     ENDIF.
     ro_params = mo_params.
   ENDMETHOD.

@@ -1,6 +1,6 @@
 // Artifact: zc_cd_opsoverview.dcls.asdcls
 // Purpose: Read access to the cross-area entities of the production-support overview page
-//          (service ZUI_CD_OPS_OVERVIEW): authorization object ZCD_OPS with ZCD_PE_AREA = the area
+//          (service ZUI_CD_OPS_OVERVIEW): authorization object ZCD_OPS with ZCA_PARAR = the area
 //          of the row (FMON, EBS, HCK, CORE) and ACTVT 03. A user sees the freshness row and the
 //          critical exceptions of the areas he may display only. The area cards reuse the area
 //          projections, guarded by their own roles (ZC_CD_FMONFLOW, ZC_CD_EBSDASH, ZC_CD_HCKDASH,
@@ -11,7 +11,7 @@
 @MappingRole: true
 define role ZC_CD_OpsOverview {
   grant select on ZC_CD_OpsFreshness
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_OpsCritExc
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
 }

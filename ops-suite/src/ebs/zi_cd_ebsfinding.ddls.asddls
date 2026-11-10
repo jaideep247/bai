@@ -1,5 +1,5 @@
 // Artifact: zi_cd_ebsfinding.ddls.asddls
-// Purpose: Basic view of EBS findings (ZCD_OPS_FINDING, area EBS) for the EBS validation dashboard:
+// Purpose: Basic view of EBS findings (ZCA_OPS_FINDING, area EBS) for the EBS validation dashboard:
 //          every open / assigned finding, plus every finding created in the last 31 days (bounded
 //          read). Keys as ZCL_CD_EBS_FINDING writes them: statement OBJECT_KEY = FEB<KUKEY> (FEB
 //          source) or S0001.. (bank file, not imported); line OBJECT_KEY = <statement key>/<ESNUM
@@ -20,13 +20,13 @@
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #L, dataClass: #TRANSACTIONAL }
 @VDM.viewType: #BASIC
 define view entity ZI_CD_EbsFinding
-  as select from zcd_ops_finding
+  as select from zca_ops_finding
   // VERIFY-ADT: path to a 0..1 association in the element list (left outer join) on 7.58
   association [0..1] to zcd_ebs_rule_def as _RuleDef on $projection.RuleId = _RuleDef.rule_id
 {
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
-      cast( 'EBS' as abap.char( 4 ) )                       as PaymentEngineArea,
+      cast( 'CD_EBS' as abap.char( 16 ) )                       as PaymentEngineArea,
       object_type                                           as ObjectType,
       object_key                                            as ObjectKey,
       // FEB = imported statement (FEBKO / FEBEP), FILE = bank file validated before import
@@ -82,7 +82,7 @@ define view entity ZI_CD_EbsFinding
       created_at                                            as CreatedAt,
       tstmp_to_dats( cast( created_at as timestamp ), 'UTC', $session.client, 'NULL' ) as CreatedDate
 }
-where pe_area = 'EBS'
+where area = 'CD_EBS'
   and ( disposition = 'O' or disposition = 'A'
      or tstmp_to_dats( cast( created_at as timestamp ), 'UTC', $session.client, 'NULL' )
         >= dats_add_days( $session.system_date, -31, 'INITIAL' ) )

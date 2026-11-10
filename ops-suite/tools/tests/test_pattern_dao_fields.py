@@ -32,7 +32,7 @@ class PatternDaoFieldListTest(unittest.TestCase):
 
     def test_every_migration_table_is_read(self):
         self.assertEqual(set(read_table_selects()), {'zcd_ebs_flow_pat', 'zcd_fmon_iface', 'zcd_job_step',
-                                                     'zcd_ops_alrule', 'zcd_hck_def', 'zcd_hck_suppress'})
+                                                     'zca_ops_alrule', 'zcd_hck_def', 'zcd_hck_suppress'})
 
     def test_field_lists_are_complete(self):
         for table, fields in read_table_selects().items():

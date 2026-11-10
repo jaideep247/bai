@@ -91,7 +91,7 @@ CLASS ltc_adapter_prism IMPLEMENTATION.
     ms_request-src-ts_field        = 'OCCURRED_AT'.
     ms_request-src-status_field    = 'MILESTONE'.
     ms_request-src-adapter_class   = zif_cd_fmon_prism_types=>gc_adapter_class.
-    ms_request-time_zone           = zif_cd_ops_types=>gc_time_zone_utc.
+    ms_request-time_zone           = zif_ca_ops_types=>gc_time_zone_utc.
     ms_request-date_from           = '20261105'.
     ms_request-date_to             = '20261106'.
     ms_request-max_rows            = 100.
@@ -194,7 +194,7 @@ CLASS ltc_adapter_prism IMPLEMENTATION.
         zcl_cd_fmon_adapter_prism=>to_records( is_request = ms_request
                                                it_rows    = mo_dao->mt_rows ).
         cl_abap_unit_assert=>fail( msg = 'An unknown field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '201'
                                             msg = 'Message 201: field does not exist' ).
     ENDTRY.

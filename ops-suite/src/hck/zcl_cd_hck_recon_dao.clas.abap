@@ -231,8 +231,8 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
     IF it_zuonr IS INITIAL.
       RETURN.
     ENDIF.
-    lt_zuonr = VALUE #( FOR lv_zuonr IN it_zuonr ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                   option = zif_cd_ops_types=>gc_range-option_equal
+    lt_zuonr = VALUE #( FOR lv_zuonr IN it_zuonr ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                   option = zif_ca_ops_types=>gc_range-option_equal
                                                    low    = lv_zuonr ) ).
     SELECT a~zuonr, a~drcrk AS cdi, SUM( a~wsl ) AS amount, COUNT(*) AS line_count
       FROM acdoca AS a
@@ -273,16 +273,16 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
 
   METHOD account_range.
     rt_range = VALUE #( FOR lv_account IN it_accounts WHERE ( table_line IS NOT INITIAL )
-                        ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                          option = zif_cd_ops_types=>gc_range-option_equal
+                        ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                          option = zif_ca_ops_types=>gc_range-option_equal
                           low    = lv_account ) ).
   ENDMETHOD.
 
 
   METHOD btc_range.
     rt_range = VALUE #( FOR lv_btc IN it_btcs WHERE ( table_line IS NOT INITIAL )
-                        ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                          option = zif_cd_ops_types=>gc_range-option_equal
+                        ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                          option = zif_ca_ops_types=>gc_range-option_equal
                           low    = lv_btc ) ).
   ENDMETHOD.
 

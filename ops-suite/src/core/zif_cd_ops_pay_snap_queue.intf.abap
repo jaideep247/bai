@@ -15,12 +15,12 @@ INTERFACE zif_cd_ops_pay_snap_queue
 
   "! Register the background unit of the package in the current LUW (starts at COMMIT WORK); the unit
   "! carries the package key only and re-reads its documents and requests (2026-11-10)
-  "! @raising zcx_cd_ops_error | the unit could not be registered (the run judges the package itself)
+  "! @raising zcx_ca_ops_error | the unit could not be registered (the run judges the package itself)
   METHODS dispatch
     IMPORTING
       is_package TYPE zif_cd_ops_payout_types=>ty_package
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Wait before the next look at the package rows
   METHODS pause

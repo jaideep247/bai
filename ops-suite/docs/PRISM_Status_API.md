@@ -16,7 +16,7 @@ The requirements baseline lists *new payment APIs or callbacks* as outside the r
 | It does | It never does |
 |---|---|
 | Store one PRISM milestone per call in the suite's own table `ZCD_FMON_PRISM` | Touch business data (payment requests, documents, DPAYH, DFKK*, FEB*) |
-| Apply the milestone to the FMON file register (`ZCD_FMON_FILE` / `ZCD_FMON_EVENT`) and write findings to `ZCD_OPS_FINDING` | Change, move, resend or delete a payment file |
+| Apply the milestone to the FMON file register (`ZCD_FMON_FILE` / `ZCD_FMON_EVENT`) and write findings to `ZCA_OPS_FINDING` | Change, move, resend or delete a payment file |
 | Hand findings to the suite's alert router | Start, stop or rerun a job; change routing or a source-system contract |
 
 The background unit it queues is suite-internal processing (FMON evaluation of one file), not a business job.
@@ -177,7 +177,7 @@ sequenceDiagram
 2. **Instant unit** (bgPF, seconds — latency target < 1 minute end to end): reads the event, converts it with the configured PRISM source (`ZCD_FMON_SRC` row with adapter `ZCL_CD_FMON_ADAPTER_PRISM`, same key rules as every source: reference = canonical name or A100 digest, instance by the file generation identity of §7a — one instance per file, whatever the event's own date), and calls `ZCL_CD_FMON_ENGINE=>RUN_EVENT`:
    - applies the stage through `ZCL_CD_FMON_STATUS` to **files FMON already knows** (or opens an inbound instance — PRISM sees an inbound file before SAP); a later stage of an unknown outbound file is **deferred** to the 5-minute run (PRISM is often faster than the next read of `ZCDT_REGUT`, and only the full run sees all sources together);
    - saves with the version check (audit A04); on a conflict with the 5-minute run it retries once with a fresh read, then leaves the event to the 5-minute run — a stale version is never written;
-   - runs only the checks the event can open or close (`ZCL_CD_FMON_CHK_SLA`, `_REJECT`, `_PRISM_FILE`, `_REGEN` — the other generations of the event's file are read by index GRP for the regeneration rules, §7b), saves the findings through the core store and hands them to the alert router exactly like a batch run (rules, throttling, quiet hours of `ZCD_OPS_ALRULE`; the digest is per run, i.e. per event);
+   - runs only the checks the event can open or close (`ZCL_CD_FMON_CHK_SLA`, `_REJECT`, `_PRISM_FILE`, `_REGEN` — the other generations of the event's file are read by index GRP for the regeneration rules, §7b), saves the findings through the core store and hands them to the alert router exactly like a batch run (rules, throttling, quiet hours of `ZCA_OPS_ALRULE`; the digest is per run, i.e. per event);
    - takes **no run lock** (variant `PRISM` in the run history) so it never blocks, and is never blocked by, the 5-minute run; does **not** auto-resolve earlier exceptions (the store reconciles by object key, and a run with three checks must not close the others' exceptions) — the next 5-minute run resolves them;
    - marks the event `PROCESSED_AT`. Unprocessed stay: deferred, conflict, persist error, unmapped interface / status, malformed, engine error.
 3. **5-minute run** (`ZCD_FMON_MONITOR`, SM36): reads the PRISM source like any other, but only events with `PROCESSED_AT` initial received in its window — the safety net for units that did not run or did not finish. Re-applying is idempotent (unique event index, status model).
@@ -334,7 +334,7 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | `ZCD_FMON_SRC` / `_SRCMAP` / `_CHK` / `_SLA` | `config/fmon_seed.md` (PRISM rows; `GROUP_FIELDS` of the generating source, check rows `F_PRFAIL` / `F_REGEN`) |
 | bgPF | default bgRFC inbound destination for bgPF (SBGRFCCONF) — `Implementation_Order.md` |
 | Volumes | ≈ 2–3 events per file (RECEIVED, DELIVERED, sometimes FAILED); a few thousand rows a day, one bgPF unit and one run record (variant `PRISM`) each; the table grows ≈ 1 M rows per year |
-| Retention | **400 days** — purge target `FMON_PRISM` of `ZCD_OPS_PURGE` deletes `ZCD_FMON_PRISM` rows by receipt time (`RECEIVED_AT`), parameter `RETENTION_DAYS_FMON_PRISM` (never below 30 days); the file history itself stays in the FMON events |
+| Retention | **400 days** — purge target `FMON_PRISM` of `ZCA_OPS_RETENTION` deletes `ZCD_FMON_PRISM` rows by receipt time (`RECEIVED_AT`), parameter `RETENTION_DAYS_FMON_PRISM` (never below 30 days); the file history itself stays in the FMON events |
 
 ## 12. Objects
 

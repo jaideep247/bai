@@ -35,9 +35,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 #: (d) transparent tables above 16 characters -> new name (16 at most)
 TABLE_RENAMES = {
-    'zcd_ops_alert_chn': 'zcd_ops_alchn',
-    'zcd_ops_alert_log': 'zcd_ops_allog',
-    'zcd_ops_alert_rule': 'zcd_ops_alrule',
+    'zcd_ops_alert_chn': 'zca_ops_alchn',
+    'zcd_ops_alert_log': 'zca_ops_allog',
+    'zcd_ops_alert_rule': 'zca_ops_alrule',
 }
 #: (e) name of a caught exception
 OLD_EXCEPTION, NEW_EXCEPTION = 'lx', 'lx_error'

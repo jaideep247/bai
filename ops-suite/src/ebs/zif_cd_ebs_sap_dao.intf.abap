@@ -55,7 +55,7 @@ INTERFACE zif_cd_ebs_sap_dao
       rlgrd     TYPE ty_lot_reason,
       "! Returned amount of the item (DFKKRP-BETRW, VERIFY-DDIC) - the morning report compares it
       "! with the return line of the bank statement (A_INFLIGHT)
-      amount    TYPE zif_cd_ops_types=>ty_amount,
+      amount    TYPE zif_ca_ops_types=>ty_amount,
     END OF ty_return_item.
   "! Fix 4: secondary key BY_SELW1 - rules read the items of one payment document by key
   TYPES tt_return_item TYPE STANDARD TABLE OF ty_return_item WITH EMPTY KEY
@@ -107,7 +107,7 @@ INTERFACE zif_cd_ebs_sap_dao
       hbkid    TYPE c LENGTH 5,
       hktid    TYPE c LENGTH 5,
       doc1r    TYPE ty_docno,
-      amount   TYPE zif_cd_ops_types=>ty_amount,
+      amount   TYPE zif_ca_ops_types=>ty_amount,
       crstatus TYPE ty_status,
     END OF ty_check.
   TYPES tt_check TYPE STANDARD TABLE OF ty_check WITH EMPTY KEY.
@@ -186,7 +186,7 @@ INTERFACE zif_cd_ebs_sap_dao
     RETURNING
       VALUE(rt_rows) TYPE tt_lookup_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   METHODS get_retrievals
     IMPORTING
@@ -194,7 +194,7 @@ INTERFACE zif_cd_ebs_sap_dao
     RETURNING
       VALUE(rt_retrievals) TYPE tt_retrieval
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   METHODS get_checks
     IMPORTING
@@ -214,14 +214,14 @@ INTERFACE zif_cd_ebs_sap_dao
       request_no TYPE i,
       bukrs      TYPE ty_fi_key-bukrs,
       gl_account TYPE ty_fi_line-hkont,
-      currency   TYPE zif_cd_ops_types=>ty_currency,
+      currency   TYPE zif_ca_ops_types=>ty_currency,
       stmt_date  TYPE d,
     END OF ty_gl_request.
   TYPES tt_gl_request TYPE SORTED TABLE OF ty_gl_request WITH UNIQUE KEY request_no.
   TYPES:
     BEGIN OF ty_gl_balance,
       request_no TYPE i,
-      balance    TYPE zif_cd_ops_types=>ty_amount,
+      balance    TYPE zif_ca_ops_types=>ty_amount,
     END OF ty_gl_balance.
   TYPES tt_gl_balance TYPE HASHED TABLE OF ty_gl_balance WITH UNIQUE KEY request_no.
 

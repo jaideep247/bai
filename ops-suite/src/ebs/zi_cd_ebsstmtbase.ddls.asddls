@@ -1,7 +1,7 @@
 // Artifact: zi_cd_ebsstmtbase.ddls.asddls
 // Purpose: Basic view of imported bank statements (standard FEBKO) with a statement date in the
 //          last 31 days (bounded read) and the finding key FEB<KUKEY> that ZCL_CD_EBS_SRC_FEB gives
-//          the statement (join key to ZCD_OPS_FINDING-OBJECT_KEY). Fields as ZCL_CD_EBS_FEB_DAO
+//          the statement (join key to ZCA_OPS_FINDING-OBJECT_KEY). Fields as ZCL_CD_EBS_FEB_DAO
 //          reads them: KUKEY, BUKRS, HBKID, HKTID, AZNUM, AZDAT, WAERS (VERIFY-SE11 as there).
 //          Only payment engine statements (user decision 2026-11-06): every line's FEBEP-XBLNR
 //          carries an active payment engine account of ZCD_EBS_ACCT (EBS configuration app) and

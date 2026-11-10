@@ -53,8 +53,8 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
                                           iv_v1 = ls_match-ztnum ) ) INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
-      DATA(lv_register) = REDUCE zif_cd_ops_types=>ty_amount(
-        INIT lv_sum = CONV zif_cd_ops_types=>ty_amount( 0 )
+      DATA(lv_register) = REDUCE zif_ca_ops_types=>ty_amount(
+        INIT lv_sum = CONV zif_ca_ops_types=>ty_amount( 0 )
         FOR ls_check IN ls_match-checks
         NEXT lv_sum = lv_sum + abs( ls_check-amount ) ).
       IF abs( lv_register - <ls_line>-amount ) > tolerance( is_rule ).

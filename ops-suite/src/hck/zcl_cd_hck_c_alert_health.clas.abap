@@ -2,15 +2,15 @@
 *& Artifact: zcl_cd_hck_c_alert_health.clas.abap
 *& Purpose:
 *& Technical health: alert delivery of the suite - failed and throttled
-*& deliveries per channel in ZCD_OPS_ALLOG within a time window.
+*& deliveries per channel in ZCA_OPS_ALLOG within a time window.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
-*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-10 | ALERT_CLAIM_STUCK: alert log rows still claimed (C) HCK_ALERT_CLAIM_MIN minutes after the
 *&            | claim - the dispatcher stopped between claim and send; nothing else reports it.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Health check - alert delivery health (ZCD_OPS_ALLOG)</p>
+"! <p class="shorttext synchronized">Health check - alert delivery health (ZCA_OPS_ALLOG)</p>
 "! PARAM1 = window in hours back from now (default 24).
 "! Metrics per channel (DIM1): ALERT_FAILED (status F), ALERT_THROTTLED
 "! (status T); ALERT_FAILED '*' = 0 when nothing failed; ALERT_CLAIM_STUCK (status C
@@ -68,7 +68,7 @@ CLASS zcl_cd_hck_c_alert_health IMPLEMENTATION.
     ENDIF.
 
     " Claims (C) written before the send and never completed: claimed before now - N minutes
-    DATA(lv_claim_min) = zcl_cd_ops_util=>param_int( io_params  = zcl_cd_ops_factory=>get_params( )
+    DATA(lv_claim_min) = zcl_ca_ops_util=>param_int( io_params  = zcl_cd_ops_factory=>get_params( )
                                                      iv_name    = zif_cd_hck_types=>gc_param-alert_claim_min
                                                      iv_default = zif_cd_hck_types=>gc_param_default-alert_claim_min ).
     DATA(lv_stuck_before) = CONV timestampl( cl_abap_tstmp=>subtractsecs( tstmp = lv_now

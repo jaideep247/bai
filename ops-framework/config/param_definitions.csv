@@ -1,0 +1,8 @@
+AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DEVELOPER_OWNED,DESCRIPTION,OWNER
+CA_OPS,ALERT_DEFAULT,P,LIST,,,,,,,,SO23 shared lists when ALERT_<route> is blank (comma list),OPS FRAMEWORK
+CA_OPS,ALERT_ESCALATION_WINDOW_H,P,INT,1,,24,,,,,Escalation look-back window of an alert rule (hours),OPS FRAMEWORK
+CA_OPS,ALERT_SECTION_CLASS,P,CLASS,,,,,ZIF_CA_OPS_ALERT_SECTION,,X,Consumer section of the alert message (blank = none),OPS FRAMEWORK
+CA_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,OPS FRAMEWORK
+CA_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),OPS FRAMEWORK
+CA_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),OPS FRAMEWORK
+CA_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,OPS FRAMEWORK

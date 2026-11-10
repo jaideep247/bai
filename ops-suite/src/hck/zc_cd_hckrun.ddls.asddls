@@ -1,7 +1,7 @@
 // Artifact: zc_cd_hckrun.ddls.asddls
 // Purpose: Consumption view of the morning report run history (service ZUI_CD_HCK_DASH): RAG and check counters per
 //          run (scorecard trend), drill-down to the findings of the run.
-//          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCD_PE_AREA = HCK, ACTVT 03). Read-only.
+//          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCA_PARAR = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'HCK health check dashboard - run'

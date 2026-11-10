@@ -20,8 +20,8 @@ define view entity ZI_CD_FmonFlowFile
       // Same text as ZCL_CD_FMON_UTIL=>FILE_HEX (REFERENCE of every file finding).
       // VERIFY-ADT: BINTOHEX in a view entity on 7.58 returns upper-case hex like ABAP
       cast( bintohex( File.file_id ) as abap.char( 35 ) )   as FileIdHex,
-      // Constant area of every row: drives the DCL (ZCD_OPS / ZCD_PE_AREA = FMON)
-      cast( 'FMON' as abap.char( 4 ) )                      as PaymentEngineArea,
+      // Constant area of every row: drives the DCL (ZCD_OPS / ZCA_PARAR = FMON)
+      cast( 'CD_FMON' as abap.char( 16 ) )                      as PaymentEngineArea,
       File.iface_id                                         as IfaceId,
       Iface.description                                     as IfaceDescription,
       File.direction                                        as Direction,

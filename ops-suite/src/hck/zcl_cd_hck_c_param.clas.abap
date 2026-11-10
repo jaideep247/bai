@@ -7,7 +7,7 @@
 *& definition (ZCL_CD_OPS_PARAM_SEED) - and reports each one the framework
 *& refuses (unknown area / name, invalid value or default, mandatory value
 *& missing, two rows for a single value). A bad parameter falls back to its
-*& code default at run time (ZCL_CD_OPS_PARAMS_CA) and shows here the next
+*& code default at run time (ZCL_CA_OPS_PARAMS) and shows here the next
 *& morning at the latest.
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
@@ -46,7 +46,7 @@ CLASS zcl_cd_hck_c_param DEFINITION
         iv_name           TYPE zif_ca_param_types=>ty_name OPTIONAL
         iv_text           TYPE string
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
 ENDCLASS.
 
@@ -127,8 +127,8 @@ CLASS zcl_cd_hck_c_param IMPLEMENTATION.
                                     ELSE |{ iv_area }{ gc_key_separator }{ iv_name }| ).
     rs_finding-group1     = iv_area.
     rs_finding-check_code = zif_cd_hck_types=>gc_code-param_invalid.
-    rs_finding-severity   = zif_cd_ops_types=>gc_severity-error.
-    rs_finding-action     = zif_cd_ops_types=>gc_action-notify.
+    rs_finding-severity   = zif_ca_ops_types=>gc_severity-error.
+    rs_finding-action     = zif_ca_ops_types=>gc_action-notify.
     rs_finding-message    = iv_text.
   ENDMETHOD.
 

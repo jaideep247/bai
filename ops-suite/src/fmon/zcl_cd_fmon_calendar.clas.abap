@@ -34,7 +34,7 @@ CLASS zcl_cd_fmon_calendar DEFINITION
         ev_factory_date    TYPE ty_factory_date
         ev_working_day     TYPE abap_bool
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS to_date
       IMPORTING
@@ -43,7 +43,7 @@ CLASS zcl_cd_fmon_calendar DEFINITION
       RETURNING
         VALUE(rv_date)  TYPE d
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 

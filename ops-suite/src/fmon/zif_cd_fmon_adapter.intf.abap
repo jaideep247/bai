@@ -18,6 +18,6 @@ INTERFACE zif_cd_fmon_adapter
     RETURNING
       VALUE(rt_records) TYPE zif_cd_fmon_types=>tt_src_record
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

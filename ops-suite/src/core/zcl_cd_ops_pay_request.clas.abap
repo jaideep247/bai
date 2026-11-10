@@ -80,10 +80,10 @@ CLASS zcl_cd_ops_pay_request DEFINITION
     METHODS load_rules.
 
     "! The request source and its SUCCESS value once per instance
-    "! @raising zcx_cd_ops_error | TRACE_SRC_REQUEST without TABLE, KEY, KEY2, STATUS or DATE
+    "! @raising zcx_ca_ops_error | TRACE_SRC_REQUEST without TABLE, KEY, KEY2, STATUS or DATE
     METHODS load
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Stage, paid date, amount of one request from the items of its FIN
     METHODS judge
@@ -136,11 +136,11 @@ CLASS zcl_cd_ops_pay_request IMPLEMENTATION.
                                          iv_default = zif_cd_ops_payout_types=>gc_param_default-req_cutoff ) ).
     " The payment engine's local time (the FMON BAI deadlines use the same) and factory calendar
     mv_time_zone = lo_params->get_param( iv_name    = zif_cd_fmon_types=>gc_param-time_zone
-                                         iv_default = CONV #( zif_cd_ops_types=>gc_time_zone_utc ) ).
+                                         iv_default = CONV #( zif_ca_ops_types=>gc_time_zone_utc ) ).
     DATA(lo_hck) = zcl_cd_hck_factory=>get_dao( ).
     DATA(lt_defs) = lo_hck->get_check_defs(
-                      it_check_ids = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                              option = zif_cd_ops_types=>gc_range-option_equal
+                      it_check_ids = VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                              option = zif_ca_ops_types=>gc_range-option_equal
                                               ( low = zif_cd_ops_payout_types=>gc_check-inflight )
                                               ( low = zif_cd_ops_payout_types=>gc_check-prq_cancel ) ) ).
     mv_calendar = to_upper( condense( VALUE #( lt_defs[ check_id = zif_cd_ops_payout_types=>gc_check-inflight ]-param1
@@ -152,7 +152,7 @@ CLASS zcl_cd_ops_pay_request IMPLEMENTATION.
                          it_watched    = VALUE #( )
                          iv_calendar   = mv_calendar
                          it_thresholds = VALUE #( )
-                         iv_today      = zcl_cd_ops_factory=>get_clock( )->today( ) ).
+                         iv_today      = zcl_ca_ops_factory=>get_clock( )->today( ) ).
     mv_rules_loaded = abap_true.
   ENDMETHOD.
 
@@ -235,7 +235,7 @@ CLASS zcl_cd_ops_pay_request IMPLEMENTATION.
           ls_request-received_date = lv_date.
           ls_request-received_time = lv_at.
           ls_request-requested     = zcl_cd_ops_trace_engine=>to_date( <ls_row>-due ).
-          ls_request-amount        = zcl_cd_ops_util=>to_decimal( <ls_row>-amount ).
+          ls_request-amount        = zcl_ca_ops_util=>to_decimal( <ls_row>-amount ).
         ENDIF.
         lv_tracked = abap_true.
       ENDLOOP.
@@ -356,7 +356,7 @@ CLASS zcl_cd_ops_pay_request IMPLEMENTATION.
       SPLIT <lv_entry> AT zif_cd_ops_payout_types=>gc_cutoff_sep INTO DATA(lv_source) DATA(lv_time).
       " HHMMSS digits only (the definition's pattern); anything else keeps the delivered cut-off
       DATA(lv_value) = zcl_cd_ops_trace_engine=>to_time( lv_time ).
-      IF lv_value IS INITIAL AND condense( lv_time ) <> zif_cd_ops_types=>gc_time-day_start.
+      IF lv_value IS INITIAL AND condense( lv_time ) <> zif_ca_ops_types=>gc_time-day_start.
         CONTINUE.
       ENDIF.
       IF condense( lv_source ) = zif_cd_ops_payout_types=>gc_cutoff_any.

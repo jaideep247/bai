@@ -61,7 +61,7 @@ CLASS zcl_cd_hck_threshold DEFINITION
         iv_value      TYPE zif_cd_hck_types=>ty_value
         is_threshold  TYPE zif_cd_hck_types=>ty_threshold
       RETURNING
-        VALUE(rv_rag) TYPE zif_cd_ops_types=>ty_rag.
+        VALUE(rv_rag) TYPE zif_ca_ops_types=>ty_rag.
 
     CLASS-METHODS is_outlier
       IMPORTING
@@ -113,8 +113,8 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
     rs_evaluation-rag = static_rag( iv_value     = iv_value
                                     is_threshold = is_threshold ).
     rs_evaluation-check_code = SWITCH #( rs_evaluation-rag
-                                         WHEN zif_cd_ops_types=>gc_rag-red   THEN zif_cd_hck_types=>gc_code-threshold_red
-                                         WHEN zif_cd_ops_types=>gc_rag-amber THEN zif_cd_hck_types=>gc_code-threshold_amber ).
+                                         WHEN zif_ca_ops_types=>gc_rag-red   THEN zif_cd_hck_types=>gc_code-threshold_red
+                                         WHEN zif_ca_ops_types=>gc_rag-amber THEN zif_cd_hck_types=>gc_code-threshold_amber ).
 
     IF is_threshold-baseline_mode IS INITIAL OR is_threshold-baseline_mode = zif_cd_hck_types=>gc_baseline-none.
       RETURN.
@@ -123,10 +123,10 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
     rs_evaluation-mean   = zcl_cd_hck_stats=>mean( it_history ).
     IF rs_evaluation-points < gc_min_points.
       " A102: no baseline verdict yet - never an inherited GREEN
-      IF rs_evaluation-rag = zif_cd_ops_types=>gc_rag-green.
+      IF rs_evaluation-rag = zif_ca_ops_types=>gc_rag-green.
         rs_evaluation-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
         IF has_static_limit( is_threshold ) = abap_false.
-          rs_evaluation-rag = zif_cd_ops_types=>gc_rag-grey.
+          rs_evaluation-rag = zif_ca_ops_types=>gc_rag-grey.
         ENDIF.
       ENDIF.
       RETURN.
@@ -139,8 +139,8 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
                    IMPORTING ev_z_score      = rs_evaluation-z_score ) = abap_false.
       RETURN.
     ENDIF.
-    IF rs_evaluation-rag = zif_cd_ops_types=>gc_rag-green.
-      rs_evaluation-rag        = zif_cd_ops_types=>gc_rag-amber.
+    IF rs_evaluation-rag = zif_ca_ops_types=>gc_rag-green.
+      rs_evaluation-rag        = zif_ca_ops_types=>gc_rag-amber.
       rs_evaluation-check_code = zif_cd_hck_types=>gc_code-baseline_outlier.
     ENDIF.
   ENDMETHOD.
@@ -154,13 +154,13 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
   METHOD static_rag.
     DATA(lv_amber_set) = xsdbool( is_threshold-amber <> 0 ).
     DATA(lv_red_set)   = xsdbool( is_threshold-red <> 0 ).
-    rv_rag = zif_cd_ops_types=>gc_rag-green.
+    rv_rag = zif_ca_ops_types=>gc_rag-green.
 
     IF is_threshold-higher_is_worse = abap_true.
       IF lv_red_set = abap_true AND iv_value >= is_threshold-red.
-        rv_rag = zif_cd_ops_types=>gc_rag-red.
+        rv_rag = zif_ca_ops_types=>gc_rag-red.
       ELSEIF lv_amber_set = abap_true AND iv_value >= is_threshold-amber.
-        rv_rag = zif_cd_ops_types=>gc_rag-amber.
+        rv_rag = zif_ca_ops_types=>gc_rag-amber.
       ENDIF.
       RETURN.
     ENDIF.
@@ -169,9 +169,9 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF iv_value <= is_threshold-red.
-      rv_rag = zif_cd_ops_types=>gc_rag-red.
+      rv_rag = zif_ca_ops_types=>gc_rag-red.
     ELSEIF iv_value <= is_threshold-amber.
-      rv_rag = zif_cd_ops_types=>gc_rag-amber.
+      rv_rag = zif_ca_ops_types=>gc_rag-amber.
     ENDIF.
   ENDMETHOD.
 

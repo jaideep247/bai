@@ -23,7 +23,7 @@
 *&            | no reconciliation; all-PE statement validated.
 *& 2026-11-06 | findings_of: prefix test with find( ) instead of a CP wildcard (no CP / NP in the suite).
 *& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
-*&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
+*&            | (semantics of ZCL_CA_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | Read-only scope: pre-posting decision, kill switch, blocked-line release and
 *&            | blocks-posting flag removed with their tests; configuration gap, map conflict,
 *&            | missing trailer and end-to-end tests assert the findings of VALIDATE_PACKAGE.
@@ -82,16 +82,16 @@ ENDCLASS.
 
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store.
+    INTERFACES zif_ca_ops_store.
     "! Parameters over ZCA_PARAM (delivered definitions, in memory)
     DATA mo_params   TYPE REF TO zcl_cd_ops_param_seed.
-    DATA mt_saved    TYPE zif_cd_ops_types=>tt_finding.
-    DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
+    DATA mt_saved    TYPE zif_ca_ops_types=>tt_finding.
+    DATA ms_finished TYPE zif_ca_ops_types=>ty_run.
     DATA mv_commits  TYPE i.
     DATA mv_starts   TYPE i.
     DATA mv_rollbacks TYPE i.
     DATA mv_reconciles TYPE i.
-    DATA mt_reconciled TYPE zif_cd_ops_types=>tt_object_key.
+    DATA mt_reconciled TYPE zif_ca_ops_types=>tt_object_key.
     METHODS constructor.
 ENDCLASS.
 
@@ -99,58 +99,58 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD constructor.
     mo_params = NEW #( ).
   ENDMETHOD.
-  METHOD zif_cd_ops_store~start_run.
+  METHOD zif_ca_ops_store~start_run.
     mv_starts += 1.
     rs_run-pe_area    = iv_pe_area.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
-    rs_run-status    = zif_cd_ops_types=>gc_run_status-running.
+    rs_run-status    = zif_ca_ops_types=>gc_run_status-running.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~save_findings.
+  METHOD zif_ca_ops_store~save_findings.
     IF cs_run-test_mode = abap_false.
       INSERT LINES OF it_findings INTO TABLE mt_saved.
     ENDIF.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
   ENDMETHOD.
-  METHOD zif_cd_ops_store~finish_run.
+  METHOD zif_ca_ops_store~finish_run.
     ms_finished = is_run.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~reconcile.
+  METHOD zif_ca_ops_store~reconcile.
     mv_reconciles += 1.
     INSERT LINES OF it_object_keys INTO TABLE mt_reconciled.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~commit.
+  METHOD zif_ca_ops_store~commit.
     mv_commits += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~rollback.
+  METHOD zif_ca_ops_store~rollback.
     mv_rollbacks += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_last_run.
+  METHOD zif_ca_ops_store~get_last_run.
     CLEAR rs_run.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_runs_since.
+  METHOD zif_ca_ops_store~get_runs_since.
     CLEAR rt_runs.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_findings.
+  METHOD zif_ca_ops_store~get_findings.
     CLEAR rt_findings.
   ENDMETHOD.
 ENDCLASS.
 
 CLASS ltd_alert DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_alert.
+    INTERFACES zif_ca_ops_alert.
     DATA mv_dispatched TYPE i.
     "! A67: findings handed to the alert router
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
     "! B11: the alert configuration cannot be read
     DATA mv_fail TYPE abap_bool.
-    DATA ms_run TYPE zif_cd_ops_types=>ty_run.
+    DATA ms_run TYPE zif_ca_ops_types=>ty_run.
 ENDCLASS.
 
 CLASS ltd_alert IMPLEMENTATION.
-  METHOD zif_cd_ops_alert~send.
+  METHOD zif_ca_ops_alert~send.
   ENDMETHOD.
-  METHOD zif_cd_ops_alert~dispatch.
+  METHOD zif_ca_ops_alert~dispatch.
     mv_dispatched += 1.
     mt_findings = it_findings.
     ms_run = is_run.
@@ -173,21 +173,21 @@ ENDCLASS.
 
 CLASS ltd_lock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_lock.
+    INTERFACES zif_ca_ops_lock.
     DATA mv_held     TYPE abap_bool.
     DATA mv_acquires TYPE i.
     DATA mv_releases TYPE i.
 ENDCLASS.
 
 CLASS ltd_lock IMPLEMENTATION.
-  METHOD zif_cd_ops_lock~acquire.
+  METHOD zif_ca_ops_lock~acquire.
     mv_acquires += 1.
     rv_acquired = xsdbool( mv_held = abap_false ).
     IF mv_held = abap_true.
       ev_holder = 'OTHER_JOB'.
     ENDIF.
   ENDMETHOD.
-  METHOD zif_cd_ops_lock~release.
+  METHOD zif_ca_ops_lock~release.
     mv_releases += 1.
   ENDMETHOD.
 ENDCLASS.
@@ -195,17 +195,17 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = '20261105080000.0000000'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = '20261105'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     rv_time = '080000'.
   ENDMETHOD.
 ENDCLASS.
@@ -221,9 +221,9 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         group_new   TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'NEWBANK',
         code_new    TYPE zif_cd_ebs_types=>ty_btc_code VALUE '987',
         code_unmap  TYPE zif_cd_ebs_types=>ty_btc_code VALUE '999',
-        sign_class  TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R01_SIGN',
-        cover_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S09_COVERAGE',
-        fail_class  TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_FAILING_RULE',
+        sign_class  TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R01_SIGN',
+        cover_class TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S09_COVERAGE',
+        fail_class  TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_FAILING_RULE',
       END OF gc_test.
 
     TYPES:
@@ -258,15 +258,15 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS add_rule
       IMPORTING
         iv_group TYPE zif_cd_ebs_types=>ty_rule_group
-        iv_id    TYPE zif_cd_ops_types=>ty_rule_id
-        iv_class TYPE zif_cd_ops_types=>ty_class_name
+        iv_id    TYPE zif_ca_ops_types=>ty_rule_id
+        iv_class TYPE zif_ca_ops_types=>ty_class_name
         iv_level TYPE char1.
     METHODS run_engine
       IMPORTING
         iv_test_mode TYPE abap_bool DEFAULT abap_false.
     METHODS count_rule
       IMPORTING
-        iv_rule_id      TYPE zif_cd_ops_types=>ty_rule_id
+        iv_rule_id      TYPE zif_ca_ops_types=>ty_rule_id
       RETURNING
         VALUE(rv_count) TYPE i.
 
@@ -325,7 +325,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
       EXPORTING
         es_package         TYPE zif_cd_ebs_types=>ty_package
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 ENDCLASS.
 
 
@@ -337,12 +337,12 @@ CLASS ltc_engine IMPLEMENTATION.
     mo_store  = NEW #( ).
     mo_alert  = NEW #( ).
     mo_lock   = NEW #( ).
-    zcl_cd_ops_injector=>inject_lock( mo_lock ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_lock( mo_lock ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
     zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_alert( mo_alert ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-fail_class io_instance = NEW ltd_failing_rule( ) ).
+    zcl_ca_ops_injector=>inject_alert( mo_alert ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_test-fail_class io_instance = NEW ltd_failing_rule( ) ).
     zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
     CLEAR ms_result.
   ENDMETHOD.
@@ -369,8 +369,8 @@ CLASS ltc_engine IMPLEMENTATION.
     ls_rule-rule_id    = iv_id.
     ls_rule-class_name = iv_class.
     ls_rule-level      = iv_level.
-    ls_rule-severity   = zif_cd_ops_types=>gc_severity-error.
-    ls_rule-action     = zif_cd_ops_types=>gc_action-exception.
+    ls_rule-severity   = zif_ca_ops_types=>gc_severity-error.
+    ls_rule-action     = zif_ca_ops_types=>gc_action-exception.
     ls_rule-active     = abap_true.
     INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
   ENDMETHOD.
@@ -443,17 +443,17 @@ CLASS ltc_engine IMPLEMENTATION.
     TRY.
         NEW zcl_cd_ebs_engine( )->run( io_source = mo_source iv_variant = 'UNIT' ).
         cl_abap_unit_assert=>fail( msg = 'The error must reach the caller' ).
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollbacks exp = 1
                                             msg = 'The open LUW is rolled back' ).
         cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-status
-                                            exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            exp = zif_ca_ops_types=>gc_run_status-aborted
                                             msg = 'The run is closed as aborted' ).
         cl_abap_unit_assert=>assert_true(
-          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_cd_ops_run_guard=>gc_check_aborted ] ) )
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_ca_ops_run_guard=>gc_check_aborted ] ) )
           msg = 'RUN_ABORTED is saved' ).
         cl_abap_unit_assert=>assert_equals( act = mo_alert->ms_run-status
-                                            exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            exp = zif_ca_ops_types=>gc_run_status-aborted
                                             msg = 'ON_ABORT rules see the aborted run' ).
         cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1
                                             msg = 'The run lock is released' ).
@@ -471,10 +471,10 @@ CLASS ltc_engine IMPLEMENTATION.
     run_engine( ).
 
     cl_abap_unit_assert=>assert_true(
-      act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_cd_ops_run_guard=>gc_check_alert_failed ] ) )
+      act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_ca_ops_run_guard=>gc_check_alert_failed ] ) )
       msg = 'ALERT_FAILED is saved with the run' ).
     cl_abap_unit_assert=>assert_true(
-      act = xsdbool( line_exists( ms_result-findings[ check_code = zcl_cd_ops_run_guard=>gc_check_alert_failed ] ) )
+      act = xsdbool( line_exists( ms_result-findings[ check_code = zcl_ca_ops_run_guard=>gc_check_alert_failed ] ) )
       msg = 'ALERT_FAILED is returned to the report' ).
   ENDMETHOD.
 
@@ -490,7 +490,7 @@ CLASS ltc_engine IMPLEMENTATION.
     DATA(ls_error) = VALUE #( mo_store->mt_saved[ check_code = zcl_cd_ebs_engine=>gc_check_code-plugin_error ] OPTIONAL ).
     cl_abap_unit_assert=>assert_true( act = xsdbool( ls_error-details CS 'ZCX_CD_OPS_ERROR' )
                                       msg = 'The trace names the exception class' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_error-error_class exp = zif_cd_ops_types=>gc_error_class-data
+    cl_abap_unit_assert=>assert_equals( act = ls_error-error_class exp = zif_ca_ops_types=>gc_error_class-data
                                         msg = 'A rule that could not read its data is DATA' ).
   ENDMETHOD.
 
@@ -592,7 +592,7 @@ CLASS ltc_engine IMPLEMENTATION.
                                       msg = 'A failing rule must leave a PLUGIN_ERROR finding' ).
     cl_abap_unit_assert=>assert_equals( act = count_rule( 'R01' ) exp = 1
                                         msg = 'Other rules must still run' ).
-    cl_abap_unit_assert=>assert_differs( act = ms_result-run-status exp = zif_cd_ops_types=>gc_run_status-aborted
+    cl_abap_unit_assert=>assert_differs( act = ms_result-run-status exp = zif_ca_ops_types=>gc_run_status-aborted
                                          msg = 'A failing rule must not abort the run' ).
   ENDMETHOD.
 
@@ -638,7 +638,7 @@ CLASS ltc_engine IMPLEMENTATION.
 
     run_engine( ).
 
-    cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_cd_ops_types=>gc_run_status-aborted
+    cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_ca_ops_types=>gc_run_status-aborted
                                         msg = 'Three failing packages must abort the run' ).
     cl_abap_unit_assert=>assert_equals( act = ms_result-run-total_items exp = 6
                                         msg = 'Only the first three packages may be processed' ).
@@ -659,7 +659,7 @@ CLASS ltc_engine IMPLEMENTATION.
                                         msg = 'Only EBS_RESULT_MAX findings may be kept in memory' ).
     cl_abap_unit_assert=>assert_equals( act = ms_result-run-blocked_items exp = 3
                                         msg = 'Counts must still cover every line' ).
-    cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-red
+    cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-red
                                         msg = 'RAG must reflect findings that were not kept' ).
     cl_abap_unit_assert=>assert_equals( act = lines( mo_store->mt_saved ) exp = 3
                                         msg = 'Every finding must still be saved' ).
@@ -677,7 +677,7 @@ CLASS ltc_engine IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( act = mo_store->mv_starts exp = 0
                                         msg = 'No run may be started while the lock is held' ).
-    cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_run_guard=>was_refused( ms_result-findings )
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_run_guard=>was_refused( ms_result-findings )
                                       msg = 'The result must carry RUN_LOCKED' ).
     cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatched exp = 1
                                         msg = 'The refusal must be alerted once' ).
@@ -819,7 +819,7 @@ CLASS ltc_engine IMPLEMENTATION.
         ls_flags-packages         = 5.
         configure_scenario( ls_flags ).
         run_engine( ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_cd_ops_types=>gc_run_status-aborted
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_ca_ops_types=>gc_run_status-aborted
                                             msg = 'Three packages with a rule that could not run must abort the run' ).
         cl_abap_unit_assert=>assert_equals( act = ms_result-run-total_items exp = 3
                                             msg = 'Only the first three packages may be processed' ).
@@ -837,9 +837,9 @@ CLASS ltc_engine IMPLEMENTATION.
                   iv_level = zif_cd_ebs_types=>gc_level-line ).
         ASSIGN mo_source->mt_packages[ 1 ] TO FIELD-SYMBOL(<ls_package>).
         INSERT VALUE #( object_type = 'STMT' object_key = 'S0001' rule_id = 'S05' check_code = 'TEST_WARNING'
-                        severity = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE <ls_package>-findings.
+                        severity = zif_ca_ops_types=>gc_severity-warning ) INTO TABLE <ls_package>-findings.
         INSERT VALUE #( object_type = 'STMT' object_key = 'S0001' rule_id = 'S02' check_code = 'TEST_BLOCKER'
-                        severity = zif_cd_ops_types=>gc_severity-block ) INTO TABLE <ls_package>-findings.
+                        severity = zif_ca_ops_types=>gc_severity-block ) INTO TABLE <ls_package>-findings.
         mo_store->mo_params->set( iv_name = 'EBS_RESULT_MAX' iv_value = '1' ).
         run_engine( ).
         cl_abap_unit_assert=>assert_false(
@@ -847,7 +847,7 @@ CLASS ltc_engine IMPLEMENTATION.
           msg = 'The blocker must lie after the display cap in this scenario' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( mo_alert->mt_findings[ check_code = 'TEST_BLOCKER'
-                                                              severity   = zif_cd_ops_types=>gc_severity-block ] ) )
+                                                              severity   = zif_ca_ops_types=>gc_severity-block ] ) )
           msg = 'A blocker after the cap must still be handed to the alert router' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -882,7 +882,7 @@ CLASS ltc_engine IMPLEMENTATION.
         run_engine( ).
         cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zcl_cd_ebs_engine=>gc_status_no_data
                                             msg = 'An empty run must end NO_DATA' ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-grey
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-grey
                                             msg = 'An empty run must be grey, not green' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_cd_ebs_types=>gc_check_code-no_data ] ) )
@@ -901,9 +901,9 @@ CLASS ltc_engine IMPLEMENTATION.
         configure_scenario( ls_flags ).
         mo_store->mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-empty_feed_ok iv_value = abap_true ).
         run_engine( ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_cd_ops_types=>gc_run_status-success
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_ca_ops_types=>gc_run_status-success
                                             msg = 'An intentionally empty feed closes successfully' ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-green
                                             msg = 'An intentionally empty feed is green' ).
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_cd_ebs_types=>gc_check_code-no_data ] ) )
@@ -922,12 +922,12 @@ CLASS ltc_engine IMPLEMENTATION.
         configure_scenario( ls_flags ).
         DATA(ls_blank) = mo_cfg->mt_map[ 1 ].
         ls_blank-flow_type = space.
-        ls_blank-action    = zif_cd_ops_types=>gc_action-on_account.
+        ls_blank-action    = zif_ca_ops_types=>gc_action-on_account.
         INSERT ls_blank INTO TABLE mo_cfg->mt_map.
         DATA(lt_findings) = validate( ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE #( lt_findings[ check_code = zif_cd_ebs_types=>gc_check_code-map_conflict ]-action OPTIONAL )
-          exp = zif_cd_ops_types=>gc_action-block
+          exp = zif_ca_ops_types=>gc_action-block
           msg = 'MAP_CONFLICT must be recorded with action BLOCK' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -999,8 +999,8 @@ CLASS ltc_engine IMPLEMENTATION.
           exp = VALUE string_table( ( `165/CFGONLY` ) )
           msg = 'The parsed line must be routed by configuration only' ).
         cl_abap_unit_assert=>assert_false(
-          act = xsdbool( line_exists( lt_findings[ severity = zif_cd_ops_types=>gc_severity-block ] )
-                      OR line_exists( lt_findings[ action = zif_cd_ops_types=>gc_action-block ] ) )
+          act = xsdbool( line_exists( lt_findings[ severity = zif_ca_ops_types=>gc_severity-block ] )
+                      OR line_exists( lt_findings[ action = zif_ca_ops_types=>gc_action-block ] ) )
           msg = 'A configured, valid entry must raise no blocker' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1057,11 +1057,11 @@ CLASS ltc_posting_state DEFINITION FINAL FOR TESTING
       BEGIN OF gc_test,
         group       TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'NEWBANK',
         code        TYPE zif_cd_ebs_types=>ty_btc_code VALUE '987',
-        dep_class   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_POSTED_PROBE',
-        indep_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_INDEP_PROBE',
-        stmt_class  TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_STMT_PROBE',
-        s13_class   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S13_POSTED',
-        s13_id      TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S13',
+        dep_class   TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_POSTED_PROBE',
+        indep_class TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_INDEP_PROBE',
+        stmt_class  TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_STMT_PROBE',
+        s13_class   TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S13_POSTED',
+        s13_id      TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S13',
         stmt_key    TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'FEB00001001',
         "! Payment engine account scope: every line carries an active configured account
         pe_account  TYPE zif_cd_ebs_types=>ty_text35 VALUE '8XX1174412',
@@ -1078,7 +1078,7 @@ CLASS ltc_posting_state DEFINITION FINAL FOR TESTING
         "! Map row disposition NOT_POSTED (e.g. 275 / 575 sweeps)
         not_posted    TYPE abap_bool,
         "! Severity of the S13 assignment (blank = W, the seed default)
-        s13_severity  TYPE zif_cd_ops_types=>ty_severity,
+        s13_severity  TYPE zif_ca_ops_types=>ty_severity,
       END OF ty_flags.
 
     DATA mo_source    TYPE REF TO ltd_source.
@@ -1100,15 +1100,15 @@ CLASS ltc_posting_state DEFINITION FINAL FOR TESTING
     METHODS add_rule
       IMPORTING
         iv_group         TYPE zif_cd_ebs_types=>ty_rule_group
-        iv_id            TYPE zif_cd_ops_types=>ty_rule_id
-        iv_class         TYPE zif_cd_ops_types=>ty_class_name
+        iv_id            TYPE zif_ca_ops_types=>ty_rule_id
+        iv_class         TYPE zif_ca_ops_types=>ty_class_name
         iv_level         TYPE char1
         iv_needs_posting TYPE abap_bool
-        iv_severity      TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error.
+        iv_severity      TYPE zif_ca_ops_types=>ty_severity DEFAULT zif_ca_ops_types=>gc_severity-error.
     METHODS run_engine.
     METHODS count_code
       IMPORTING
-        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+        iv_check_code   TYPE zif_ca_ops_types=>ty_check_code
       RETURNING
         VALUE(rv_count) TYPE i.
 
@@ -1134,14 +1134,14 @@ CLASS ltc_posting_state IMPLEMENTATION.
     mo_dep_rule  = NEW #( ).
     mo_ind_rule  = NEW #( ).
     mo_stmt_rule = NEW #( ).
-    zcl_cd_ops_injector=>inject_lock( NEW ltd_lock( ) ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_lock( NEW ltd_lock( ) ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
     zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_alert( NEW ltd_alert( ) ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-dep_class io_instance = mo_dep_rule ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-indep_class io_instance = mo_ind_rule ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-stmt_class io_instance = mo_stmt_rule ).
+    zcl_ca_ops_injector=>inject_alert( NEW ltd_alert( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_test-dep_class io_instance = mo_dep_rule ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_test-indep_class io_instance = mo_ind_rule ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_test-stmt_class io_instance = mo_stmt_rule ).
     zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
     CLEAR ms_result.
   ENDMETHOD.
@@ -1168,7 +1168,7 @@ CLASS ltc_posting_state IMPLEMENTATION.
     ls_rule-class_name    = iv_class.
     ls_rule-level         = iv_level.
     ls_rule-severity      = iv_severity.
-    ls_rule-action        = zif_cd_ops_types=>gc_action-notify.
+    ls_rule-action        = zif_ca_ops_types=>gc_action-notify.
     ls_rule-active        = abap_true.
     ls_rule-needs_posting = iv_needs_posting.
     INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
@@ -1205,7 +1205,7 @@ CLASS ltc_posting_state IMPLEMENTATION.
               iv_level         = zif_cd_ebs_types=>gc_level-statement
               iv_needs_posting = abap_false
               iv_severity      = COND #( WHEN is_flags-s13_severity IS INITIAL
-                                         THEN zif_cd_ops_types=>gc_severity-warning
+                                         THEN zif_ca_ops_types=>gc_severity-warning
                                          ELSE is_flags-s13_severity ) ).
     add_rule( iv_group = zif_cd_ebs_types=>gc_rule_group_all iv_id = 'R18' iv_class = gc_test-stmt_class
               iv_level = zif_cd_ebs_types=>gc_level-statement iv_needs_posting = abap_true ).
@@ -1268,7 +1268,7 @@ CLASS ltc_posting_state IMPLEMENTATION.
                                             msg = 'A posted entry is fully evaluated' ).
         cl_abap_unit_assert=>assert_equals( act = ms_result-run-passed_items exp = 1
                                             msg = 'A posted entry without findings passes' ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-green
                                             msg = 'A fully posted, clean statement closes green' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1332,9 +1332,9 @@ CLASS ltc_posting_state IMPLEMENTATION.
         DATA(ls_finding) = ms_result-findings[ check_code = zif_cd_ebs_types=>gc_check_code-posting_incomplete ].
         cl_abap_unit_assert=>assert_equals( act = ls_finding-object_type exp = zcl_cd_ebs_finding=>gc_object_type-statement
                                             msg = 'POSTING_INCOMPLETE is a statement finding' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-object_key exp = CONV zif_cd_ops_types=>ty_object_key( gc_test-stmt_key )
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-object_key exp = CONV zif_ca_ops_types=>ty_object_key( gc_test-stmt_key )
                                             msg = 'POSTING_INCOMPLETE must name the statement' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-warning
                                             msg = 'Severity comes from the S13 rule configuration' ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-rule_id exp = gc_test-s13_id
                                             msg = 'POSTING_INCOMPLETE is raised by rule S13' ).
@@ -1350,12 +1350,12 @@ CLASS ltc_posting_state IMPLEMENTATION.
     TRY.
         DATA(ls_flags) = default_flags( ).
         ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
-        ls_flags-s13_severity  = zif_cd_ops_types=>gc_severity-info.
+        ls_flags-s13_severity  = zif_ca_ops_types=>gc_severity-info.
         configure_scenario( ls_flags ).
         run_engine( ).
-        cl_abap_unit_assert=>assert_differs( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+        cl_abap_unit_assert=>assert_differs( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-green
                                              msg = 'A run with POSTING_INCOMPLETE must never be green' ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-amber
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-amber
                                             msg = 'Incomplete posting without other findings is amber' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1387,7 +1387,7 @@ CLASS ltc_posting_state IMPLEMENTATION.
   METHOD r05_skips_unposted_entry.
     DATA(lo_r05) = NEW ltd_probe_rule( ).
     TRY.
-        zcl_cd_ops_injector=>inject_plugin( iv_class_name = 'ZCL_CD_EBS_R_R05_REASON' io_instance = lo_r05 ).
+        zcl_ca_ops_injector=>inject_plugin( iv_class_name = 'ZCL_CD_EBS_R_R05_REASON' io_instance = lo_r05 ).
         DATA(ls_flags) = default_flags( ).
         ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
         configure_scenario( ls_flags ).
@@ -1461,7 +1461,7 @@ CLASS ltc_posting_state IMPLEMENTATION.
           act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = zcl_cd_ebs_finding=>line_key( ls_line ) ] ) )
           msg = 'An unposted entry must not be reconciled' ).
         cl_abap_unit_assert=>assert_false(
-          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_ca_ops_types=>ty_object_key(
                                                                                 gc_test-stmt_key ) ] ) )
           msg = 'A statement with an unposted entry must not be reconciled' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1500,7 +1500,7 @@ CLASS ltc_register_memo DEFINITION FINAL FOR TESTING
       BEGIN OF gc_test,
         group    TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'CHEQUES',
         code     TYPE zif_cd_ebs_types=>ty_btc_code VALUE '475',
-        r07c     TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R07C_CHECK',
+        r07c     TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R07C_CHECK',
         stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'S0001',
       END OF gc_test.
 
@@ -1524,9 +1524,9 @@ CLASS ltc_register_memo IMPLEMENTATION.
     DATA ls_rule TYPE zif_cd_ebs_types=>ty_rule_cfg.
     mo_cfg = NEW #( ).
     mo_dao = NEW #( ).
-    zcl_cd_ops_injector=>inject_store( NEW ltd_store( ) ).
+    zcl_ca_ops_injector=>inject_store( NEW ltd_store( ) ).
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
     zcl_cd_ebs_injector=>inject_sap_dao( mo_dao ).
     ls_map-scheme     = zif_cd_ebs_types=>gc_scheme-bai2.
@@ -1541,8 +1541,8 @@ CLASS ltc_register_memo IMPLEMENTATION.
     ls_rule-rule_id    = 'R07C'.
     ls_rule-class_name = gc_test-r07c.
     ls_rule-level      = zif_cd_ebs_types=>gc_level-line.
-    ls_rule-severity   = zif_cd_ops_types=>gc_severity-error.
-    ls_rule-action     = zif_cd_ops_types=>gc_action-exception.
+    ls_rule-severity   = zif_ca_ops_types=>gc_severity-error.
+    ls_rule-action     = zif_ca_ops_types=>gc_action-exception.
     ls_rule-active     = abap_true.
     INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
   ENDMETHOD.
@@ -1608,12 +1608,12 @@ CLASS ltc_pe_scope DEFINITION FINAL FOR TESTING
         group      TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'PESCOPE',
         code       TYPE zif_cd_ebs_types=>ty_btc_code VALUE '987',
         unmapped   TYPE zif_cd_ebs_types=>ty_btc_code VALUE '999',
-        line_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_SCOPE_LINE',
-        stmt_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_SCOPE_STMT',
-        s04_class  TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S04_ACCOUNT',
-        s04_id     TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S04',
-        stmt_id    TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S99',
-        line_id    TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R99',
+        line_class TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_SCOPE_LINE',
+        stmt_class TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_SCOPE_STMT',
+        s04_class  TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S04_ACCOUNT',
+        s04_id     TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S04',
+        stmt_id    TYPE zif_ca_ops_types=>ty_rule_id VALUE 'S99',
+        line_id    TYPE zif_ca_ops_types=>ty_rule_id VALUE 'R99',
         stmt_in    TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'FEB00002001',
         stmt_mixed TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'FEB00002002',
         pe_account TYPE zif_cd_ebs_types=>ty_text35 VALUE '8XX1174412',
@@ -1624,7 +1624,7 @@ CLASS ltc_pe_scope DEFINITION FINAL FOR TESTING
         hbkid      TYPE c LENGTH 5 VALUE 'JPMC1',
         hktid      TYPE c LENGTH 5 VALUE 'DISB1',
         other_hkt  TYPE c LENGTH 5 VALUE 'OTHR1',
-        currency   TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
+        currency   TYPE zif_ca_ops_types=>ty_currency VALUE 'USD',
       END OF gc_test.
 
     DATA mo_source    TYPE REF TO ltd_source.
@@ -1680,13 +1680,13 @@ CLASS ltc_pe_scope IMPLEMENTATION.
     mo_store     = NEW #( ).
     mo_line_rule = NEW #( ).
     mo_stmt_rule = NEW #( ).
-    zcl_cd_ops_injector=>inject_lock( NEW ltd_lock( ) ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_lock( NEW ltd_lock( ) ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
     zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_alert( NEW ltd_alert( ) ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-line_class io_instance = mo_line_rule ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-stmt_class io_instance = mo_stmt_rule ).
+    zcl_ca_ops_injector=>inject_alert( NEW ltd_alert( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_test-line_class io_instance = mo_line_rule ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_test-stmt_class io_instance = mo_stmt_rule ).
     zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
     CLEAR ms_result.
   ENDMETHOD.
@@ -1728,7 +1728,7 @@ CLASS ltc_pe_scope IMPLEMENTATION.
     ls_rule-rule_id    = gc_test-s04_id.
     ls_rule-class_name = gc_test-s04_class.
     ls_rule-level      = zif_cd_ebs_types=>gc_level-statement.
-    ls_rule-severity   = zif_cd_ops_types=>gc_severity-error.
+    ls_rule-severity   = zif_ca_ops_types=>gc_severity-error.
     ls_rule-active     = abap_true.
     INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
     ls_rule-rule_id    = gc_test-stmt_id.
@@ -1817,7 +1817,7 @@ CLASS ltc_pe_scope IMPLEMENTATION.
                                             msg = 'Nothing is out of scope' ).
         cl_abap_unit_assert=>assert_equals( act = ms_result-run-passed_items exp = 2
                                             msg = 'Both lines pass' ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-green
                                             msg = 'A clean in-scope statement closes green' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1890,7 +1890,7 @@ CLASS ltc_pe_scope IMPLEMENTATION.
         configure_scenario( abap_true ).
         run_engine( ).
         cl_abap_unit_assert=>assert_false(
-          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_ca_ops_types=>ty_object_key(
                                                                                 gc_test-stmt_mixed ) ] ) )
           msg = 'The out-of-scope statement must not be reconciled' ).
         LOOP AT mo_store->mt_reconciled ASSIGNING FIELD-SYMBOL(<lv_key>).
@@ -1898,7 +1898,7 @@ CLASS ltc_pe_scope IMPLEMENTATION.
                                                msg = 'No line of the out-of-scope statement may be reconciled' ).
         ENDLOOP.
         cl_abap_unit_assert=>assert_true(
-          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_ca_ops_types=>ty_object_key(
                                                                                gc_test-stmt_in ) ] ) )
           msg = 'The in-scope statement is reconciled as before' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1916,7 +1916,7 @@ CLASS ltc_pe_scope IMPLEMENTATION.
                                             msg = 'The statement is counted as out of scope' ).
         cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zcl_cd_ebs_engine=>gc_status_no_data
                                             msg = 'Nothing was in scope - NO_DATA (grey), never green' ).
-        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-grey
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_ca_ops_types=>gc_rag-grey
                                             msg = 'An empty account configuration must not look like a clean day' ).
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( mo_store->mt_saved[ rule_id = 'S04' ] ) )
                                            msg = 'No rule finding for the skipped statement' ).

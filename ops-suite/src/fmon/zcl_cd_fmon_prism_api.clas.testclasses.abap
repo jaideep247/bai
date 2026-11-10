@@ -51,15 +51,15 @@ ENDCLASS.
 
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
     DATA mv_allowed TYPE abap_bool VALUE abap_true.
-    DATA mv_activity TYPE zif_cd_ops_auth=>ty_activity.
-    DATA mv_pe_area TYPE zif_cd_ops_types=>ty_pe_area.
+    DATA mv_activity TYPE zif_ca_ops_auth=>ty_activity.
+    DATA mv_pe_area TYPE zif_ca_ops_types=>ty_area.
 ENDCLASS.
 
 
 CLASS ltd_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_auth~is_allowed.
+  METHOD zif_ca_ops_auth~is_allowed.
     mv_activity = iv_activity.
     mv_pe_area  = iv_pe_area.
     rv_allowed  = mv_allowed.
@@ -69,12 +69,12 @@ ENDCLASS.
 
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_store PARTIALLY IMPLEMENTED.
     DATA mv_commits TYPE i.
     DATA mv_rollbacks TYPE i.
     "! B6: the server-side record of a store failure
-    DATA mt_saved TYPE zif_cd_ops_types=>tt_finding.
-    DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
+    DATA mt_saved TYPE zif_ca_ops_types=>tt_finding.
+    DATA ms_finished TYPE zif_ca_ops_types=>ty_run.
     "! Queued units in the LUW at commit time (the unit must be part of the committed LUW)
     DATA mo_queue TYPE REF TO ltd_queue.
     DATA mv_queued_at_commit TYPE i.
@@ -82,23 +82,23 @@ ENDCLASS.
 
 
 CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~commit.
+  METHOD zif_ca_ops_store~commit.
     mv_commits += 1.
     IF mo_queue IS BOUND.
       mv_queued_at_commit = lines( mo_queue->mt_queued ).
     ENDIF.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~rollback.
+  METHOD zif_ca_ops_store~rollback.
     mv_rollbacks += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~start_run.
+  METHOD zif_ca_ops_store~start_run.
     rs_run-pe_area = iv_pe_area.
     rs_run-variant = iv_variant.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~save_findings.
+  METHOD zif_ca_ops_store~save_findings.
     INSERT LINES OF it_findings INTO TABLE mt_saved.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~finish_run.
+  METHOD zif_ca_ops_store~finish_run.
     ms_finished = is_run.
   ENDMETHOD.
 ENDCLASS.
@@ -106,18 +106,18 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
 ENDCLASS.
 
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = '20261106143500'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = '20261106'.
   ENDMETHOD.
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     rv_time = '143500'.
   ENDMETHOD.
 ENDCLASS.
@@ -193,11 +193,11 @@ CLASS ltc_api IMPLEMENTATION.
     mo_store->mo_queue = mo_queue.
     zcl_cd_fmon_injector=>inject_prism_dao( mo_dao ).
     zcl_cd_fmon_injector=>inject_prism_queue( mo_queue ).
-    zcl_cd_ops_injector=>inject_auth( mo_auth ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_auth( mo_auth ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
     mo_params = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.
 
 
@@ -245,7 +245,7 @@ CLASS ltc_api IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_store->mv_queued_at_commit exp = 1
                                             msg = 'The unit must be queued before the commit' ).
         cl_abap_unit_assert=>assert_equals( act = mo_store->mv_commits exp = 1 msg = 'Exactly one commit' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_activity exp = zif_cd_ops_auth=>gc_activity-create
+        cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_activity exp = zif_ca_ops_auth=>gc_activity-create
                                             msg = 'Authority ZCD_OPS 01 must be checked' ).
         cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_pe_area
                                             exp = zif_cd_ops_types=>gc_pe_area-file_monitor

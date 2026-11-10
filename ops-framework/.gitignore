@@ -1,0 +1,4 @@
+# abaplint downloads the SAP stubs (abaplint/deps) into this folder on every run
+/deps/
+__pycache__/
+*.pyc

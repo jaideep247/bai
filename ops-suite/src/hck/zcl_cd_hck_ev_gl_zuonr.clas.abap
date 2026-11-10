@@ -60,7 +60,7 @@ CLASS zcl_cd_hck_ev_gl_zuonr IMPLEMENTATION.
         READ TABLE rs_result-evidence ASSIGNING FIELD-SYMBOL(<ls_evidence>) WITH TABLE KEY doc1r = <ls_gl>-doc1r.
         IF sy-subrc = 0.
           <ls_evidence>-anomaly  = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
-          <ls_evidence>-severity = zif_cd_ops_types=>gc_severity-error.
+          <ls_evidence>-severity = zif_ca_ops_types=>gc_severity-error.
           <ls_evidence>-detail   = |{ <ls_evidence>-detail } | &&
                                    |{ zcl_cd_ops_util=>text( zif_cd_hck_runtime_types=>gc_msg-ev_zuonr_changed ) }|.
         ENDIF.

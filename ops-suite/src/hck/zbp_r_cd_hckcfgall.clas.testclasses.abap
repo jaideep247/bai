@@ -2,13 +2,13 @@
 *& Artifact: zbp_r_cd_hckcfgall.clas.testclasses.abap
 *& Purpose:
 *& Permission tests of the Health check setup behaviour pool through EML
-*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCD_OPS of the payment engine
-*& area per activity: edit with 01 / 02 / 06, create 01 on the root association,
+*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCA_OPS of the area of the app
+*& per activity: edit with 01 / 02 / 06, create 01 on the root association,
 *& change 02 and delete 06 on a child entity; gate doubles of
-*& ZCL_CD_OPS_CFG_INJECTOR). Global features, validations and the saver need GET
+*& ZCL_CA_OPS_CFG_INJECTOR). Global features, validations and the saver need GET
 *& PERMISSIONS ... FEATURES (not parsed by the offline lint) or draft EML with
 *& COMMIT ENTITIES on doubled tables: DV1 cases RAP_Config_Apps.md 6; their
-*& decisions are tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY. VERIFY-ADT:
+*& decisions are tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY. VERIFY-ADT:
 *& result component GLOBAL and %ASSOC on SAP_BASIS 7.58 SP01.
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
@@ -17,7 +17,7 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_client DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_cfg_client PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_cfg_client PARTIALLY IMPLEMENTED.
 ENDCLASS.
 
 CLASS ltd_client IMPLEMENTATION.
@@ -26,7 +26,7 @@ ENDCLASS.
 
 CLASS ltd_transport DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_cfg_transport PARTIALLY IMPLEMENTED.
+    INTERFACES zif_ca_ops_cfg_transport PARTIALLY IMPLEMENTED.
 ENDCLASS.
 
 CLASS ltd_transport IMPLEMENTATION.
@@ -35,16 +35,16 @@ ENDCLASS.
 
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_cfg_auth.
+    INTERFACES zif_ca_ops_cfg_auth.
     "! Activities the user holds for the area
-    DATA mt_actvt TYPE STANDARD TABLE OF zif_cd_ops_cfg_types=>ty_actvt WITH EMPTY KEY.
-    "! Payment engine areas asked
-    DATA mt_pe_area TYPE STANDARD TABLE OF zif_cd_ops_cfg_types=>ty_pe_area WITH EMPTY KEY.
+    DATA mt_actvt TYPE STANDARD TABLE OF zif_ca_ops_cfg_types=>ty_actvt WITH EMPTY KEY.
+    "! Areas asked
+    DATA mt_area TYPE STANDARD TABLE OF zif_ca_ops_types=>ty_area WITH EMPTY KEY.
 ENDCLASS.
 
 CLASS ltd_auth IMPLEMENTATION.
-  METHOD zif_cd_ops_cfg_auth~is_authorized.
-    INSERT iv_pe_area INTO TABLE mt_pe_area.
+  METHOD zif_ca_ops_cfg_auth~is_authorized.
+    INSERT iv_area INTO TABLE mt_area.
     rv_allowed = xsdbool( line_exists( mt_actvt[ table_line = iv_actvt ] ) ).
   ENDMETHOD.
 ENDCLASS.
@@ -55,7 +55,7 @@ CLASS ltc_permissions DEFINITION FINAL FOR TESTING
   DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'HCK'.
+    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE 'CD_HCK'.
 
     TYPES:
       BEGIN OF ty_flags,
@@ -95,27 +95,27 @@ CLASS ltc_permissions IMPLEMENTATION.
 
   METHOD setup.
     mo_auth = NEW #( ).
-    zcl_cd_ops_cfg_injector=>inject_client( NEW ltd_client( ) ).
-    zcl_cd_ops_cfg_injector=>inject_transport( NEW ltd_transport( ) ).
-    zcl_cd_ops_cfg_injector=>inject_auth( mo_auth ).
+    zcl_ca_ops_cfg_injector=>inject_client( NEW ltd_client( ) ).
+    zcl_ca_ops_cfg_injector=>inject_transport( NEW ltd_transport( ) ).
+    zcl_ca_ops_cfg_injector=>inject_auth( mo_auth ).
   ENDMETHOD.
 
 
   METHOD teardown.
-    zcl_cd_ops_cfg_injector=>reset( ).
+    zcl_ca_ops_cfg_injector=>reset( ).
     CLEAR mo_auth.
   ENDMETHOD.
 
 
   METHOD configure_scenario.
     IF is_flags-create = abap_true.
-      INSERT zif_cd_ops_cfg_types=>gc_actvt-create INTO TABLE mo_auth->mt_actvt.
+      INSERT zif_ca_ops_cfg_types=>gc_actvt-create INTO TABLE mo_auth->mt_actvt.
     ENDIF.
     IF is_flags-change = abap_true.
-      INSERT zif_cd_ops_cfg_types=>gc_actvt-change INTO TABLE mo_auth->mt_actvt.
+      INSERT zif_ca_ops_cfg_types=>gc_actvt-change INTO TABLE mo_auth->mt_actvt.
     ENDIF.
     IF is_flags-delete = abap_true.
-      INSERT zif_cd_ops_cfg_types=>gc_actvt-delete INTO TABLE mo_auth->mt_actvt.
+      INSERT zif_ca_ops_cfg_types=>gc_actvt-delete INTO TABLE mo_auth->mt_actvt.
     ENDIF.
   ENDMETHOD.
 
@@ -155,9 +155,9 @@ CLASS ltc_permissions IMPLEMENTATION.
                                          change = if_abap_behv=>auth-allowed
                                          delete = if_abap_behv=>auth-unauthorized ).
         cl_abap_unit_assert=>assert_equals( act = ls_act exp = ls_exp msg = '02 only: edit and change' ).
-        cl_abap_unit_assert=>assert_equals( act = line_exists( mo_auth->mt_pe_area[ table_line = gc_pe_area ] )
+        cl_abap_unit_assert=>assert_equals( act = line_exists( mo_auth->mt_area[ table_line = gc_area ] )
                                             exp = abap_true
-                                            msg = 'Checked for the payment engine area of the app' ).
+                                            msg = 'Checked for the area of the app' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

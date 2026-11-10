@@ -88,17 +88,17 @@ class ModernizeFixture(unittest.TestCase):
 
     def test_tables_renamed_with_files(self):
         self.assertEqual(self.run_script().returncode, 0)
-        self.assertTrue(os.path.exists(os.path.join(self.root, 'ddic', 'core', 'zcd_ops_alchn.tabl.ddl')))
+        self.assertTrue(os.path.exists(os.path.join(self.root, 'ddic', 'core', 'zca_ops_alchn.tabl.ddl')))
         self.assertFalse(os.path.exists(os.path.join(self.root, 'ddic', 'core', 'zcd_ops_alert_chn.tabl.ddl')))
-        self.assertIn('define table zcd_ops_alchn {', self.read(os.path.join('ddic', 'core', 'zcd_ops_alchn.tabl.ddl')))
-        self.assertEqual(self.read(os.path.join('src', 'core', 'zcd_ops_alchn.tabl.xml')),
-                         '<TABNAME>ZCD_OPS_ALCHN</TABNAME>\n')
+        self.assertIn('define table zca_ops_alchn {', self.read(os.path.join('ddic', 'core', 'zca_ops_alchn.tabl.ddl')))
+        self.assertEqual(self.read(os.path.join('src', 'core', 'zca_ops_alchn.tabl.xml')),
+                         '<TABNAME>ZCA_OPS_ALCHN</TABNAME>\n')
         abap = self.read(os.path.join('src', 'core', 'zcl_cd_fixture.clas.abap'))
-        self.assertIn('FROM zcd_ops_alchn INTO', abap)
-        self.assertIn('Reads ZCD_OPS_ALCHN;', abap)
+        self.assertIn('FROM zca_ops_alchn INTO', abap)
+        self.assertIn('Reads ZCA_OPS_ALCHN;', abap)
         self.assertIn('ZCD_OPS_ALERT_CHNX is another table', abap, 'token boundary: longer names stay')
         doc = self.read(os.path.join('docs', 'ALERTING.md'))
-        self.assertIn('| ZCD_OPS_ALRULE | `zcd_ops_alrule` routes; zcd_ops_alert_rules is not', doc)
+        self.assertIn('| ZCA_OPS_ALRULE | `zca_ops_alrule` routes; zcd_ops_alert_rules is not', doc)
 
     def test_caught_exception_renamed_in_its_block(self):
         self.assertEqual(self.run_script().returncode, 0)
@@ -116,7 +116,7 @@ class ModernizeFixture(unittest.TestCase):
         self.assertIn('CLASS ltd_rows DEFINITION FINAL FOR TESTING.', tests)
         self.assertIn('DATA(ls_row) = ltd_rows=>row( ).', tests)
         self.assertIn('NEW lcl_kept( )', tests, 'a local class that is not FOR TESTING keeps its name')
-        self.assertIn('TYPE zcd_ops_allog.', tests)
+        self.assertIn('TYPE zca_ops_allog.', tests)
 
     def test_second_run_changes_nothing(self):
         self.assertEqual(self.run_script().returncode, 0)

@@ -70,7 +70,7 @@ CLASS ltc_fix IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 """
-CDS = """define view entity ZI_CD_Fix as select from zcd_ops_finding
+CDS = """define view entity ZI_CD_Fix as select from zca_ops_finding
 { key run_id, case check_code when 'FIX_IN_CDS' then 'X' end as IsFix }
 """
 

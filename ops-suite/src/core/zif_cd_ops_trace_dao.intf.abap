@@ -25,7 +25,7 @@ INTERFACE zif_cd_ops_trace_dao
   "! from ZCA_PARAM; the read goes through the file monitoring reader, which checks
   "! them against the DDIC, the approved tables (ZCD_OPS_TABWL, FMON / SOURCE) and S_TABU_NAM first.
   "! @parameter iv_match_key2 | abap_false: KEY2 is read but not used as a condition
-  "! @raising zcx_cd_ops_error | unknown table / field, table not approved or not authorised
+  "! @raising zcx_ca_ops_error | unknown table / field, table not approved or not authorised
   METHODS read_configured
     IMPORTING
       is_source      TYPE zif_cd_ops_trace_types=>ty_source_cfg
@@ -35,11 +35,11 @@ INTERFACE zif_cd_ops_trace_dao
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Rows of a configured source for many keys in one read (KEY1 IN the values; KEY2 read,
   "! not compared) - the source attribution of FIN numbers by the payment outcome evaluator
-  "! @raising zcx_cd_ops_error | unknown table / field, table not approved or not authorised
+  "! @raising zcx_ca_ops_error | unknown table / field, table not approved or not authorised
   METHODS read_configured_set
     IMPORTING
       is_source      TYPE zif_cd_ops_trace_types=>ty_source_cfg
@@ -48,12 +48,12 @@ INTERFACE zif_cd_ops_trace_dao
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Watermark read of a configured source (2026-11-08, request log of the payment worklist): the rows
   "! after the keyset position (DATE, TIME, KEY = the source's DATE / TIME / KEY fields) with DATE up to
   "! iv_date_to, ordered by DATE, TIME, KEY, at most iv_max_rows. DATE (and KEY) must be configured
-  "! @raising zcx_cd_ops_error | unknown table / field, table not approved or not authorised
+  "! @raising zcx_ca_ops_error | unknown table / field, table not approved or not authorised
   METHODS read_configured_after
     IMPORTING
       is_source      TYPE zif_cd_ops_trace_types=>ty_source_cfg
@@ -63,12 +63,12 @@ INTERFACE zif_cd_ops_trace_dao
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Business partners by external number (BUT000-BPEXT = request ZZ_MEMBER_NO), with the
   "! configured source field when iv_source_field is given (VERIFY-SE11; read through the
   "! approved reader, so BUT000 needs a ZCD_OPS_TABWL row FMON / SOURCE)
-  "! @raising zcx_cd_ops_error | source field unknown, BUT000 not approved or not authorised
+  "! @raising zcx_ca_ops_error | source field unknown, BUT000 not approved or not authorised
   METHODS get_partners
     IMPORTING
       iv_bpext           TYPE zif_cd_ops_trace_types=>ty_key_value
@@ -78,7 +78,7 @@ INTERFACE zif_cd_ops_trace_dao
     RETURNING
       VALUE(rt_partners) TYPE zif_cd_ops_trace_types=>tt_partner
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Open items by FIN number (DFKKOP-ZZ_FIN_TRANS_NUM, confirmed)
   METHODS get_items_by_fin
@@ -154,14 +154,14 @@ INTERFACE zif_cd_ops_trace_dao
 
   "! ACH retrieval log (ZCD_ACH_RTRV_LOG-AUGBL); status field from EBS_RTRV_STATUS_FIELD
   "! (the EBS read, shared)
-  "! @raising zcx_cd_ops_error | configured status field unknown
+  "! @raising zcx_ca_ops_error | configured status field unknown
   METHODS get_retrievals
     IMPORTING
       it_docno             TYPE zif_cd_ops_trace_types=>tt_docno
     RETURNING
       VALUE(rt_retrievals) TYPE zif_cd_ops_trace_types=>tt_retrieval
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Monitored files (ZCD_FMON_FILE) by file reference with a business date in
   "! iv_from .. iv_to (index BDT; the reference alone has no index)

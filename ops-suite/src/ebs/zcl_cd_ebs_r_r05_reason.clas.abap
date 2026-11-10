@@ -61,7 +61,7 @@ CLASS zcl_cd_ebs_r_r05_reason DEFINITION
         iv_required TYPE abap_bool
         iv_kind     TYPE string
       CHANGING
-        ct_findings TYPE zif_cd_ops_types=>tt_finding.
+        ct_findings TYPE zif_ca_ops_types=>tt_finding.
 
     "! FEB source: the reason of the payment's lot items (return or NOC); none = not evaluated
     METHODS check_lot_reason
@@ -73,7 +73,7 @@ CLASS zcl_cd_ebs_r_r05_reason DEFINITION
         is_lot      TYPE ty_lot
         it_valid    TYPE tt_lot_reason
       CHANGING
-        ct_findings TYPE zif_cd_ops_types=>tt_finding.
+        ct_findings TYPE zif_ca_ops_types=>tt_finding.
 
     "! Configured payment engine reasons of one kind (ZRSN result FICA_REASON of the
     "! return rows or of the NOC rows); placeholders and blank values are no reason

@@ -20,8 +20,8 @@ CLASS ltc_ack_mail DEFINITION FINAL FOR TESTING
         file_cad TYPE string VALUE `WIRE_BOA_20261110_02.txt`,
         due_early TYPE string VALUE `2026-11-10 09:00:00 CST`,
         due_late  TYPE string VALUE `2026-11-10 11:00:00 CST`,
-        usd      TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
-        cad      TYPE zif_cd_ops_types=>ty_currency VALUE 'CAD',
+        usd      TYPE zif_ca_ops_types=>ty_currency VALUE 'USD',
+        cad      TYPE zif_ca_ops_types=>ty_currency VALUE 'CAD',
         amount_usd TYPE string VALUE `USD 1,234,567.80`,
         amount_cad TYPE string VALUE `CAD 2,500.00`,
       END OF gc_test.
@@ -40,11 +40,11 @@ CLASS ltc_ack_mail DEFINITION FINAL FOR TESTING
         iv_payments       TYPE string
         iv_due            TYPE string
       RETURNING
-        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     METHODS two_files
       RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
 ENDCLASS.
 
 
@@ -95,7 +95,7 @@ CLASS ltc_ack_mail IMPLEMENTATION.
   METHOD subject_leads_with_impact.
     DATA(lv_subject) = zcl_cd_ops_ack_mail=>subject( it_rows     = zcl_cd_ops_ack_mail=>rows( two_files( ) )
                                                      iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
-                                                     iv_severity = zif_cd_ops_types=>gc_severity-error ).
+                                                     iv_severity = zif_ca_ops_types=>gc_severity-error ).
     cl_abap_unit_assert=>assert_equals(
       act = lv_subject
       exp = |[FMON][E] { zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_ack_msg-subject

@@ -20,7 +20,7 @@ CLASS ltd_parser IMPLEMENTATION.
   METHOD zif_cd_ebs_parser~parse.
     DATA ls_statement TYPE zif_cd_ebs_types=>ty_statement.
     DATA ls_line      TYPE zif_cd_ebs_types=>ty_line.
-    DATA ls_finding   TYPE zif_cd_ops_types=>ty_finding.
+    DATA ls_finding   TYPE zif_ca_ops_types=>ty_finding.
     mv_calls += 1.
     mv_content = iv_content.
     rs_file-format    = zif_cd_ebs_types=>gc_format-bai2.
@@ -32,7 +32,7 @@ CLASS ltd_parser IMPLEMENTATION.
     INSERT ls_line INTO TABLE rs_file-lines.
     ls_finding-rule_id    = 'S06'.
     ls_finding-check_code = 'BAI2_FILE_CTRL_TOTAL'.
-    ls_finding-severity   = zif_cd_ops_types=>gc_severity-block.
+    ls_finding-severity   = zif_ca_ops_types=>gc_severity-block.
     INSERT ls_finding INTO TABLE rs_file-findings.
   ENDMETHOD.
 ENDCLASS.

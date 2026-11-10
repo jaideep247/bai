@@ -53,7 +53,7 @@ CLASS zcl_cd_ebs_feb_dao DEFINITION
       RETURNING
         VALUE(rv_select) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS field_exists
       IMPORTING

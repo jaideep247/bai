@@ -65,7 +65,7 @@ class SerializerFixture(unittest.TestCase):
         # before A89 the earlier tables were already rewritten when the run failed
         before = self.xml_snapshot()
         self.edit_ddl('ack_known', 'ack_known_bad : abap.unknowntype(3);\n  ack_known')
-        core = os.path.join(self.root, 'ddic', 'core', 'zcd_ops_run.tabl.ddl')
+        core = os.path.join(self.root, 'ddic', 'core', 'zca_ops_run.tabl.ddl')
         with open(core, encoding='utf-8') as fh:
             text = fh.read()
         with open(core, 'w', encoding='utf-8', newline='\n') as fh:

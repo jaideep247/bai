@@ -90,7 +90,7 @@ CLASS ltc_event IMPLEMENTATION.
     CLEAR ms_context.
     ms_context-now       = gc_test-now.
     ms_context-user      = gc_test-user.
-    ms_context-time_zone = zif_cd_ops_types=>gc_time_zone_utc.
+    ms_context-time_zone = zif_ca_ops_types=>gc_time_zone_utc.
   ENDMETHOD.
 
 

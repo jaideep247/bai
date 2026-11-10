@@ -25,7 +25,7 @@ INTERFACE zif_cd_ops_pay_request
   "! watermark (keyset received date, time, FIN of the configured TRACE_SRC_REQUEST), at most iv_max;
   "! the FIN + source of every SUCCESS row and the watermark of the last row read
   "! @parameter iv_to | SWEEP: last received date read (initial: no upper bound)
-  "! @raising zcx_cd_ops_error | request source not configured (TABLE, KEY, KEY2, STATUS, DATE) or not readable
+  "! @raising zcx_ca_ops_error | request source not configured (TABLE, KEY, KEY2, STATUS, DATE) or not readable
   METHODS changes
     IMPORTING
       is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
@@ -34,12 +34,12 @@ INTERFACE zif_cd_ops_pay_request
     RETURNING
       VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
   "! Due date and stage of the requests at the instant iv_now (UTC): one read of the request log for
   "! all their FIN numbers and one read of the items; a key without SUCCESS attempt is finished (not
   "! tracked - failures are the morning report's C_PRQ_NO_SPE)
-  "! @raising zcx_cd_ops_error | request source not configured or not readable, capped read (fail closed)
+  "! @raising zcx_ca_ops_error | request source not configured or not readable, capped read (fail closed)
   METHODS evaluate
     IMPORTING
       it_keys            TYPE zif_cd_ops_payout_types=>tt_req_key
@@ -47,6 +47,6 @@ INTERFACE zif_cd_ops_pay_request
     RETURNING
       VALUE(rt_requests) TYPE zif_cd_ops_payout_types=>tt_request
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

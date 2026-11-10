@@ -40,21 +40,21 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
     CONSTANTS gc_now TYPE timestampl VALUE '20261106070000.0000000'.
     CONSTANTS gc_today TYPE d VALUE '20261106'.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     rv_timestamp = gc_now.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = gc_today.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     CLEAR rv_time.
   ENDMETHOD.
 ENDCLASS.
@@ -103,12 +103,12 @@ CLASS ltc_config_drift DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS assert_single_finding
       IMPORTING
         is_result   TYPE zif_cd_hck_types=>ty_check_result
-        iv_code     TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity TYPE zif_cd_ops_types=>ty_severity.
+        iv_code     TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity TYPE zif_ca_ops_types=>ty_severity.
 ENDCLASS.
 
 
@@ -119,7 +119,7 @@ CLASS ltc_config_drift IMPLEMENTATION.
     CLEAR ms_context.
     INSERT VALUE #( tabname = gc_table ) INTO TABLE mo_dao->mt_tables.
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.
 
 
@@ -180,7 +180,7 @@ CLASS ltc_config_drift IMPLEMENTATION.
         DATA(ls_result) = act( ).
         assert_single_finding( is_result   = ls_result
                                iv_code     = zif_cd_hck_types=>gc_code-config_drift
-                               iv_severity = zif_cd_ops_types=>gc_severity-error ).
+                               iv_severity = zif_ca_ops_types=>gc_severity-error ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-reference exp = gc_owner
                                             msg = 'Drift names who took the baseline' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-value exp = 1 msg = 'One drifted table' ).
@@ -213,7 +213,7 @@ CLASS ltc_config_drift IMPLEMENTATION.
         DATA(ls_result) = act( ).
         assert_single_finding( is_result   = ls_result
                                iv_code     = zif_cd_hck_types=>gc_code-no_baseline
-                               iv_severity = zif_cd_ops_types=>gc_severity-warning ).
+                               iv_severity = zif_ca_ops_types=>gc_severity-warning ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -227,7 +227,7 @@ CLASS ltc_config_drift IMPLEMENTATION.
         DATA(ls_result) = act( ).
         assert_single_finding( is_result   = ls_result
                                iv_code     = zif_cd_hck_types=>gc_code-baseline_outdated
-                               iv_severity = zif_cd_ops_types=>gc_severity-warning ).
+                               iv_severity = zif_ca_ops_types=>gc_severity-warning ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-value exp = 0
                                             msg = 'Outdated baseline is not counted as drift' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -243,9 +243,9 @@ CLASS ltc_config_drift IMPLEMENTATION.
         DATA(ls_result) = act( ).
         assert_single_finding( is_result   = ls_result
                                iv_code     = zif_cd_hck_types=>gc_code-config_drift
-                               iv_severity = zif_cd_ops_types=>gc_severity-error ).
+                               iv_severity = zif_ca_ops_types=>gc_severity-error ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-action
-                                            exp = zif_cd_ops_types=>gc_action-notify
+                                            exp = zif_ca_ops_types=>gc_action-notify
                                             msg = 'Read error is notified, not owned' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -260,7 +260,7 @@ CLASS ltc_config_drift IMPLEMENTATION.
         DATA(ls_result) = act( ).
         assert_single_finding( is_result   = ls_result
                                iv_code     = zif_cd_hck_types=>gc_code-budget_exhausted
-                               iv_severity = zif_cd_ops_types=>gc_severity-warning ).
+                               iv_severity = zif_ca_ops_types=>gc_severity-warning ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_hash_calls exp = 0 msg = 'No hash computed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

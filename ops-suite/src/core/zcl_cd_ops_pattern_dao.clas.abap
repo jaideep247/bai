@@ -52,17 +52,17 @@ CLASS zcl_cd_ops_pattern_dao DEFINITION
         key1       TYPE zif_cd_ops_pattern_types=>ty_name,
         key2       TYPE zif_cd_ops_pattern_types=>ty_name,
         "! Only rows of this check class (ZCD_HCK_DEF parameters holding pattern lists)
-        class_name TYPE zif_cd_ops_types=>ty_class_name,
+        class_name TYPE zif_ca_ops_types=>ty_class_name,
         is_list    TYPE abap_bool,
       END OF ty_scope.
     TYPES tt_scope TYPE STANDARD TABLE OF ty_scope WITH EMPTY KEY.
     TYPES tt_flow TYPE STANDARD TABLE OF zcd_ebs_flow_pat WITH EMPTY KEY.
     TYPES tt_iface TYPE STANDARD TABLE OF zcd_fmon_iface WITH EMPTY KEY.
     TYPES tt_step TYPE STANDARD TABLE OF zcd_job_step WITH EMPTY KEY.
-    TYPES tt_rule TYPE STANDARD TABLE OF zcd_ops_alrule WITH EMPTY KEY.
+    TYPES tt_rule TYPE STANDARD TABLE OF zca_ops_alrule WITH EMPTY KEY.
     TYPES tt_def TYPE STANDARD TABLE OF zcd_hck_def WITH EMPTY KEY.
     TYPES tt_suppress TYPE STANDARD TABLE OF zcd_hck_suppress WITH EMPTY KEY.
-    TYPES tt_area_range TYPE RANGE OF zif_cd_ops_types=>ty_pe_area.
+    TYPES tt_area_range TYPE RANGE OF zif_ca_ops_types=>ty_area.
 
     METHODS scope
       RETURNING
@@ -75,7 +75,7 @@ CLASS zcl_cd_ops_pattern_dao DEFINITION
       RETURNING
         VALUE(rr_rows) TYPE REF TO data
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Key part of a row as text (the same text identifies the row when it is written)
     METHODS key_text
@@ -103,7 +103,7 @@ CLASS zcl_cd_ops_pattern_dao DEFINITION
       RETURNING
         VALUE(rs_written) TYPE zif_cd_ops_pattern_types=>ty_written
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS stamp
       CHANGING
@@ -117,7 +117,7 @@ CLASS zcl_cd_ops_pattern_dao DEFINITION
         it_new        TYPE ANY TABLE
         iv_key_change TYPE abap_bool
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 
@@ -170,7 +170,7 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           ORDER BY check_id
           INTO TABLE @DATA(lt_def).
         LOOP AT lt_def ASSIGNING FIELD-SYMBOL(<ls_def>).
-          LOOP AT zcl_cd_ops_util=>split_list( <ls_def>-param1 ) INTO DATA(lv_item).
+          LOOP AT zcl_ca_ops_util=>split_list( <ls_def>-param1 ) INTO DATA(lv_item).
             INSERT VALUE #( source  = |{ zif_cd_ops_pattern_types=>gc_table-hck_def } { <ls_def>-check_id } {
                                         zif_cd_ops_pattern_types=>gc_field-param1 }|
                             pattern = lv_item ) INTO TABLE rt_patterns.
@@ -195,12 +195,12 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
         OR zif_cd_ops_pattern_types=>gc_area-alert_grp1
         OR zif_cd_ops_pattern_types=>gc_area-alert_grp2.
         SELECT rule_id, rule_pattern, check_pattern, group1_pattern, group2_pattern
-          FROM zcd_ops_alrule
+          FROM zca_ops_alrule
           WHERE active = @abap_true
           ORDER BY rule_id
           INTO TABLE @DATA(lt_rule).
         LOOP AT lt_rule ASSIGNING FIELD-SYMBOL(<ls_rule>).
-          DATA(lv_pattern) = SWITCH zif_cd_ops_types=>ty_pattern(
+          DATA(lv_pattern) = SWITCH zif_ca_ops_types=>ty_pattern(
             iv_area
             WHEN zif_cd_ops_pattern_types=>gc_area-alert_rule  THEN <ls_rule>-rule_pattern
             WHEN zif_cd_ops_pattern_types=>gc_area-alert_check THEN <ls_rule>-check_pattern
@@ -273,8 +273,8 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
     CASE iv_area.
       WHEN zif_cd_ops_pattern_types=>gc_area-hck_suppr.
         SELECT DISTINCT f~object_key
-          FROM zcd_ops_finding AS f
-          INNER JOIN zcd_ops_run AS r
+          FROM zca_ops_finding AS f
+          INNER JOIN zca_ops_run AS r
             ON r~run_id = f~run_id
           WHERE r~started_at BETWEEN @lv_from AND @lv_to
             AND f~pe_area IN @lt_area
@@ -283,8 +283,8 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           UP TO @iv_max_rows ROWS.
       WHEN zif_cd_ops_pattern_types=>gc_area-alert_rule.
         SELECT DISTINCT f~rule_id
-          FROM zcd_ops_finding AS f
-          INNER JOIN zcd_ops_run AS r
+          FROM zca_ops_finding AS f
+          INNER JOIN zca_ops_run AS r
             ON r~run_id = f~run_id
           WHERE r~started_at BETWEEN @lv_from AND @lv_to
           ORDER BY f~rule_id
@@ -292,8 +292,8 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           UP TO @iv_max_rows ROWS.
       WHEN zif_cd_ops_pattern_types=>gc_area-alert_check.
         SELECT DISTINCT f~check_code
-          FROM zcd_ops_finding AS f
-          INNER JOIN zcd_ops_run AS r
+          FROM zca_ops_finding AS f
+          INNER JOIN zca_ops_run AS r
             ON r~run_id = f~run_id
           WHERE r~started_at BETWEEN @lv_from AND @lv_to
           ORDER BY f~check_code
@@ -301,8 +301,8 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           UP TO @iv_max_rows ROWS.
       WHEN zif_cd_ops_pattern_types=>gc_area-alert_grp1.
         SELECT DISTINCT f~group1
-          FROM zcd_ops_finding AS f
-          INNER JOIN zcd_ops_run AS r
+          FROM zca_ops_finding AS f
+          INNER JOIN zca_ops_run AS r
             ON r~run_id = f~run_id
           WHERE r~started_at BETWEEN @lv_from AND @lv_to
           ORDER BY f~group1
@@ -310,8 +310,8 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           UP TO @iv_max_rows ROWS.
       WHEN zif_cd_ops_pattern_types=>gc_area-alert_grp2.
         SELECT DISTINCT f~group2
-          FROM zcd_ops_finding AS f
-          INNER JOIN zcd_ops_run AS r
+          FROM zca_ops_finding AS f
+          INNER JOIN zca_ops_run AS r
             ON r~run_id = f~run_id
           WHERE r~started_at BETWEEN @lv_from AND @lv_to
           ORDER BY f~group2
@@ -336,7 +336,7 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
         lv_table = <ls_scope>-table.
         TRY.
             lr_rows = read_table( lv_table ).
-          CATCH zcx_cd_ops_error.
+          CATCH zcx_ca_ops_error.
             " Table not active yet (pull in progress): nothing to migrate in it
             CLEAR lr_rows.
         ENDTRY.
@@ -478,7 +478,7 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
         lv_failed = xsdbool( sy-subrc <> 0 ).
       WHEN zif_cd_ops_pattern_types=>gc_table-alert_rule.
         lt_rule = it_new.
-        UPDATE zcd_ops_alrule FROM TABLE @lt_rule.
+        UPDATE zca_ops_alrule FROM TABLE @lt_rule.
         lv_failed = xsdbool( sy-subrc <> 0 ).
       WHEN zif_cd_ops_pattern_types=>gc_table-hck_def.
         lt_def = it_new.
@@ -544,7 +544,7 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
                min_rag, on_abort, channel, destination, digest, max_items, throttle_min, quiet_from, quiet_to,
                escalate_after, escalation_dest, esc_override, active, changed_by, changed_at, last_changed_by,
                last_changed_at, local_last_changed_at
-          FROM zcd_ops_alrule
+          FROM zca_ops_alrule
           ORDER BY PRIMARY KEY
           INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_rule).
         rr_rows = NEW tt_rule( lt_rule ).

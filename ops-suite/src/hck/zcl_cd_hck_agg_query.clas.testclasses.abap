@@ -50,7 +50,7 @@ CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_query) TYPE zif_cd_hck_types=>ty_agg_query
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS assert_msgno
       IMPORTING
@@ -106,7 +106,7 @@ CLASS ltc_agg_query IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = |{ iv_msg }: no exception raised| ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = iv_msgno
                                             msg = iv_msg ).

@@ -1,6 +1,6 @@
 // Artifact: zc_cd_fmonfile.dcls.asdcls
 // Purpose: Read access to the file manual-status app (service ZUI_CD_FMON_MAN): authorization object
-//          ZCD_OPS with ZCD_PE_AREA FMON and ACTVT 03. Every row is a file of file monitoring, so the
+//          ZCD_OPS with ZCA_PARAR FMON and ACTVT 03. Every row is a file of file monitoring, so the
 //          area is a fixed value of the condition (no element of the view is mapped).
 // Modification log: 2026-11-10 | Initial version (read authorisation of the operations apps).
 // VERIFY-ADT: pfcg_auth with an empty element list and fixed field values (7.58).
@@ -8,5 +8,5 @@
 @MappingRole: true
 define role ZC_CD_FmonFile {
   grant select on ZC_CD_FmonFile
-    where ( ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA = 'FMON', ACTVT = '03' );
+    where ( ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR = 'CD_FMON', ACTVT = '03' );
 }

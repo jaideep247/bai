@@ -61,8 +61,8 @@ CLASS zcl_cd_hck_c_gl_transfer IMPLEMENTATION.
     LOOP AT lt_gaps ASSIGNING FIELD-SYMBOL(<ls_gap>).
       INSERT VALUE #( object_key = |{ <ls_gap>-fikey }/{ <ls_gap>-bukrs }|
                       check_code = zif_cd_hck_types=>gc_code-gl_gap
-                      severity   = zif_cd_ops_types=>gc_severity-error
-                      action     = zif_cd_ops_types=>gc_action-exception
+                      severity   = zif_ca_ops_types=>gc_severity-error
+                      action     = zif_ca_ops_types=>gc_action-exception
                       reference  = <ls_gap>-fikey
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-reconciliation_key_has_tota
                                                           iv_v1    = <ls_gap>-fikey

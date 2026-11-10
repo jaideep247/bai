@@ -30,7 +30,7 @@ CLASS zcl_cd_ebs_r_s10_complete IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>) WHERE source = zif_cd_ebs_types=>gc_source-feb.
       DATA(lv_open) = 0.
-      DATA(lv_amount) = CONV zif_cd_ops_types=>ty_amount( 0 ).
+      DATA(lv_amount) = CONV zif_ca_ops_types=>ty_amount( 0 ).
       " A26: an entry the business never posts (NOT_POSTED, e.g. sweeps) is complete unposted
       LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>) USING KEY stmt
            WHERE stmt_key = <ls_statement>-stmt_key AND belnr IS INITIAL AND blocked = abap_false

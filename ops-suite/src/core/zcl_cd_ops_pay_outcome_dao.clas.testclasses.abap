@@ -538,13 +538,13 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
 
   METHOD query.
     INSERT gc_agg-wire INTO TABLE rs_query-methods.
-    rs_query-all_ages = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                 option = zif_cd_ops_types=>gc_range-option_equal
+    rs_query-all_ages = VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                 option = zif_ca_ops_types=>gc_range-option_equal
                                  ( low = zif_cd_ops_payout_types=>gc_outcome-in_flight )
                                  ( low = zif_cd_ops_payout_types=>gc_outcome-undetermined )
                                  ( low = zif_cd_ops_payout_types=>gc_outcome-inconsistent ) ).
-    rs_query-recent = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                               option = zif_cd_ops_types=>gc_range-option_equal
+    rs_query-recent = VALUE #( sign   = zif_ca_ops_types=>gc_range-sign_include
+                               option = zif_ca_ops_types=>gc_range-option_equal
                                ( low = zif_cd_ops_payout_types=>gc_outcome-cleared ) ).
     rs_query-final_from = gc-day.
     rs_query-lag_limit  = gc_agg-lag_limit.
@@ -744,8 +744,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
                                                     ( version( iv_augbl = gc-doc_new
                                                                iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) ) ) ).
         DATA(ls_query) = query( ).
-        ls_query-statuses = VALUE #( ( sign = zif_cd_ops_types=>gc_range-sign_include
-                                       option = zif_cd_ops_types=>gc_range-option_equal low = gc_agg-issued ) ).
+        ls_query-statuses = VALUE #( ( sign = zif_ca_ops_types=>gc_range-sign_include
+                                       option = zif_ca_ops_types=>gc_range-option_equal low = gc_agg-issued ) ).
         DATA(lt_rows) = mo_cut->get_outcome_rows( is_query = ls_query iv_max = 100 ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'Only the ISSUED payment' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-doc1r exp = gc-doc_old msg = 'The ISSUED payment' ).
@@ -1034,7 +1034,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   " Rule (review 2026-11-10): a judgement made on rows another run changed meanwhile (here: NIGHTLY
   " re-evaluated the open row after FAST read it) writes nothing - 780, the package is retried
   METHOD stale_judgement_writes_none.
-    DATA lx_stale TYPE REF TO zcx_cd_ops_error.
+    DATA lx_stale TYPE REF TO zcx_ca_ops_error.
     DATA(ls_read) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
     ls_read-evaluated_at = gc-from.
     TRY.
@@ -1068,7 +1068,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
                                it_insert = VALUE #( ( ls_closing ) ) ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_db).
         cl_abap_unit_assert=>fail( msg = lx_db->get_text( ) ).
-      CATCH zcx_cd_ops_error INTO lx_stale.
+      CATCH zcx_ca_ops_error INTO lx_stale.
         " expected
     ENDTRY.
     cl_abap_unit_assert=>assert_bound( act = lx_stale msg = 'A stale judgement raises' ).
@@ -1082,7 +1082,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   " Rule (review 2026-11-10): before a row is inserted as current, every current row of its key is
   " closed or deleted in the same write - never two current rows of one key
   METHOD second_current_row_refused.
-    DATA lx_second TYPE REF TO zcx_cd_ops_error.
+    DATA lx_second TYPE REF TO zcx_ca_ops_error.
     DATA(ls_current) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-inconsistent ).
     TRY.
         mo_cut->save_versions( it_basis  = VALUE #( )
@@ -1103,7 +1103,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
                                it_insert = VALUE #( ( ls_second ) ) ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_db).
         cl_abap_unit_assert=>fail( msg = lx_db->get_text( ) ).
-      CATCH zcx_cd_ops_error INTO lx_second.
+      CATCH zcx_ca_ops_error INTO lx_second.
         " expected
     ENDTRY.
     cl_abap_unit_assert=>assert_bound( act = lx_second msg = 'A second current row raises' ).

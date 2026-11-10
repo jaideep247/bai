@@ -55,7 +55,7 @@ Every SLA row is delivered with `ACTIVE = X`. New rows only by customizing trans
 
 ## ZCD_FMON_SLA, kind DEADLINE (stage reached by a clock time of a business day — user requirement 2026-11-07; was ZCD_FMON_DEADL)
 
-"Alert if BAI is not processed until 10 AM" (JPMC and BOA, **10:00 US Central** — `FMON_TIME_ZONE` = CST, Central time with US daylight saving, i.e. 10:00 local all year; normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*` - unchanged by the consolidation). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. A similar alert is a new DEADLINE row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created in DV1 on a customizing request, tested in QA1 and transported to PS4; in PS4 support only edits existing rows (due time, severity, ACTIVE) (`Operations_Runbook.md` §5h).
+"Alert if BAI is not processed until 10 AM" (JPMC and BOA, **10:00 US Central** — `FMON_TIME_ZONE` = CST, Central time with US daylight saving, i.e. 10:00 local all year; normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*` - unchanged by the consolidation). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. A similar alert is a new DEADLINE row here (and, if needed, a rule in `ZCA_OPS_ALRULE`), created in DV1 on a customizing request, tested in QA1 and transported to PS4; in PS4 support only edits existing rows (due time, severity, ACTIVE) (`Operations_Runbook.md` §5h).
 
 | IFACE_ID | STAGE | KIND | DAY_TYPE | MAX_MINUTES | BASIS | DUE_TIME | SEVERITY | ACTIVE | DESCRIPTION |
 |---|---|---|---|---|---|---|---|---|---|
@@ -222,4 +222,4 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 
 ## Alerting
 
-FMON calls the core router (`ZIF_CD_OPS_ALERT~DISPATCH`) once per run. Thresholds, recipients, channels, digest, throttling and quiet hours are rows of `ZCD_OPS_ALRULE` (owned by core), e.g. payment engine area `FMON`, minimum severity `E`, group1 pattern `ACH_.*` (PCRE, complete value, case ignored). FMON keeps no alert configuration of its own.
+FMON calls the core router (`ZIF_CA_OPS_ALERT~DISPATCH`) once per run. Thresholds, recipients, channels, digest, throttling and quiet hours are rows of `ZCA_OPS_ALRULE` (owned by core), e.g. payment engine area `FMON`, minimum severity `E`, group1 pattern `ACH_.*` (PCRE, complete value, case ignored). FMON keeps no alert configuration of its own.

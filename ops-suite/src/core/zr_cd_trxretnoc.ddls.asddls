@@ -17,7 +17,7 @@ define root view entity ZR_CD_TrxRetNoc
   key SubItem,
   key LotKind,
   key LotItemKey,
-      cast( 'CORE' as abap.char( 4 ) )                      as PaymentEngineArea,
+      cast( 'CD_OPS' as abap.char( 16 ) )                      as PaymentEngineArea,
       Reason,
       LotStatus,
       FinId,

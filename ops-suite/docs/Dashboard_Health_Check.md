@@ -22,8 +22,8 @@ Fiori elements **analytical list page** (OData V4, service `ZUI_CD_HCK_DASH`, ma
 
 ## 2. Freshness
 
-- The dashboard reads what the morning report (`ZCD_MORNING_REPORT`, `ZCL_CD_HCK_ENGINE`) stored: `ZCD_OPS_RUN`, **`ZCD_HCK_RESULT`** (verdict of each check per run, design review 2026-11-07), `ZCD_OPS_FINDING` (area HCK, object CHECK - open exceptions, findings), `ZCD_HCK_METRIC` (history). It runs no check and derives no status.
-- **As of** = `ENDED_AT` of the last **completed** HCK run: not test mode, status S, W or E (GREEN closes S, AMBER W, RED and unrated E — A60). Running (R) and aborted (A — incl. a run refused because another held the lock, `ZCL_CD_OPS_RUN_GUARD`) runs never move it. Any report variant.
+- The dashboard reads what the morning report (`ZCD_MORNING_REPORT`, `ZCL_CD_HCK_ENGINE`) stored: `ZCA_OPS_RUN`, **`ZCD_HCK_RESULT`** (verdict of each check per run, design review 2026-11-07), `ZCA_OPS_FINDING` (area HCK, object CHECK - open exceptions, findings), `ZCD_HCK_METRIC` (history). It runs no check and derives no status.
+- **As of** = `ENDED_AT` of the last **completed** HCK run: not test mode, status S, W or E (GREEN closes S, AMBER W, RED and unrated E — A60). Running (R) and aborted (A — incl. a run refused because another held the lock, `ZCL_CA_OPS_RUN_GUARD`) runs never move it. Any report variant.
 - **Stale** after the parameter `MON_STALE_AFTER_MIN_<area>` (ZCA_PARAM area `CD_OPS`: value row, else definition default, read through `ZI_CD_OpsStaleCfg`; was the `ZCD_OPS_MONCFG` row until the table consolidation of 2026-11-08; the morning report self-check reads the same parameter) or when there is no completed run; without a definition **26 hours** (`HCK_MAX_AGE_HOURS` default; fallback literal in `ZR_CD_HckAsOf`, portable check `cds_abap_parity`). Delivered definition default HCK = 1560. `AgeMinutes` and `StaleAfterMinutes` exposed.
 
 ## 3. Status of a check (last completed run)
@@ -41,7 +41,7 @@ Fiori elements **analytical list page** (OData V4, service `ZUI_CD_HCK_DASH`, ma
 | SKIPPED | Active check outside the scope of a filtered run (category / priority / check filter); the scope is shown | grey |
 | NO_RESULT | No row in the as-of run (e.g. a check activated after it) | grey |
 
-Shown with the status: **completion** (COMPLETE / PARTIAL - timeout, time budget, capped read / FAILED / SKIPPED), **evidence** (ALL / PARTIAL - e.g. a mandatory in-flight evidence kind not usable / NONE), **scope of the run** (variant, categories, priorities, check ids), **baseline mode** used (NONE / ZSCORE / IQR / MIXED), summary and execution time. The **overall RAG** and the **health score** stay those the engine stored: RAG in `ZCD_OPS_RUN-RAG`, score and critical / high counts in the run message (`HealthKpi-RunMessage`, `HealthRun`). **Open exceptions** per check count every open / assigned HCK finding, whatever run raised it (an exception of an older run is still open; it does not change today's status). Category status = worst check of the category (RED, AMBER, GREEN; GREY when no check has a verdict).
+Shown with the status: **completion** (COMPLETE / PARTIAL - timeout, time budget, capped read / FAILED / SKIPPED), **evidence** (ALL / PARTIAL - e.g. a mandatory in-flight evidence kind not usable / NONE), **scope of the run** (variant, categories, priorities, check ids), **baseline mode** used (NONE / ZSCORE / IQR / MIXED), summary and execution time. The **overall RAG** and the **health score** stay those the engine stored: RAG in `ZCA_OPS_RUN-RAG`, score and critical / high counts in the run message (`HealthKpi-RunMessage`, `HealthRun`). **Open exceptions** per check count every open / assigned HCK finding, whatever run raised it (an exception of an older run is still open; it does not change today's status). Category status = worst check of the category (RED, AMBER, GREEN; GREY when no check has a verdict).
 
 Category texts (A financial integrity, B mass-run and job health, C exception queues, D configuration drift, E technical health) are CDS literals = `HCK_MORNING_REPORT.md` §1.
 
@@ -98,7 +98,7 @@ Service binding `ZUI_CD_HCK_DASH_O4` (path VERIFY-ADT).
 
 ## 9. Tests
 
-`ZCL_CD_HCK_DASH_CDS_TEST` (doubles of ZCD_HCK_DEF, ZCD_HCK_RESULT, ZCD_HCK_METRIC, ZCD_OPS_FINDING, ZCD_OPS_RUN):
+`ZCL_CD_HCK_DASH_CDS_TEST` (doubles of ZCD_HCK_DEF, ZCD_HCK_RESULT, ZCD_HCK_METRIC, ZCA_OPS_FINDING, ZCA_OPS_RUN):
 
 | Class | Tests |
 |---|---|
@@ -118,7 +118,7 @@ Service binding `ZUI_CD_HCK_DASH_O4` (path VERIFY-ADT).
 | HCD-06 | Resolve an older exception of a green check | Open count drops; status unchanged |
 | HCD-07 | `B_VOLUME` with DIM2 per payment method | Metric history chart: one line per DIM2 series; values equal ZCD_HCK_METRIC |
 | HCD-08 | User without ZCD_OPS HCK / 03 | No rows |
-| HCD-09 | ST05 | SELECT only on ZCD_OPS_RUN / _FINDING, ZCD_HCK_DEF / _RESULT / _METRIC |
+| HCD-09 | ST05 | SELECT only on ZCA_OPS_RUN / _FINDING, ZCD_HCK_DEF / _RESULT / _METRIC |
 | HCD-10 | Check that ran green without a metric (e.g. no open exception queue) | GREEN, metric rows 0 - same as the report mail |
 | HCD-11 | Baseline check in warm-up next to a fixed limit the value passes | GREEN on the dashboard and in the report; baseline mode ZSCORE shown |
 | HCD-12 | Check class that raises (test client) | FAILED, completion FAILED, evidence NONE; counted red, never green |

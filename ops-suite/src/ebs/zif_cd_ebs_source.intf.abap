@@ -17,6 +17,6 @@ INTERFACE zif_cd_ebs_source
     RETURNING
       VALUE(rs_package) TYPE zif_cd_ebs_types=>ty_package
     RAISING
-      zcx_cd_ops_error.
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

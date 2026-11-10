@@ -61,7 +61,7 @@ CLASS zcl_cd_hck_ev_stmt_cheque IMPLEMENTATION.
     LOOP AT ls_lines-ambiguous ASSIGNING FIELD-SYMBOL(<ls_ambiguous>).
       zcl_cd_hck_ev_support=>add_anomaly( EXPORTING iv_doc1r    = <ls_ambiguous>-doc1r
                                                     iv_code     = zif_cd_hck_runtime_types=>gc_code-cheque_ambiguous
-                                                    iv_severity = zif_cd_ops_types=>gc_severity-error
+                                                    iv_severity = zif_ca_ops_types=>gc_severity-error
                                                     iv_detail   = <ls_ambiguous>-detail
                                           CHANGING  ct_evidence = rs_result-evidence ).
     ENDLOOP.

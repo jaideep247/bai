@@ -62,6 +62,7 @@ CLASS ltc_param DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
     METHODS class_interface_validated FOR TESTING.
     METHODS unknown_area_raises FOR TESTING.
     METHODS inactive_area_raises FOR TESTING.
+    METHODS check_area_known_and_active FOR TESTING.
     METHODS unknown_name_raises FOR TESTING.
     METHODS name_is_case_insensitive FOR TESTING.
     METHODS is_set_ignores_default FOR TESTING.
@@ -453,6 +454,34 @@ CLASS ltc_param IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = error_of( io_param = lo_param iv_read_as = zif_ca_param_types=>gc_read_as-value )
                                         exp = zif_ca_param_types=>gc_msg-area_inactive
                                         msg = `Inactive area: exception` ).
+  ENDMETHOD.
+
+
+  METHOD check_area_known_and_active.
+    DATA lv_msgno TYPE symsgno.
+    DATA(lo_param) = given( )->param( gc_name )->build( ).
+    TRY.
+        lo_param->check_area( gc_area ).
+      CATCH zcx_ca_param INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+    TRY.
+        lo_param->check_area( 'ZNONE' ).
+      CATCH zcx_ca_param INTO DATA(lx_unknown).
+        lv_msgno = lx_unknown->if_t100_message~t100key-msgno.
+    ENDTRY.
+    cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = zif_ca_param_types=>gc_msg-area_unknown
+                                        msg = `An unknown area is refused` ).
+    CLEAR lv_msgno.
+    DATA(lo_inactive) = NEW zcl_ca_param_builder( )->area( iv_area = gc_area iv_active = abap_false
+                                                  )->param( gc_name )->build( ).
+    TRY.
+        lo_inactive->check_area( gc_area ).
+      CATCH zcx_ca_param INTO DATA(lx_inactive).
+        lv_msgno = lx_inactive->if_t100_message~t100key-msgno.
+    ENDTRY.
+    cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = zif_ca_param_types=>gc_msg-area_inactive
+                                        msg = `An inactive area is refused` ).
   ENDMETHOD.
 
 

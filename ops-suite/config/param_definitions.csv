@@ -1,11 +1,8 @@
 AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DEVELOPER_OWNED,DESCRIPTION,OWNER
-CD_OPS,ALERT_DEFAULT,P,LIST,,,,,,,,SO23 shared lists when ALERT_<route> is blank (comma list),PE RTB
-CD_OPS,ALERT_ESCALATION_WINDOW_H,P,INT,1,,24,,,,,Escalation look-back window of an alert rule (hours),PE RTB
-CD_OPS,ALERT_MORNING,P,LIST,,,,,,,,SO23 shared lists of route MORNING (morning report),PE RTB
-CD_OPS,MON_STALE_AFTER_MIN_CORE,P,INT,1,,30,,,,,Minutes of payment outcome snapshot lag before it is stale,PE RTB
-CD_OPS,MON_STALE_AFTER_MIN_EBS,P,INT,1,,1560,,,,,Minutes after the last EBS run before its monitor is stale,PE RTB
-CD_OPS,MON_STALE_AFTER_MIN_FMON,P,INT,1,,15,,,,,Minutes after the last FMON run before its monitor is stale,PE RTB
-CD_OPS,MON_STALE_AFTER_MIN_HCK,P,INT,1,,1560,,,,,Minutes after the last HCK run before its monitor is stale,PE RTB
+CD_OPS,MON_STALE_AFTER_MIN_CD_EBS,P,INT,1,,1560,,,,,Minutes after the last EBS run before its monitor is stale,PE RTB
+CD_OPS,MON_STALE_AFTER_MIN_CD_FMON,P,INT,1,,15,,,,,Minutes after the last FMON run before its monitor is stale,PE RTB
+CD_OPS,MON_STALE_AFTER_MIN_CD_HCK,P,INT,1,,1560,,,,,Minutes after the last HCK run before its monitor is stale,PE RTB
+CD_OPS,MON_STALE_AFTER_MIN_CD_OPS,P,INT,1,,30,,,,,Minutes of payment outcome snapshot lag before it is stale,PE RTB
 CD_OPS,PAYOUT_BATCH_MAX_PACKAGES,P,INT,1,,1000,,,,,Packages per NIGHTLY / SWEEP run of the payment worklist,PE RTB
 CD_OPS,PAYOUT_EXAMPLES,P,INT,1,100,10,,,,,Payments listed per aggregated finding (oldest first),PE RTB
 CD_OPS,PAYOUT_FAIL_ESCALATE,P,INT,1,100,3,,,,,Snapshot runs failed in a row before the failure is an error,PE RTB
@@ -21,25 +18,6 @@ CD_OPS,POSTAREA_BTR,P,CHAR,,,ZBTR,Z[A-Z0-9]{3},,X,X,Posting area of the bank cod
 CD_OPS,POSTAREA_KTOPL,P,CHAR,,,,"[A-Z0-9]{1,4}",,,X,Chart of accounts of the posting area entries (blank = none),PE RTB
 CD_OPS,POSTAREA_PMC,P,CHAR,,,ZPMC,Z[A-Z0-9]{3},,X,X,Posting area of the method classes (was ZCD_HCK_PMCLASS),PE RTB
 CD_OPS,POSTAREA_RSN,P,CHAR,,,ZRSN,Z[A-Z0-9]{3},,X,X,Posting area of return / NOC reasons (was ZCD_EBS_RSN_MAP),PE RTB
-CD_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,PE RTB
-CD_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),PE RTB
-CD_OPS,RETENTION_DAYS_FMON_EVENT,P,INT,,,400,,,,,Retention of file monitoring events (days; >= 30),PE RTB
-CD_OPS,RETENTION_DAYS_FMON_FILE,P,INT,,,400,,,,,Retention of the file registry (days; >= 30),PE RTB
-CD_OPS,RETENTION_DAYS_FMON_PRISM,P,INT,,,400,,,,,Retention of PRISM status events (days; >= 30),PE RTB
-CD_OPS,RETENTION_DAYS_HCK_METRIC,P,INT,,,400,,,,,Retention of health check metrics (days; >= 30),PE RTB
-CD_OPS,RETENTION_DAYS_HCK_RESULT,P,INT,,,400,,,,,Retention of health check verdicts per run (days; >= 30),PE RTB
-CD_OPS,RETENTION_DAYS_PAY_OUTCOME,P,INT,,,90,,,,,Retention of closed / final outcome versions (days; >= 30),PE RTB
-CD_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),PE RTB
-CD_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,PE RTB
-CD_OPS,SLA_DAYS_EBS_B,P,INT,0,,,,,,,SLA days of EBS blocking exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_EBS_E,P,INT,0,,,,,,,SLA days of EBS error exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_EBS_W,P,INT,0,,,,,,,SLA days of EBS warning exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_FMON_B,P,INT,0,,,,,,,SLA days of FMON blocking exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_FMON_E,P,INT,0,,,,,,,SLA days of FMON error exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_FMON_W,P,INT,0,,,,,,,SLA days of FMON warning exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_HCK_B,P,INT,0,,,,,,,SLA days of HCK blocking exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_HCK_E,P,INT,0,,,,,,,SLA days of HCK error exceptions (blank = default),PE RTB
-CD_OPS,SLA_DAYS_HCK_W,P,INT,0,,,,,,,SLA days of HCK warning exceptions (blank = default),PE RTB
 CD_OPS,TRACE_ACK_NACK_VALUES,P,LIST,,,"NACK,REJECTED,R",,,,,Acknowledgement statuses that mean rejected (comma list),PE RTB
 CD_OPS,TRACE_BANK_LOOKBACK_DAYS,P,INT,0,,5,,,,,Days after the payment searched for bank evidence,PE RTB
 CD_OPS,TRACE_BP_SOURCE_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,Field of the business partner source (blank = not read),PE RTB
@@ -102,16 +80,16 @@ CD_HCK,HCK_INFLIGHT_MAX_ROWS,P,INT,,,5000,,,,,Payments read per window of A_INFL
 CD_HCK,HCK_LOOKBACK_RUNS,P,INT,1,,8,,,,,Default baseline history points,PE RTB
 CD_HCK,HCK_MAIL_ROUTE,P,CHAR,,,MORNING,[A-Z][A-Z0-9_]*,,X,,Route of the morning report e-mail (needs ALERT_<route>),PE RTB
 CD_HCK,HCK_MAX_AGE_HOURS,P,INT,1,,26,,,,,Default max age of an area's last run (hours),PE RTB
-CD_HCK,HCK_MAX_AGE_H_EBS,P,INT,1,,,,,,,Max age of the last EBS run (hours; blank = default),PE RTB
-CD_HCK,HCK_MAX_AGE_H_FMON,P,INT,1,,,,,,,Max age of the last FMON run (hours; blank = default),PE RTB
-CD_HCK,HCK_MAX_AGE_H_HCK,P,INT,1,,,,,,,Max age of the last HCK run (hours; blank = default),PE RTB
+CD_HCK,HCK_MAX_AGE_H_CD_EBS,P,INT,1,,,,,,,Max age of the last EBS run (hours; blank = default),PE RTB
+CD_HCK,HCK_MAX_AGE_H_CD_FMON,P,INT,1,,,,,,,Max age of the last FMON run (hours; blank = default),PE RTB
+CD_HCK,HCK_MAX_AGE_H_CD_HCK,P,INT,1,,,,,,,Max age of the last HCK run (hours; blank = default),PE RTB
 CD_HCK,HCK_MAX_AGG_ROWS,P,INT,,,5000,,,,,Groups of an aggregate check (ceiling 50000),PE RTB
 CD_HCK,HCK_MAX_JOB_NAMES,P,INT,,,20000,,,,,Distinct TBTCO job names per window (ceiling 200000),PE RTB
 CD_HCK,HCK_MAX_JOB_ROWS,P,INT,,,5000,,,,,TBTCO job runs per read (ceiling 50000),PE RTB
 CD_HCK,HCK_MAX_RUN_MIN,P,INT,1,,120,,,,,Runtime of a run before it counts as hung (minutes),PE RTB
-CD_HCK,HCK_MAX_RUN_MIN_EBS,P,INT,1,,,,,,,Hung limit of EBS runs (minutes; blank = default),PE RTB
-CD_HCK,HCK_MAX_RUN_MIN_FMON,P,INT,1,,,,,,,Hung limit of FMON runs (minutes; blank = default),PE RTB
-CD_HCK,HCK_MAX_RUN_MIN_HCK,P,INT,1,,,,,,,Hung limit of HCK runs (minutes; blank = default),PE RTB
+CD_HCK,HCK_MAX_RUN_MIN_CD_EBS,P,INT,1,,,,,,,Hung limit of EBS runs (minutes; blank = default),PE RTB
+CD_HCK,HCK_MAX_RUN_MIN_CD_FMON,P,INT,1,,,,,,,Hung limit of FMON runs (minutes; blank = default),PE RTB
+CD_HCK,HCK_MAX_RUN_MIN_CD_HCK,P,INT,1,,,,,,,Hung limit of HCK runs (minutes; blank = default),PE RTB
 CD_HCK,HCK_MAX_TECH_ROWS,P,INT,,,5000,,,,,NRIV intervals / queue groups per read (ceiling 50000),PE RTB
 CD_HCK,HCK_PAY_ACK_FILE_CLASSES,P,LIST,,,"CACH,CCRD",,,,,Flow + method classes acknowledged per file (list),PE RTB
 CD_HCK,HCK_PAY_ACK_FILE_SRC,P,CHAR,,,REGUT,"[A-Z0-9_]{1,10}",,,,FMON source whose GROUP_FIELDS name the payment run,PE RTB
@@ -140,7 +118,23 @@ CD_HCK,HCK_STRIPE_TYPE_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,Stripe payout log: re
 CD_HCK,HCK_SUPPRESS_MAX_DAYS,P,INT,1,,7,,,,,Longest suppression without a second user (days),PE RTB
 CD_HCK,HCK_TIMEOUT_SEC,P,INT,1,,300,,,,,Default check timeout (seconds),PE RTB
 CD_HCK,HCK_TOP_N,P,INT,0,,20,,,,,Open exceptions listed in the morning report,PE RTB
-CD_HCK,HCK_WATCH_PE_AREAS,P,LIST,,,"EBS,FMON,HCK",,,,,Areas whose last run is checked (comma list),PE RTB
+CD_HCK,HCK_WATCH_PE_AREAS,P,LIST,,,"CD_EBS,CD_FMON,CD_HCK",,,,,Areas whose last run is checked (comma list),PE RTB
 CD_HCK,HCK_WEIGHT_H,P,INT,0,,3,,,,,Score weight of priority H,PE RTB
 CD_HCK,HCK_WEIGHT_L,P,INT,0,,1,,,,,Score weight of priority L,PE RTB
 CD_HCK,HCK_WEIGHT_M,P,INT,0,,2,,,,,Score weight of priority M,PE RTB
+CA_OPS,ALERT_MORNING,P,LIST,,,,,,,,SO23 shared lists of route MORNING (morning report),PE RTB
+CA_OPS,RETENTION_DAYS_FMON_EVENT,P,INT,,,400,,,,,Retention of file monitoring events (days; >= 30),PE RTB
+CA_OPS,RETENTION_DAYS_FMON_FILE,P,INT,,,400,,,,,Retention of the file registry (days; >= 30),PE RTB
+CA_OPS,RETENTION_DAYS_FMON_PRISM,P,INT,,,400,,,,,Retention of PRISM status events (days; >= 30),PE RTB
+CA_OPS,RETENTION_DAYS_HCK_METRIC,P,INT,,,400,,,,,Retention of health check metrics (days; >= 30),PE RTB
+CA_OPS,RETENTION_DAYS_HCK_RESULT,P,INT,,,400,,,,,Retention of health check verdicts per run (days; >= 30),PE RTB
+CA_OPS,RETENTION_DAYS_PAY_OUTCOME,P,INT,,,90,,,,,Retention of closed / final outcome versions (days; >= 30),PE RTB
+CA_OPS,SLA_DAYS_CD_EBS_B,P,INT,0,,,,,,,SLA days of EBS blocking exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_EBS_E,P,INT,0,,,,,,,SLA days of EBS error exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_EBS_W,P,INT,0,,,,,,,SLA days of EBS warning exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_FMON_B,P,INT,0,,,,,,,SLA days of FMON blocking exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_FMON_E,P,INT,0,,,,,,,SLA days of FMON error exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_FMON_W,P,INT,0,,,,,,,SLA days of FMON warning exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_HCK_B,P,INT,0,,,,,,,SLA days of HCK blocking exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_HCK_E,P,INT,0,,,,,,,SLA days of HCK error exceptions (blank = default),PE RTB
+CA_OPS,SLA_DAYS_CD_HCK_W,P,INT,0,,,,,,,SLA days of HCK warning exceptions (blank = default),PE RTB

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_SUSO" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <TOBJ>
+    <OBJCT>ZCA_OPS</OBJCT>
+    <FIEL1>ZCA_PARAR</FIEL1>
+    <FIEL2>ACTVT</FIEL2>
+    <FIEL3>BUKRS</FIEL3>
+    <OCLSS>ZCA</OCLSS>
+   </TOBJ>
+   <TOBJT>
+    <LANGU>E</LANGU>
+    <OBJECT>ZCA_OPS</OBJECT>
+    <TTEXT>Operations framework: runs, findings, alerts per area</TTEXT>
+   </TOBJT>
+   <TOBJVORFLG>
+    <OBJCT>ZCA_OPS</OBJCT>
+   </TOBJVORFLG>
+   <TACTZ>
+    <TACTZ>
+     <BROBJ>ZCA_OPS</BROBJ>
+     <ACTVT>01</ACTVT>
+    </TACTZ>
+    <TACTZ>
+     <BROBJ>ZCA_OPS</BROBJ>
+     <ACTVT>02</ACTVT>
+    </TACTZ>
+    <TACTZ>
+     <BROBJ>ZCA_OPS</BROBJ>
+     <ACTVT>03</ACTVT>
+    </TACTZ>
+    <TACTZ>
+     <BROBJ>ZCA_OPS</BROBJ>
+     <ACTVT>06</ACTVT>
+    </TACTZ>
+    <TACTZ>
+     <BROBJ>ZCA_OPS</BROBJ>
+     <ACTVT>16</ACTVT>
+    </TACTZ>
+    <TACTZ>
+     <BROBJ>ZCA_OPS</BROBJ>
+     <ACTVT>85</ACTVT>
+    </TACTZ>
+   </TACTZ>
+  </asx:values>
+ </asx:abap>
+</abapGit>

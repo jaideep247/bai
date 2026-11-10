@@ -34,14 +34,14 @@ CLASS zcl_cd_ops_pattern_check DEFINITION
       IMPORTING
         iv_area           TYPE zif_cd_ops_pattern_types=>ty_area
       RETURNING
-        VALUE(rv_pe_area) TYPE zif_cd_ops_types=>ty_pe_area.
+        VALUE(rv_pe_area) TYPE zif_ca_ops_types=>ty_area.
 
     "! Payment engine area that owns a configuration table of the migration (authorisation)
     CLASS-METHODS pe_area_of_table
       IMPORTING
         iv_table          TYPE zif_cd_ops_pattern_types=>ty_name
       RETURNING
-        VALUE(rv_pe_area) TYPE zif_cd_ops_types=>ty_pe_area.
+        VALUE(rv_pe_area) TYPE zif_ca_ops_types=>ty_area.
 
     "! RAP entity of a customizing table for transport recording; blank = application data
     "! (ZCD_HCK_SUPPRESS, maintained in each system, never transported)
@@ -136,7 +136,7 @@ CLASS zcl_cd_ops_pattern_check IMPLEMENTATION.
     DATA lt_unused TYPE zif_cd_ops_pattern_types=>tt_check_row.
 
     LOOP AT it_patterns ASSIGNING FIELD-SYMBOL(<ls_pattern>).
-      IF zcl_cd_ops_util=>pcre_valid( <ls_pattern>-pattern ) = abap_false.
+      IF zcl_ca_ops_util=>pcre_valid( <ls_pattern>-pattern ) = abap_false.
         INSERT VALUE #( status  = zif_cd_ops_pattern_types=>gc_check-invalid
                         pattern = <ls_pattern>-pattern
                         source  = <ls_pattern>-source ) INTO TABLE rs_result-rows.
@@ -149,7 +149,7 @@ CLASS zcl_cd_ops_pattern_check IMPLEMENTATION.
     LOOP AT it_values ASSIGNING FIELD-SYMBOL(<lv_value>).
       DATA(lv_first) = lines( lt_matched ) + 1.
       LOOP AT lt_valid ASSIGNING FIELD-SYMBOL(<ls_valid>).
-        IF zcl_cd_ops_util=>pcre_match( iv_value = <lv_value> iv_pattern = <ls_valid>-pattern ) = abap_true.
+        IF zcl_ca_ops_util=>pcre_match( iv_value = <lv_value> iv_pattern = <ls_valid>-pattern ) = abap_true.
           <ls_valid>-hits += 1.
           INSERT VALUE #( status  = zif_cd_ops_pattern_types=>gc_check-matched
                           value   = <lv_value>
@@ -264,7 +264,7 @@ CLASS zcl_cd_ops_pattern_check IMPLEMENTATION.
       ELSE.
         " Item by item: the list converts when one item converts, is invalid when one is
         <ls_row>-status = zif_cd_ops_pattern_types=>gc_migration-unchanged.
-        LOOP AT zcl_cd_ops_util=>split_list( <ls_row>-old ) INTO DATA(lv_item).
+        LOOP AT zcl_ca_ops_util=>split_list( <ls_row>-old ) INTO DATA(lv_item).
           ls_conversion = convert( lv_item ).
           INSERT ls_conversion-new INTO TABLE lt_new.
           IF ls_conversion-status = zif_cd_ops_pattern_types=>gc_migration-invalid.
@@ -314,7 +314,7 @@ CLASS zcl_cd_ops_pattern_check IMPLEMENTATION.
                                      ELSE zif_cd_ops_pattern_types=>gc_migration-convert ).
     ENDIF.
     " A pattern that does not compile is never written (and an existing one is reported)
-    IF zcl_cd_ops_util=>pcre_valid( rs_conversion-new ) = abap_false.
+    IF zcl_ca_ops_util=>pcre_valid( rs_conversion-new ) = abap_false.
       rs_conversion-status = zif_cd_ops_pattern_types=>gc_migration-invalid.
     ENDIF.
   ENDMETHOD.

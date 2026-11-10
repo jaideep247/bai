@@ -86,7 +86,7 @@ CLASS zcl_cd_hck_runtime_dao DEFINITION
       RETURNING
         VALUE(rv_name) TYPE string
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 
@@ -100,8 +100,8 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
     IF it_objects IS INITIAL OR iv_max_rows <= 0.
       RETURN.
     ENDIF.
-    lt_objects = VALUE #( FOR lv_object IN it_objects ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                    option = zif_cd_ops_types=>gc_range-option_equal
+    lt_objects = VALUE #( FOR lv_object IN it_objects ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                    option = zif_ca_ops_types=>gc_range-option_equal
                                                     low    = lv_object ) ).
     " VERIFY-DDIC: NRIV-OBJECT, SUBOBJECT, NRRANGENR, TOYEAR, FROMNUMBER, TONUMBER, NRLEVEL,
     " EXTERNIND (standard number range intervals, key OBJECT / SUBOBJECT / NRRANGENR / TOYEAR)
@@ -191,8 +191,8 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
     IF it_methods IS INITIAL OR iv_max_rows <= 0.
       RETURN.
     ENDIF.
-    lt_methods = VALUE #( FOR lv_method IN it_methods ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                    option = zif_cd_ops_types=>gc_range-option_equal
+    lt_methods = VALUE #( FOR lv_method IN it_methods ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                    option = zif_ca_ops_types=>gc_range-option_equal
                                                     low    = lv_method ) ).
     " Confirmed: DPAYH LAUFD / LAUFI / DOC1R (payment document = DFKKOP-AUGBL), TFK042Z-XEINZ
     " collections vs disbursements. VERIFY-DDIC: DPAYH-XVORL, BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS;
@@ -247,8 +247,8 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
       RETURN.
     ENDIF.
     " Empty account list = no account restriction (documented: PARAM1 of the evidence rule)
-    lt_hkont = VALUE #( FOR lv_hkont IN it_hkont ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                   option = zif_cd_ops_types=>gc_range-option_equal
+    lt_hkont = VALUE #( FOR lv_hkont IN it_hkont ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                   option = zif_ca_ops_types=>gc_range-option_equal
                                                    low    = lv_hkont ) ).
     " User rule 3 (2026-11-07): collection cleared = BSEG line with XREF2 = AUGBL whose AUGBL is
     " filled (XREF2 is the stable key: Stripe payout processing overwrites ZUONR with the statement

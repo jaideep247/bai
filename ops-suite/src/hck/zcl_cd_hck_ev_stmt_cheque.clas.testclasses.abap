@@ -65,7 +65,7 @@ CLASS ltc_ev_stmt_cheque DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_runtime_types=>ty_evidence_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
     METHODS suffix_13_matches       FOR TESTING.
     METHODS other_length_by_param1  FOR TESTING.
     METHODS short_number_in_full    FOR TESTING.

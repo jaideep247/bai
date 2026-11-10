@@ -158,8 +158,8 @@ CLASS zcl_cd_hck_c_recon3 DEFINITION
       IMPORTING
         is_work     TYPE ty_set_work
         iv_key      TYPE clike
-        iv_code     TYPE zif_cd_ops_types=>ty_check_code
-        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_code     TYPE zif_ca_ops_types=>ty_check_code
+        iv_severity TYPE zif_ca_ops_types=>ty_severity
         iv_amount   TYPE zif_cd_hck_recon_types=>ty_amount OPTIONAL
         iv_message  TYPE string
         iv_details  TYPE string OPTIONAL.
@@ -226,7 +226,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
   METHOD read_parameters.
     DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
     mv_lookback = nmax( val1 = 1
-                        val2 = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                        val2 = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                            iv_name    = zif_cd_hck_recon_types=>gc_param-lookback_days
                                                            iv_default = zif_cd_hck_recon_types=>gc_param_default-lookback_days ) ).
     mv_max_rows = zcl_cd_hck_param=>row_cap( iv_name    = zif_cd_hck_recon_types=>gc_param-max_rows
@@ -236,15 +236,15 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
     ms_base-report_date    = is_context-report_date.
     ms_base-to             = is_context-report_date - 1.
     ms_base-from           = ms_base-to - mv_lookback + 1.
-    DATA(lv_timing) = zcl_cd_ops_util=>param_int( io_params  = lo_params
+    DATA(lv_timing) = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                   iv_name    = zif_cd_hck_recon_types=>gc_param-timing_days
                                                   iv_default = zif_cd_hck_recon_types=>gc_param_default-timing_days ).
-    DATA(lv_redeposit) = zcl_cd_ops_util=>param_int( io_params  = lo_params
+    DATA(lv_redeposit) = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                      iv_name    = zif_cd_hck_recon_types=>gc_param-redeposit_days
                                                      iv_default = zif_cd_hck_recon_types=>gc_param_default-redeposit_days ).
     ms_base-timing_days    = nmax( val1 = 0 val2 = lv_timing ).
     ms_base-redeposit_days = nmax( val1 = 0 val2 = lv_redeposit ).
-    ms_base-tolerance = abs( zcl_cd_ops_util=>to_decimal(
+    ms_base-tolerance = abs( zcl_ca_ops_util=>to_decimal(
                                lo_params->get_param( iv_name    = zif_cd_hck_recon_types=>gc_param-tolerance
                                                      iv_default = zif_cd_hck_recon_types=>gc_param_default-tolerance ) ) ).
     " Facts owned by other areas, read through their definitions (one source each)
@@ -302,7 +302,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = ls_work
                      iv_key      = |{ ls_work-group }{ zif_cd_hck_recon_types=>gc_key_sep }{ <ls_set>-set_id }|
                      iv_code     = zif_cd_hck_recon_types=>gc_code-recon_config
-                     iv_severity = zif_cd_ops_types=>gc_severity-warning
+                     iv_severity = zif_ca_ops_types=>gc_severity-warning
                      iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-set_not_used
                                                           iv_v1    = <ls_set>-set_id
                                                           iv_v2    = lv_reason ) ).
@@ -441,7 +441,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
       add_finding( is_work     = is_work
                    iv_key      = |{ is_work-group }{ zif_cd_hck_recon_types=>gc_key_sep }{ zif_cd_hck_recon_types=>gc_leg-unmapped }|
                    iv_code     = zif_cd_hck_recon_types=>gc_code-recon_variance
-                   iv_severity = zif_cd_ops_types=>gc_severity-warning
+                   iv_severity = zif_ca_ops_types=>gc_severity-warning
                    iv_amount   = REDUCE #( INIT lv_sum = VALUE zif_cd_hck_recon_types=>ty_amount( )
                                            FOR ls_unmapped IN ls_eval-unmapped NEXT lv_sum = lv_sum + ls_unmapped-amount )
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-unmapped_codes
@@ -456,7 +456,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
       add_finding( is_work     = is_work
                    iv_key      = is_work-group
                    iv_code     = zif_cd_hck_recon_types=>gc_code-recon_no_data
-                   iv_severity = zif_cd_ops_types=>gc_severity-info
+                   iv_severity = zif_ca_ops_types=>gc_severity-info
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-no_data
                                                         iv_v1    = is_work-group
                                                         iv_v2    = day_text( ms_base-from )
@@ -535,7 +535,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = is_work
                      iv_key      = lv_bank_key
                      iv_code     = zif_cd_hck_recon_types=>gc_code-recon_break
-                     iv_severity = zif_cd_ops_types=>gc_severity-error
+                     iv_severity = zif_ca_ops_types=>gc_severity-error
                      iv_amount   = is_day-residual
                      iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-recon_break
                                                           iv_v1    = is_work-group
@@ -549,7 +549,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = is_work
                      iv_key      = lv_bank_key
                      iv_code     = zif_cd_hck_recon_types=>gc_code-recon_timing
-                     iv_severity = zif_cd_ops_types=>gc_severity-info
+                     iv_severity = zif_ca_ops_types=>gc_severity-info
                      iv_amount   = is_day-diff_bank_gl
                      iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-recon_timing
                                                           iv_v1    = is_work-group
@@ -562,7 +562,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = is_work
                      iv_key      = lv_bank_key
                      iv_code     = zif_cd_hck_recon_types=>gc_code-recon_variance
-                     iv_severity = zif_cd_ops_types=>gc_severity-warning
+                     iv_severity = zif_ca_ops_types=>gc_severity-warning
                      iv_amount   = is_day-diff_bank_gl
                      iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-recon_variance
                                                           iv_v1    = is_work-group
@@ -578,7 +578,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = is_work
                      iv_key      = lv_fica_key
                      iv_code     = zif_cd_hck_recon_types=>gc_code-subledger_break
-                     iv_severity = zif_cd_ops_types=>gc_severity-error
+                     iv_severity = zif_ca_ops_types=>gc_severity-error
                      iv_amount   = is_day-diff_gl_fica
                      iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-subledger_break
                                                           iv_v1    = is_work-group
@@ -591,7 +591,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = is_work
                      iv_key      = lv_fica_key
                      iv_code     = zif_cd_hck_recon_types=>gc_code-recon_timing
-                     iv_severity = zif_cd_ops_types=>gc_severity-info
+                     iv_severity = zif_ca_ops_types=>gc_severity-info
                      iv_amount   = is_day-diff_gl_fica
                      iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-recon_timing
                                                           iv_v1    = is_work-group
@@ -644,7 +644,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
       add_finding( is_work     = is_work
                    iv_key      = is_work-group
                    iv_code     = zif_cd_hck_recon_types=>gc_code-recon_no_data
-                   iv_severity = zif_cd_ops_types=>gc_severity-info
+                   iv_severity = zif_ca_ops_types=>gc_severity-info
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-no_data
                                                         iv_v1    = is_work-group
                                                         iv_v2    = day_text( ms_base-from )
@@ -672,7 +672,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
           add_finding( is_work     = is_work
                        iv_key      = lv_key
                        iv_code     = zif_cd_hck_recon_types=>gc_code-stripe_break
-                       iv_severity = zif_cd_ops_types=>gc_severity-error
+                       iv_severity = zif_ca_ops_types=>gc_severity-error
                        iv_amount   = <ls_group>-difference
                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-stripe_break
                                                             iv_v1    = lv_name
@@ -685,7 +685,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
           add_finding( is_work     = is_work
                        iv_key      = lv_key
                        iv_code     = zif_cd_hck_recon_types=>gc_code-recon_timing
-                       iv_severity = zif_cd_ops_types=>gc_severity-info
+                       iv_severity = zif_ca_ops_types=>gc_severity-info
                        iv_amount   = <ls_group>-difference
                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-recon_timing
                                                             iv_v1    = is_work-group
@@ -712,7 +712,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
       add_finding( is_work     = is_work
                    iv_key      = |{ is_work-group }{ zif_cd_hck_recon_types=>gc_key_sep }{ zif_cd_hck_recon_types=>gc_leg-ach }|
                    iv_code     = zif_cd_hck_runtime_types=>gc_code-read_capped
-                   iv_severity = zif_cd_ops_types=>gc_severity-warning
+                   iv_severity = zif_ca_ops_types=>gc_severity-warning
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-read_capped
                                                         iv_v1    = zif_cd_hck_recon_types=>gc_param-max_rows
                                                         iv_v2    = mv_max_rows
@@ -737,7 +737,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = is_work
                      iv_key      = lv_key
                      iv_code     = zif_cd_hck_recon_types=>gc_code-recon_break
-                     iv_severity = zif_cd_ops_types=>gc_severity-error
+                     iv_severity = zif_ca_ops_types=>gc_severity-error
                      iv_amount   = <ls_day>-amount
                      iv_message  = lv_message
                      iv_details  = condense( CONV string( <ls_day>-first_zuonr ) ) ).
@@ -746,7 +746,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         add_finding( is_work     = is_work
                      iv_key      = lv_key
                      iv_code     = zif_cd_hck_recon_types=>gc_code-recon_timing
-                     iv_severity = zif_cd_ops_types=>gc_severity-info
+                     iv_severity = zif_ca_ops_types=>gc_severity-info
                      iv_amount   = <ls_day>-amount
                      iv_message  = lv_message ).
       ENDIF.
@@ -803,8 +803,8 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
     INSERT VALUE #( object_key = |{ mv_check_id }{ zif_cd_hck_recon_types=>gc_key_sep }{ iv_key }|
                     check_code = iv_code
                     severity   = iv_severity
-                    action     = COND #( WHEN iv_severity <> zif_cd_ops_types=>gc_severity-info
-                                         THEN zif_cd_ops_types=>gc_action-exception )
+                    action     = COND #( WHEN iv_severity <> zif_ca_ops_types=>gc_severity-info
+                                         THEN zif_ca_ops_types=>gc_action-exception )
                     amount     = iv_amount
                     currency   = is_work-set-waers
                     reference  = is_work-set-set_id

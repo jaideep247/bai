@@ -11,7 +11,7 @@
 *& 2026-11-06 | hung_run_fails_self, own_run_is_not_hung, empty_selection_is_red, self_check_alone_not_green (A06, A60).
 *& 2026-11-06 | check_receives_time_budget (audit A18).
 *& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
-*&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
+*&            | (semantics of ZCL_CA_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | moncfg_threshold_wins, no_moncfg_keeps_hours_rule (ZCD_OPS_MONCFG first, hours rule unchanged).
 *& 2026-11-07 | Failing check double raises generic message 000 (unused message 301 removed).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
@@ -24,22 +24,22 @@
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store.
+    INTERFACES zif_ca_ops_store.
     "! Parameters over ZCA_PARAM (delivered definitions, in memory)
     DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
-    DATA mt_last_runs TYPE zif_cd_ops_types=>tt_run.
-    DATA mt_saved TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_last_runs TYPE zif_ca_ops_types=>tt_run.
+    DATA mt_saved TYPE zif_ca_ops_types=>tt_finding.
     DATA mv_save_calls TYPE i.
     DATA mv_finish_calls TYPE i.
     DATA mv_commit_calls TYPE i.
     DATA mv_start_calls TYPE i.
-    DATA mt_reconciled TYPE zif_cd_ops_types=>tt_group.
+    DATA mt_reconciled TYPE zif_ca_ops_types=>tt_group.
     "! Runs still in status R (get_stale_runs)
-    DATA mt_running TYPE zif_cd_ops_types=>tt_run.
+    DATA mt_running TYPE zif_ca_ops_types=>tt_run.
     "! B9: the first save of findings fails (the run stops after it started)
     DATA mv_fail_save TYPE abap_bool.
     DATA mv_rollback_calls TYPE i.
-    DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
+    DATA ms_finished TYPE zif_ca_ops_types=>ty_run.
     METHODS constructor.
 ENDCLASS.
 
@@ -47,55 +47,55 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD constructor.
     mo_params = NEW #( ).
   ENDMETHOD.
-  METHOD zif_cd_ops_store~start_run.
+  METHOD zif_ca_ops_store~start_run.
     mv_start_calls = mv_start_calls + 1.
     rs_run-run_id    = '0123456789ABCDEF0123456789ABCDEF'.
     rs_run-pe_area    = iv_pe_area.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
-    rs_run-status    = zif_cd_ops_types=>gc_run_status-running.
+    rs_run-status    = zif_ca_ops_types=>gc_run_status-running.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~save_findings.
+  METHOD zif_ca_ops_store~save_findings.
     IF mv_fail_save = abap_true.
       mv_fail_save = abap_false.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e010(zcd_ops) WITH 'ZCD_OPS_FINDING'.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e010(zcd_ops) WITH 'ZCA_OPS_FINDING'.
     ENDIF.
     mv_save_calls = mv_save_calls + 1.
     INSERT LINES OF it_findings INTO TABLE mt_saved.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~finish_run.
+  METHOD zif_ca_ops_store~finish_run.
     mv_finish_calls = mv_finish_calls + 1.
     ms_finished = is_run.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~commit.
+  METHOD zif_ca_ops_store~commit.
     mv_commit_calls = mv_commit_calls + 1.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~rollback.
+  METHOD zif_ca_ops_store~rollback.
     mv_rollback_calls = mv_rollback_calls + 1.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~reconcile.
+  METHOD zif_ca_ops_store~reconcile.
     INSERT LINES OF it_groups INTO TABLE mt_reconciled.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ops_store~get_last_run.
+  METHOD zif_ca_ops_store~get_last_run.
     READ TABLE mt_last_runs INTO rs_run WITH KEY pe_area = iv_pe_area.
     IF sy-subrc <> 0.
       CLEAR rs_run.
     ENDIF.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~get_runs_since.
+  METHOD zif_ca_ops_store~get_runs_since.
     CLEAR rt_runs.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~get_stale_runs.
+  METHOD zif_ca_ops_store~get_stale_runs.
     LOOP AT mt_running INTO DATA(ls_run) WHERE pe_area = iv_pe_area AND run_id <> iv_exclude_run.
       IF ls_run-started_at < iv_started_before.
         INSERT ls_run INTO TABLE rt_runs.
@@ -103,7 +103,7 @@ CLASS ltd_store IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~get_findings.
+  METHOD zif_ca_ops_store~get_findings.
     CLEAR rt_findings.
   ENDMETHOD.
 ENDCLASS.
@@ -111,10 +111,10 @@ ENDCLASS.
 
 CLASS ltd_alert DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_alert.
+    INTERFACES zif_ca_ops_alert.
     DATA mv_send_calls TYPE i.
     DATA mv_dispatch_calls TYPE i.
-    DATA mv_last_route TYPE zif_cd_ops_types=>ty_param_name.
+    DATA mv_last_route TYPE zif_ca_ops_types=>ty_param_name.
     "! When bound, dispatch( ) records how far the run was persisted at that moment
     DATA mo_store TYPE REF TO ltd_store.
     DATA mv_commits_seen TYPE i.
@@ -122,12 +122,12 @@ CLASS ltd_alert DEFINITION FINAL FOR TESTING.
 ENDCLASS.
 
 CLASS ltd_alert IMPLEMENTATION.
-  METHOD zif_cd_ops_alert~send.
+  METHOD zif_ca_ops_alert~send.
     mv_send_calls = mv_send_calls + 1.
     mv_last_route = iv_route.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_alert~dispatch.
+  METHOD zif_ca_ops_alert~dispatch.
     mv_dispatch_calls = mv_dispatch_calls + 1.
     IF mo_store IS BOUND.
       mv_commits_seen  = mo_store->mv_commit_calls.
@@ -139,21 +139,21 @@ ENDCLASS.
 
 CLASS ltd_lock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_lock.
+    INTERFACES zif_ca_ops_lock.
     DATA mv_held     TYPE abap_bool.
     DATA mv_acquires TYPE i.
     DATA mv_releases TYPE i.
 ENDCLASS.
 
 CLASS ltd_lock IMPLEMENTATION.
-  METHOD zif_cd_ops_lock~acquire.
+  METHOD zif_ca_ops_lock~acquire.
     mv_acquires = mv_acquires + 1.
     rv_acquired = xsdbool( mv_held = abap_false ).
     IF mv_held = abap_true.
       ev_holder = 'OTHER_JOB'.
     ENDIF.
   ENDMETHOD.
-  METHOD zif_cd_ops_lock~release.
+  METHOD zif_ca_ops_lock~release.
     mv_releases = mv_releases + 1.
   ENDMETHOD.
 ENDCLASS.
@@ -161,7 +161,7 @@ ENDCLASS.
 
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    INTERFACES zif_cd_ops_clock.
+    INTERFACES zif_ca_ops_clock.
     CONSTANTS gc_base TYPE timestampl VALUE '20261105070000.0000000'.
     CONSTANTS gc_today TYPE d VALUE '20261105'.
     "! seconds added per call of now( )
@@ -170,17 +170,17 @@ CLASS ltd_clock DEFINITION FINAL FOR TESTING.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
-  METHOD zif_cd_ops_clock~now.
+  METHOD zif_ca_ops_clock~now.
     mv_calls = mv_calls + 1.
     rv_timestamp = cl_abap_tstmp=>add( tstmp = gc_base
                                        secs  = mv_calls * mv_step ).
   ENDMETHOD.
 
-  METHOD zif_cd_ops_clock~today.
+  METHOD zif_ca_ops_clock~today.
     rv_date = gc_today.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_clock~time.
+  METHOD zif_ca_ops_clock~time.
     rv_time = '070000'.
   ENDMETHOD.
 ENDCLASS.
@@ -263,10 +263,10 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
       gc_none_check TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_EMPTY',
       gc_metric     TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVERDUE',
       gc_dim        TYPE zif_cd_hck_types=>ty_dim VALUE 'EBS',
-      gc_green      TYPE zif_cd_ops_types=>ty_rag VALUE 'G',
-      gc_amber      TYPE zif_cd_ops_types=>ty_rag VALUE 'A',
-      gc_red        TYPE zif_cd_ops_types=>ty_rag VALUE 'R',
-      gc_grey       TYPE zif_cd_ops_types=>ty_rag VALUE ' '.
+      gc_green      TYPE zif_ca_ops_types=>ty_rag VALUE 'G',
+      gc_amber      TYPE zif_ca_ops_types=>ty_rag VALUE 'A',
+      gc_red        TYPE zif_ca_ops_types=>ty_rag VALUE 'R',
+      gc_grey       TYPE zif_ca_ops_types=>ty_rag VALUE ' '.
 
     TYPES:
       BEGIN OF ty_flags,
@@ -295,7 +295,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
 
     CONSTANTS gc_two_hours_sec TYPE i VALUE 7200.
     "! Stale threshold of FMON (core parameter, was ZCD_OPS_MONCFG) and a value ZCA_PARAM refuses (INT)
-    CONSTANTS gc_fmon_stale_param TYPE zif_cd_ops_types=>ty_param_name VALUE 'MON_STALE_AFTER_MIN_FMON'.
+    CONSTANTS gc_fmon_stale_param TYPE zif_ca_ops_types=>ty_param_name VALUE 'MON_STALE_AFTER_MIN_FMON'.
     CONSTANTS gc_not_an_integer TYPE string VALUE `FIFTEEN`.
     DATA mo_store TYPE REF TO ltd_store.
     DATA mo_alert TYPE REF TO ltd_alert.
@@ -354,7 +354,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
       RETURNING
         VALUE(rs_report) TYPE zif_cd_hck_types=>ty_report
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
 ENDCLASS.
 
@@ -369,11 +369,11 @@ CLASS ltc_engine IMPLEMENTATION.
     mo_dao   = NEW #( ).
     CLEAR ms_flags.
     mo_lock = NEW #( ).
-    zcl_cd_ops_injector=>inject_lock( mo_lock ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_lock( mo_lock ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
     zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
-    zcl_cd_ops_injector=>inject_alert( mo_alert ).
-    zcl_cd_ops_injector=>inject_clock( mo_clock ).
+    zcl_ca_ops_injector=>inject_alert( mo_alert ).
+    zcl_ca_ops_injector=>inject_clock( mo_clock ).
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
   ENDMETHOD.
 
@@ -397,14 +397,14 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDIF.
     INSERT ls_def INTO TABLE mo_dao->mt_defs.
     ro_check = NEW #( ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = ls_def-class_name
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = ls_def-class_name
                                         io_instance   = ro_check ).
   ENDMETHOD.
 
 
   METHOD configure_scenario.
     DATA ls_threshold TYPE zif_cd_hck_types=>ty_threshold.
-    DATA ls_last_run TYPE zif_cd_ops_types=>ty_run.
+    DATA ls_last_run TYPE zif_ca_ops_types=>ty_run.
 
     ms_flags = is_flags.
     IF is_flags-slow_clock = abap_true.
@@ -495,7 +495,7 @@ CLASS ltc_engine IMPLEMENTATION.
       CLEAR ls_last_run.
       ls_last_run-run_id     = 'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'.
       ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor.
-      ls_last_run-status     = zif_cd_ops_types=>gc_run_status-running.
+      ls_last_run-status     = zif_ca_ops_types=>gc_run_status-running.
       ls_last_run-started_at = '20261105010000.0000000'.
       INSERT ls_last_run INTO TABLE mo_store->mt_running.
     ENDIF.
@@ -505,11 +505,11 @@ CLASS ltc_engine IMPLEMENTATION.
       CLEAR ls_last_run.
       ls_last_run-run_id     = '0123456789ABCDEF0123456789ABCDEF'.
       ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
-      ls_last_run-status     = zif_cd_ops_types=>gc_run_status-running.
+      ls_last_run-status     = zif_ca_ops_types=>gc_run_status-running.
       ls_last_run-started_at = '20261105010000.0000000'.
       INSERT ls_last_run INTO TABLE mo_store->mt_running.
       ls_last_run-run_id     = 'DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD'.
-      ls_last_run-status     = zif_cd_ops_types=>gc_run_status-success.
+      ls_last_run-status     = zif_ca_ops_types=>gc_run_status-success.
       ls_last_run-started_at = ltd_clock=>gc_base.
       INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
     ENDIF.
@@ -543,7 +543,7 @@ CLASS ltc_engine IMPLEMENTATION.
 
   " Rule: a metric at or above its red threshold turns the check RED with one owned finding
   METHOD red_metric_turns_check_red.
-    DATA lt_exp TYPE zif_cd_ops_types=>tt_finding.
+    DATA lt_exp TYPE zif_ca_ops_types=>tt_finding.
     TRY.
         configure_scenario( VALUE #( red_metric = abap_true ) ).
         DATA(ls_report) = act( ).
@@ -553,8 +553,8 @@ CLASS ltc_engine IMPLEMENTATION.
                         group1      = 'C'
                         group2      = gc_red_check
                         check_code  = zif_cd_hck_types=>gc_code-threshold_red
-                        severity    = zif_cd_ops_types=>gc_severity-error
-                        action      = zif_cd_ops_types=>gc_action-exception
+                        severity    = zif_ca_ops_types=>gc_severity-error
+                        action      = zif_ca_ops_types=>gc_action-exception
                         message     = |{ gc_metric } { gc_dim }: 15 (amber 1, red 10)| ) INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals( act = ls_result-rag exp = gc_red msg = 'Check must be RED' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings exp = lt_exp msg = 'Exactly one THRESHOLD_RED finding' ).
@@ -592,14 +592,14 @@ CLASS ltc_engine IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'The error must reach the caller' ).
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollback_calls exp = 1
                                             msg = 'The open LUW is rolled back' ).
         cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-status
-                                            exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            exp = zif_ca_ops_types=>gc_run_status-aborted
                                             msg = 'The run is closed as aborted' ).
         cl_abap_unit_assert=>assert_true(
-          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_cd_ops_run_guard=>gc_check_aborted ] ) )
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_ca_ops_run_guard=>gc_check_aborted ] ) )
           msg = 'RUN_ABORTED is saved' ).
     ENDTRY.
   ENDMETHOD.
@@ -799,7 +799,7 @@ CLASS ltc_engine IMPLEMENTATION.
                                             exp = zif_cd_hck_types=>gc_code-baseline_warmup
                                             msg = 'Finding code BASELINE_WARMUP' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity
-                                            exp = zif_cd_ops_types=>gc_severity-info
+                                            exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'Warm-up is information, not an exception' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-warmup_count exp = 1 msg = 'Warm-up counted apart' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-score exp = 100 msg = 'Warm-up is not scored' ).
@@ -947,7 +947,7 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatch_calls exp = 1
                                             msg = 'The refusal must be alerted once' ).
         cl_abap_unit_assert=>assert_true(
-          act = zcl_cd_ops_run_guard=>was_refused( VALUE #( ls_report-results[ 1 ]-findings OPTIONAL ) )
+          act = zcl_ca_ops_run_guard=>was_refused( VALUE #( ls_report-results[ 1 ]-findings OPTIONAL ) )
           msg = 'The report must carry RUN_LOCKED' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -977,7 +977,7 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = 'GREEN1' ] ) )
                                           msg = 'A check that ran must be reconciled' ).
         cl_abap_unit_assert=>assert_false(
-          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_group( gc_fail_check ) ] ) )
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_ca_ops_types=>ty_group( gc_fail_check ) ] ) )
           msg = 'A check that failed must not resolve its exceptions' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1001,7 +1001,7 @@ CLASS ltc_engine IMPLEMENTATION.
         DATA(ls_result) = ls_report-results[ check_id = gc_red_check ].
         cl_abap_unit_assert=>assert_equals( act = ls_result-rag exp = gc_green
                                             msg = 'A check whose only finding is suppressed must be green' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-info
+        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-info
                                             msg = 'The suppressed finding must stay listed as information' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1020,7 +1020,7 @@ CLASS ltc_engine IMPLEMENTATION.
           cl_abap_unit_assert=>fail( msg = 'Fixture must include the previous FMON run' ).
           RETURN.
         ENDIF.
-        <ls_prior_run>-status = zif_cd_ops_types=>gc_run_status-success.
+        <ls_prior_run>-status = zif_ca_ops_types=>gc_run_status-success.
         <ls_prior_run>-started_at = '20261105003000.0000000'.
         DATA(ls_report) = act( ).
         DATA(ls_self) = ls_report-results[ check_id = zif_cd_hck_types=>gc_self_check ].
@@ -1064,7 +1064,7 @@ CLASS ltc_engine IMPLEMENTATION.
                                             exp = zif_cd_hck_types=>gc_code-no_checks
                                             msg = 'Finding CHECKS_NOT_CONFIGURED expected' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-overall_rag exp = gc_red msg = 'Overall must be RED' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_report-run-status exp = zif_cd_ops_types=>gc_run_status-error
+        cl_abap_unit_assert=>assert_equals( act = ls_report-run-status exp = zif_ca_ops_types=>gc_run_status-error
                                             msg = 'The run must not close as SUCCESS' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-configured_checks exp = 0 msg = 'No check configured' ).
       CATCH cx_root INTO DATA(lx_error).

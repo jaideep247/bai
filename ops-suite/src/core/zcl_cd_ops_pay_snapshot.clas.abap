@@ -73,11 +73,11 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
   PUBLIC SECTION.
     TYPES:
       BEGIN OF ty_result,
-        run      TYPE zif_cd_ops_types=>ty_run,
+        run      TYPE zif_ca_ops_types=>ty_run,
         "! Mode of the run (FAST, NIGHTLY, SWEEP)
         mode     TYPE zif_cd_ops_payout_types=>ty_mode,
         sources  TYPE zif_cd_ops_payout_types=>tt_source_result,
-        findings TYPE zif_cd_ops_types=>tt_finding,
+        findings TYPE zif_ca_ops_types=>tt_finding,
         "! Snapshot lag after the run (from the saved watermarks)
         lag      TYPE zif_cd_ops_payout_types=>ty_lag,
       END OF ty_result.
@@ -86,7 +86,7 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
     TYPES tt_pkg_status TYPE STANDARD TABLE OF zif_cd_ops_payout_types=>ty_pkg_status WITH EMPTY KEY.
 
     "! One run of the mode chosen (blank = FAST) over its evidence sources
-    "! @raising zcx_cd_ops_error | run header or run end could not be written
+    "! @raising zcx_ca_ops_error | run header or run end could not be written
     METHODS run
       IMPORTING
         iv_test_mode     TYPE abap_bool
@@ -94,7 +94,7 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       RETURNING
         VALUE(rs_result) TYPE ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! One parallel package as its bgPF unit runs it: re-read the documents and requests of the package
     "! (its key only is carried), judge them, claim the package row (still planned), write the worklist
@@ -205,12 +205,12 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
     DATA mo_dao TYPE REF TO zif_cd_ops_pay_outcome_dao.
     DATA mo_outcome TYPE REF TO zif_cd_ops_pay_outcome.
     DATA mo_request TYPE REF TO zif_cd_ops_pay_request.
-    DATA mo_store TYPE REF TO zif_cd_ops_store.
+    DATA mo_store TYPE REF TO zif_ca_ops_store.
     DATA mo_ageing TYPE REF TO zcl_cd_hck_pay_ageing.
     DATA ms_config TYPE zif_cd_ops_payout_types=>ty_config.
     DATA ms_selection TYPE zif_cd_ops_payout_types=>ty_selection.
     DATA mv_test_mode TYPE abap_bool.
-    DATA mv_run_id TYPE zif_cd_ops_types=>ty_run_id.
+    DATA mv_run_id TYPE zif_ca_ops_types=>ty_run_id.
     DATA mv_now TYPE zif_cd_ops_payout_types=>ty_timestamp.
     DATA mv_package TYPE i.
     DATA mv_max_packages TYPE i.
@@ -229,7 +229,7 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
     "! Payment documents / requests already judged (or planned) in this run (in several sources: once)
     DATA mt_done TYPE zif_cd_ops_trace_types=>tt_docno.
     DATA mt_req_done TYPE zif_cd_ops_payout_types=>tt_req_key.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
     "! Versions with a finding written by the packages judged in this process (one by one, test mode)
     DATA mt_flagged TYPE tt_flagged.
 
@@ -239,14 +239,14 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       RETURNING
         VALUE(rs_result) TYPE ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS read_parameters.
 
     "! Run lock variant of the mode
     METHODS variant
       RETURNING
-        VALUE(rv_variant) TYPE zif_cd_ops_types=>ty_variant.
+        VALUE(rv_variant) TYPE zif_ca_ops_types=>ty_variant.
 
     "! SWEEP without date range or evidence source, or with a source that cannot be swept: said, nothing run
     METHODS selection_valid
@@ -262,7 +262,7 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       RETURNING
         VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! PAYOUT_PARALLEL = 1 (and test mode): one package after the other, rows and watermark of a
     "! package in one commit
@@ -280,7 +280,7 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       CHANGING
         cs_result  TYPE zif_cd_ops_payout_types=>ty_source_result
       RAISING
-        zcx_cd_ops_error
+        zcx_ca_ops_error
         cx_sy_open_sql_db.
 
     "! PAYOUT_PARALLEL > 1: plan every source, judge the packages in waves of bgPF units, advance each
@@ -291,7 +291,7 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       RETURNING
         VALUE(rt_results) TYPE zif_cd_ops_payout_types=>tt_source_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! The packages of one source after its watermark (key reads only), documents of the run judged once
     METHODS plan_source
@@ -306,14 +306,14 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       CHANGING
         ct_plans TYPE tt_plan
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Advance every source's watermark to the end of its last contiguous done package
     METHODS advance_watermarks
       CHANGING
         ct_plans TYPE tt_plan
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Payment documents of a change set: the documents, the statement references that are payment
     "! documents and the payment documents of the cheques referenced - without those already judged
@@ -339,7 +339,7 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       RETURNING
         VALUE(rs_judgement) TYPE ty_judgement
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     "! Rows wanted for the verdicts: one per item FIN, source, company code; one with FIN and source
     "! blank for a payment without an item with a FIN; a clean verdict is a clean entity
@@ -441,13 +441,13 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       IMPORTING
         it_sources TYPE zif_cd_ops_payout_types=>tt_source_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS finish
       CHANGING
         cs_result TYPE ty_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_ca_ops_error.
 
     METHODS release_lock.
 
@@ -489,10 +489,10 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     IF iv_test_mode = abap_false.
       " An overlapping start of the same mode is refused (RUN_LOCKED), never run twice; the modes have
       " their own locks, so a nightly or sweep run never blocks the 5-minute FAST run
-      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
                                                              iv_variant = variant( )
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
                                                          iv_variant = variant( )
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -518,7 +518,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     CLEAR: mt_done, mt_req_done, mt_findings, mt_flagged, ms_config, mo_ageing, mt_start_wm, mt_failed.
     mv_test_mode = iv_test_mode.
     rs_result-mode = ms_selection-mode.
-    mo_store   = zcl_cd_ops_factory=>get_store( ).
+    mo_store   = zcl_ca_ops_factory=>get_store( ).
     mo_dao     = zcl_cd_ops_factory=>get_pay_outcome_dao( ).
     mo_outcome = zcl_cd_ops_factory=>get_pay_outcome( ).
     mo_request = zcl_cd_ops_factory=>get_pay_request( ).
@@ -529,7 +529,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       mo_store->commit( ).
     ENDIF.
     mv_run_id = rs_result-run-run_id.
-    mv_now = trunc( zcl_cd_ops_factory=>get_clock( )->now( ) ).
+    mv_now = trunc( zcl_ca_ops_factory=>get_clock( )->now( ) ).
     read_parameters( ).
     IF selection_valid( ) = abap_false.
       finish( CHANGING cs_result = rs_result ).
@@ -539,7 +539,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
         mv_cap = zcl_cd_ops_pay_outcome=>evidence_cap( ).
         ms_config = mo_outcome->load( iv_context  = zif_cd_ops_payout_types=>gc_context
                                       iv_max_rows = mv_cap ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         " No configuration: nothing can be judged, nothing is written
         failure( iv_source = space
                  iv_text   = zcl_cd_ops_pay_outcome=>reason_chain( lx_error )
@@ -573,7 +573,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
   METHOD read_parameters.
     DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
     mv_package = nmax( val1 = 1
-                       val2 = nmin( val1 = zcl_cd_ops_util=>param_int(
+                       val2 = nmin( val1 = zcl_ca_ops_util=>param_int(
                                              io_params  = lo_params
                                              iv_name    = zif_cd_ops_payout_types=>gc_param-package_size
                                              iv_default = zif_cd_ops_payout_types=>gc_param_default-package_size )
@@ -581,37 +581,37 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     " FAST is bounded per 5-minute run; NIGHTLY and SWEEP by their own, larger budget
     mv_max_packages = nmax( val1 = 1
                             val2 = COND #( WHEN ms_selection-mode = zif_cd_ops_payout_types=>gc_mode-fast
-                                           THEN zcl_cd_ops_util=>param_int(
+                                           THEN zcl_ca_ops_util=>param_int(
                                                   io_params  = lo_params
                                                   iv_name    = zif_cd_ops_payout_types=>gc_param-max_packages
                                                   iv_default = zif_cd_ops_payout_types=>gc_param_default-max_packages )
-                                           ELSE zcl_cd_ops_util=>param_int(
+                                           ELSE zcl_ca_ops_util=>param_int(
                                                   io_params  = lo_params
                                                   iv_name    = zif_cd_ops_payout_types=>gc_param-batch_max_packages
                                                   iv_default = zif_cd_ops_payout_types=>gc_param_default-batch_max_packages ) ) ).
     mv_initial_days = nmax( val1 = 0
-                            val2 = zcl_cd_ops_util=>param_int(
+                            val2 = zcl_ca_ops_util=>param_int(
                                      io_params  = lo_params
                                      iv_name    = zif_cd_ops_payout_types=>gc_param-initial_days
                                      iv_default = zif_cd_ops_payout_types=>gc_param_default-initial_days ) ).
     mv_parallel = nmax( val1 = 1
-                        val2 = nmin( val1 = zcl_cd_ops_util=>param_int(
+                        val2 = nmin( val1 = zcl_ca_ops_util=>param_int(
                                               io_params  = lo_params
                                               iv_name    = zif_cd_ops_payout_types=>gc_param-parallel
                                               iv_default = zif_cd_ops_payout_types=>gc_param_default-parallel )
                                      val2 = zif_cd_ops_payout_types=>gc_max_parallel ) ).
     mv_wait_sec = nmax( val1 = zif_cd_ops_payout_types=>gc_poll_seconds
-                        val2 = zcl_cd_ops_util=>param_int(
+                        val2 = zcl_ca_ops_util=>param_int(
                                  io_params  = lo_params
                                  iv_name    = zif_cd_ops_payout_types=>gc_param-wait_sec
                                  iv_default = zif_cd_ops_payout_types=>gc_param_default-wait_sec ) ).
     mv_examples = nmax( val1 = 1
-                        val2 = zcl_cd_ops_util=>param_int(
+                        val2 = zcl_ca_ops_util=>param_int(
                                  io_params  = lo_params
                                  iv_name    = zif_cd_ops_payout_types=>gc_param-examples
                                  iv_default = zif_cd_ops_payout_types=>gc_param_default-examples ) ).
     mv_escalate = nmax( val1 = 1
-                        val2 = zcl_cd_ops_util=>param_int(
+                        val2 = zcl_ca_ops_util=>param_int(
                                  io_params  = lo_params
                                  iv_name    = zif_cd_ops_payout_types=>gc_param-fail_escalate
                                  iv_default = zif_cd_ops_payout_types=>gc_param_default-fail_escalate ) ).
@@ -680,7 +680,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
           DATA(ls_changes) = changes( iv_source = iv_source is_watermark = ls_watermark ).
           process_package( EXPORTING is_changes = ls_changes
                            CHANGING  cs_result  = rs_result ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        CATCH zcx_ca_ops_error INTO DATA(lx_error).
           " Fail closed: nothing of the package is written, the watermark stays; the next run retries (a
           " stale judgement - another mode changed the rows - too: 780 / 781)
           mo_store->rollback( ).
@@ -924,12 +924,12 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                                       iv_valut = is_verdict-valut
                                       iv_hbkid = is_verdict-hbkid ).
     CASE ls_age-rag.
-      WHEN zif_cd_ops_types=>gc_rag-red.
+      WHEN zif_ca_ops_types=>gc_rag-red.
         cs_version-finding  = zif_cd_hck_runtime_types=>gc_code-payment_not_clear.
-        cs_version-severity = zif_cd_ops_types=>gc_severity-error.
-      WHEN zif_cd_ops_types=>gc_rag-amber.
+        cs_version-severity = zif_ca_ops_types=>gc_severity-error.
+      WHEN zif_ca_ops_types=>gc_rag-amber.
         cs_version-finding  = zif_cd_hck_runtime_types=>gc_code-payment_not_clear.
-        cs_version-severity = zif_cd_ops_types=>gc_severity-warning.
+        cs_version-severity = zif_ca_ops_types=>gc_severity-warning.
     ENDCASE.
   ENDMETHOD.
 
@@ -941,13 +941,13 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     CASE cs_version-outcome.
       WHEN zif_cd_ops_payout_types=>gc_outcome-inconsistent.
         cs_version-finding  = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
-        cs_version-severity = zif_cd_ops_types=>gc_severity-error.
+        cs_version-severity = zif_ca_ops_types=>gc_severity-error.
       WHEN zif_cd_ops_payout_types=>gc_outcome-undetermined.
         cs_version-finding  = zif_cd_hck_runtime_types=>gc_code-undetermined.
-        cs_version-severity = zif_cd_ops_types=>gc_severity-warning.
+        cs_version-severity = zif_ca_ops_types=>gc_severity-warning.
       WHEN zif_cd_ops_payout_types=>gc_outcome-ambiguous.
         cs_version-finding  = zif_cd_ops_payout_types=>gc_code-source_ambiguous.
-        cs_version-severity = zif_cd_ops_types=>gc_severity-warning.
+        cs_version-severity = zif_ca_ops_types=>gc_severity-warning.
     ENDCASE.
   ENDMETHOD.
 
@@ -957,15 +957,15 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       " A_INFLIGHT's AGE_OLDEST limits and default calendar (PARAM1): one definition of "late"
       DATA(lo_hck) = zcl_cd_hck_factory=>get_dao( ).
       DATA(lt_defs) = lo_hck->get_check_defs(
-                        it_check_ids = VALUE #( ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                  option = zif_cd_ops_types=>gc_range-option_equal
+                        it_check_ids = VALUE #( ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                  option = zif_ca_ops_types=>gc_range-option_equal
                                                   low    = zif_cd_ops_payout_types=>gc_check-inflight ) ) ).
       mo_ageing = NEW #( it_classes    = ms_config-classes
                          it_banks      = ms_config-banks
                          it_watched    = ms_config-watched
                          iv_calendar   = VALUE #( lt_defs[ 1 ]-param1 OPTIONAL )
                          it_thresholds = lo_hck->get_thresholds( zif_cd_ops_payout_types=>gc_check-inflight )
-                         iv_today      = zcl_cd_ops_factory=>get_clock( )->today( ) ).
+                         iv_today      = zcl_ca_ops_factory=>get_clock( )->today( ) ).
     ENDIF.
     ro_ageing = mo_ageing.
   ENDMETHOD.
@@ -987,7 +987,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
         " even when no nightly marked it before the payment came)
         ls_row-outcome  = zif_cd_ops_payout_types=>gc_outcome-req_paid_late.
         ls_row-finding  = zif_cd_ops_payout_types=>gc_code-request_not_paid.
-        ls_row-severity = zif_cd_ops_types=>gc_severity-error.
+        ls_row-severity = zif_ca_ops_types=>gc_severity-error.
         INSERT ls_row INTO TABLE rs_wanted-clean.
         CONTINUE.
       ENDIF.
@@ -1001,7 +1001,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
         " Not paid in a payment run by the end of the due date: RED from the morning after
         ls_row-outcome  = zif_cd_ops_payout_types=>gc_outcome-req_not_paid.
         ls_row-finding  = zif_cd_ops_payout_types=>gc_code-request_not_paid.
-        ls_row-severity = zif_cd_ops_types=>gc_severity-error.
+        ls_row-severity = zif_ca_ops_types=>gc_severity-error.
       ELSE.
         ls_row-outcome = zif_cd_ops_payout_types=>gc_outcome-req_open.
       ENDIF.
@@ -1214,7 +1214,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     DO mv_max_packages TIMES.
       TRY.
           DATA(ls_changes) = changes( iv_source = iv_source is_watermark = ls_watermark ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        CATCH zcx_ca_ops_error INTO DATA(lx_error).
           " The source cannot be read: its later packages are not planned, the watermark stays
           failure( iv_source = iv_source
                    iv_text   = zcl_cd_ops_pay_outcome=>reason_chain( lx_error )
@@ -1277,15 +1277,15 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     LOOP AT lt_wave ASSIGNING FIELD-SYMBOL(<ls_package>).
       TRY.
           lo_queue->dispatch( <ls_package> ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        CATCH zcx_ca_ops_error INTO DATA(lx_error).
           " bgPF not available: the package is judged here, one by one (said once per run)
           IF NOT line_exists( mt_findings[ check_code = zif_cd_ops_payout_types=>gc_code-parallel_off ] ).
             INSERT VALUE #( object_type = zif_cd_ops_payout_types=>gc_object_type
                             object_key  = |{ zif_cd_ops_payout_types=>gc_context }/| &&
                                           |{ zif_cd_ops_payout_types=>gc_code-parallel_off }|
                             check_code  = zif_cd_ops_payout_types=>gc_code-parallel_off
-                            severity    = zif_cd_ops_types=>gc_severity-warning
-                            action      = zif_cd_ops_types=>gc_action-notify
+                            severity    = zif_ca_ops_types=>gc_severity-warning
+                            action      = zif_ca_ops_types=>gc_action-notify
                             message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-parallel_off
                                                                  iv_tail  = COND #( WHEN lx_error->previous IS BOUND
                                                                                     THEN lx_error->previous->get_text( )
@@ -1402,7 +1402,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
 
 
   METHOD run_package.
-    mo_store   = zcl_cd_ops_factory=>get_store( ).
+    mo_store   = zcl_ca_ops_factory=>get_store( ).
     mo_dao     = zcl_cd_ops_factory=>get_pay_outcome_dao( ).
     mo_outcome = zcl_cd_ops_factory=>get_pay_outcome( ).
     mo_request = zcl_cd_ops_factory=>get_pay_request( ).
@@ -1456,7 +1456,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
           mo_dao->finish_package( ls_package ).
         ENDIF.
         mo_store->commit( ).
-      CATCH zcx_cd_ops_error.
+      CATCH zcx_ca_ops_error.
         " The run sees the package still planned and abandons it after its wait
         mo_store->rollback( ).
     ENDTRY.
@@ -1511,8 +1511,8 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     INSERT VALUE #( object_type = zif_cd_ops_payout_types=>gc_object_type
                     object_key  = |{ zif_cd_ops_payout_types=>gc_context }/{ ms_selection-mode }/{ iv_source }|
                     check_code  = zif_cd_ops_payout_types=>gc_code-batch_incomplete
-                    severity    = zif_cd_ops_types=>gc_severity-warning
-                    action      = zif_cd_ops_types=>gc_action-notify
+                    severity    = zif_ca_ops_types=>gc_severity-warning
+                    action      = zif_ca_ops_types=>gc_action-notify
                     message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-batch_stopped
                                                          iv_v1    = |{ ms_selection-mode } { iv_source }|
                                                          iv_v2    = iv_packages ) ) INTO TABLE mt_findings.
@@ -1555,8 +1555,8 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                       group1      = <ls_group>-key
                       group2      = |{ <ls_group>-laufd }|
                       check_code  = <ls_group>-finding
-                      severity    = zif_cd_ops_types=>gc_severity-warning
-                      action      = zif_cd_ops_types=>gc_action-notify
+                      severity    = zif_ca_ops_types=>gc_severity-warning
+                      action      = zif_ca_ops_types=>gc_action-notify
                       reference   = <ls_group>-key
                       message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-aggregated
                                                            iv_v1    = <ls_group>-key
@@ -1590,11 +1590,11 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       rs_watermark-wm_date = COND #( WHEN iv_source = zif_cd_ops_payout_types=>gc_source-statement
                                      THEN ms_selection-date_from ELSE ms_selection-date_from - 1 ).
       rs_watermark-wm_time = COND #( WHEN iv_source <> zif_cd_ops_payout_types=>gc_source-statement
-                                     THEN zif_cd_ops_types=>gc_time-day_end ).
+                                     THEN zif_ca_ops_types=>gc_time-day_end ).
       RETURN.
     ENDIF.
     " History starts at go-live: the first run reads the last PAYOUT_INITIAL_DAYS days once
-    rs_watermark-wm_date = zcl_cd_ops_factory=>get_clock( )->today( ) - mv_initial_days.
+    rs_watermark-wm_date = zcl_ca_ops_factory=>get_clock( )->today( ) - mv_initial_days.
   ENDMETHOD.
 
 
@@ -1605,12 +1605,12 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       INSERT iv_source INTO TABLE mt_failed.
       lv_runs = VALUE #( mt_start_wm[ source = iv_source ]-fail_count OPTIONAL ) + 1.
     ENDIF.
-    DATA(ls_finding) = VALUE zif_cd_ops_types=>ty_finding(
+    DATA(ls_finding) = VALUE zif_ca_ops_types=>ty_finding(
                          object_type = zif_cd_ops_payout_types=>gc_object_type
                          object_key  = |{ zif_cd_ops_payout_types=>gc_context }/{ iv_source }|
                          check_code  = zif_cd_ops_payout_types=>gc_code-snapshot_failed
-                         severity    = zif_cd_ops_types=>gc_severity-error
-                         action      = zif_cd_ops_types=>gc_action-notify
+                         severity    = zif_ca_ops_types=>gc_severity-error
+                         action      = zif_ca_ops_types=>gc_action-notify
                          message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-snapshot_failed
                                                               iv_v1    = iv_source
                                                               iv_tail  = iv_text ) ).
@@ -1630,7 +1630,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                                                   iv_tail  = iv_text ).
     ELSEIF lv_runs > 0.
       " A first failure of a watermark source: the next run retries it (a concurrent mode, a lock)
-      ls_finding-severity = zif_cd_ops_types=>gc_severity-warning.
+      ls_finding-severity = zif_ca_ops_types=>gc_severity-warning.
     ENDIF.
     INSERT ls_finding INTO TABLE mt_findings.
   ENDMETHOD.
@@ -1657,16 +1657,16 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       cs_result-run-total_items  = cs_result-run-total_items + <ls_source>-documents.
       cs_result-run-passed_items = cs_result-run-passed_items + <ls_source>-evaluated.
     ENDLOOP.
-    cs_result-run-status = COND #( WHEN line_exists( mt_findings[ severity = zif_cd_ops_types=>gc_severity-error ] )
-                                     THEN zif_cd_ops_types=>gc_run_status-error
+    cs_result-run-status = COND #( WHEN line_exists( mt_findings[ severity = zif_ca_ops_types=>gc_severity-error ] )
+                                     THEN zif_ca_ops_types=>gc_run_status-error
                                    WHEN mt_findings IS NOT INITIAL
-                                     THEN zif_cd_ops_types=>gc_run_status-warning
-                                   ELSE zif_cd_ops_types=>gc_run_status-success ).
+                                     THEN zif_ca_ops_types=>gc_run_status-warning
+                                   ELSE zif_ca_ops_types=>gc_run_status-success ).
     cs_result-run-rag = SWITCH #( cs_result-run-status
-                                  WHEN zif_cd_ops_types=>gc_run_status-error   THEN zif_cd_ops_types=>gc_rag-red
-                                  WHEN zif_cd_ops_types=>gc_run_status-warning THEN zif_cd_ops_types=>gc_rag-amber
-                                  ELSE zif_cd_ops_types=>gc_rag-green ).
-    cs_result-run-ended_at = zcl_cd_ops_factory=>get_clock( )->now( ).
+                                  WHEN zif_ca_ops_types=>gc_run_status-error   THEN zif_ca_ops_types=>gc_rag-red
+                                  WHEN zif_ca_ops_types=>gc_run_status-warning THEN zif_ca_ops_types=>gc_rag-amber
+                                  ELSE zif_ca_ops_types=>gc_rag-green ).
+    cs_result-run-ended_at = zcl_ca_ops_factory=>get_clock( )->now( ).
     IF mo_dao IS BOUND.
       cs_result-lag = lag( it_watermarks = mo_dao->get_watermarks( )
                            iv_now        = cs_result-run-ended_at ).
@@ -1705,7 +1705,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
 
 
   METHOD release_lock.
-    zcl_cd_ops_factory=>get_lock( )->release( iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
+    zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
                                               iv_variant = variant( ) ).
   ENDMETHOD.
 

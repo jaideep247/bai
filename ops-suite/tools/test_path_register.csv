@@ -1,12 +1,12 @@
 object,path,covered_by,reason
-ZBP_R_CD_EBSCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
-ZBP_R_CD_FMONCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_EBSCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_FMONCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZBP_R_CD_FMONFILE,own,,"global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
 ZBP_R_CD_FMONPRQWA,own,,"global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
-ZBP_R_CD_HCKCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_HCKCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZBP_R_CD_HCKSUPPRESS,own,,"global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
-ZBP_R_CD_OPSCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
-ZBP_R_CD_OPSEXCEPTION,exempt,,"instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled ZCD_OPS_FINDING / ZCD_OPS_EXC_HIST, not parsed offline - QA1 OPS-01 .. OPS-08; every decision tested in ZCL_CD_OPS_EXC_POLICY"
+ZBP_R_CD_OPSCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CA_OPSEXCEPTION,exempt,,"instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled ZCA_OPS_FINDING / ZCA_OPS_EXC_HIST, not parsed offline - QA1 OPS-01 .. OPS-08; every decision tested in ZCL_CA_OPS_EXC_POLICY"
 ZCL_CD_EBS_INJECTOR,covered,ZCL_CD_EBS_FACTORY,test seam: every slot injected and reset in the factory test
 ZCL_CD_EBS_R_R01_SIGN,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
 ZCL_CD_EBS_R_R02_BOUNDS,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
@@ -53,8 +53,8 @@ ZCL_CD_HCK_DAO,own,,"technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DU
 ZCL_CD_HCK_DATASET,own,,"success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
 ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,construction only: every engine test resolves through it
 ZCL_CD_HCK_INJECTOR,covered,ZCL_CD_HCK_ENGINE,test seam: injected and reset by every engine test
-ZCL_CD_OPS_CFG_FACTORY,covered,ZCL_CD_OPS_CFG_GATE,construction only: the gate test resolves through it
-ZCL_CD_OPS_CFG_INJECTOR,covered,ZCL_CD_OPS_CFG_GATE,test seam: injected and reset by the gate test
+ZCL_CA_OPS_CFG_FACTORY,covered,ZCL_CA_OPS_CFG_GATE,construction only: the gate test resolves through it
+ZCL_CA_OPS_CFG_INJECTOR,covered,ZCL_CA_OPS_CFG_GATE,test seam: injected and reset by the gate test
 ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,test seam: every slot injected and reset in the factory test
 ZCL_CD_OPS_PAY_FIXTURE,covered,ZCL_CD_OPS_PAY_OUTCOME,"test support (shared negative fixtures, no logic): used by the tests of the evaluator, A_INFLIGHT, the trace, the snapshot and the dashboard CDS"
 ZCL_CD_OPS_PAY_SNAP_OP,covered,ZCL_CD_OPS_PAY_SNAPSHOT,"bgPF operation (one call): the snapshot tests run it through their queue double (parallel packages); bgPF execution itself - QA case POC-14"
@@ -63,6 +63,6 @@ ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,test helper class of the plug
 ZCL_CD_OPS_POSTAREA_FACTORY,covered,ZCL_CD_OPS_POSTAREA,construction only: every reader test resolves the reader and the repository through it
 ZCL_CD_OPS_POSTAREA_INJECTOR,covered,ZCL_CD_OPS_POSTAREA,test seam: injected and reset by every reader test
 ZCL_CD_OPS_POSTAREA_MEM,covered,ZCL_CD_OPS_POSTAREA,test double (in-memory posting areas): every reader test adds entries and counts its reads
-ZCL_CD_OPS_STORE,own,,COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
+ZCL_CA_OPS_STORE,own,,COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
 ZCL_CD_OPS_TRACE_DAO,own,,"reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"
 ZCX_CD_OPS_ERROR,covered,ZCL_CD_OPS_FACTORY,exception class: raised and caught in every application test

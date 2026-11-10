@@ -26,7 +26,7 @@ CLASS lcl_buffer DEFINITION FINAL.
     TYPES:
       BEGIN OF ty_record,
         wa_uuid TYPE sysuuid_x16,
-        open    TYPE zif_cd_ops_exc_types=>tt_exc_open,
+        open    TYPE zif_ca_ops_exc_types=>tt_exc_open,
       END OF ty_record.
     TYPES tt_record TYPE SORTED TABLE OF ty_record WITH UNIQUE KEY wa_uuid.
     CLASS-DATA gt_created TYPE tt_record.
@@ -52,8 +52,8 @@ CLASS lhc_handled IMPLEMENTATION.
 
   METHOD get_global_authorizations.
     IF requested_authorizations-%create = if_abap_behv=>mk-on.
-      result-%create = COND #( WHEN zcl_cd_ops_factory=>get_auth( )->is_allowed(
-                                      iv_activity = zif_cd_ops_auth=>gc_activity-change
+      result-%create = COND #( WHEN zcl_ca_ops_factory=>get_auth( )->is_allowed(
+                                      iv_activity = zif_ca_ops_auth=>gc_activity-change
                                       iv_pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ) = abap_true
                                THEN if_abap_behv=>auth-allowed
                                ELSE if_abap_behv=>auth-unauthorized ).
@@ -62,7 +62,7 @@ CLASS lhc_handled IMPLEMENTATION.
 
 
   METHOD sethandled.
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
     " Remembered for the save: its exceptions are read in CHECK_BEFORE_SAVE
     LOOP AT keys ASSIGNING FIELD-SYMBOL(<ls_key>).
       INSERT VALUE #( wa_uuid = <ls_key>-WaUuid ) INTO TABLE lcl_buffer=>gt_created.
@@ -116,7 +116,7 @@ CLASS lsc_handled IMPLEMENTATION.
       ENTITY Handled FIELDS ( RequestRef ) WITH VALUE #( FOR ls_created IN lcl_buffer=>gt_created
                                                          ( WaUuid = ls_created-wa_uuid ) )
       RESULT DATA(lt_rows).
-    DATA(lo_exc_dao) = zcl_cd_ops_factory=>get_exc_dao( ).
+    DATA(lo_exc_dao) = zcl_ca_ops_factory=>get_exc_dao( ).
     LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       READ TABLE lcl_buffer=>gt_created ASSIGNING FIELD-SYMBOL(<ls_created>)
            WITH TABLE KEY wa_uuid = <ls_row>-WaUuid.
@@ -131,7 +131,7 @@ CLASS lsc_handled IMPLEMENTATION.
           INSERT VALUE #( %tky = <ls_row>-%tky ) INTO TABLE failed-handled.
           INSERT VALUE #( %tky = <ls_row>-%tky
                           %msg = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                              number   = zif_cd_ops_exc_types=>gc_msg-open_read_failed
+                                              number   = zif_ca_ops_exc_types=>gc_msg-open_read_failed
                                               severity = if_abap_behv_message=>severity-error
                                               v1       = <ls_row>-RequestRef ) ) INTO TABLE reported-handled.
       ENDTRY.
@@ -145,19 +145,19 @@ CLASS lsc_handled IMPLEMENTATION.
     READ ENTITIES OF zr_cd_fmonprqwa IN LOCAL MODE
       ENTITY Handled ALL FIELDS WITH CORRESPONDING #( create-handled )
       RESULT DATA(lt_rows).
-    DATA(lo_exc_dao) = zcl_cd_ops_factory=>get_exc_dao( ).
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lo_exc_dao) = zcl_ca_ops_factory=>get_exc_dao( ).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
     LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       " Exactly the exceptions read in CHECK_BEFORE_SAVE, written only while they are as read
       DATA(lt_open) = VALUE #( lcl_buffer=>gt_created[ wa_uuid = <ls_row>-WaUuid ]-open OPTIONAL ).
       TRY.
           lo_exc_dao->resolve( it_open      = lt_open
-                               iv_action    = zif_cd_ops_exc_types=>gc_action-manual
+                               iv_action    = zif_ca_ops_exc_types=>gc_action-manual
                                iv_reason    = <ls_row>-Reason
                                iv_reference = <ls_row>-Reference
                                iv_user      = sy-uname
                                iv_at        = lv_now ).
-        CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        CATCH zcx_ca_ops_error INTO DATA(lx_error).
           " Late save: past the point of no return - a record without its closure, or a closure without
           " its history, is never committed (the framework rolls the whole save back)
           RAISE SHORTDUMP lx_error.

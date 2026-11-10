@@ -44,8 +44,8 @@ CLASS zcl_cd_hck_ev_stripe DEFINITION
     "! Value of a setting parameter (upper case; blank when not maintained)
     CLASS-METHODS setting
       IMPORTING
-        io_params       TYPE REF TO zif_cd_ops_params
-        iv_name         TYPE zif_cd_ops_types=>ty_param_name
+        io_params       TYPE REF TO zif_ca_ops_params
+        iv_name         TYPE zif_ca_ops_types=>ty_param_name
       RETURNING
         VALUE(rv_value) TYPE string.
 
@@ -144,7 +144,7 @@ CLASS zcl_cd_hck_ev_stripe IMPLEMENTATION.
           READ TABLE rs_result-evidence ASSIGNING FIELD-SYMBOL(<ls_evidence>) WITH TABLE KEY doc1r = <ls_intent>-doc1r.
         IF sy-subrc = 0.
             <ls_evidence>-anomaly  = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
-            <ls_evidence>-severity = zif_cd_ops_types=>gc_severity-error.
+            <ls_evidence>-severity = zif_ca_ops_types=>gc_severity-error.
         ENDIF.
       ENDIF.
       ENDLOOP.
