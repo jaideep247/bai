@@ -10,6 +10,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Recipients are SO23 shared lists: seam DLI_READ, 027 and CHECK_DESTINATION tests.
+*& 2026-11-10 | commit_failure_raises_806: a failed COMMIT WORK AND WAIT is a failed delivery.
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -27,6 +28,7 @@ CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
     CONSTANTS gc_msgno_unknown_list TYPE symsgno VALUE '027'.
     CONSTANTS gc_msgno_refused TYPE symsgno VALUE '026'.
     CONSTANTS gc_msgno_bcs_error TYPE symsgno VALUE '020'.
+    CONSTANTS gc_msgno_commit_failed TYPE symsgno VALUE '806'.
 
     TYPES:
       BEGIN OF ty_flags,
@@ -34,6 +36,7 @@ CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
         refused      TYPE abap_bool,
         bcs_error    TYPE abap_bool,
         unknown_list TYPE abap_bool,
+        commit_fails TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_cut TYPE REF TO zif_cd_ops_alert_channel.
@@ -48,6 +51,7 @@ CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
     METHODS unknown_list_raises_027 FOR TESTING.
     METHODS known_lists_are_valid FOR TESTING.
     METHODS unknown_and_long_listed FOR TESTING.
+    METHODS commit_failure_raises_806 FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -99,8 +103,16 @@ CLASS ltc_chn_email IMPLEMENTATION.
         lv_sent = abap_true.
       END-TEST-INJECTION.
     ENDIF.
-    TEST-INJECTION bcs_commit.
-    END-TEST-INJECTION.
+    IF is_flags-commit_fails = abap_true.
+      TEST-INJECTION bcs_commit.
+        " SAP update task failed (COMMIT WORK AND WAIT return code 4)
+        lv_commit_subrc = 4.
+      END-TEST-INJECTION.
+    ELSE.
+      TEST-INJECTION bcs_commit.
+        lv_commit_subrc = 0.
+      END-TEST-INJECTION.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -152,6 +164,13 @@ CLASS ltc_chn_email IMPLEMENTATION.
   METHOD unknown_list_raises_027.
     configure_scenario( VALUE #( unknown_list = abap_true ) ).
     assert_raises( gc_msgno_unknown_list ).
+  ENDMETHOD.
+
+
+  " Rule (B18): a send request whose commit failed is not logged as sent (806)
+  METHOD commit_failure_raises_806.
+    configure_scenario( VALUE #( commit_fails = abap_true ) ).
+    assert_raises( gc_msgno_commit_failed ).
   ENDMETHOD.
 
 

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area FMON at start.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-10 | In background an error ends the job with a type E message (was S: the job ended green).
 *&---------------------------------------------------------------------*
 REPORT zcd_fmon_monitor.
 
@@ -45,6 +46,10 @@ CLASS lcl_app IMPLEMENTATION.
           iv_iface_id      = CONV #( to_upper( p_iface ) )
           iv_test_mode     = xsdbool( p_test = abap_true ) ).
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+        " B9: in background the job ends cancelled (Control-M red), never green
+        IF sy-batch = abap_true.
+          MESSAGE lx_ops TYPE 'E'.
+        ENDIF.
         MESSAGE lx_ops TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.

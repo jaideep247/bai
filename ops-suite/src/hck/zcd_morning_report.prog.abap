@@ -11,6 +11,7 @@
 *& 2026-11-06 | Export through ZCL_CD_HCK_EXPORT: complete file or none (audit A61).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: string templates.
+*& 2026-11-10 | In background an error ends the job with a type E message (was S: the job ended green).
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
 *& ZCL_CD_HCK_REPORT_HTML. Schedule daily (Control-M) with a variant that
@@ -159,6 +160,10 @@ CLASS lcl_app IMPLEMENTATION.
         zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
                                                 iv_pe_area   = zif_cd_ops_types=>gc_pe_area-health_check ).
       CATCH zcx_cd_ops_error INTO DATA(lx_auth).
+        " B9: in background the job ends cancelled (Control-M red), never green
+        IF sy-batch = abap_true.
+          MESSAGE lx_auth TYPE 'E'.
+        ENDIF.
         MESSAGE lx_auth TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.
@@ -170,6 +175,10 @@ CLASS lcl_app IMPLEMENTATION.
     TRY.
         ms_report = zcl_cd_hck_factory=>get_engine( )->run( selection( ) ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        " B9: in background the job ends cancelled (Control-M red), never green
+        IF sy-batch = abap_true.
+          MESSAGE lx_error TYPE 'E'.
+        ENDIF.
         MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.
@@ -213,6 +222,10 @@ CLASS lcl_app IMPLEMENTATION.
         DATA(lv_count) = zcl_cd_hck_factory=>get_engine( )->take_baseline( p_test ).
         MESSAGE s314(zcd_ops) WITH lv_count COND string( WHEN p_test = abap_true THEN TEXT-t01 ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        " B9: in background the job ends cancelled (Control-M red), never green
+        IF sy-batch = abap_true.
+          MESSAGE lx_error TYPE 'E'.
+        ENDIF.
         MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
     ENDTRY.
   ENDMETHOD.
@@ -396,6 +409,10 @@ CLASS lcl_app IMPLEMENTATION.
                                   io_file  = NEW zcl_cd_hck_dataset( ) ).
         MESSAGE s315(zcd_ops) WITH lv_file.
       CATCH zcx_cd_ops_error INTO DATA(lx_file).
+        " B9: in background the job ends cancelled (Control-M red), never green
+        IF sy-batch = abap_true.
+          MESSAGE lx_file TYPE 'E'.
+        ENDIF.
         MESSAGE lx_file TYPE 'S' DISPLAY LIKE 'E'.
     ENDTRY.
   ENDMETHOD.

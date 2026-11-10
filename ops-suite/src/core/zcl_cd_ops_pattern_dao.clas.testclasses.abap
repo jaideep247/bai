@@ -10,6 +10,7 @@
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: pattern check and migration).
+*& 2026-11-10 | migration_rows_of_areas_only: tables of areas outside IT_PE_AREAS are not read (B7).
 *&---------------------------------------------------------------------*
 CLASS ltc_pattern_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -58,6 +59,10 @@ CLASS ltc_pattern_dao DEFINITION FINAL FOR TESTING
     METHODS finding_keys_of_hck_runs     FOR TESTING.
     METHODS migration_rows_key_length    FOR TESTING.
     METHODS write_rekeys_and_updates     FOR TESTING.
+    METHODS migration_rows_of_areas_only FOR TESTING.
+    METHODS all_areas
+      RETURNING
+        VALUE(rt_areas) TYPE zif_cd_ops_pattern_types=>tt_pe_area.
 ENDCLASS.
 
 
@@ -283,7 +288,7 @@ CLASS ltc_pattern_dao IMPLEMENTATION.
   " of a check outside the pattern-list classes is never touched
   METHOD migration_rows_key_length.
     TRY.
-        DATA(lt_rows) = mo_cut->get_migration_rows( ).
+        DATA(lt_rows) = mo_cut->get_migration_rows( all_areas( ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 4
                                             msg = 'Two flow patterns, one interface, one job list' ).
         DATA(ls_flow) = lt_rows[ table = zif_cd_ops_pattern_types=>gc_table-flow_pattern key1 = `10` ].
@@ -300,10 +305,31 @@ CLASS ltc_pattern_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD all_areas.
+    rt_areas = VALUE #( ( zif_cd_ops_types=>gc_pe_area-core ) ( zif_cd_ops_types=>gc_pe_area-ebs )
+                        ( zif_cd_ops_types=>gc_pe_area-file_monitor ) ( zif_cd_ops_types=>gc_pe_area-health_check ) ).
+  ENDMETHOD.
+
+
+  " B7: only the areas the caller may display are read - here EBS only (two flow patterns)
+  METHOD migration_rows_of_areas_only.
+    TRY.
+        DATA(lt_rows) = mo_cut->get_migration_rows( VALUE #( ( zif_cd_ops_types=>gc_pe_area-ebs ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2
+                                            msg = 'Only the two flow patterns of EBS' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( lt_rows[ table = zif_cd_ops_pattern_types=>gc_table-fmon_iface ] ) )
+          msg = 'No FMON row without FMON display authorisation' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   " Write: the flow pattern (key field) is re-keyed, the interface pattern updated with stamp
   METHOD write_rekeys_and_updates.
     TRY.
-        DATA(lt_plan) = zcl_cd_ops_pattern_check=>plan_migration( mo_cut->get_migration_rows( ) ).
+        DATA(lt_plan) = zcl_cd_ops_pattern_check=>plan_migration( mo_cut->get_migration_rows( all_areas( ) ) ).
         DATA(lt_written) = mo_cut->write_migration( lt_plan ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_written ) exp = 2
                                             msg = 'Flow patterns and interfaces written' ).

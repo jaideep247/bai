@@ -12,6 +12,7 @@
 *& ZCD_EBS_FLOW_PAT key field PATTERN: delete + insert). Commits nothing.
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: pattern check and migration).
+*& 2026-11-10 | Migration rows only of the areas the caller may display (IT_PE_AREAS, B7).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pattern check and migration DAO</p>
 CLASS zcl_cd_ops_pattern_dao DEFINITION
@@ -327,6 +328,10 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
     FIELD-SYMBOLS <lt_rows> TYPE STANDARD TABLE.
 
     LOOP AT scope( ) ASSIGNING FIELD-SYMBOL(<ls_scope>).
+      " B7: a table of an area the caller may not display is never read
+      IF NOT line_exists( it_pe_areas[ table_line = zcl_cd_ops_pattern_check=>pe_area_of_table( <ls_scope>-table ) ] ).
+        CONTINUE.
+      ENDIF.
       IF <ls_scope>-table <> lv_table.
         lv_table = <ls_scope>-table.
         TRY.

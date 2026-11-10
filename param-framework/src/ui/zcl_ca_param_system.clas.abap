@@ -5,7 +5,8 @@
 *&  - read_client: T000 (role CCCATEGORY, change option CCCORACTIV) and the
 *&    business configuration API CL_BCFG_CD_REUSE_API_FACTORY (is the
 *&    customizing table ZCA_PARAM_DEF editable in this client); unreadable
-*&    = production / not editable (fail closed);
+*&    = production / not editable (fail closed), the API's error text is
+*&    returned as CUST_REASON (message 048 in the app);
 *&  - read_request: E070 (TRSTATUS, TRFUNCTION);
 *&  - is_authorized: AUTHORITY-CHECK OBJECT ZCA_PARAM (ZCA_PARAR, ACTVT);
 *&  - record_changes: MBC_CP_API=>RAP_TABLE_CTS( )->RECORD_CHANGES.
@@ -17,6 +18,7 @@
 *& APIs only, docs/DESIGN.md section 9); its callers are tested with a double.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-10 | Fail closed keeps the reason: CUST_REASON = error text of the configuration API.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - SAP APIs of the app</p>
 CLASS zcl_ca_param_system DEFINITION
@@ -50,9 +52,11 @@ CLASS zcl_ca_param_system IMPLEMENTATION.
         rs_client-cust_editable = cl_bcfg_cd_reuse_api_factory=>get_cust_obj_service_instance(
                                     iv_objectname = CONV #( zif_ca_param_types=>gc_table-definition )
                                     iv_objecttype = cl_bcfg_cd_reuse_api_factory=>simple_table )->is_editable( ).
-      CATCH cx_root.
-        " Deliberately broad: any failure of the API means "not editable" (fail closed)
+      CATCH cx_root INTO DATA(lx_error).
+        " Deliberately broad: any failure of the API means "not editable" (fail closed);
+        " the reason is kept for the app message (048), never dropped
         rs_client-cust_editable = abap_false.
+        rs_client-cust_reason   = lx_error->get_text( ).
     ENDTRY.
   ENDMETHOD.
 

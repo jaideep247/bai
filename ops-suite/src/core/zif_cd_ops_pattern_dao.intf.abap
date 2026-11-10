@@ -7,6 +7,7 @@
 *& the write of converted patterns to the suite's own configuration tables.
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: pattern check and migration).
+*& 2026-11-10 | get_migration_rows reads only the tables of the given payment engine areas (ZCD_OPS 03).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pattern check and migration DAO</p>
 INTERFACE zif_cd_ops_pattern_dao
@@ -34,6 +35,9 @@ INTERFACE zif_cd_ops_pattern_dao
   "! ZCD_JOB_STEP, ZCD_OPS_ALRULE, the pattern-list parameters of ZCD_HCK_DEF,
   "! ZCD_HCK_SUPPRESS) with its row key and field length; NEW and STATUS empty
   METHODS get_migration_rows
+    IMPORTING
+      "! Areas the caller may display; a table of another area is not read
+      it_pe_areas    TYPE zif_cd_ops_pattern_types=>tt_pe_area
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_ops_pattern_types=>tt_migration.
 

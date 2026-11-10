@@ -23,6 +23,7 @@
 *&            | ZCD_FMON_TABWL).
 *& 2026-11-08 | Payment worklist (requests not paid on the due date): source spec keys DUE (requested payment date)
 *&            | and AMOUNT of the request log, TY_CFG_ROW-DUE / AMOUNT, keyset position TY_CFG_SEEK.
+*& 2026-11-10 | Stage CONFIGURATION (configuration row, never the verdict); message 815 (partner filter off).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -81,6 +82,9 @@ INTERFACE zif_cd_ops_trace_types
       "! Due date and stage of the payment request (ZIF_CD_OPS_PAY_REQUEST, the rule of the payment
       "! worklist and of the morning report check A_PRQ_NOT_PAID) - information, never the verdict
       request_due TYPE ty_stage VALUE 'REQUEST_DUE',
+      "! A configuration row of the trace (e.g. BP_SOURCE_FIELD not usable) - information shown first,
+      "! never the verdict
+      config      TYPE ty_stage VALUE 'CONFIGURATION',
     END OF gc_stage.
 
   "! Evidence status of a stage row. There is no PENDING: no deterministic SLA rule exists
@@ -573,6 +577,8 @@ INTERFACE zif_cd_ops_trace_types
       no_noc            TYPE zif_cd_ops_types=>ty_msgno VALUE '741',
       "! A statement line fits several cheques of one house bank account (ZCL_CD_OPS_CHEQUE_LINK)
       cheque_ambiguous  TYPE zif_cd_ops_types=>ty_msgno VALUE '749',
+      "! The partner filter by source could not be applied (TRACE_BP_SOURCE_FIELD)
+      partner_filter_off TYPE zif_cd_ops_types=>ty_msgno VALUE '815',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -37,6 +37,7 @@
 *&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
 *& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
 *&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
+*& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -162,9 +163,11 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     ENDIF.
     TRY.
         lo_struct ?= lo_descr.
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e303(zcd_ops) WITH lv_name.
+          MESSAGE e303(zcd_ops) WITH lv_name
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
 
     lo_struct->get_ddic_field_list(

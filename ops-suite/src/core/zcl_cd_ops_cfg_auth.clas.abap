@@ -2,13 +2,14 @@
 *& Artifact: zcl_cd_ops_cfg_auth.clas.abap
 *& Purpose:
 *& Authorisation check of the configuration apps on object ZCD_OPS (design
-*& 1): ACTVT and ZCD_MODULE, company code not restricted (payment engine area-wide
+*& 1): ACTVT and ZCD_PE_AREA, company code not restricted (payment engine area-wide
 *& customizing). Delegates to ZCL_CD_OPS_AUTH (core). The object is created
 *& in SU21 by security (design 1).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Delegates to ZCL_CD_OPS_AUTH (core) - no own AUTHORITY-CHECK.
 *& 2026-11-07 | Purpose: merge note removed.
+*& 2026-11-10 | Purpose names the authorisation field ZCD_PE_AREA (SU20).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: ZCD_OPS check</p>
 CLASS zcl_cd_ops_cfg_auth DEFINITION

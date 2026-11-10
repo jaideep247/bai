@@ -119,7 +119,7 @@ interfaces (types) → domain (engines, rules, checks: no SQL) → repositories 
 - **Durable before notified:** commit the run header at start; commit results and run end before any alert or mail (a channel may `COMMIT WORK` itself); never commit a half-written save — `store->rollback( )`.
 
 ### Message class ZCD_OPS ranges
-001–099 / 700–799 core · 100–199 / 500–599 EBS · 200–299 / 600–649 FMON · 300–399 / 650–699 HCK · 400–449 configuration apps. Every message is listed in `config/zcd_ops_messages.md` (the serializer writes the message class from it).
+001–099 / 700–799 / 800–849 core · 100–199 / 500–599 EBS · 200–299 / 600–649 FMON · 300–399 / 650–699 HCK · 400–449 configuration apps. Every message is listed in `config/zcd_ops_messages.md` (the serializer writes the message class from it).
 
 ### No hardcoding (phase 5)
 - **Regular expressions: PCRE only** (`pcre =` in `matches( )` / `find( )` / `replace( )` / `count( )`, `FIND|REPLACE … PCRE`, `CL_ABAP_REGEX=>CREATE_PCRE`, `replace_regexpr( pcre => … )` in CDS). POSIX (`regex =`, `FIND|REPLACE … REGEX`, `CL_ABAP_REGEX=>CREATE_POSIX`) is obsolete since ABAP 7.55 and fails the portable check `pcre_only`. Patterns in code are named constants, never built from input.

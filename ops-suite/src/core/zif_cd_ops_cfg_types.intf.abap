@@ -111,7 +111,7 @@ INTERFACE zif_cd_ops_cfg_types
       delete  TYPE ty_actvt VALUE '06',
     END OF gc_actvt.
 
-  "! Authorisation object ZCD_OPS, field ZCD_MODULE
+  "! Authorisation object ZCD_OPS, field ZCD_PE_AREA
   CONSTANTS:
     BEGIN OF gc_pe_area,
       core TYPE ty_pe_area VALUE 'CORE',

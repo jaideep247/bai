@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Severity-ordered cap, full-selection severity, held-back count (audit A63).
 *& 2026-11-06 | PCRE rule patterns: whole value, case ignored, invalid pattern named.
+*& 2026-11-10 | mail_names_system_and_job: system ID in the subject, run and job in the body (message 803).
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -55,6 +56,7 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
     METHODS throttle_expires             FOR TESTING.
     METHODS escalates_after_n_runs       FOR TESTING.
     METHODS digest_is_one_message        FOR TESTING.
+    METHODS mail_names_system_and_job    FOR TESTING.
     METHODS per_finding_caps_at_max      FOR TESTING.
     METHODS html_values_are_escaped      FOR TESTING.
     METHODS blocker_after_cap_is_kept    FOR TESTING.
@@ -333,6 +335,33 @@ CLASS ltc_alert_policy IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-severity
                                             exp = zif_cd_ops_types=>gc_severity-block
                                             msg = 'Digest severity is the worst finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B12: the receiver sees the system in the subject and the run / job link in the body
+  METHOD mail_names_system_and_job.
+    DATA ls_selection TYPE zcl_cd_ops_alert_policy=>ty_selection.
+    CONSTANTS lc_jobname TYPE btcjob VALUE 'ZCD_EBS_VALIDATE_JPMC'.
+    CONSTANTS lc_jobcount TYPE btcjobcnt VALUE '11223344'.
+    TRY.
+        ms_run-jobname  = lc_jobname.
+        ms_run-jobcount = lc_jobcount.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-error ) ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        cl_abap_unit_assert=>assert_equals( act = ls_message-subject(5)
+                                            exp = |[{ sy-sysid }]|
+                                            msg = 'The subject starts with the system ID' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-text CS lc_jobname AND ls_message-text CS lc_jobcount )
+                                          msg = 'The text names job name and count' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-html CS lc_jobcount )
+                                          msg = 'The HTML body names the job count' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

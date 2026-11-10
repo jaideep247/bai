@@ -147,6 +147,13 @@ check('no_cp_patterns', name_checks.cp_pattern_failures(ROOT),
       'Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP '
       "comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).")
 
+# Authorisation object ZCD_OPS: only the fields SU20 / SU21 define (tools/auth_checks.py)
+import auth_checks  # noqa: E402
+check('auth_fields_defined', auth_checks.failures(ROOT),
+      'Every AUTHORITY-CHECK on ZCD_OPS (zif_cd_ops_auth=>gc_object) and every pfcg_auth( ZCD_OPS, ... ) '
+      'in a DCL (src/ and cds/) names only the fields config/auth_zcd_ops.md defines (section 1 field, '
+      'section 2 object field list).')
+
 # Nothing declared that nothing uses (tools/usage_checks.py)
 import usage_checks  # noqa: E402
 check('messages_used', usage_checks.message_failures(ROOT),

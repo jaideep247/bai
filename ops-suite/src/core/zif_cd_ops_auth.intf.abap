@@ -2,11 +2,12 @@
 *& Artifact: zif_cd_ops_auth.intf.abap
 *& Purpose:
 *& Authorisation seam for the operations suite (object ZCD_OPS: ACTVT,
-*& ZCD_MODULE, BUKRS). Engines, reports and RAP handlers ask this interface;
+*& ZCD_PE_AREA, BUKRS). Engines, reports and RAP handlers ask this interface;
 *& nobody writes AUTHORITY-CHECK for ZCD_OPS directly.
 *& Modification log:
 *& 2026-11-06 | Initial version (authorisation object ZCD_OPS, gap G3).
 *& 2026-11-07 | Activity 43 (release a blocked line) removed (read-only scope).
+*& 2026-11-10 | Authorisation field ZCD_PE_AREA, as defined in SU20 and used by the DCLs.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - authorisation (object ZCD_OPS)</p>
 "! Activities follow SU21 object ZCD_OPS (config/auth_zcd_ops.md).

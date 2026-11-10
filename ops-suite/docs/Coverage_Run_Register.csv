@@ -10,7 +10,7 @@ ZBP_R_CD_OPSEXCEPTION,exempt,,0,,,"Exempt: instance authorization / features and
 ZCL_CD_EBS_BTC_RESOLVER,own test include,,23,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,own test include,,15,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,own test include,,22,90,,Not run in target SAP
-ZCL_CD_EBS_ENGINE,own test include,,43,90,,Not run in target SAP
+ZCL_CD_EBS_ENGINE,own test include,,46,90,,Not run in target SAP
 ZCL_CD_EBS_FACTORY,own test include,,5,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,own test include,,9,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,own test include,,5,90,,Not run in target SAP
@@ -69,7 +69,7 @@ ZCL_CD_FMON_CHK_SIZE,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; mea
 ZCL_CD_FMON_CHK_SLA,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_DAO,own test include,,28,90,,"Not run in target SAP; partial exemption: READ_LEGACY / SELECT_LEGACY dynamic reads of legacy structures and the EVENT_NO collision retry (two sessions) - QA1 FMON 01, 05, 07, 08, 10, 11"
 ZCL_CD_FMON_DDIC,own test include,,6,90,,Not run in target SAP
-ZCL_CD_FMON_ENGINE,own test include,,46,90,,Not run in target SAP
+ZCL_CD_FMON_ENGINE,own test include,,47,90,,Not run in target SAP
 ZCL_CD_FMON_FACTORY,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (construction only: every engine test resolves through it)
 ZCL_CD_FMON_FLOW_CDS_TEST,own test include,,20,90,,Not run in target SAP
 ZCL_CD_FMON_INJECTOR,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (test seam: injected and reset by every engine test)
@@ -114,7 +114,7 @@ ZCL_CD_HCK_C_VOLUME,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_DAO,own test include,,28,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
 ZCL_CD_HCK_DASH_CDS_TEST,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
-ZCL_CD_HCK_ENGINE,own test include,,28,90,,Not run in target SAP
+ZCL_CD_HCK_ENGINE,own test include,,30,90,,Not run in target SAP
 ZCL_CD_HCK_EV_BTC_SEQ,own test include,,31,90,,Not run in target SAP
 ZCL_CD_HCK_EV_CHQ_STATUS,own test include,,7,90,,Not run in target SAP
 ZCL_CD_HCK_EV_GL_XREF2,own test include,,3,90,,Not run in target SAP
@@ -142,8 +142,8 @@ ZCL_CD_HCK_SUPPRESSION,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_THRESHOLD,own test include,,16,90,,Not run in target SAP
 ZCL_CD_HCK_VALUE_QUERY,own test include,,6,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_DAO,own test include,,7,90,,Not run in target SAP
-ZCL_CD_OPS_ALERT_POLICY,own test include,,20,90,,Not run in target SAP
-ZCL_CD_OPS_ALERT_ROUTER,own test include,,15,90,,Not run in target SAP
+ZCL_CD_OPS_ALERT_POLICY,own test include,,21,90,,Not run in target SAP
+ZCL_CD_OPS_ALERT_ROUTER,own test include,,16,90,,Not run in target SAP
 ZCL_CD_OPS_AUTH,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_AUTH,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CHECKS,own test include,,38,90,,Not run in target SAP
@@ -155,7 +155,7 @@ ZCL_CD_OPS_CFG_POLICY,own test include,,11,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_TRANSPORT,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_CHEQUE_LINK,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_APPLOG,own test include,,5,90,,Not run in target SAP
-ZCL_CD_OPS_CHN_EMAIL,own test include,,7,90,,Not run in target SAP
+ZCL_CD_OPS_CHN_EMAIL,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_CLOCK,own test include,,3,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_DAO,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_POLICY,own test include,,9,90,,Not run in target SAP
@@ -166,7 +166,7 @@ ZCL_CD_OPS_OVW_CDS_TEST,own test include,,6,90,,Not run in target SAP
 ZCL_CD_OPS_PARAMS_CA,own test include,,12,90,,Not run in target SAP
 ZCL_CD_OPS_PARAM_SEED,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_CHECK,own test include,,19,90,,Not run in target SAP
-ZCL_CD_OPS_PATTERN_DAO,own test include,,7,90,,Not run in target SAP
+ZCL_CD_OPS_PATTERN_DAO,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_FIXTURE,covered,ZCL_CD_OPS_PAY_OUTCOME,0,90,,"Not run in target SAP; measured in ZCL_CD_OPS_PAY_OUTCOME (test support (shared negative fixtures, no logic): used by the tests of the evaluator, A_INFLIGHT, the trace, the snapshot and the dashboard CDS)"
 ZCL_CD_OPS_PAY_OUTCOME,own test include,,17,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,28,90,,Not run in target SAP
@@ -182,10 +182,10 @@ ZCL_CD_OPS_POSTAREA_INJECTOR,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target
 ZCL_CD_OPS_POSTAREA_MEM,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_POSTAREA (test double (in-memory posting areas): every reader test adds entries and counts its reads)
 ZCL_CD_OPS_PURGE,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,own test include,,13,90,,Not run in target SAP
-ZCL_CD_OPS_RUN_GUARD,own test include,,4,90,,Not run in target SAP
+ZCL_CD_OPS_RUN_GUARD,own test include,,10,90,,Not run in target SAP
 ZCL_CD_OPS_STORE,own test include,,23,90,,Not run in target SAP; partial exemption: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
 ZCL_CD_OPS_TRACE_DAO,own test include,,14,90,,"Not run in target SAP; partial exemption: reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"
-ZCL_CD_OPS_TRACE_ENGINE,own test include,,37,90,,Not run in target SAP
-ZCL_CD_OPS_UTIL,own test include,,22,90,,Not run in target SAP
+ZCL_CD_OPS_TRACE_ENGINE,own test include,,38,90,,Not run in target SAP
+ZCL_CD_OPS_UTIL,own test include,,33,90,,Not run in target SAP
 ZCL_CD_TRX_DASH_CDS_TEST,own test include,,14,90,,Not run in target SAP
 ZCX_CD_OPS_ERROR,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (exception class: raised and caught in every application test)

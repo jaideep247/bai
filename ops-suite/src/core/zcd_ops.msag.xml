@@ -48,7 +48,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>006</MSGNR>
-     <TEXT>&amp;1 more finding(s) in ZCD_OPS_FINDING.</TEXT>
+     <TEXT>&amp;1 more finding(s): see the exceptions app (Fiori ZUI_CD_OPS_EXC).</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -91,12 +91,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>021</MSGNR>
      <TEXT>Alert rule &amp;1 has no recipient</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>022</MSGNR>
-     <TEXT>Application log &amp;1/&amp;2 could not be written</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -3103,6 +3097,54 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>779</MSGNR>
      <TEXT>Request &amp;1 &amp;2: stage &amp;3, &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>800</MSGNR>
+     <TEXT>Application log &amp;1/&amp;2 not created (BAL_LOG_CREATE return code &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>801</MSGNR>
+     <TEXT>Application log &amp;1/&amp;2 not saved (BAL_DB_SAVE return code &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>802</MSGNR>
+     <TEXT>Alert log ID could not be generated - alert not delivered</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>803</MSGNR>
+     <TEXT>Run &amp;1, job &amp;2 / &amp;3 - exceptions app ZUI_CD_OPS_EXC</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>804</MSGNR>
+     <TEXT>Run &amp;1 &amp;2 aborted by an error:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>805</MSGNR>
+     <TEXT>Alert dispatch failed for the run of &amp;1:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>806</MSGNR>
+     <TEXT>E-mail for &amp;1: SAPconnect commit failed (return code &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>815</MSGNR>
+     <TEXT>Partner filter not applied: source field &amp;1 not usable -</TEXT>
     </T100>
    </T100>
   </asx:values>

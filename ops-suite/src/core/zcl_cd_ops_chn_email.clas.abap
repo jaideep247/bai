@@ -15,6 +15,7 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Test seams BCS_SEND / BCS_COMMIT; send result and BCS error in locals; document type constant (coverage gap closure).
 *& 2026-11-07 | Recipients are SO23 shared distribution lists (user decision); CHECK_DESTINATION, test seam DLI_READ.
+*& 2026-11-10 | COMMIT WORK AND WAIT; a failed commit raises 806, so the router logs FAILED, never SENT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert channel e-mail (BCS)</p>
 CLASS zcl_cd_ops_chn_email DEFINITION
@@ -82,6 +83,7 @@ CLASS zcl_cd_ops_chn_email IMPLEMENTATION.
     DATA lo_request TYPE REF TO cl_bcs.
     DATA lv_sent TYPE abap_bool.
     DATA lx_error TYPE REF TO cx_bcs.
+    DATA lv_commit_subrc TYPE sysubrc.
     FIELD-SYMBOLS <lv_name> TYPE string.
     DATA(lt_recipients) = zcl_cd_ops_util=>split_list( is_message-destination ).
     IF lt_recipients IS INITIAL.
@@ -124,10 +126,16 @@ CLASS zcl_cd_ops_chn_email IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e026(zcd_ops) WITH is_message-rule_id.
     ENDIF.
-    " BCS sends on commit; the alert is delivered independently of the run's LUW
+    " BCS sends on commit; the alert is delivered independently of the run's LUW. AND WAIT: the
+    " send request is in the database before the router logs the alert as submitted
     TEST-SEAM bcs_commit.
-      COMMIT WORK.
+      COMMIT WORK AND WAIT.
+      lv_commit_subrc = sy-subrc.
     END-TEST-SEAM.
+    IF lv_commit_subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e806(zcd_ops) WITH is_message-rule_id lv_commit_subrc.
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.

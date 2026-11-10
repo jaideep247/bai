@@ -2,12 +2,12 @@
   "_artifact": {
     "name": "portable_checks.json",
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
-    "generated": "2026-11-08"
+    "generated": "2026-11-10"
   },
-  "passed": 27,
-  "total": 27,
+  "passed": 28,
+  "total": 28,
   "abap_files": 401,
-  "declared_unit_methods": 1663,
+  "declared_unit_methods": 1691,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,13 +79,13 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (4020 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (4064 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "439 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "444 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {
@@ -128,6 +128,12 @@
       "name": "no_cp_patterns",
       "passed": true,
       "detail": "Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).",
+      "failures": []
+    },
+    {
+      "name": "auth_fields_defined",
+      "passed": true,
+      "detail": "Every AUTHORITY-CHECK on ZCD_OPS (zif_cd_ops_auth=>gc_object) and every pfcg_auth( ZCD_OPS, ... ) in a DCL (src/ and cds/) names only the fields config/auth_zcd_ops.md defines (section 1 field, section 2 object field list).",
       "failures": []
     },
     {

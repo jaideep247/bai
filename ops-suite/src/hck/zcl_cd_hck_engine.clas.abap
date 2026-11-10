@@ -39,6 +39,10 @@
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *& 2026-11-08 | Table consolidation: self-check stale threshold from the core parameter
 *&            | MON_STALE_AFTER_MIN_<area> (was ZCD_OPS_MONCFG), then the hours rule as before.
+*& 2026-11-10 | Run boundary: a ZCX_CD_OPS_ERROR / CX_SY_OPEN_SQL_DB after the run started is rolled back, the run
+*&            | closed as aborted (ZCL_CD_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
+*&            | re-raised - never left in status R. PLUGIN_ERROR and ALERT_FAILED keep the exception trace
+*&            | (DETAILS) and error class.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -332,100 +336,114 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       mo_store->commit( ).
     ENDIF.
 
-    DATA(ls_context) = VALUE zif_cd_hck_types=>ty_context( report_date = rs_report-report_date
-                                                           now_date    = lv_today
-                                                           now_time    = mo_clock->time( )
-                                                           run_id      = rs_report-run-run_id
-                                                           test_mode   = is_selection-test_mode ).
+    " B9: this method owns the LUW of the run - a technical error is rolled back, the run is
+    " closed as aborted (ON_ABORT alert rules) and the error goes to the job (cancelled)
+    TRY.
+        DATA(ls_context) = VALUE zif_cd_hck_types=>ty_context( report_date = rs_report-report_date
+                                                               now_date    = lv_today
+                                                               now_time    = mo_clock->time( )
+                                                               run_id      = rs_report-run-run_id
+                                                               test_mode   = is_selection-test_mode ).
 
-    mv_today = lv_today.
-    mv_run_id = rs_report-run-run_id.
-    mv_as_of = history_as_of( iv_report_date = rs_report-report_date
-                              iv_today       = lv_today
-                              iv_started_at  = rs_report-run-started_at ).
-    mv_flat_tol_pct = zcl_cd_ops_util=>param_int( io_params  = mo_params
-                                                  iv_name    = zif_cd_hck_types=>gc_param-flat_tol_pct
-                                                  iv_default = CONV #( zcl_cd_hck_threshold=>gc_default_flat_tol_pct ) ).
-    mt_suppressions = mo_dao->get_suppressions( lv_today ).
+        mv_today = lv_today.
+        mv_run_id = rs_report-run-run_id.
+        mv_as_of = history_as_of( iv_report_date = rs_report-report_date
+                                  iv_today       = lv_today
+                                  iv_started_at  = rs_report-run-started_at ).
+        mv_flat_tol_pct = zcl_cd_ops_util=>param_int( io_params  = mo_params
+                                                      iv_name    = zif_cd_hck_types=>gc_param-flat_tol_pct
+                                                      iv_default = CONV #( zcl_cd_hck_threshold=>gc_default_flat_tol_pct ) ).
+        mt_suppressions = mo_dao->get_suppressions( lv_today ).
 
-    DATA(lv_scope) = scope_text( is_selection ).
-    DATA(lt_defs) = mo_dao->get_check_defs( it_categories = is_selection-categories
-                                            it_priorities = is_selection-priorities
-                                            it_check_ids  = is_selection-check_ids ).
-    LOOP AT lt_defs ASSIGNING FIELD-SYMBOL(<ls_def>).
-      DATA(ls_result) = execute_check( is_def     = <ls_def>
-                                       is_context = ls_context ).
-      IF is_selection-test_mode = abap_false.
-        persist_result( EXPORTING is_result = ls_result
-                                  iv_scope  = lv_scope
-                        CHANGING  cs_run    = rs_report-run ).
-      ENDIF.
-      INSERT ls_result INTO TABLE rs_report-results.
-      IF ls_result-plugin_error = abap_false.
-        rs_report-executed_checks = rs_report-executed_checks + 1.
-      ENDIF.
-    ENDLOOP.
-    rs_report-configured_checks = lines( lt_defs ).
+        DATA(lv_scope) = scope_text( is_selection ).
+        DATA(lt_defs) = mo_dao->get_check_defs( it_categories = is_selection-categories
+                                                it_priorities = is_selection-priorities
+                                                it_check_ids  = is_selection-check_ids ).
+        LOOP AT lt_defs ASSIGNING FIELD-SYMBOL(<ls_def>).
+          DATA(ls_result) = execute_check( is_def     = <ls_def>
+                                           is_context = ls_context ).
+          IF is_selection-test_mode = abap_false.
+            persist_result( EXPORTING is_result = ls_result
+                                      iv_scope  = lv_scope
+                            CHANGING  cs_run    = rs_report-run ).
+          ENDIF.
+          INSERT ls_result INTO TABLE rs_report-results.
+          IF ls_result-plugin_error = abap_false.
+            rs_report-executed_checks = rs_report-executed_checks + 1.
+          ENDIF.
+        ENDLOOP.
+        rs_report-configured_checks = lines( lt_defs ).
 
-    " A60: a report that executed no business check proves nothing - red, never SUCCESS,
-    " and a healthy self check alone cannot make it green
-    IF lt_defs IS INITIAL.
-      ls_result = config_result( ).
-      IF is_selection-test_mode = abap_false.
-        persist_result( EXPORTING is_result = ls_result
-                                  iv_scope  = lv_scope
-                        CHANGING  cs_run    = rs_report-run ).
-      ENDIF.
-      INSERT ls_result INTO TABLE rs_report-results.
-    ENDIF.
+        " A60: a report that executed no business check proves nothing - red, never SUCCESS,
+        " and a healthy self check alone cannot make it green
+        IF lt_defs IS INITIAL.
+          ls_result = config_result( ).
+          IF is_selection-test_mode = abap_false.
+            persist_result( EXPORTING is_result = ls_result
+                                      iv_scope  = lv_scope
+                            CHANGING  cs_run    = rs_report-run ).
+          ENDIF.
+          INSERT ls_result INTO TABLE rs_report-results.
+        ENDIF.
 
-    IF is_selection-include_pe_areas = abap_true.
-      rs_report-pe_areas = pe_area_status( ).
-      ls_result = self_check( rs_report-pe_areas ).
-      IF is_selection-test_mode = abap_false.
-        persist_result( EXPORTING is_result = ls_result
-                                  iv_scope  = lv_scope
-                        CHANGING  cs_run    = rs_report-run ).
-      ENDIF.
-      INSERT ls_result INTO TABLE rs_report-results.
-    ENDIF.
-    " A filtered run says which active checks it left out (never 'no result' by omission)
-    IF is_selection-test_mode = abap_false.
-      DATA(lt_skipped) = skipped_rows( is_selection = is_selection
-                                       it_defs      = lt_defs
-                                       is_run       = rs_report-run
-                                       iv_scope     = lv_scope ).
-      IF lt_skipped IS NOT INITIAL.
-        mo_dao->save_results( lt_skipped ).
+        IF is_selection-include_pe_areas = abap_true.
+          rs_report-pe_areas = pe_area_status( ).
+          ls_result = self_check( rs_report-pe_areas ).
+          IF is_selection-test_mode = abap_false.
+            persist_result( EXPORTING is_result = ls_result
+                                      iv_scope  = lv_scope
+                            CHANGING  cs_run    = rs_report-run ).
+          ENDIF.
+          INSERT ls_result INTO TABLE rs_report-results.
+        ENDIF.
+        " A filtered run says which active checks it left out (never 'no result' by omission)
+        IF is_selection-test_mode = abap_false.
+          DATA(lt_skipped) = skipped_rows( is_selection = is_selection
+                                           it_defs      = lt_defs
+                                           is_run       = rs_report-run
+                                           iv_scope     = lv_scope ).
+          IF lt_skipped IS NOT INITIAL.
+            mo_dao->save_results( lt_skipped ).
+            mo_store->commit( ).
+          ENDIF.
+        ENDIF.
+
+        DATA(ls_summary) = zcl_cd_hck_score=>summarize( it_results = rs_report-results
+                                                        is_rules   = score_rules( ) ).
+        rs_report-score          = ls_summary-score.
+        rs_report-overall_rag    = ls_summary-overall_rag.
+        rs_report-critical_count = ls_summary-critical_count.
+        rs_report-high_count     = ls_summary-high_count.
+        rs_report-warmup_count   = ls_summary-warmup_count.
+        rs_report-categories     = ls_summary-categories.
+        IF is_selection-test_mode = abap_false.
+          " before the exception list is read, so it shows only what is still open
+          reconcile_checks( is_run     = rs_report-run
+                            it_results = rs_report-results ).
+        ENDIF.
+        rs_report-exceptions     = open_exceptions( lv_today ).
+
+        close_run( CHANGING cs_report = rs_report ).
+
+        IF is_selection-test_mode = abap_true.
+          RETURN.
+        ENDIF.
+        " Results are durable before anyone is told (a channel may COMMIT WORK itself)
+        mo_store->finish_run( rs_report-run ).
         mo_store->commit( ).
-      ENDIF.
-    ENDIF.
-
-    DATA(ls_summary) = zcl_cd_hck_score=>summarize( it_results = rs_report-results
-                                                    is_rules   = score_rules( ) ).
-    rs_report-score          = ls_summary-score.
-    rs_report-overall_rag    = ls_summary-overall_rag.
-    rs_report-critical_count = ls_summary-critical_count.
-    rs_report-high_count     = ls_summary-high_count.
-    rs_report-warmup_count   = ls_summary-warmup_count.
-    rs_report-categories     = ls_summary-categories.
-    IF is_selection-test_mode = abap_false.
-      " before the exception list is read, so it shows only what is still open
-      reconcile_checks( is_run     = rs_report-run
-                        it_results = rs_report-results ).
-    ENDIF.
-    rs_report-exceptions     = open_exceptions( lv_today ).
-
-    close_run( CHANGING cs_report = rs_report ).
-
-    IF is_selection-test_mode = abap_true.
-      RETURN.
-    ENDIF.
-    " Results are durable before anyone is told (a channel may COMMIT WORK itself)
-    mo_store->finish_run( rs_report-run ).
-    mo_store->commit( ).
-    notify( EXPORTING is_selection = is_selection
-            CHANGING  cs_report    = rs_report ).
+        notify( EXPORTING is_selection = is_selection
+                CHANGING  cs_report    = rs_report ).
+      CATCH zcx_cd_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
+        zcl_cd_ops_run_guard=>abort( EXPORTING ix_error = lx_error
+                                     CHANGING  cs_run   = rs_report-run ).
+        IF lx_error IS INSTANCE OF zcx_cd_ops_error.
+          RAISE EXCEPTION CAST zcx_cd_ops_error( lx_error ).
+        ENDIF.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e804(zcd_ops) WITH rs_report-run-pe_area rs_report-run-variant
+          EXPORTING
+            previous = lx_error.
+    ENDTRY.
   ENDMETHOD.
 
 
@@ -489,7 +507,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                         severity   = zif_cd_ops_types=>gc_severity-error
                         action     = zif_cd_ops_types=>gc_action-notify
                         reference  = is_def-class_name
-                        message    = lx_ops->get_text( ) ) INTO TABLE rs_result-findings.
+                        message    = lx_ops->get_text( )
+                        details     = zcl_cd_ops_util=>exception_trace( lx_ops )
+                        error_class = zcl_cd_ops_util=>error_class( lx_ops ) ) INTO TABLE rs_result-findings.
       CATCH cx_root INTO DATA(lx_root).
         CLEAR rs_result.
         rs_result-plugin_error = abap_true.
@@ -497,7 +517,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                         severity   = zif_cd_ops_types=>gc_severity-error
                         action     = zif_cd_ops_types=>gc_action-notify
                         reference  = is_def-class_name
-                        message    = lx_root->get_text( ) ) INTO TABLE rs_result-findings.
+                        message    = lx_root->get_text( )
+                        details     = zcl_cd_ops_util=>exception_trace( lx_root )
+                        error_class = zcl_cd_ops_util=>error_class( lx_root ) ) INTO TABLE rs_result-findings.
     ENDTRY.
 
     rs_result-check_id    = is_def-check_id.
@@ -1004,7 +1026,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                         check_code  = zif_cd_hck_types=>gc_code-alert_failed
                         severity    = zif_cd_ops_types=>gc_severity-warning
                         action      = zif_cd_ops_types=>gc_action-notify
-                        message     = lx_dispatch->get_text( ) ) INTO TABLE lt_failures.
+                        message     = lx_dispatch->get_text( )
+                        details     = zcl_cd_ops_util=>exception_trace( lx_dispatch )
+                        error_class = zcl_cd_ops_util=>error_class( lx_dispatch ) ) INTO TABLE lt_failures.
     ENDTRY.
 
     " the morning report e-mail is a report, not an alert: deliberate send to one route
@@ -1023,7 +1047,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                           check_code  = zif_cd_hck_types=>gc_code-alert_failed
                           severity    = zif_cd_ops_types=>gc_severity-warning
                           action      = zif_cd_ops_types=>gc_action-notify
-                          message     = lx_send->get_text( ) ) INTO TABLE lt_failures.
+                          message     = lx_send->get_text( )
+                          details     = zcl_cd_ops_util=>exception_trace( lx_send )
+                          error_class = zcl_cd_ops_util=>error_class( lx_send ) ) INTO TABLE lt_failures.
       ENDTRY.
     ENDIF.
 

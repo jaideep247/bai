@@ -7,6 +7,7 @@
 *& TEST-INJECTION, nothing is written; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-10 | Create and save failures: own messages 800 / 801 with the return code.
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_applog DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -15,7 +16,9 @@ CLASS ltc_chn_applog DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS gc_rule TYPE zif_cd_ops_types=>ty_rule_id VALUE 'EBS_BLOCK'.
     CONSTANTS gc_destination TYPE zif_cd_ops_types=>ty_alert_dest VALUE 'ZCD_OPS/EBS'.
-    CONSTANTS gc_msgno_not_logged TYPE symsgno VALUE '022'.
+    CONSTANTS gc_msgno_not_created TYPE symsgno VALUE '800'.
+    CONSTANTS gc_msgno_not_saved TYPE symsgno VALUE '801'.
+    CONSTANTS gc_save_subrc TYPE sysubrc VALUE 2.
     CONSTANTS gc_msgno_partial TYPE symsgno VALUE '025'.
 
     TYPES:
@@ -31,8 +34,8 @@ CLASS ltc_chn_applog DEFINITION FINAL FOR TESTING
     METHODS setup.
     METHODS teardown.
     METHODS saved_log_is_delivered FOR TESTING.
-    METHODS create_failure_raises_022 FOR TESTING.
-    METHODS save_failure_raises_022 FOR TESTING.
+    METHODS create_failure_raises_800 FOR TESTING.
+    METHODS save_failure_raises_801 FOR TESTING.
     METHODS partial_log_raises_025 FOR TESTING.
     METHODS refresh_failure_is_ignored FOR TESTING.
 
@@ -44,7 +47,9 @@ CLASS ltc_chn_applog DEFINITION FINAL FOR TESTING
         zcx_cd_ops_error.
     METHODS assert_raises
       IMPORTING
-        iv_msgno TYPE symsgno.
+        iv_msgno TYPE symsgno
+      RETURNING
+        VALUE(rx_error) TYPE REF TO zcx_cd_ops_error.
 ENDCLASS.
 
 
@@ -83,11 +88,11 @@ CLASS ltc_chn_applog IMPLEMENTATION.
     ENDIF.
     IF is_flags-save_fails = abap_true.
       TEST-INJECTION bal_save.
-        lv_saved = abap_false.
+        lv_save_subrc = gc_save_subrc.
       END-TEST-INJECTION.
     ELSE.
       TEST-INJECTION bal_save.
-        lv_saved = abap_true.
+        lv_save_subrc = 0.
       END-TEST-INJECTION.
     ENDIF.
     IF is_flags-refresh_fails = abap_true.
@@ -116,8 +121,8 @@ CLASS ltc_chn_applog IMPLEMENTATION.
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'Delivery must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
-        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+      CATCH zcx_cd_ops_error INTO rx_error.
+        cl_abap_unit_assert=>assert_equals( act = rx_error->if_t100_message~t100key-msgno
                                             exp = iv_msgno
                                             msg = 'Raised with the expected message' ).
     ENDTRY.
@@ -136,17 +141,21 @@ CLASS ltc_chn_applog IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a log that cannot be created is a failed delivery (022)
-  METHOD create_failure_raises_022.
+  " Rule: a log that cannot be created is a failed delivery (800, own number)
+  METHOD create_failure_raises_800.
     configure_scenario( VALUE #( create_fails = abap_true ) ).
-    assert_raises( gc_msgno_not_logged ).
+    assert_raises( gc_msgno_not_created ).
   ENDMETHOD.
 
 
-  " Rule: a log that cannot be saved is a failed delivery (022), never logged as sent
-  METHOD save_failure_raises_022.
+  " Rule: a log that cannot be saved is a failed delivery (801), never logged as sent;
+  " the message carries the return code of BAL_DB_SAVE
+  METHOD save_failure_raises_801.
     configure_scenario( VALUE #( save_fails = abap_true ) ).
-    assert_raises( gc_msgno_not_logged ).
+    DATA(lx_error) = assert_raises( gc_msgno_not_saved ).
+    cl_abap_unit_assert=>assert_equals( act = condense( CONV string( lx_error->if_t100_dyn_msg~msgv3 ) )
+                                        exp = condense( CONV string( gc_save_subrc ) )
+                                        msg = 'The return code of BAL_DB_SAVE is kept in the message' ).
   ENDMETHOD.
 
 

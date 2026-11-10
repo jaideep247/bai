@@ -19,6 +19,7 @@
 *&            | "not run yet" (762); parallel packages are the class's (PAYOUT_PARALLEL).
 *& 2026-11-08 | Exceptions-only worklist: modes FAST (default, unchanged job step), NIGHTLY and SWEEP (date
 *&            | range and evidence sources); the lag is said after a FAST run only.
+*& 2026-11-10 | In background an error ends the job with a type E message (was S: the job ended green).
 *&---------------------------------------------------------------------*
 REPORT zcd_ops_pay_snapshot.
 
@@ -64,6 +65,10 @@ CLASS lcl_app IMPLEMENTATION.
         DATA(ls_result) = NEW zcl_cd_ops_pay_snapshot( )->run( iv_test_mode = xsdbool( p_test = abap_true )
                                                                is_selection = selection( ) ).
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+        " B9: in background the job ends cancelled (Control-M red), never green
+        IF sy-batch = abap_true.
+          MESSAGE lx_ops TYPE 'E'.
+        ENDIF.
         MESSAGE lx_ops TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.

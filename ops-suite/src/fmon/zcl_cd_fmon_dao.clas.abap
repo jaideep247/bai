@@ -26,6 +26,7 @@
 *&            | get_deadlines (ZCD_FMON_DEADL) removed.
 *& 2026-11-08 | READ_LEGACY: optional keyset paging (rows after date, time, key in that order -
 *&            | ZCL_CD_FMON_QUERY=>SEEK_CONDITION) for the watermark read of the payment request log.
+*& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -537,9 +538,11 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
     ENDIF.
     TRY.
         lo_struct ?= lo_descr.
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e202(zcd_ops) WITH iv_table.
+          MESSAGE e202(zcd_ops) WITH iv_table
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
     LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_field>).
       INSERT <ls_field>-field INTO TABLE lt_names.

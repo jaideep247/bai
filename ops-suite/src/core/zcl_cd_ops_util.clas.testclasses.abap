@@ -14,6 +14,7 @@
 *& 2026-11-07 | Tests of the removed rag_from_value dropped.
 *& 2026-11-07 | param_int over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED, INT parameter without definition
 *&            | default): a value that is not a number is a logged parameter error and gives the default.
+*& 2026-11-10 | exception_trace, error_class, account_label, job_link (test seam JOB_INFO).
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -42,6 +43,40 @@ CLASS ltc_util DEFINITION FINAL FOR TESTING
     METHODS pcre_invalid_never_matches   FOR TESTING.
     METHODS pcre_blank_is_valid          FOR TESTING.
     METHODS pcre_literals_skip_meta      FOR TESTING.
+    METHODS trace_lists_every_link       FOR TESTING.
+    METHODS lock_message_is_transient    FOR TESTING.
+    METHODS database_error_is_transient  FOR TESTING.
+    METHODS config_message_wins_over_cx  FOR TESTING.
+    METHODS runtime_error_is_code        FOR TESTING.
+    METHODS other_message_is_data        FOR TESTING.
+    METHODS account_shows_house_bank     FOR TESTING.
+    METHODS account_number_is_masked     FOR TESTING.
+    METHODS short_account_fully_masked   FOR TESTING.
+    METHODS job_link_in_batch            FOR TESTING.
+    METHODS job_link_blank_in_dialog     FOR TESTING.
+
+    CONSTANTS:
+      BEGIN OF gc_test,
+        msg_lock    TYPE symsgno VALUE '040',
+        msg_class   TYPE symsgno VALUE '032',
+        msg_insert  TYPE symsgno VALUE '010',
+        account     TYPE string VALUE `0012345678`,
+        masked      TYPE string VALUE `****5678`,
+        short       TYPE string VALUE `678`,
+        hbkid       TYPE string VALUE `JPMC1`,
+        hktid       TYPE string VALUE `OPS01`,
+        house_label TYPE string VALUE `JPMC1/OPS01`,
+        jobname     TYPE btcjob VALUE 'ZCD_FMON_MONITOR_ALL',
+        jobcount    TYPE btcjobcnt VALUE '10203040',
+      END OF gc_test.
+
+    "! A ZCD_OPS exception with the given message, optionally chained to ix_previous
+    METHODS ops_error
+      IMPORTING
+        iv_msgno        TYPE symsgno
+        ix_previous     TYPE REF TO cx_root OPTIONAL
+      RETURNING
+        VALUE(rx_error) TYPE REF TO zcx_cd_ops_error.
 ENDCLASS.
 
 
@@ -285,6 +320,139 @@ CLASS ltc_util IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_literals( 'A[0-9]{8}\d' )
                                         exp = 1
                                         msg = 'Only A is literal' ).
+  ENDMETHOD.
+
+
+  METHOD ops_error.
+    TRY.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE ID zif_cd_ops_types=>gc_message_class TYPE zif_cd_ops_types=>gc_msgty_error NUMBER iv_msgno
+          EXPORTING
+            previous = ix_previous.
+      CATCH zcx_cd_ops_error INTO rx_error.
+        RETURN.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B10: the trace keeps every link of the chain, outermost first, with class and message
+  METHOD trace_lists_every_link.
+    TRY.
+        DATA(lx_error) = ops_error( iv_msgno    = gc_test-msg_class
+                                    ix_previous = NEW cx_sy_move_cast_error( ) ).
+        SPLIT zcl_cd_ops_util=>exception_trace( lx_error ) AT cl_abap_char_utilities=>newline
+          INTO TABLE DATA(lt_lines).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines )
+                                            exp = 2
+                                            msg = 'One trace line per link of the chain' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( lt_lines[ 1 ] CS |ZCX_CD_OPS_ERROR { zif_cd_ops_types=>gc_message_class }/{ gc_test-msg_class }| )
+          msg = 'The outermost link names its class and message' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( lt_lines[ 2 ] CS `CX_SY_MOVE_CAST_ERROR` )
+                                          msg = 'The previous exception is not lost' ).
+      CATCH cx_root INTO DATA(lx_unexpected).
+        cl_abap_unit_assert=>fail( msg = lx_unexpected->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B12: a run lock held by another run may be retried
+  METHOD lock_message_is_transient.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>error_class( ops_error( gc_test-msg_lock ) )
+                                        exp = zif_cd_ops_types=>gc_error_class-transient
+                                        msg = 'Message 040 (lock held) is TRANSIENT' ).
+  ENDMETHOD.
+
+
+  " B12: a database error anywhere in the chain may be retried
+  METHOD database_error_is_transient.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_cd_ops_util=>error_class( ops_error( iv_msgno    = gc_test-msg_insert
+                                                     ix_previous = NEW cx_sy_open_sql_db( ) ) )
+      exp = zif_cd_ops_types=>gc_error_class-transient
+      msg = 'CX_SY_OPEN_SQL_DB is TRANSIENT' ).
+  ENDMETHOD.
+
+
+  " B12: a configuration message classifies the chain even when a runtime error is below it
+  METHOD config_message_wins_over_cx.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_cd_ops_util=>error_class( ops_error( iv_msgno    = gc_test-msg_class
+                                                     ix_previous = NEW cx_sy_move_cast_error( ) ) )
+      exp = zif_cd_ops_types=>gc_error_class-config
+      msg = 'Message 032 (class does not implement the interface) is CONFIG' ).
+  ENDMETHOD.
+
+
+  " B12: a runtime error of the ABAP kernel is a code defect
+  METHOD runtime_error_is_code.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>error_class( NEW cx_sy_zerodivide( ) )
+                                        exp = zif_cd_ops_types=>gc_error_class-code
+                                        msg = 'CX_SY_ZERODIVIDE is CODE' ).
+  ENDMETHOD.
+
+
+  " B12: everything else is data
+  METHOD other_message_is_data.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>error_class( ops_error( gc_test-msg_insert ) )
+                                        exp = zif_cd_ops_types=>gc_error_class-data
+                                        msg = 'Message 010 without a classified cause is DATA' ).
+  ENDMETHOD.
+
+
+  " B15: house bank and account ID replace the account number when both are known
+  METHOD account_shows_house_bank.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>account_label( iv_account = gc_test-account
+                                                                             iv_hbkid   = gc_test-hbkid
+                                                                             iv_hktid   = gc_test-hktid )
+                                        exp = gc_test-house_label
+                                        msg = 'House bank / account ID, never the number' ).
+  ENDMETHOD.
+
+
+  " B15: without house bank only the last four characters are shown
+  METHOD account_number_is_masked.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>account_label( gc_test-account )
+                                        exp = gc_test-masked
+                                        msg = 'Masked to the last four characters' ).
+  ENDMETHOD.
+
+
+  " B15: a number of four characters or fewer is masked completely
+  METHOD short_account_fully_masked.
+    cl_abap_unit_assert=>assert_false( act = xsdbool( zcl_cd_ops_util=>account_label( gc_test-short ) CS gc_test-short )
+                                       msg = 'A short number never appears in full' ).
+  ENDMETHOD.
+
+
+  " B12: a batch run knows its job (SM37 link)
+  METHOD job_link_in_batch.
+    TEST-INJECTION job_info.
+      lv_batch    = abap_true.
+      lv_jobname  = gc_test-jobname.
+      lv_jobcount = gc_test-jobcount.
+      lv_subrc    = 0.
+    END-TEST-INJECTION.
+    DATA(ls_link) = zcl_cd_ops_util=>job_link( ).
+    cl_abap_unit_assert=>assert_equals( act = ls_link
+                                        exp = VALUE zif_cd_ops_types=>ty_job_link( jobname  = gc_test-jobname
+                                                                                   jobcount = gc_test-jobcount
+                                                                                   sysid    = sy-sysid )
+                                        msg = 'Job name, count and system of the batch run' ).
+  ENDMETHOD.
+
+
+  " B12: a dialog run has no job
+  METHOD job_link_blank_in_dialog.
+    TEST-INJECTION job_info.
+      lv_batch = abap_false.
+    END-TEST-INJECTION.
+    DATA(ls_link) = zcl_cd_ops_util=>job_link( ).
+    cl_abap_unit_assert=>assert_initial( act = ls_link-jobname
+                                         msg = 'No job name outside batch' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_link-sysid
+                                        exp = sy-sysid
+                                        msg = 'The system is always known' ).
   ENDMETHOD.
 
 ENDCLASS.

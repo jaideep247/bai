@@ -42,6 +42,8 @@ define table zcd_ops_finding {
   waiver_reason : abap.char(255);
   created_by    : syuname;
   created_at    : timestampl;
+  // Error class of a finding raised at a catch boundary (TRANSIENT, DATA, CONFIG, CODE; 2026-11-10)
+  error_class   : abap.char(10);
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and

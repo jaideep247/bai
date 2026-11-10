@@ -33,6 +33,8 @@
 *& 2026-11-08 | Prefix POSTAREA_ -> CD_OPS: posting areas of the mapping tables (customer posting areas).
 *& 2026-11-08 | Transactions dashboard on the payment worklist: GC_TRX_DASHBOARD-RETENTION_DAYS retired (no 400-day
 *&            | driver), date kinds WORKLIST / RUN / VALUE / DUE (POSTING retired).
+*& 2026-11-10 | Error class (GC_ERROR_CLASS, rules GC_ERROR_RULE; TY_FINDING-ERROR_CLASS), job link of a
+*&            | run (TY_RUN-JOBNAME / JOBCOUNT / SYSID), TABWL purpose LOOKUP (EBS R21), messages 802-805.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -61,6 +63,7 @@ INTERFACE zif_cd_ops_types
   CONSTANTS gc_message_class TYPE c LENGTH 20 VALUE 'ZCD_OPS'.
   "! Message type used when a text is only built, never shown
   CONSTANTS gc_msgty_info TYPE c LENGTH 1 VALUE 'I'.
+  CONSTANTS gc_msgty_error TYPE c LENGTH 1 VALUE 'E'.
   "! Time of day limits and the time zone used for UTC timestamps
   CONSTANTS:
     BEGIN OF gc_time,
@@ -208,7 +211,40 @@ INTERFACE zif_cd_ops_types
       read   TYPE ty_tabwl_purpose VALUE 'READ',
       "! HCK configuration drift: the whole table is hashed against the golden baseline
       drift  TYPE ty_tabwl_purpose VALUE 'DRIFT',
+      "! EBS lookup rule R21 (ZCD_EBS_LOOKUP): key and status fields only, field-level rows
+      lookup TYPE ty_tabwl_purpose VALUE 'LOOKUP',
     END OF gc_tabwl_purpose.
+
+  "! Error class of a failure (ZCD_OPS_FINDING-ERROR_CLASS): only TRANSIENT may be retried
+  "! (lock, timeout, database); DATA, CONFIG and CODE go to their owner (ZCL_CD_OPS_UTIL=>ERROR_CLASS)
+  TYPES ty_error_class TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_error_class,
+      transient TYPE ty_error_class VALUE 'TRANSIENT',
+      data      TYPE ty_error_class VALUE 'DATA',
+      config    TYPE ty_error_class VALUE 'CONFIG',
+      code      TYPE ty_error_class VALUE 'CODE',
+    END OF gc_error_class.
+
+  "! Classification of ZCL_CD_OPS_UTIL=>ERROR_CLASS: ZCD_OPS message numbers of lock / timeout and of
+  "! configuration / authorisation failures (comma lists - extend them with every new message of the
+  "! kind), exception classes of the database layer (TRANSIENT) and the prefix of runtime errors (CODE)
+  CONSTANTS:
+    BEGIN OF gc_error_rule,
+      transient_msgno TYPE string VALUE `040,042,313,335,369,763`,
+      config_msgno    TYPE string
+        VALUE `007,021,027,030,031,032,033,041,050,051,200,201,202,303,304,703,807,808,809,811,812,813`,
+      transient_class TYPE string VALUE `CX_SY_OPEN_SQL_DB,CX_SQL_EXCEPTION`,
+      code_prefix     TYPE string VALUE `CX_SY_`,
+    END OF gc_error_rule.
+
+  "! Batch job of a run (SM37 link) and the system it ran in (ZCL_CD_OPS_UTIL=>JOB_LINK)
+  TYPES:
+    BEGIN OF ty_job_link,
+      jobname  TYPE btcjob,
+      jobcount TYPE btcjobcnt,
+      sysid    TYPE sysysid,
+    END OF ty_job_link.
 
   "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
   TYPES ty_disposition TYPE c LENGTH 1.
@@ -276,6 +312,8 @@ INTERFACE zif_cd_ops_types
       reference   TYPE ty_reference,
       message     TYPE ty_message,
       details     TYPE string,
+      "! TRANSIENT / DATA / CONFIG / CODE for a finding raised at a catch boundary (else blank)
+      error_class TYPE ty_error_class,
     END OF ty_finding.
   TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
@@ -302,6 +340,10 @@ INTERFACE zif_cd_ops_types
       runtime_ms    TYPE i,
       message       TYPE ty_message,
       created_by    TYPE syuname,
+      "! Batch job of the run (SM37 link; blank in dialog) and the system it ran in
+      jobname       TYPE btcjob,
+      jobcount      TYPE btcjobcnt,
+      sysid         TYPE sysysid,
     END OF ty_run.
   TYPES tt_run TYPE STANDARD TABLE OF ty_run WITH EMPTY KEY.
 
@@ -448,6 +490,10 @@ INTERFACE zif_cd_ops_types
       alert_pattern_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '742',
       pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '743',
       pattern_too_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '744',
+      alert_id_failed             TYPE zif_cd_ops_types=>ty_msgno VALUE '802',
+      alert_run_reference         TYPE zif_cd_ops_types=>ty_msgno VALUE '803',
+      run_aborted                 TYPE zif_cd_ops_types=>ty_msgno VALUE '804',
+      alert_dispatch_failed       TYPE zif_cd_ops_types=>ty_msgno VALUE '805',
     END OF gc_msg.
 
 ENDINTERFACE.

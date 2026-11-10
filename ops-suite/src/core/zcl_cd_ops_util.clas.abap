@@ -14,6 +14,9 @@
 *&              (whole value, case-insensitive), pcre_literals (specificity).
 *& 2026-11-07 | param_int: the one integer-parameter helper (replaces five private copies).
 *& 2026-11-07 | rag_from_value removed (no caller).
+*& 2026-11-10 | exception_trace (every link of an exception chain), error_class (TRANSIENT / DATA /
+*&              CONFIG / CODE), account_label (house bank / account ID or masked number), job_link
+*&              (batch job of the running program; GET_JOB_RUNTIME_INFO in test seam JOB_INFO).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -155,6 +158,39 @@ CLASS zcl_cd_ops_util DEFINITION
       RETURNING
         VALUE(rv_value) TYPE i.
 
+    "! Every link of an exception chain (outermost first, PREVIOUS followed), one line each:
+    "! exception class, message ID / number (T100 exceptions), text and source position.
+    "! Stored in ZCD_OPS_FINDING-DETAILS at every catch boundary, never shown to a caller
+    CLASS-METHODS exception_trace
+      IMPORTING
+        ix_error        TYPE REF TO cx_root
+      RETURNING
+        VALUE(rv_trace) TYPE string.
+
+    "! Error class of a caught exception (rules ZIF_CD_OPS_TYPES=>GC_ERROR_RULE over the whole
+    "! chain): database layer or a lock / timeout message TRANSIENT; else a configuration or
+    "! authorisation message CONFIG; else a runtime error (CX_SY_*) CODE; else DATA
+    CLASS-METHODS error_class
+      IMPORTING
+        ix_error        TYPE REF TO cx_root
+      RETURNING
+        VALUE(rv_class) TYPE zif_cd_ops_types=>ty_error_class.
+
+    "! A bank account for a text that may be e-mailed: house bank / account ID when both are
+    "! known, else the account number masked to its last four characters (never in full)
+    CLASS-METHODS account_label
+      IMPORTING
+        iv_account      TYPE clike
+        iv_hbkid        TYPE clike OPTIONAL
+        iv_hktid        TYPE clike OPTIONAL
+      RETURNING
+        VALUE(rv_label) TYPE string.
+
+    "! Batch job of the running program (SM37 name and count; blank in dialog) and the system
+    CLASS-METHODS job_link
+      RETURNING
+        VALUE(rs_link) TYPE zif_cd_ops_types=>ty_job_link.
+
     "! Safe string to decimal; returns iv_default on conversion error
     CLASS-METHODS to_decimal
       IMPORTING
@@ -176,6 +212,13 @@ CLASS zcl_cd_ops_util DEFINITION
         meta        TYPE string VALUE `.*+?()|^$`,
         word        TYPE string VALUE `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`,
       END OF gc_pcre.
+
+    "! Account masking: visible trailing characters and the mask in front of them
+    CONSTANTS gc_account_visible TYPE i VALUE 4.
+    CONSTANTS gc_account_mask TYPE string VALUE `****`.
+    "! A chain longer than this is cut (protects the trace against a cyclic PREVIOUS)
+    CONSTANTS gc_trace_max_links TYPE i VALUE 20.
+    CONSTANTS gc_list_separator TYPE string VALUE `,`.
 
 ENDCLASS.
 
@@ -380,6 +423,118 @@ CLASS zcl_cd_ops_util IMPLEMENTATION.
       CATCH cx_sy_conversion_error.
         rv_value = iv_default.
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD exception_trace.
+    DATA lv_include TYPE syrepid.
+    DATA lv_line    TYPE i.
+    DATA lv_links   TYPE i.
+
+    DATA(lx_link) = ix_error.
+    WHILE lx_link IS BOUND AND lv_links < gc_trace_max_links.
+      lv_links += 1.
+      DATA(lv_class) = cl_abap_typedescr=>describe_by_object_ref( lx_link )->get_relative_name( ).
+      DATA(lv_t100) = ``.
+      IF lx_link IS INSTANCE OF if_t100_message.
+        DATA(ls_key) = CAST if_t100_message( lx_link )->t100key.
+        lv_t100 = |{ ls_key-msgid }/{ ls_key-msgno }|.
+      ENDIF.
+      lx_link->get_source_position( IMPORTING include_name = lv_include
+                                              source_line  = lv_line ).
+      DATA(lv_entry) = |{ lv_class } { lv_t100 }: { lx_link->get_text( ) } ({ lv_include }:{ lv_line })|.
+      rv_trace = COND #( WHEN rv_trace IS INITIAL THEN lv_entry
+                         ELSE |{ rv_trace }{ cl_abap_char_utilities=>newline }{ lv_entry }| ).
+      lx_link = lx_link->previous.
+    ENDWHILE.
+  ENDMETHOD.
+
+
+  METHOD error_class.
+    DATA lv_config TYPE abap_bool.
+    DATA lv_code   TYPE abap_bool.
+    DATA lv_links  TYPE i.
+
+    SPLIT zif_cd_ops_types=>gc_error_rule-transient_msgno AT gc_list_separator INTO TABLE DATA(lt_transient_no).
+    SPLIT zif_cd_ops_types=>gc_error_rule-config_msgno AT gc_list_separator INTO TABLE DATA(lt_config_no).
+    SPLIT zif_cd_ops_types=>gc_error_rule-transient_class AT gc_list_separator INTO TABLE DATA(lt_transient_cx).
+    DATA(lv_prefix_len) = strlen( zif_cd_ops_types=>gc_error_rule-code_prefix ).
+
+    DATA(lx_link) = ix_error.
+    WHILE lx_link IS BOUND AND lv_links < gc_trace_max_links.
+      lv_links += 1.
+      DATA(lv_class) = CONV string( cl_abap_typedescr=>describe_by_object_ref( lx_link )->get_relative_name( ) ).
+      IF line_exists( lt_transient_cx[ table_line = lv_class ] ).
+        rv_class = zif_cd_ops_types=>gc_error_class-transient.
+        RETURN.
+      ENDIF.
+      IF lx_link IS INSTANCE OF if_t100_message.
+        DATA(ls_key) = CAST if_t100_message( lx_link )->t100key.
+        IF ls_key-msgid = zif_cd_ops_types=>gc_message_class.
+          DATA(lv_msgno) = CONV string( ls_key-msgno ).
+          IF line_exists( lt_transient_no[ table_line = lv_msgno ] ).
+            rv_class = zif_cd_ops_types=>gc_error_class-transient.
+            RETURN.
+          ENDIF.
+          IF line_exists( lt_config_no[ table_line = lv_msgno ] ).
+            lv_config = abap_true.
+          ENDIF.
+        ENDIF.
+      ELSEIF strlen( lv_class ) > lv_prefix_len
+         AND lv_class(lv_prefix_len) = zif_cd_ops_types=>gc_error_rule-code_prefix.
+        lv_code = abap_true.
+      ENDIF.
+      lx_link = lx_link->previous.
+    ENDWHILE.
+    rv_class = COND #( WHEN lv_config = abap_true THEN zif_cd_ops_types=>gc_error_class-config
+                       WHEN lv_code = abap_true   THEN zif_cd_ops_types=>gc_error_class-code
+                       ELSE zif_cd_ops_types=>gc_error_class-data ).
+  ENDMETHOD.
+
+
+  METHOD account_label.
+    IF iv_hbkid IS NOT INITIAL AND iv_hktid IS NOT INITIAL.
+      rv_label = |{ condense( CONV string( iv_hbkid ) ) }/{ condense( CONV string( iv_hktid ) ) }|.
+      RETURN.
+    ENDIF.
+    DATA(lv_account) = condense( CONV string( iv_account ) ).
+    DATA(lv_length) = strlen( lv_account ).
+    IF lv_length = 0.
+      RETURN.
+    ENDIF.
+    " a short number is masked completely: four visible characters would be the whole number
+    rv_label = COND #( WHEN lv_length <= gc_account_visible THEN gc_account_mask
+                       ELSE |{ gc_account_mask }{ substring( val = lv_account
+                                                             off = lv_length - gc_account_visible
+                                                             len = gc_account_visible ) }| ).
+  ENDMETHOD.
+
+
+  METHOD job_link.
+    DATA lv_batch    TYPE abap_bool.
+    DATA lv_jobname  TYPE btcjob.
+    DATA lv_jobcount TYPE btcjobcnt.
+    DATA lv_subrc    TYPE sysubrc.
+
+    rs_link-sysid = sy-sysid.
+    TEST-SEAM job_info.
+      lv_batch = sy-batch.
+      IF lv_batch = abap_true.
+        CALL FUNCTION 'GET_JOB_RUNTIME_INFO'
+          IMPORTING
+            jobcount        = lv_jobcount
+            jobname         = lv_jobname
+          EXCEPTIONS
+            no_runtime_info = 1
+            OTHERS          = 2.
+        lv_subrc = sy-subrc.
+      ENDIF.
+    END-TEST-SEAM.
+    IF lv_batch = abap_false OR lv_subrc <> 0.
+      " dialog run, or no job context: no SM37 link (the run keeps user and time)
+      RETURN.
+    ENDIF.
+    rs_link-jobname  = lv_jobname.
+    rs_link-jobcount = lv_jobcount.
   ENDMETHOD.
 
 ENDCLASS.

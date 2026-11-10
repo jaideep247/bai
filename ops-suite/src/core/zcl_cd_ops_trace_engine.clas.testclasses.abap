@@ -28,6 +28,7 @@
 *&            | ZCD_HCK_PMCLASS rows).
 *& 2026-11-08 | Payment worklist: request rule double (stage REQUEST_DUE shown as information), search by payment
 *&            | reference (cheque number, payment document).
+*& 2026-11-10 | bad_source_field_is_reported: CONFIGURATION row instead of a silently lost filter.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -54,6 +55,8 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_gl_lines TYPE zif_cd_ops_trace_types=>tt_gl_line.
     DATA mv_kind TYPE zif_cd_ops_trace_types=>ty_kind.
     DATA mt_noc TYPE zif_cd_ops_trace_types=>tt_noc.
+    "! The partner read by source field fails (field not in BUT000)
+    DATA mv_source_field_fails TYPE abap_bool.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -79,6 +82,9 @@ CLASS ltd_dao IMPLEMENTATION.
     CLEAR rt_rows.
   ENDMETHOD.
   METHOD zif_cd_ops_trace_dao~get_partners.
+    IF mv_source_field_fails = abap_true AND iv_source_field IS NOT INITIAL.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e201(zcd_ops) WITH iv_source_field 'BUT000'.
+    ENDIF.
     rt_partners = COND #( WHEN iv_source_field IS NOT INITIAL THEN mt_partners_src ELSE mt_partners ).
   ENDMETHOD.
   METHOD zif_cd_ops_trace_dao~get_items_by_fin.
@@ -370,6 +376,7 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
     METHODS unauthorised_not_missing      FOR TESTING.
     METHODS partner_mismatch_ambiguous    FOR TESTING.
     METHODS partner_without_source_noted  FOR TESTING.
+    METHODS bad_source_field_is_reported  FOR TESTING.
     METHODS clearing_doc_input_traces     FOR TESTING.
     METHODS unknown_fin_is_not_found      FOR TESTING.
     METHODS member_number_is_masked       FOR TESTING.
@@ -1096,6 +1103,27 @@ CLASS ltc_trace IMPLEMENTATION.
                                             msg = 'Legacy partner still verifies the item' ).
         cl_abap_unit_assert=>assert_equals( act = ls_item-reason exp = zif_cd_ops_trace_types=>gc_reason-partner_legacy
                                             msg = 'Reason PARTNER_WITHOUT_SOURCE' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (B17): a source field the partner read refuses is reported as a configuration row;
+  " the trace continues without the filter and the row never decides the verdict
+  METHOD bad_source_field_is_reported.
+    TRY.
+        configure_scenario( VALUE #( partner_legacy = abap_true ) ).
+        mo_dao->mv_source_field_fails = abap_true.
+        DATA(ls_result) = run_trace( ).
+        DATA(ls_config) = ls_result-rows[ stage = zif_cd_ops_trace_types=>gc_stage-config ].
+        cl_abap_unit_assert=>assert_equals( act = ls_config-reason exp = zif_cd_ops_trace_types=>gc_reason-not_configured
+                                            msg = 'Configuration row SOURCE_NOT_CONFIGURED' ).
+        cl_abap_unit_assert=>assert_false( act = ls_config-first_gap
+                                           msg = 'A configuration row is never the first gap' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-rows[ stage = zif_cd_ops_trace_types=>gc_stage-sap_item ]-status
+                                            exp = zif_cd_ops_trace_types=>gc_status-verified
+                                            msg = 'The items still verify without the filter' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

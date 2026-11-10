@@ -36,6 +36,10 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mt_reconciled TYPE zif_cd_ops_types=>tt_group.
     "! Runs still in status R (get_stale_runs)
     DATA mt_running TYPE zif_cd_ops_types=>tt_run.
+    "! B9: the first save of findings fails (the run stops after it started)
+    DATA mv_fail_save TYPE abap_bool.
+    DATA mv_rollback_calls TYPE i.
+    DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
     METHODS constructor.
 ENDCLASS.
 
@@ -53,6 +57,10 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_store~save_findings.
+    IF mv_fail_save = abap_true.
+      mv_fail_save = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e010(zcd_ops) WITH 'ZCD_OPS_FINDING'.
+    ENDIF.
     mv_save_calls = mv_save_calls + 1.
     INSERT LINES OF it_findings INTO TABLE mt_saved.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
@@ -60,10 +68,15 @@ CLASS ltd_store IMPLEMENTATION.
 
   METHOD zif_cd_ops_store~finish_run.
     mv_finish_calls = mv_finish_calls + 1.
+    ms_finished = is_run.
   ENDMETHOD.
 
   METHOD zif_cd_ops_store~commit.
     mv_commit_calls = mv_commit_calls + 1.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_store~rollback.
+    mv_rollback_calls = mv_rollback_calls + 1.
   ENDMETHOD.
 
   METHOD zif_cd_ops_store~reconcile.
@@ -298,6 +311,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS red_metric_turns_check_red FOR TESTING.
     METHODS suppressed_red_is_not_red FOR TESTING.
     METHODS failed_plugin_does_not_abort FOR TESTING.
+    METHODS stopped_run_is_aborted FOR TESTING.
+    METHODS plugin_error_keeps_trace FOR TESTING.
     METHODS timeout_overrun_is_flagged FOR TESTING.
     METHODS test_mode_saves_nothing FOR TESTING.
     METHODS real_run_persists_dispatches FOR TESTING.
@@ -563,6 +578,43 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_report-results[ check_id = 'GREEN1' ]-rag
                                             exp = gc_green
                                             msg = 'Healthy check after the failure must be GREEN' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B9: a ZCD_OPS error after the run started is rolled back, the run closed as aborted
+  " (RUN_ABORTED, ON_ABORT alert) and re-raised to the job - never left in status R
+  METHOD stopped_run_is_aborted.
+    configure_scenario( VALUE #( failing_plugin = abap_true ) ).
+    mo_store->mv_fail_save = abap_true.
+    TRY.
+        act( ).
+        cl_abap_unit_assert=>fail( msg = 'The error must reach the caller' ).
+      CATCH zcx_cd_ops_error.
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollback_calls exp = 1
+                                            msg = 'The open LUW is rolled back' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-status
+                                            exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            msg = 'The run is closed as aborted' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_cd_ops_run_guard=>gc_check_aborted ] ) )
+          msg = 'RUN_ABORTED is saved' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B10 / B12: a failed plug-in keeps its exception trace and error class
+  METHOD plugin_error_keeps_trace.
+    TRY.
+        configure_scenario( VALUE #( failing_plugin = abap_true ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_error) = ls_report-results[ check_id = gc_fail_check ]-findings[ 1 ].
+        cl_abap_unit_assert=>assert_not_initial( act = ls_error-details
+                                                 msg = 'PLUGIN_ERROR carries the exception trace' ).
+        cl_abap_unit_assert=>assert_not_initial( act = ls_error-error_class
+                                                 msg = 'PLUGIN_ERROR carries the error class' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

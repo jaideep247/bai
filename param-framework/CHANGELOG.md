@@ -4,6 +4,13 @@ All notable changes of the parameter framework (`param-framework/` in jaideep247
 
 ## [Unreleased]
 
+### Changed (2026-11-10)
+- `ZCL_CA_PARAM`: a conversion error is kept as `PREVIOUS` of the raised `ZCX_CA_PARAM`
+  (helper `RAISE` has `IX_PREVIOUS`).
+- `ZCL_CA_PARAM_SYSTEM=>READ_CLIENT` stays fail closed but returns the error text of the
+  business configuration API (`TY_CLIENT-CUST_REASON`); the app shows it with message 048
+  instead of 044 (`ZCL_CA_PARAM_MAINT=>CHECK_CONFIG_CHANGE`, test `client_check_reason_shown`).
+
 ### Added
 - Repository scaffold: abapGit settings (starting folder `/src/`, folder logic PREFIX),
   abaplint configuration (v758), CI workflow (`ci/abaplint.yml`), house checks

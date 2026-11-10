@@ -10,6 +10,7 @@
 *& 2026-11-06 | Audit A51: S_TABU_NAM display check for the dynamic reader.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Test seam TABLE_AUTH around the S_TABU_NAM check (coverage gap closure).
+*& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC describer (RTTI)</p>
 CLASS zcl_cd_fmon_ddic DEFINITION
@@ -64,9 +65,11 @@ CLASS zcl_cd_fmon_ddic IMPLEMENTATION.
 
     TRY.
         lo_struct ?= lo_descr.
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e200(zcd_ops) WITH iv_table.
+          MESSAGE e200(zcd_ops) WITH iv_table
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
 
     IF lo_struct->is_ddic_type( ) = abap_false.

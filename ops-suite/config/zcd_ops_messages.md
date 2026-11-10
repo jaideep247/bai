@@ -1,6 +1,6 @@
 # Message class ZCD_OPS
 
-Number ranges: 001–099 and 700–799 core · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
+Number ranges: 001–099, 700–799 and 800–849 core · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
 Every user-facing text of the suite is one of these messages (built with `ZCL_CD_OPS_UTIL=>TEXT( )`) or a text symbol (`docs/text_elements/`); numbers are referenced through the `gc_msg-*` constants of each area's types interface.
 Create in SE91 exactly as listed (short texts ≤ 73 characters).
 
@@ -12,7 +12,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 003 | [&1][&2] &3 finding(s) - rule &4 |
 | 004 | Run &1 status &2, RAG &3, items &4, |
 | 005 | failed &1, blocked &2. |
-| 006 | &1 more finding(s) in ZCD_OPS_FINDING. |
+| 006 | &1 more finding(s): see the exceptions app (Fiori ZUI_CD_OPS_EXC). |
 | 007 | Channel &1 not configured or inactive in ZCD_OPS_ALCHN |
 | 008 | Passed on re-run &1 |
 | 010 | Insert into table &1 failed |
@@ -20,7 +20,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 012 | Read of table &1 failed |
 | 020 | Alert for route &1 could not be sent |
 | 021 | Alert rule &1 has no recipient |
-| 022 | Application log &1/&2 could not be written |
 | 025 | Application log &1/&2 written only in part (&3 of &4 lines) |
 | 026 | E-mail for &1 was not accepted by SAPconnect (BCS send result) |
 | 027 | Alert route &1: &2 is not a shared SO23 distribution list |
@@ -522,3 +521,11 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 777 | Worklist re-check &1 not completed today (&2): requests unchecked |
 | 778 | Cancelled after SUCCESS (&1): not expected to be paid |
 | 779 | Request &1 &2: stage &3, &4 |
+| 800 | Application log &1/&2 not created (BAL_LOG_CREATE return code &3) |
+| 801 | Application log &1/&2 not saved (BAL_DB_SAVE return code &3) |
+| 802 | Alert log ID could not be generated - alert not delivered |
+| 803 | Run &1, job &2 / &3 - exceptions app ZUI_CD_OPS_EXC |
+| 804 | Run &1 &2 aborted by an error: |
+| 805 | Alert dispatch failed for the run of &1: |
+| 806 | E-mail for &1: SAPconnect commit failed (return code &2) |
+| 815 | Partner filter not applied: source field &1 not usable - |

@@ -46,6 +46,10 @@
 *&            | duplicate-name failures in the check context, ZCL_CD_FMON_CHK_REGEN in the instant unit.
 *& 2026-11-08 | Table consolidation: stage deadlines are ZCD_FMON_SLA rows of kind DEADLINE in the context's
 *&            | SLAs (ZCD_FMON_DEADL merged).
+*& 2026-11-10 | Run boundary: a ZCX_CD_OPS_ERROR after the run started is rolled back, the run closed as aborted
+*&            | (ZCL_CD_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and re-raised - never
+*&            | left in status R. Engine findings of a caught exception (source, lot reader, check, registry,
+*&            | database, alert) keep the exception trace (DETAILS) and error class: ENGINE_FINDING IX_ERROR.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -388,7 +392,9 @@ CLASS zcl_cd_fmon_engine DEFINITION
         iv_key      TYPE clike
         iv_message  TYPE clike
         iv_iface_id TYPE zif_cd_fmon_types=>ty_iface_id OPTIONAL
-        iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error.
+        iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error
+        "! Caught exception: its trace goes to DETAILS, its error class to ERROR_CLASS
+        ix_error    TYPE REF TO cx_root OPTIONAL.
 
 
     METHODS mark_changed
@@ -494,33 +500,42 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       mo_store->commit( ).
     ENDIF.
 
-    " Audit A05: a technical SQL error anywhere in the run is handled here, at the owner of
-    " the LUW - rolled back, recorded, and the run closed as failed (never left running)
+    " B9: this method owns the LUW of the run - a ZCD_OPS error that stops the run is rolled
+    " back, the run closed as aborted (ON_ABORT alert rules) and the error re-raised to the job
     TRY.
-        load_config( ).
-        sync_sources( ).
-        load_registry( ).
-        " Lots and calendar expectations need the whole day: batch run only
-        IF mv_single = abap_false.
-          derive_lot_outcomes( ).
-          build_expectations( ).
-        ENDIF.
-        run_checks( ).
-        IF mv_test_mode = abap_false.
-          persist_registry( ).
-        ENDIF.
-      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
-        IF mv_test_mode = abap_false.
-          mo_store->rollback( ).
-        ENDIF.
-        engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
-                        iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
-                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
-                                                            iv_tail  = lx_sql->get_text( ) ) ).
-    ENDTRY.
+        " Audit A05: a technical SQL error anywhere in the run is handled here, at the owner of
+        " the LUW - rolled back, recorded, and the run closed as failed (never left running)
+        TRY.
+            load_config( ).
+            sync_sources( ).
+            load_registry( ).
+            " Lots and calendar expectations need the whole day: batch run only
+            IF mv_single = abap_false.
+              derive_lot_outcomes( ).
+              build_expectations( ).
+            ENDIF.
+            run_checks( ).
+            IF mv_test_mode = abap_false.
+              persist_registry( ).
+            ENDIF.
+          CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+            IF mv_test_mode = abap_false.
+              mo_store->rollback( ).
+            ENDIF.
+            engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
+                            iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
+                            iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
+                                                                iv_tail  = lx_sql->get_text( ) )
+                            ix_error   = lx_sql ).
+        ENDTRY.
 
-    rs_result-board = build_board( ).
-    finish( CHANGING cs_run = ls_run ).
+        rs_result-board = build_board( ).
+        finish( CHANGING cs_run = ls_run ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        mt_findings = zcl_cd_ops_run_guard=>abort( EXPORTING ix_error = lx_error
+                                                   CHANGING  cs_run   = ls_run ).
+        RAISE EXCEPTION lx_error.
+    ENDTRY.
     rs_result-run      = ls_run.
     rs_result-findings = mt_findings.
   ENDMETHOD.
@@ -602,7 +617,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source
                                                               iv_v1    = ls_src-src_id
                                                               iv_v2    = ls_src-table_name
-                                                              iv_tail  = lx_ops->get_text( ) ) ).
+                                                              iv_tail  = lx_ops->get_text( ) )
+                          ix_error   = lx_ops ).
           CONTINUE.
         CATCH cx_root INTO DATA(lx_root).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
@@ -610,7 +626,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source
                                                               iv_v1    = ls_src-src_id
                                                               iv_v2    = ls_src-table_name
-                                                              iv_tail  = lx_root->get_text( ) ) ).
+                                                              iv_tail  = lx_root->get_text( ) )
+                          ix_error   = lx_root ).
           CONTINUE.
       ENDTRY.
 
@@ -1129,7 +1146,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_reader
                                                               iv_v1    = ls_cfg-lot_type
                                                               iv_v2    = ls_cfg-item_table
-                                                              iv_tail  = lx_root->get_text( ) ) ).
+                                                              iv_tail  = lx_root->get_text( ) )
+                          ix_error   = lx_root ).
           CONTINUE.
       ENDTRY.
 
@@ -1429,7 +1447,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-check
                                                               iv_v1    = ls_check-check_id
                                                               iv_v2    = ls_check-class_name
-                                                              iv_tail  = lx_root->get_text( ) ) ).
+                                                              iv_tail  = lx_root->get_text( ) )
+                          ix_error   = lx_root ).
       ENDTRY.
     ENDLOOP.
   ENDMETHOD.
@@ -1459,7 +1478,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
                         iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
                         iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-registry_not_saved
-                                                            iv_tail  = lx_ops->get_text( ) ) ).
+                                                            iv_tail  = lx_ops->get_text( ) )
+                        ix_error   = lx_ops ).
         RETURN.
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         " Audit A05: technical SQL errors are rolled back the same way
@@ -1467,7 +1487,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
                         iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
                         iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
-                                                            iv_tail  = lx_sql->get_text( ) ) ).
+                                                            iv_tail  = lx_sql->get_text( ) )
+                        ix_error   = lx_sql ).
         RETURN.
     ENDTRY.
 
@@ -1603,6 +1624,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                 iv_code       = zif_cd_fmon_types=>gc_check_code-alert_failed
                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-alert_dispatch_failed
                                                        iv_tail  = lx_alert->get_text( ) ) ) ) ).
+          lt_alert_error[ 1 ]-details     = zcl_cd_ops_util=>exception_trace( lx_alert ).
+          lt_alert_error[ 1 ]-error_class = zcl_cd_ops_util=>error_class( lx_alert ).
           mo_store->save_findings( EXPORTING it_findings = lt_alert_error
                                    CHANGING  cs_run      = cs_run ).
           INSERT LINES OF lt_alert_error INTO TABLE mt_findings.
@@ -1650,6 +1673,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                          iv_severity   = iv_severity ).
     IF line_exists( mt_findings[ check_code = ls_finding-check_code object_key = ls_finding-object_key ] ).
       RETURN.
+    ENDIF.
+    IF ix_error IS BOUND.
+      ls_finding-details     = zcl_cd_ops_util=>exception_trace( ix_error ).
+      ls_finding-error_class = zcl_cd_ops_util=>error_class( ix_error ).
     ENDIF.
     INSERT ls_finding INTO TABLE mt_findings.
   ENDMETHOD.

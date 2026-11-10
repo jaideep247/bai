@@ -20,7 +20,7 @@ section 12.
 | DDIC | `ZCA_PARAM_VAL` | value rows per area + name + `NUMB`: sign, option, low, high; FK (`AREA`, `NAME`) -> `ZCA_PARAM_DEF` |
 | DDIC | domains / data elements `ZCA_PARAM_*` | fixed values for kind, value type, sign, option; flags on domain `XFELD` |
 | DDIC | `ZCA_D_PARAREA`, `ZCA_D_PARDEF`, `ZCA_D_PARVAL` | draft tables of the app |
-| Messages | `ZCA_PARAM` | 001-025 runtime and validation, 040-047 maintenance (`config/zca_param_messages.md`; authorization failures are reported by the RAP framework) |
+| Messages | `ZCA_PARAM` | 001-025 runtime and validation, 040-048 maintenance (`config/zca_param_messages.md`; authorization failures are reported by the RAP framework) |
 | Authorization | `ZCA_PARAM` (class `ZCA`), field `ZCA_PARAR` | maintenance only |
 | API | `ZIF_CA_PARAM`, `ZIF_CA_PARAM_TYPES`, `ZCX_CA_PARAM` | read API, types / constants, checked exception (T100) |
 | Logic | `ZCL_CA_PARAM` | resolution, typed getters, validation on every read, per-area buffer |
