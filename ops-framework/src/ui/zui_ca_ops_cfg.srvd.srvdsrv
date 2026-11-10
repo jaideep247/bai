@@ -1,8 +1,11 @@
-@EndUserText.label: 'Alerting and purge targets'
+@EndUserText.label: 'Alerting, purge targets and controls'
 @ObjectModel.leadingEntity.name: 'ZC_CA_OPSCFGALL'
 define service ZUI_CA_OPS_CFG {
   expose ZC_CA_OpsCfgAll as OpsCfgAll;
   expose ZC_CA_AlertRule as AlertRule;
   expose ZC_CA_AlertChannel as AlertChannel;
   expose ZC_CA_PurgeTarget as PurgeTarget;
+  expose ZC_CA_Control as Control;
+  expose ZC_CA_ControlText as ControlText;
+  expose ZC_CA_ControlCheck as ControlCheck;
 }

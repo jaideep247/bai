@@ -14,6 +14,8 @@
 *&            | checks; threshold order and posting areas stay with the consumer's checks).
 *& 2026-11-10 | LTC_TEMPLATE_CHECK: e-mail template ID of a rule / channel (syntax, existence through the
 *&            | injected renderer double LTD_MAIL_TEMPLATE).
+*& 2026-11-10 | LTC_CONTROL_CHECK: owner / backup user (double LTD_USERS), team (parameter CONTROL_TEAMS of the
+*&            | in-memory parameter store), runbook link (control register of the daily review).
 *&---------------------------------------------------------------------*
 "! Alert configuration from memory: only the channels are read by the checks
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
@@ -458,6 +460,104 @@ CLASS ltc_template_check IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Users of the client as the authorisation seam sees them: only ZT_OWNER exists
+CLASS ltd_users DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
+    CONSTANTS gc_known TYPE syuname VALUE 'ZT_OWNER'.
+ENDCLASS.
+
+
+CLASS ltd_users IMPLEMENTATION.
+
+  METHOD zif_ca_ops_auth~user_exists.
+    rv_exists = xsdbool( iv_user = gc_known ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Control register: owner / backup, team and runbook link checked on save (messages 437-439)
+CLASS ltc_control_check DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    METHODS setup.
+    METHODS teardown.
+    METHODS known_user_is_valid          FOR TESTING.
+    METHODS unknown_user_is_refused      FOR TESTING.
+    METHODS team_from_parameter          FOR TESTING.
+    METHODS maintained_teams_replace     FOR TESTING.
+    METHODS http_link_is_valid           FOR TESTING.
+    METHODS link_without_scheme_refused  FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_control_check IMPLEMENTATION.
+
+  METHOD setup.
+    zcl_ca_ops_injector=>inject_auth( NEW ltd_users( ) ).
+    zcl_ca_ops_injector=>inject_params( NEW zcl_ca_ops_param_seed( )->params( ) ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_ca_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  METHOD known_user_is_valid.
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>user_valid( ltd_users=>gc_known )
+                                      msg = 'An existing user is accepted' ).
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>user_valid( space )
+                                      msg = 'No backup yet is accepted (blank)' ).
+  ENDMETHOD.
+
+
+  METHOD unknown_user_is_refused.
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>user_valid( 'ZT_NOBODY' )
+                                       msg = 'A user that does not exist is refused (437)' ).
+  ENDMETHOD.
+
+
+  METHOD team_from_parameter.
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>team_valid( 'offshore' )
+                                      msg = 'A delivered team, any case' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>team_valid( 'NIGHT' )
+                                       msg = 'A team that is not configured is refused (438)' ).
+  ENDMETHOD.
+
+
+  METHOD maintained_teams_replace.
+    zcl_ca_ops_injector=>inject_params(
+      NEW zcl_ca_ops_param_seed( )->set( iv_name  = zif_ca_ops_ctl_types=>gc_param-teams
+                                         iv_value = `ONSITE,NIGHT` )->params( ) ).
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>team_valid( 'NIGHT' )
+                                      msg = 'A maintained team list is used' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>team_valid( 'OFFSHORE' )
+                                       msg = 'The maintained list replaces the delivered one' ).
+  ENDMETHOD.
+
+
+  METHOD http_link_is_valid.
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>url_valid( 'https://wiki.example.com/runbook/ctl-01' )
+                                      msg = 'An https link is accepted' ).
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>url_valid( space )
+                                      msg = 'The runbook link is optional' ).
+  ENDMETHOD.
+
+
+  METHOD link_without_scheme_refused.
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>url_valid( 'wiki.example.com/runbook' )
+                                       msg = 'A link without http(s):// is refused (439)' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>url_valid( 'https://wiki.example.com/run book' )
+                                       msg = 'A link with a blank is refused' ).
   ENDMETHOD.
 
 ENDCLASS.

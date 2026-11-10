@@ -1,0 +1,12 @@
+// Artifact: zc_ca_opsctlreview.dcls.asdcls
+// Purpose: Read access to the daily control review (service ZUI_CA_OPS_REV): authorization object ZCA_OPS
+//          with ZCA_PARAR = the area of the control and ACTVT 03, as the exceptions app. The sign-off
+//          (action markReviewed) keeps its own instance check in the behaviour pool (ACTVT 02).
+// Modification log: 2026-11-10 | Initial version (control register and daily control review).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58).
+@EndUserText.label: 'Daily control review - read access'
+@MappingRole: true
+define role ZC_CA_OpsCtlReview {
+  grant select on ZC_CA_OpsCtlReview
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+}

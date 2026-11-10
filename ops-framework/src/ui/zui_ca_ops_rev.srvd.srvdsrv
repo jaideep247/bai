@@ -1,0 +1,6 @@
+@EndUserText.label: 'Daily control review'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSCTLREVIEW'
+define service ZUI_CA_OPS_REV {
+  expose ZC_CA_OpsCtlReview as ControlReview;
+  expose ZI_CA_OpsCtlStatusT as ControlStatusText;
+}

@@ -1,4 +1,4 @@
-// UI annotations: Alerting and purge targets - Alert channels
+// UI annotations: Alerting, purge targets and controls - Alert channels
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Channel',
                      typeNamePlural: 'Alert channels',

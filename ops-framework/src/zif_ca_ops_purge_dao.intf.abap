@@ -11,6 +11,7 @@
 *& 2026-11-10 | Moved from ZIF_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: the framework's targets
 *&            | RUN and ALERT_LOG (ZIF_CA_OPS_PURGE_TARGET) and the registry of consumer targets
 *&            | (GET_TARGETS, table ZCA_OPS_PURGE); the consumer targets left with their owner.
+*& 2026-11-10 | Target REVIEW: sign-offs of the daily control review (ZCA_OPS_REVIEW) by sign-off time.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge repository</p>
 INTERFACE zif_ca_ops_purge_dao
@@ -26,6 +27,8 @@ INTERFACE zif_ca_ops_purge_dao
       run       TYPE zif_ca_ops_purge_target=>ty_target VALUE 'RUN',
       "! ZCA_OPS_ALLOG by send time
       alert_log TYPE zif_ca_ops_purge_target=>ty_target VALUE 'ALERT_LOG',
+      "! ZCA_OPS_REVIEW by sign-off time (daily control review)
+      review    TYPE zif_ca_ops_purge_target=>ty_target VALUE 'REVIEW',
     END OF gc_target.
 
   "! A consumer's purge target (ZCA_OPS_PURGE)

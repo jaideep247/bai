@@ -1,5 +1,12 @@
 {
-  "_comment": "Domains and data elements of the operations framework. None of its own: the area of a run, finding, alert rule, lock and purge target is ZCA_PARAM_AREA_ID of the parameter framework (one area register); the other fields use built-in types and SAP data elements. tools/abapgit_serialize.py writes src/<name>.doma.xml / .dtel.xml for every entry added here.",
-  "domains": [],
-  "data_elements": []
+  "_comment": "Domains and data elements of the operations framework. The area of a run, finding, alert rule, lock and purge target is ZCA_PARAM_AREA_ID of the parameter framework (one area register); the other fields use built-in types and SAP data elements, except the status of a control (2026-11-10: fixed values with translatable texts, shown by the review app and the consumers' cards). tools/abapgit_serialize.py writes src/<name>.doma.xml / .dtel.xml for every entry added here. Labels: short <= 10, medium <= 20, long <= 40, heading <= 55, text <= 60 characters.",
+  "domains": [
+    {"name": "ZCA_OPS_CTL_STATUS", "type": "CHAR", "length": 1, "lowercase": false,
+     "text": "Status of a control on a business date",
+     "values": [["H", "Healthy"], ["W", "Watch"], ["A", "Action required"]]}
+  ],
+  "data_elements": [
+    {"name": "ZCA_OPS_CTL_STATUS", "domain": "ZCA_OPS_CTL_STATUS", "text": "Status of a control on a business date",
+     "short": "Status", "medium": "Control status", "long": "Status of the control", "heading": "Status"}
+  ]
 }

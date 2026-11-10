@@ -48,6 +48,9 @@ define root view entity ZR_CA_OpsException
       resolved_at   as ResolvedAt,
       @EndUserText.label: 'Resolution'
       resolution    as Resolution,
+      // Classification by operations (action classifyException, parameter EXC_REASON_CODES; 2026-11-10)
+      @EndUserText.label: 'Reason code'
+      reason_code   as ReasonCode,
       @EndUserText.label: 'First seen'
       first_seen_at as FirstSeenAt,
       @EndUserText.label: 'Occurrences'

@@ -6,7 +6,8 @@
 *& before the cutoff and none of its findings is open (O), assigned (A) or
 *& waived (W) with a waiver that has not expired (no end date = not
 *& expired). Its findings and their exception history are deleted with it.
-*& The alert log is purged by its send time. Deletes by key, at most iv_max
+*& The alert log is purged by its send time, the sign-offs of the daily
+*& control review (REVIEW) by their sign-off time. Deletes by key, at most iv_max
 *& rows per call; the caller commits. GET_TARGETS reads ZCA_OPS_PURGE.
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
@@ -15,6 +16,7 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: targets RUN and
 *&            | ALERT_LOG only (a consumer's tables are purged by its own target classes), GET_TARGETS
 *&            | (registry ZCA_OPS_PURGE).
+*& 2026-11-10 | Target REVIEW (ZCA_OPS_REVIEW by REVIEWED_AT, daily control review).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge SQL</p>
 CLASS zcl_ca_ops_purge_dao DEFINITION
@@ -60,6 +62,8 @@ CLASS zcl_ca_ops_purge_dao IMPLEMENTATION.
           INTO @rv_count.
       WHEN zif_ca_ops_purge_dao=>gc_target-alert_log.
         SELECT COUNT(*) FROM zca_ops_allog WHERE sent_at < @iv_cutoff INTO @rv_count.
+      WHEN zif_ca_ops_purge_dao=>gc_target-review.
+        SELECT COUNT(*) FROM zca_ops_review WHERE reviewed_at < @iv_cutoff INTO @rv_count.
     ENDCASE.
   ENDMETHOD.
 
@@ -87,6 +91,17 @@ CLASS zcl_ca_ops_purge_dao IMPLEMENTATION.
           UP TO @iv_max ROWS.
         CHECK lt_alerts IS NOT INITIAL.
         DELETE zca_ops_allog FROM TABLE @lt_alerts.
+        rv_count = sy-dbcnt.
+
+      WHEN zif_ca_ops_purge_dao=>gc_target-review.
+        SELECT area, control_id, business_date
+          FROM zca_ops_review
+          WHERE reviewed_at < @iv_cutoff
+          ORDER BY area, control_id, business_date
+          INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_reviews)
+          UP TO @iv_max ROWS.
+        CHECK lt_reviews IS NOT INITIAL.
+        DELETE zca_ops_review FROM TABLE @lt_reviews.
         rv_count = sy-dbcnt.
     ENDCASE.
   ENDMETHOD.

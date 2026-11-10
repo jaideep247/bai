@@ -209,6 +209,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>068</MSGNR>
+     <TEXT>Reason code &amp;1 is not allowed (parameter EXC_REASON_CODES)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>070</MSGNR>
      <TEXT>E-mail renderer &amp;1 not available in this system - built-in layout sent</TEXT>
     </T100>
@@ -241,6 +247,36 @@
      <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>075</MSGNR>
      <TEXT>E-mail template &amp;1 not used: ALERT_MAIL_RENDERER is BUILTIN</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>076</MSGNR>
+     <TEXT>Action required: enter the observation and the next action</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>077</MSGNR>
+     <TEXT>Result &amp;1 differs from the derived status: enter the observation</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>078</MSGNR>
+     <TEXT>&amp;1 is not a control status (H healthy, W watch, A action required)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>079</MSGNR>
+     <TEXT>Control &amp;1 for &amp;2 is being reviewed by &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>080</MSGNR>
+     <TEXT>Lock service failed for the review of control &amp;1 for &amp;2</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -319,6 +355,24 @@
      <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>436</MSGNR>
      <TEXT>&amp;1 is not an e-mail template ID (SMTG, upper case) or does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>437</MSGNR>
+     <TEXT>&amp;1 is not a user of this client</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>438</MSGNR>
+     <TEXT>Team &amp;1 is not a value of parameter CONTROL_TEAMS</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>439</MSGNR>
+     <TEXT>&amp;1 is not an http:// or https:// link (no blanks)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

@@ -8,6 +8,7 @@ use etag
   use action resolveException;
   use action requestWaiver;
   use action approveWaiver;
+  use action classifyException;
 
   use association _History;
 }

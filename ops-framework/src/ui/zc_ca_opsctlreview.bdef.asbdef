@@ -1,0 +1,8 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_CA_OpsCtlReview alias Review
+use etag
+{
+  use action markReviewed;
+}

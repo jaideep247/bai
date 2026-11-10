@@ -18,6 +18,7 @@
 *&            | open_kept (registry by business date, file of an open exception kept).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: tests of RUN and
 *&            | ALERT_LOG (the suite's targets are tested with a consumer's class); registry test.
+*& 2026-11-10 | old_review_is_deleted (target REVIEW, daily control review).
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -72,6 +73,7 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
     METHODS recent_run_is_kept         FOR TESTING.
     METHODS old_alert_log_is_deleted   FOR TESTING.
     METHODS active_targets_registered  FOR TESTING.
+    METHODS old_review_is_deleted      FOR TESTING.
 
 
 ENDCLASS.
@@ -82,7 +84,8 @@ CLASS ltc_purge_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCA_OPS_RUN' ) ( 'ZCA_OPS_FINDING' ) ( 'ZCA_OPS_ALLOG' )
-                                   ( 'ZCA_OPS_EXC_HIST' ) ( 'ZCA_OPS_PURGE' ) ) ).
+                                   ( 'ZCA_OPS_EXC_HIST' ) ( 'ZCA_OPS_PURGE' )
+                                   ( 'ZCA_OPS_REVIEW' ) ) ).
   ENDMETHOD.
 
 
@@ -275,6 +278,29 @@ CLASS ltc_purge_dao IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a sign-off older than the cutoff is deleted, a recent one is kept (count and delete agree)
+  METHOD old_review_is_deleted.
+    DATA lt_reviews TYPE STANDARD TABLE OF zca_ops_review WITH EMPTY KEY.
+    lt_reviews = VALUE #( ( area = gc-area control_id = 'ZT_CTL' business_date = gc-old_run reviewed_at = gc-old )
+                          ( area = gc-area control_id = 'ZT_CTL' business_date = gc-new_run reviewed_at = gc-recent ) ).
+    go_env->insert_test_data( lt_reviews ).
+
+    DATA(lv_count) = mo_cut->count_purgeable( iv_target = zif_ca_ops_purge_dao=>gc_target-review
+                                              iv_cutoff = gc-cutoff
+                                              iv_today  = gc-today ).
+    DATA(lv_deleted) = mo_cut->delete_package( iv_target = zif_ca_ops_purge_dao=>gc_target-review
+                                               iv_cutoff = gc-cutoff
+                                               iv_today  = gc-today
+                                               iv_max    = 100 ).
+    SELECT business_date FROM zca_ops_review INTO TABLE @DATA(lt_left).
+
+    cl_abap_unit_assert=>assert_equals( act = lv_count exp = 1 msg = 'One sign-off before the cutoff' ).
+    cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'Only the old sign-off deleted' ).
+    cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_left[ 1 ]-business_date OPTIONAL ) exp = gc-new_run
+                                        msg = 'The recent sign-off is kept' ).
   ENDMETHOD.
 
 ENDCLASS.

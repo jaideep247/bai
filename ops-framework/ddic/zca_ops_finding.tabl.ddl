@@ -48,6 +48,9 @@ define table zca_ops_finding {
   last_changed_at : timestampl;
   // Error class of a finding raised at a catch boundary (TRANSIENT, DATA, CONFIG, CODE; 2026-11-10)
   error_class   : abap.char(10);
+  // Classification of an open exception by operations (exceptions app, action classifyException;
+  // values of parameter EXC_REASON_CODES, e.g. TIMING, INVESTIGATING; 2026-11-10) - carried forward
+  reason_code   : abap.char(12);
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and

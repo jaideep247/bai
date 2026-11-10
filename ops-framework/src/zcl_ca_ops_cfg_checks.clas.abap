@@ -17,6 +17,7 @@
 *&            | AREA_VALID (one area register) and PARAM_EXISTS (purge registry) added.
 *& 2026-11-10 | TEMPLATE_VALID: e-mail template ID of a rule / channel (syntax, existence where the SMTG API
 *&            | is available; message 436).
+*& 2026-11-10 | USER_VALID, TEAM_VALID, URL_VALID: control register of the daily review (messages 437-439).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - config apps: field checks</p>
 CLASS zcl_ca_ops_cfg_checks DEFINITION
@@ -117,6 +118,27 @@ CLASS zcl_ca_ops_cfg_checks DEFINITION
     CLASS-METHODS template_valid
       IMPORTING
         iv_template_id  TYPE zif_ca_ops_types=>ty_template_id
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Owner / backup of a control: blank, or a user of this client (ZIF_CA_OPS_AUTH=>USER_EXISTS)
+    CLASS-METHODS user_valid
+      IMPORTING
+        iv_user         TYPE syuname
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Team of a control: blank, or one of the values of parameter CONTROL_TEAMS (case ignored)
+    CLASS-METHODS team_valid
+      IMPORTING
+        iv_team         TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Runbook link of a control: blank, or http(s):// without blanks (PCRE, whole value)
+    CLASS-METHODS url_valid
+      IMPORTING
+        iv_url          TYPE clike
       RETURNING
         VALUE(rv_valid) TYPE abap_bool.
 
@@ -288,6 +310,32 @@ CLASS zcl_ca_ops_cfg_checks IMPLEMENTATION.
       RETURN.
     ENDIF.
     rv_valid = zcl_ca_ops_factory=>get_mail_template( )->exists( iv_template_id ).
+  ENDMETHOD.
+
+
+  METHOD user_valid.
+    rv_valid = xsdbool( iv_user IS INITIAL OR zcl_ca_ops_factory=>get_auth( )->user_exists( iv_user ) = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD team_valid.
+    IF iv_team IS INITIAL.
+      rv_valid = abap_true.
+      RETURN.
+    ENDIF.
+    DATA(lv_teams) = zcl_ca_ops_factory=>get_params( )->get_param(
+                       iv_name    = zif_ca_ops_ctl_types=>gc_param-teams
+                       iv_default = CONV #( zif_ca_ops_ctl_types=>gc_param_default-teams ) ).
+    DATA(lt_teams) = zcl_ca_ops_util=>split_list( to_upper( lv_teams ) ).
+    DATA(lv_team) = to_upper( condense( CONV string( iv_team ) ) ).
+    rv_valid = xsdbool( line_exists( lt_teams[ table_line = lv_team ] ) ).
+  ENDMETHOD.
+
+
+  METHOD url_valid.
+    rv_valid = xsdbool( iv_url IS INITIAL
+                        OR zcl_ca_ops_util=>pcre_match( iv_value   = iv_url
+                                                        iv_pattern = zif_ca_ops_ctl_types=>gc_url_pattern ) = abap_true ).
   ENDMETHOD.
 
 

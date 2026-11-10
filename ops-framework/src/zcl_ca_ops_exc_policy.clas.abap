@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_POLICY to the reusable framework ZCA_OPS.
+*& 2026-11-10 | CAN_CLASSIFY: reason code of an open exception (values of EXC_REASON_CODES).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception lifecycle rules</p>
 CLASS zcl_ca_ops_exc_policy DEFINITION
@@ -35,6 +36,15 @@ CLASS zcl_ca_ops_exc_policy DEFINITION
         iv_reason          TYPE zif_ca_ops_exc_types=>ty_reason
         iv_valid_to        TYPE d
         iv_today           TYPE d
+      RETURNING
+        VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
+
+    "! Reason code of an open exception: one of the allowed codes (comma list, case ignored)
+    CLASS-METHODS can_classify
+      IMPORTING
+        is_state           TYPE zif_ca_ops_exc_types=>ty_state
+        iv_reason_code     TYPE zif_ca_ops_exc_types=>ty_reason_code
+        iv_allowed         TYPE clike
       RETURNING
         VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
 
@@ -82,6 +92,19 @@ CLASS zcl_ca_ops_exc_policy IMPLEMENTATION.
       rs_decision = refuse( iv_msgno = zif_ca_ops_exc_types=>gc_msg-not_open iv_v1 = is_state-disposition ).
     ELSEIF iv_reason IS INITIAL.
       rs_decision = refuse( zif_ca_ops_exc_types=>gc_msg-reason_missing ).
+    ELSE.
+      rs_decision-allowed = abap_true.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD can_classify.
+    DATA(lv_code) = to_upper( condense( CONV string( iv_reason_code ) ) ).
+    DATA(lt_allowed) = zcl_ca_ops_util=>split_list( to_upper( iv_allowed ) ).
+    IF is_open( is_state-disposition ) = abap_false.
+      rs_decision = refuse( iv_msgno = zif_ca_ops_exc_types=>gc_msg-not_open iv_v1 = is_state-disposition ).
+    ELSEIF lv_code IS INITIAL OR NOT line_exists( lt_allowed[ table_line = lv_code ] ).
+      rs_decision = refuse( iv_msgno = zif_ca_ops_exc_types=>gc_msg-reason_code_invalid iv_v1 = iv_reason_code ).
     ELSE.
       rs_decision-allowed = abap_true.
     ENDIF.

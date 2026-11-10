@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_CA_OPSCFGALL</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Alerting and purge targets (all)</DDTEXT>
+    <DDTEXT>Alerting, purge targets and controls (all)</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

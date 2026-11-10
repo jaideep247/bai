@@ -11,6 +11,7 @@
 *& 2026-11-10 | may_read_table: S_TABU_NAM display (03) before every dynamic read of a configured table
 *&            | (dynamic readers of the consumers); moved here from a consumer's DDIC helper.
 *& 2026-11-10 | Moved from ZIF_CD_OPS_AUTH to the reusable framework ZCA_OPS.
+*& 2026-11-10 | user_exists: owner and backup of a control are SAP users (control register, check on save).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - authorisation (object ZCA_OPS)</p>
 "! Activities follow SU21 object ZCA_OPS (config/auth_zcd_ops.md).
@@ -59,6 +60,14 @@ INTERFACE zif_ca_ops_auth
       iv_table          TYPE clike
     RETURNING
       VALUE(rv_allowed) TYPE abap_bool.
+
+  "! The SAP user exists in this client (owner / backup of a control). DEFAULT IGNORE: a double
+  "! that does not implement it knows no user.
+  METHODS user_exists DEFAULT IGNORE
+    IMPORTING
+      iv_user          TYPE syuname
+    RETURNING
+      VALUE(rv_exists) TYPE abap_bool.
 
   "! Same as is_allowed, raising message 041 when not allowed
   METHODS check

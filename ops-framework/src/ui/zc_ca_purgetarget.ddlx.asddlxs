@@ -1,4 +1,4 @@
-// UI annotations: Alerting and purge targets - Purge targets of consumers
+// UI annotations: Alerting, purge targets and controls - Purge targets of consumers
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Purge target',
                      typeNamePlural: 'Purge targets of consumers',
