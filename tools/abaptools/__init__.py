@@ -15,6 +15,10 @@ works unchanged.
   literal_scan        inventory and classification of the literals of production ABAP
   class_purpose       object table of a class purpose document from the artefact headers
   checks              house checks shared by the component check runners (per-folder lists)
+  onboarding          offline completeness of the registered business processes of a component
+                      (process onboarding of ZCA_OPS: checks, control, alert rule, owner, purge, role)
+  new_process         scaffold of a new business process: configuration rows (seed files), process
+                      document, check class skeleton with its test class
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).
@@ -22,6 +26,7 @@ shipped on its own takes this folder along (tooling only - nothing of it is impo
 Modification log:
 2026-11-10 | Initial version (shared tools: one serializer, generator and check set for the
            | parameter framework, the operations framework and its consumers).
+2026-11-10 | onboarding, new_process (process onboarding framework).
 """
 import importlib.util
 import os

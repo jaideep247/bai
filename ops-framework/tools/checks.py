@@ -35,11 +35,15 @@ Checks
   packaging           self-contained: no file names a consumer's folder (Python imports, abaplint
                       dependency paths, document links); the parameter framework and the shared tools
                       are allowed; the change log may name where the framework came from
+  process_onboarding  every registered business process of config/ (process_register.csv) is integrated
+                      end to end: checks, control, alert rule, ownership, purge, authorisation; no active
+                      row with a placeholder (shared engine tools/abaptools/onboarding.py)
 
 Modification log:
 2026-11-10 | Copied from the parameter framework's checks and extended for the framework.
 2026-11-10 | Common checks from the shared tools (tools/abaptools/checks.py); method names and
            | packaging checks added.
+2026-11-10 | process_onboarding (process onboarding framework: offline completeness of registered processes).
 """
 import os
 import re
@@ -48,6 +52,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, '..', 'tools'))
 from abaptools import checks as _shared  # noqa: E402
+from abaptools import onboarding as _onboarding  # noqa: E402
 from abaptools.checks import (files, read, strip_comments, statements, check_test_path,  # noqa: E402,F401
                               check_name_lengths, check_method_names, check_artifact_header, check_pcre_only,
                               check_no_cp, check_no_select_star, check_final, check_test_classes)
@@ -148,6 +153,10 @@ def check_packaging(root):
     return _shared.check_packaging(root, ('ops-suite',))  # packaging: forbidden folders
 
 
+def check_process_onboarding(root):
+    return _onboarding.failures(root, auth_docs=('docs/auth_zca_ops.md',), source_roots=('src',))
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -165,6 +174,7 @@ CHECKS = [
     ('layering', check_layering),
     ('customer_terms', check_customer_terms),
     ('packaging', check_packaging),
+    ('process_onboarding', check_process_onboarding),
 ]
 
 
