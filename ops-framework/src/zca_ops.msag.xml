@@ -356,6 +356,30 @@
      <MSGNR>809</MSGNR>
      <TEXT>No authorisation to &amp;2 file &amp;1 (S_DATASET)</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>900</MSGNR>
+     <TEXT>Jobs ended in the last &amp;1 hours: &amp;2 (cancelled &amp;3, late &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>901</MSGNR>
+     <TEXT>&amp;1 job(s) cancelled in the last &amp;2 hours (SM37)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>902</MSGNR>
+     <TEXT>&amp;1 released job(s) not started &amp;2 minutes after their planned start</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>903</MSGNR>
+     <TEXT>Demo run of area &amp;1: &amp;2 finding(s), RAG &amp;3 - &amp;4</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

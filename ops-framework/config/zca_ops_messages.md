@@ -4,7 +4,8 @@ Messages of the operations framework ZCA_OPS (package `ZCA_OPS`). Numbers of mes
 the message class of its first consumer (ZCD_OPS) are kept (ZCD_OPS nnn = ZCA_OPS nnn), new messages use free
 numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock, authorisation, version
 and area checks, purge, exception lifecycle · 400-449 configuration apps (RAP) · 700-849 alert patterns,
-exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths.
+exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
+optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
 or raised with `MESSAGE eNNN(zca_ops)`) or a text symbol (`docs/text_elements/`); numbers are referenced
 through the `gc_msg-*` constants of the types interfaces. `tools/abapgit_serialize.py` writes the message
@@ -71,3 +72,7 @@ texts <= 73 characters).
 | 807 | File &2 not resolved or not valid in logical path / file name &1 (FILE) |
 | 808 | File name &1 not allowed: enter a name only, without a path or .. |
 | 809 | No authorisation to &2 file &1 (S_DATASET) |
+| 900 | Jobs ended in the last &1 hours: &2 (cancelled &3, late &4) |
+| 901 | &1 job(s) cancelled in the last &2 hours (SM37) |
+| 902 | &1 released job(s) not started &2 minutes after their planned start |
+| 903 | Demo run of area &1: &2 finding(s), RAG &3 - &4 |

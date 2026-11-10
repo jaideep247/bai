@@ -19,3 +19,8 @@ recorded in the release pack.
 | V09 | Runtime | `ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE` with table `ZCA_OPS_LOCK` (key MANDT, AREA 16, VARIANT 30) |
 | V10 | SLG0 | Object `ZCA_OPS` / sub-object `ALERT` (APPLOG channel default destination) |
 | V11 | Runtime | `ZCA_OPS_RETENTION` in test mode lists RUN, ALERT_LOG and every active row of `ZCA_OPS_PURGE`; a registry class that is no purge target stops the run before anything is deleted (032) |
+| V12 | VERIFY-ADT | Optional sub-package `ZCA_OPS_DEMO` (folder `src/demo`) created by the abapGit import and activated after `ZCA_OPS`; an import without `src/demo` leaves the framework complete (nothing outside the demo refers to it) |
+| V13 | VERIFY-SE11 | `TBTCO` fields read by `ZCL_CA_OPS_DEMO_DAO`: `AUTHCKMAN` (client of the job), `STATUS` (`F` finished, `A` cancelled, `S` released), `ENDDATE` / `ENDTIME`, `SDLSTRTDT` / `SDLSTRTTM` (planned start, server time); COUNT only, read only |
+| V14 | Runtime | Demo (`docs/INSTALL.md` section 7): test mode writes nothing and sends nothing; test mode off with *Sample* stores a run of area `CA_DEMO` with an open error and warning exception (exceptions app), one SLG1 entry `ZCA_OPS` / `ALERT` by rule `DEMO_LOG` and its `ZCA_OPS_ALLOG` row; a second run without *Sample* resolves the exceptions it no longer raises; without ZCA_OPS 16 for `CA_DEMO` the report stops with 041 |
+| V15 | ABAP Unit | `ZCL_CA_OPS_DEMO` (local doubles injected through `ZCL_CA_OPS_INJECTOR`) and `ZCL_CA_OPS_DEMO_DAO` (OSQL double of `TBTCO`, incl. the client filter) |
+| V16 | Runtime | Messages 900-903 of `ZCA_OPS` (texts and variables of the demo findings and of its result message) |

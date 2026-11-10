@@ -2,6 +2,30 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-10 (customer kit)
+
+Release constant unchanged (`GC_VERSION` 1.0.0): nothing of the framework's behaviour changed.
+
+### Added
+- Optional demo consumer, sub-package `ZCA_OPS_DEMO` (`src/demo`, not for production): report
+  `ZCA_OPS_DEMO`, `ZCL_CA_OPS_DEMO`, `ZIF_CA_OPS_DEMO_DAO` / `ZCL_CA_OPS_DEMO_DAO`, `ZIF_CA_OPS_DEMO_TYPES`;
+  one run of area `CA_DEMO` with job counts of the last 24 hours (`TBTCO`, read only): information, error
+  (open exception) and warning findings, alert dispatch, test mode, sample mode; unit tests with local
+  doubles and an OSQL double. Messages 900-903. Seed rows `config/demo/` (area, APPLOG channel, rule).
+- `docs/INSTALL.md`: installing at a new customer (checklist with the `ZCA` name-clash look-up and reuse
+  rights, pull order, SU21, roles, SLG0, SO23, parameters, purge job, first area, verification).
+- README: consumer how-to with code (area, parameters, findings, alerts, alert section plug-in, purge
+  target, errors, tests).
+- Tooling: the engines are the repository's shared tools (`../tools/abaptools`, tests `../tools/tests`);
+  `tools/` holds thin wrappers. The configuration app is generated from this folder
+  (`tools/rap_generate.py`, was the first consumer's generator). Checks `method_names` and `packaging`
+  (no file names a consumer's folder) added; PCRE / CP / name checks are the shared ones.
+
+### Offline evidence (2026-11-10)
+- abaplint 2.120.92 (`abaplint.json`): 0 issues; `tools/checks.py` 16/16; serializer, parameter seed and
+  configuration app up to date; tool tests and shared tool tests green. Generated files byte-identical
+  before and after the move of the engines. Not proven offline: `docs/VERIFY.md` V12-V16.
+
 ## [1.0.0] - 2026-11-10
 
 First release (`ZIF_CA_OPS_TYPES=>GC_VERSION`), extracted from the payment engine operations suite
