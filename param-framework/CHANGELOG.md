@@ -2,6 +2,18 @@
 
 All notable changes of the parameter framework (`param-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-10 (tooling)
+
+Release constant unchanged (`GC_VERSION` 1.1.0): no ABAP object changed.
+
+### Changed
+- Tooling: the serializer and the common house checks are the repository's shared tools
+  (`../tools/abaptools`); `tools/` holds thin wrappers (message rows with a constant column are the
+  setting `message_class.columns = 3` of `config/repository.json`). Generated XML unchanged.
+- Checks added: `method_names`, `abapgit_up_to_date`, `customer_terms` (`config/customer_terms.txt`) and
+  `packaging` (no file names the operations framework's or a consumer's folder; this component depends
+  on SAP standard only). README and ONBOARDING reworded accordingly.
+
 ## [1.1.0] - 2026-11-10
 
 ### Added

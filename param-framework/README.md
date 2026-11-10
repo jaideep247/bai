@@ -88,9 +88,12 @@ DATA(lo_param) = NEW zcl_ca_param_builder( )->area( 'ZPE_OPS'
 |---|---|
 | `src/`, `src/ui/` | abapGit objects (`ZCA_PARAM`, `ZCA_PARAM_UI`) |
 | `ddic/` | table DDL sources and `dictionary.json` (domains, data elements) |
-| `config/` | repository settings, message class texts, authorization objects |
+| `config/` | repository settings, message class texts, authorization objects, `customer_terms.txt` |
 | `tools/abapgit_serialize.py` | writes all abapGit XML from `ddic/`, `config/` and the sources |
-| `tools/checks.py` | house checks (name lengths, headers, PCRE only, no inline texts, ...) |
+| `tools/checks.py` | house checks (name lengths, headers, PCRE only, no inline texts, customer wording, packaging, ...) |
+
+The files in `tools/` are thin wrappers of the repository's shared tools (`../tools/abaptools`, tests in
+`../tools/tests`); copy that folder along when the component is shipped on its own.
 | `ci/abaplint.yml` | CI workflow (to be wired into `.github/workflows` of `jaideep247/bai`) |
 
 Run locally from this folder:

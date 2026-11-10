@@ -22,12 +22,14 @@ Checks
   messages            every ZIF_CA_PARAM_TYPES=>GC_MSG constant has a message row with the same
                       number and name; texts <= 73
   abapgit_up_to_date  tools/abapgit_serialize.py --check (generated XML equals the sources)
+  customer_terms      none of the words of config/customer_terms.txt in src/, the message texts or the
+                      text elements (whole words, case ignored)
   packaging           self-contained: no file names the operations framework's or a consumer's
                       folder (the framework is the base layer; the change log may name them)
 
 Modification log:
 2026-11-10 | Common checks from the shared tools (tools/abaptools/checks.py); method names, abapGit
-           | metadata and packaging checks added.
+           | metadata, customer wording and packaging checks added.
 """
 import os
 import re
@@ -38,7 +40,8 @@ sys.path.insert(0, os.path.join(ROOT, '..', 'tools'))
 from abaptools import checks as _shared  # noqa: E402
 from abaptools.checks import (files, read, strip_comments, statements,  # noqa: E402,F401
                               check_name_lengths, check_method_names, check_artifact_header, check_pcre_only,
-                              check_no_cp, check_no_select_star, check_final, check_test_classes)
+                              check_no_cp, check_no_select_star, check_final, check_test_classes,
+                              check_customer_terms)
 
 DECLARATION = re.compile(r'^\s*(CONSTANTS|TYPES|DATA|CLASS-DATA|STATICS)\b', re.I)
 SENTENCE = re.compile(r"'([^'\n]*[A-Za-z]{2,}\s+[A-Za-z]{2,}[^'\n]*)'|`([^`\n]*[A-Za-z]{2,}\s+[A-Za-z]{2,}[^`\n]*)`")
@@ -102,6 +105,7 @@ CHECKS = [
     ('test_classes', check_test_classes),
     ('messages', check_messages),
     ('abapgit_up_to_date', check_abapgit),
+    ('customer_terms', check_customer_terms),
     ('packaging', check_packaging),
 ]
 
