@@ -15,6 +15,7 @@
 *&            | ZCD_HCK_RCBTC).
 *& 2026-11-08 | Customer posting areas: get_btc_roles from ZBTR usage RECON through ZCL_CD_OPS_POSTAREA (was a SELECT
 *&            | on ZCD_HCK_BTCROLE).
+*& 2026-11-10 | get_sets reads TOLERANCE_SET (set tolerance maintained).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation reads (HANA)</p>
 "! Access paths and the SQL-trace items: Performance_Review.md, section "Three-way
@@ -51,7 +52,7 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_recon_dao~get_sets.
     SELECT set_id, kind, side, bukrs, hkont, waers, hbkid, hktid, invert_bank, leg_bank, leg_fica,
-           tolerance, description
+           tolerance, tolerance_set, description
       FROM zcd_hck_rcset
       WHERE active = @abap_true
       ORDER BY set_id

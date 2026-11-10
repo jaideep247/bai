@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Company-code test uses activity 02 (activity 43 removed, read-only scope).
+*& 2026-11-10 | may_read_table through test seam AUTH_TABLE (S_TABU_NAM 03).
 *&---------------------------------------------------------------------*
 CLASS ltc_auth DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -31,6 +32,7 @@ CLASS ltc_auth DEFINITION FINAL FOR TESTING
     METHODS bukrs_uses_bukrs_check FOR TESTING.
     METHODS refused_check_raises_041 FOR TESTING.
     METHODS allowed_check_passes FOR TESTING.
+    METHODS table_display_decides FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -128,6 +130,16 @@ CLASS ltc_auth IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: S_TABU_NAM display decides whether a configured table is read
+  METHOD table_display_decides.
+    TEST-INJECTION auth_table.
+      rv_allowed = abap_false.
+    END-TEST-INJECTION.
+    cl_abap_unit_assert=>assert_false( act = mo_cut->may_read_table( 'T000' )
+                                       msg = 'Without S_TABU_NAM 03 the table is not read' ).
   ENDMETHOD.
 
 ENDCLASS.

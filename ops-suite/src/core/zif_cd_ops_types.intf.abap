@@ -37,6 +37,8 @@
 *&            | run (TY_RUN-JOBNAME / JOBCOUNT / SYSID), TABWL purpose LOOKUP (EBS R21), messages 802-805.
 *& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): labels of the detail lines GC_ACK_MSG
 *&            | (messages 816-837), label separator, alert subject and table.
+*& 2026-11-10 | Logical file names / paths (FILE) of the EBS input file and the morning report export,
+*&            | S_DATASET activities (directory traversal fix).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -235,7 +237,7 @@ INTERFACE zif_cd_ops_types
     BEGIN OF gc_error_rule,
       transient_msgno TYPE string VALUE `040,042,313,335,369,763`,
       config_msgno    TYPE string
-        VALUE `007,021,027,030,031,032,033,041,050,051,200,201,202,303,304,703,807,808,809,811,812,813`,
+        VALUE `007,021,027,030,031,032,033,041,050,051,200,201,202,303,304,703,807,808,809,812,813`,
       transient_class TYPE string VALUE `CX_SY_OPEN_SQL_DB,CX_SQL_EXCEPTION`,
       code_prefix     TYPE string VALUE `CX_SY_`,
     END OF gc_error_rule.
@@ -247,6 +249,35 @@ INTERFACE zif_cd_ops_types
       jobcount TYPE btcjobcnt,
       sysid    TYPE sysysid,
     END OF ty_job_link.
+
+  "! Application server files only through a logical path of transaction FILE (no directory from a
+  "! user): logical path for FILE_GET_NAME_USING_PATH and the logical file name it is validated
+  "! against (FILE_VALIDATE_NAME); created in FILE as a setup step (Implementation_Order.md)
+  TYPES:
+    BEGIN OF ty_logical_file,
+      path TYPE pathintern,
+      file TYPE fileintern,
+    END OF ty_logical_file.
+  CONSTANTS:
+    BEGIN OF gc_logical_file,
+      "! EBS validation: bank file read before import (ZCD_EBS_VALIDATE)
+      BEGIN OF ebs_input,
+        path TYPE pathintern VALUE 'ZCD_OPS_EBS_IN',
+        file TYPE fileintern VALUE 'ZCD_OPS_EBS_IN',
+      END OF ebs_input,
+      "! Morning report: CSV export (ZCD_MORNING_REPORT)
+      BEGIN OF hck_export,
+        path TYPE pathintern VALUE 'ZCD_OPS_HCK_OUT',
+        file TYPE fileintern VALUE 'ZCD_OPS_HCK_OUT',
+      END OF hck_export,
+    END OF gc_logical_file.
+  "! S_DATASET activity of AUTHORITY_CHECK_DATASET
+  TYPES ty_dataset_activity TYPE c LENGTH 8.
+  CONSTANTS:
+    BEGIN OF gc_dataset_activity,
+      read  TYPE ty_dataset_activity VALUE 'READ',
+      write TYPE ty_dataset_activity VALUE 'WRITE',
+    END OF gc_dataset_activity.
 
   "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
   TYPES ty_disposition TYPE c LENGTH 1.

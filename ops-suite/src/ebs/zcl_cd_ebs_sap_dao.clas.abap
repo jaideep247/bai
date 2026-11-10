@@ -20,6 +20,8 @@
 *& 2026-11-07 | EBS_GL_LEDGER and EBS_RTRV_STATUS_FIELD name / default from ZIF_CD_EBS_TYPES.
 *& 2026-11-07 | Comments: parameters in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *& 2026-11-07 | Returns lot read also returns the item amount DFKKRP-BETRW (A_INFLIGHT, VERIFY-DDIC).
+*& 2026-11-10 | R21 lookup: table and fields only when approved in ZCD_OPS_TABWL (EBS / LOOKUP, field-level,
+*&            | 812) and displayable (S_TABU_NAM 03, 813) - a DDIC check alone let any table be read.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -101,6 +103,24 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD zif_cd_ebs_sap_dao~is_lookup_field_approved.
+    DATA(lv_table) = to_upper( condense( CONV string( iv_table ) ) ).
+    DATA(lv_field) = to_upper( condense( CONV string( iv_field ) ) ).
+    IF lv_table IS INITIAL OR lv_field IS INITIAL.
+      RETURN.
+    ENDIF.
+    " Full key of the approved-table list: EBS lookups are approved per field (2026-11-10)
+    SELECT SINGLE active
+      FROM zcd_ops_tabwl
+      WHERE pe_area    = @zif_cd_ops_types=>gc_pe_area-ebs
+        AND purpose    = @zif_cd_ops_types=>gc_tabwl_purpose-lookup
+        AND table_name = @lv_table
+        AND field_name = @lv_field
+      INTO @DATA(lv_active).
+    rv_approved = xsdbool( sy-subrc = 0 AND lv_active = abap_true ).
+  ENDMETHOD.
+
+
   METHOD zif_cd_ebs_sap_dao~get_lookup_rows.
     CHECK it_keys IS NOT INITIAL.
     " Table and field names come from ZCD_EBS_LOOKUP; each is validated against the DDIC
@@ -108,6 +128,21 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     DATA(lv_table)  = to_upper( condense( CONV string( is_lookup-table_name ) ) ).
     DATA(lv_key)    = to_upper( condense( CONV string( is_lookup-key_field ) ) ).
     DATA(lv_status) = to_upper( condense( CONV string( is_lookup-status_field ) ) ).
+    " Security boundary of R21: only approved key / status fields of an approved table, and only
+    " with display authorisation for it - the values found are echoed into findings
+    IF zif_cd_ebs_sap_dao~is_lookup_field_approved( iv_table = lv_table iv_field = lv_key ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e812(zcd_ops) WITH lv_key lv_table.
+    ENDIF.
+    IF lv_status IS NOT INITIAL
+       AND zif_cd_ebs_sap_dao~is_lookup_field_approved( iv_table = lv_table iv_field = lv_status ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e812(zcd_ops) WITH lv_status lv_table.
+    ENDIF.
+    IF zcl_cd_ops_factory=>get_auth( )->may_read_table( lv_table ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e813(zcd_ops) WITH lv_table.
+    ENDIF.
     IF field_exists( iv_table = lv_table iv_field = lv_key ) = abap_false.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e051(zcd_ops) WITH lv_key zif_cd_ebs_types=>gc_lookup_table.

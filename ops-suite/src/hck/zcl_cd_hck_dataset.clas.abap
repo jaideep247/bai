@@ -5,6 +5,7 @@
 *& server). Thin wrapper: authorisation is checked by the caller (report).
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A61: no truncated report export).
+*& 2026-11-10 | Callers pass only a path resolved by ZCL_CD_OPS_FILE_PATH (logical path, S_DATASET).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - application server file (DATASET)</p>
 CLASS zcl_cd_hck_dataset DEFINITION

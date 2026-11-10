@@ -10,6 +10,8 @@
 *& 2026-11-07 | FMON_PRISM_INSTANT is BOOL in ZCA_PARAM: a value row with blank value = registry only (the open
 *&            | item of the blank flag is closed); comments name ZCA_PARAM.
 *& 2026-11-07 | TT_ERROR_CODE (regenerated files: PRISM duplicate-name failures).
+*& 2026-11-10 | A store failure is recorded server-side (run variant PRISM_API, check PRISM_STORE_FAILED);
+*&            | the caller gets the generic error code and the event ID only.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - types and wire format</p>
 "! Contract: docs/PRISM_Status_API.md. JSON keys, milestone, direction and error code values
@@ -148,6 +150,11 @@ INTERFACE zif_cd_fmon_prism_types
   "! Request body limit in ZCA_PARAM [16384 bytes]
   CONSTANTS gc_param_max_bytes TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_MAX_BYTES'.
   CONSTANTS gc_default_max_bytes TYPE i VALUE 16384.
+  "! A call that could not be stored: recorded server-side as a run of this variant with one
+  "! finding (exception trace in DETAILS) - the caller sees only the error code and the event ID
+  CONSTANTS gc_api_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'PRISM_API'.
+  CONSTANTS gc_check_store_failed TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_STORE_FAILED'.
+  CONSTANTS gc_object_type_event TYPE zif_cd_ops_types=>ty_object_type VALUE 'PRISM_EVT'.
   "! Instant processing (BOOL in ZCA_PARAM): the unit saves findings and hands them to the alert
   "! router (X, default), or only updates the registry and leaves findings and alerts to the
   "! 5-minute run (a value row with blank value)

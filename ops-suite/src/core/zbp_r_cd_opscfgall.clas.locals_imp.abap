@@ -51,11 +51,13 @@ INTERFACE lif_c.
       alertrule_minrag               TYPE string VALUE `,R,A,G`,
       alertrule_minseverity          TYPE string VALUE `,B,E,W,I`,
       alertrule_paymentenginearea    TYPE string VALUE `,*,EBS,FMON,HCK`,
-      approvedtable_paymentengineare TYPE string VALUE `FMON,HCK`,
+      approvedtable_paymentengineare TYPE string VALUE `FMON,HCK,EBS`,
+      approvedtable_purpose_ebs      TYPE string VALUE `LOOKUP`,
       approvedtable_purpose_fmon     TYPE string VALUE `SOURCE`,
       approvedtable_purpose_hck      TYPE string VALUE `READ,DRIFT`,
     END OF gc_val,
     BEGIN OF gc_when,
+      approvedtable_pe_area_ebs      TYPE string VALUE `EBS`,
       approvedtable_pe_area_fmon     TYPE string VALUE `FMON`,
       approvedtable_pe_area_hck      TYPE string VALUE `HCK`,
     END OF gc_when.
@@ -507,6 +509,20 @@ CLASS lhc_approvedtable IMPLEMENTATION.
         ENDIF.
         IF ls_row-FieldName IS NOT INITIAL.
           INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-fieldname
+                          v2 = lif_c=>gc_el-paymentenginearea v3 = ls_row-PaymentEngineArea
+                          element = lif_c=>gc_el-fieldname ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-PaymentEngineArea )
+                                        iv_list  = lif_c=>gc_when-approvedtable_pe_area_ebs ) = abap_true.
+        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Purpose )
+                                          iv_list  = lif_c=>gc_val-approvedtable_purpose_ebs ) = abap_false.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Purpose
+                          v2 = lif_c=>gc_el-purpose v3 = lif_c=>gc_val-approvedtable_purpose_ebs
+                          element = lif_c=>gc_el-purpose ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-FieldName IS INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-fieldname
                           v2 = lif_c=>gc_el-paymentenginearea v3 = ls_row-PaymentEngineArea
                           element = lif_c=>gc_el-fieldname ) INTO TABLE lt_msg.
         ENDIF.

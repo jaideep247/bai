@@ -18,6 +18,7 @@ define table zcd_d_hckrcset {
   legbank : abap_boolean;
   legfica : abap_boolean;
   tolerance : abap.dec(15,2);
+  toleranceset : abap_boolean;
   description : abap.char(60);
   active : abap_boolean;
   changedby : syuname;

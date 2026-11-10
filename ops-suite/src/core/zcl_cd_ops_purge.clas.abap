@@ -19,6 +19,8 @@
 *& 2026-11-07 | Purge target PAY_OUTCOME (payment outcome versions, 400 days, RETENTION_DAYS_PAY_OUTCOME).
 *& 2026-11-08 | PAY_OUTCOME retention 90 days (user decision 2026-11-08, about 60 million versions at the
 *&            | confirmed volume); the 30-day minimum guard stays.
+*& 2026-11-10 | RUN also purges the exception history of its findings (HISTORY); target FMON_FILE (file
+*&            | registry, 400 days, RETENTION_DAYS_FMON_FILE; files of open exceptions kept).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge</p>
 CLASS zcl_cd_ops_purge DEFINITION
@@ -39,6 +41,8 @@ CLASS zcl_cd_ops_purge DEFINITION
         rows     TYPE i,
         "! RUN only: findings deleted with the runs
         findings TYPE i,
+        "! RUN only: exception history rows deleted with the findings
+        history  TYPE i,
       END OF ty_result.
     TYPES tt_result TYPE STANDARD TABLE OF ty_result WITH EMPTY KEY.
 
@@ -115,10 +119,12 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
                                                                iv_cutoff   = lv_cutoff_ts
                                                                iv_today    = lv_today
                                                                iv_max      = lv_package
-                                                     IMPORTING ev_findings = DATA(lv_findings) ).
+                                                     IMPORTING ev_findings = DATA(lv_findings)
+                                                               ev_history  = DATA(lv_history) ).
           lo_store->commit( ).
           ls_result-rows     += lv_deleted.
           ls_result-findings += lv_findings.
+          ls_result-history  += lv_history.
           IF lv_deleted < lv_package.
             EXIT.
           ENDIF.
@@ -137,7 +143,8 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
                           ( target = zif_cd_ops_purge_dao=>gc_target-hck_metric default_days = 400 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-fmon_prism default_days = 400 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-hck_result default_days = 400 )
-                          ( target = zif_cd_ops_purge_dao=>gc_target-pay_outcome default_days = 90 ) ).
+                          ( target = zif_cd_ops_purge_dao=>gc_target-pay_outcome default_days = 90 )
+                          ( target = zif_cd_ops_purge_dao=>gc_target-fmon_file default_days = 400 ) ).
   ENDMETHOD.
 
 

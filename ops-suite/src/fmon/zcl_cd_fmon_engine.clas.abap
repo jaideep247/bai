@@ -1721,13 +1721,15 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       DATA(lv_details) = zcl_cd_ops_ack_mail=>marker( ).
       DATA(lv_amount) = VALUE zif_cd_ops_types=>ty_amount( ).
       DATA(lv_ccy) = VALUE zif_cd_ops_types=>ty_currency( ).
+      DATA(lv_blocks) = 0.
       LOOP AT <ls_target>-files ASSIGNING <ls_file>.
+        lv_blocks += 1.
         DATA(ls_block) = zcl_cd_fmon_ack_alert=>block( ack_input( is_file     = <ls_file>
                                                                   is_finding  = <ls_finding>
                                                                   it_totals   = lt_totals
                                                                   iv_currency = lv_currency ) ).
         " one block per file, separated by an empty line
-        lv_details = COND #( WHEN sy-tabix = 1
+        lv_details = COND #( WHEN lv_blocks = 1
                              THEN |{ lv_details }{ cl_abap_char_utilities=>newline }{ ls_block-text }|
                              ELSE |{ lv_details }{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|
                                && ls_block-text ).

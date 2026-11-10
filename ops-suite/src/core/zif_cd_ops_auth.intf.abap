@@ -8,6 +8,8 @@
 *& 2026-11-06 | Initial version (authorisation object ZCD_OPS, gap G3).
 *& 2026-11-07 | Activity 43 (release a blocked line) removed (read-only scope).
 *& 2026-11-10 | Authorisation field ZCD_PE_AREA, as defined in SU20 and used by the DCLs.
+*& 2026-11-10 | may_read_table: S_TABU_NAM display (03) before every dynamic read of a configured table
+*&            | (file monitoring, health check, EBS lookup R21); moved here from ZCL_CD_FMON_DDIC.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - authorisation (object ZCD_OPS)</p>
 "! Activities follow SU21 object ZCD_OPS (config/auth_zcd_ops.md).
@@ -17,6 +19,15 @@ INTERFACE zif_cd_ops_auth
   TYPES ty_activity TYPE c LENGTH 2.
 
   CONSTANTS gc_object TYPE xuobject VALUE 'ZCD_OPS'.
+
+  "! Table display authorisation of every dynamic read (S_TABU_NAM, ACTVT 03, TABLE)
+  CONSTANTS:
+    BEGIN OF gc_table_auth,
+      object   TYPE xuobject VALUE 'S_TABU_NAM',
+      id_actvt TYPE xufield VALUE 'ACTVT',
+      id_table TYPE xufield VALUE 'TABLE',
+      display  TYPE activ_auth VALUE '03',
+    END OF gc_table_auth.
 
   CONSTANTS:
     BEGIN OF gc_activity,
@@ -36,6 +47,15 @@ INTERFACE zif_cd_ops_auth
       iv_activity       TYPE ty_activity
       iv_pe_area         TYPE zif_cd_ops_types=>ty_pe_area
       iv_bukrs          TYPE bukrs OPTIONAL
+    RETURNING
+      VALUE(rv_allowed) TYPE abap_bool.
+
+  "! S_TABU_NAM display (03) for a table the suite reads by a configured name (FMON dynamic
+  "! reader, HCK aggregates / values / queues / drift, EBS lookup R21). DEFAULT IGNORE: a double
+  "! that does not implement it allows nothing.
+  METHODS may_read_table DEFAULT IGNORE
+    IMPORTING
+      iv_table          TYPE clike
     RETURNING
       VALUE(rv_allowed) TYPE abap_bool.
 

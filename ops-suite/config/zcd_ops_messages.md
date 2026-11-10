@@ -189,7 +189,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 252 | Field &1 is longer than &2 characters |
 | 253 | Field &1 is sent more than once |
 | 254 | Field &1 must be a string, number or boolean |
-| 255 | Body is not valid JSON: |
+| 255 | Body is not valid JSON |
 | 256 | Body must be one JSON object |
 | 257 | Method &1 is not allowed - use POST |
 | 258 | Content type &1 is not supported - use application/json |
@@ -528,6 +528,12 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 804 | Run &1 &2 aborted by an error: |
 | 805 | Alert dispatch failed for the run of &1: |
 | 806 | E-mail for &1: SAPconnect commit failed (return code &2) |
+| 807 | File &2 not resolved or not valid in logical path / file name &1 (FILE) |
+| 808 | File name &1 not allowed: enter a name only, without a path or .. |
+| 809 | No authorisation to &2 file &1 (S_DATASET) |
+| 810 | File &1 could not be opened or read |
+| 812 | Field &1 of table &2 is not approved for EBS lookups (ZCD_OPS_TABWL) |
+| 813 | No authorisation to display table &1 (S_TABU_NAM 03) |
 | 815 | Partner filter not applied: source field &1 not usable - |
 | 816 | House bank |
 | 817 | Bank |
@@ -551,3 +557,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 835 | unknown |
 | 836 | &1 h &2 min |
 | 837 | Missing or late bank ACK - evidence per file |
+| 838 | Expected &1, actual &2, difference &3, tolerance &4 - source: |

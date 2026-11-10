@@ -13,6 +13,7 @@
 *& 2026-11-08 | Messages 422 / 424 / 425: required for the kind, value of the other usage, form (PCRE).
 *& 2026-11-08 | Message 426: expected group list of ZCD_HCK_AGG (ZCD_HCK_AGGGRP merged).
 *& 2026-11-08 | Messages 427-433 (and 385 shared): configuration check of the customer posting areas.
+*& 2026-11-10 | Message 812 (shared with R21): lookup key / status field not approved in ZCD_OPS_TABWL.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - configuration apps: types</p>
 INTERFACE zif_cd_ops_cfg_types
@@ -168,6 +169,8 @@ INTERFACE zif_cd_ops_cfg_types
       entries_differ     TYPE ty_msg_number VALUE '433',
       "! Shared with the in-flight check (HCK): one payment method in two method classes
       method_two_classes TYPE ty_msg_number VALUE '385',
+      "! Shared with the EBS lookup rule R21 at runtime: field not approved in ZCD_OPS_TABWL (EBS / LOOKUP)
+      lookup_not_approved TYPE ty_msg_number VALUE '812',
     END OF gc_msg.
 
 ENDINTERFACE.

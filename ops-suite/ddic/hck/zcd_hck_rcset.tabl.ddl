@@ -27,8 +27,11 @@ define table zcd_hck_rcset {
   leg_bank     : abap_boolean;
   // leg mapping: X = G/L leg compared with the payment engine control total (G/L <-> subledger)
   leg_fica     : abap_boolean;
-  // absolute tolerance in the set currency; 0 = parameter HCK_RECON_TOLERANCE
+  // absolute tolerance in the set currency; used when TOLERANCE_SET = X (0.00 = exact match), else the
+  // parameter HCK_RECON_TOLERANCE (a value above 0 without the flag also counts as maintained)
   tolerance    : abap.dec(15,2);
+  // X = TOLERANCE of the set is maintained (2026-11-10: 0.00 with the flag is an exact match)
+  tolerance_set : abap_boolean;
   description  : abap.char(60);
   active       : abap_boolean;
   changed_by   : syuname;

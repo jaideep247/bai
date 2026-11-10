@@ -19,6 +19,8 @@
 *& 2026-11-08 | CHECK_POSTING_AREAS: configuration check of the customer posting areas ZRSN, ZPMC, ZBTM,
 *&            | ZBTR (FQC0 checks domains only) - the checks of the former app entities and the posting
 *&            | area's own (generic keys, lengths, blank keys, one class per payment method, empty area).
+*& 2026-11-10 | LOOKUP_APPROVED: a lookup field of rule R21 must be approved in ZCD_OPS_TABWL (EBS / LOOKUP),
+*&            | read through the EBS SAP DAO (the same check as at runtime).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: field checks</p>
 CLASS zcl_cd_ops_cfg_checks DEFINITION
@@ -47,6 +49,15 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
         iv_field         TYPE zif_cd_ops_cfg_types=>ty_name
       RETURNING
         VALUE(rv_exists) TYPE abap_bool.
+
+    "! The field of the table is approved for the EBS lookup rule R21 (ZCD_OPS_TABWL, EBS / LOOKUP,
+    "! field-level) - the same check as at runtime (ZIF_CD_EBS_SAP_DAO=>IS_LOOKUP_FIELD_APPROVED)
+    CLASS-METHODS lookup_approved
+      IMPORTING
+        iv_table           TYPE zif_cd_ops_cfg_types=>ty_name
+        iv_field           TYPE zif_cd_ops_cfg_types=>ty_name
+      RETURNING
+        VALUE(rv_approved) TYPE abap_bool.
 
     "! Global class exists and implements the interface (plug-in contract)
     CLASS-METHODS implements
@@ -305,6 +316,12 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
     ENDIF.
     rv_exists = xsdbool( lo_type->kind = cl_abap_typedescr=>kind_struct
                          AND lo_type->is_ddic_type( ) = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD lookup_approved.
+    rv_approved = zcl_cd_ebs_factory=>get_sap_dao( )->is_lookup_field_approved( iv_table = iv_table
+                                                                                iv_field = iv_field ).
   ENDMETHOD.
 
 

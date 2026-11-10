@@ -735,6 +735,18 @@ CLASS lhc_ebslookup IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-StatusField v2 = ls_row-TableName
                         element = lif_c=>gc_el-statusfield ) INTO TABLE lt_msg.
       ENDIF.
+      IF ls_row-KeyField IS NOT INITIAL AND ls_row-TableName IS NOT INITIAL
+         AND zcl_cd_ops_cfg_checks=>lookup_approved( iv_table = CONV #( ls_row-TableName )
+                                                     iv_field = CONV #( ls_row-KeyField ) ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-lookup_not_approved v1 = ls_row-KeyField v2 = ls_row-TableName
+                        element = lif_c=>gc_el-keyfield ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-StatusField IS NOT INITIAL AND ls_row-TableName IS NOT INITIAL
+         AND zcl_cd_ops_cfg_checks=>lookup_approved( iv_table = CONV #( ls_row-TableName )
+                                                     iv_field = CONV #( ls_row-StatusField ) ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-lookup_not_approved v1 = ls_row-StatusField v2 = ls_row-TableName
+                        element = lif_c=>gc_el-statusfield ) INTO TABLE lt_msg.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-ebslookup.

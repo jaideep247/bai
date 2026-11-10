@@ -12,6 +12,8 @@
 *& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
 *&            | ZCD_HCK_RCBTC).
 *& 2026-11-08 | Customer posting areas: TY_BTC_ROLE is an entry of ZBTR usage RECON.
+*& 2026-11-10 | TOLERANCE_SET (set tolerance maintained), tolerance source SET / PARAMETER, evidence metrics
+*&            | RC_BANK / RC_GL / RC_FICA / RC_TOLERANCE_SET / RC_TOLERANCE_PARAM per group-day, message 838.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation types</p>
 "! Shared by ZCL_CD_HCK_C_RECON3 (check), ZCL_CD_HCK_RECON_EVAL (pure rules) and
@@ -66,6 +68,8 @@ INTERFACE zif_cd_hck_recon_types
       leg_bank    TYPE abap_bool,
       leg_fica    TYPE abap_bool,
       tolerance   TYPE ty_amount,
+      "! X = TOLERANCE is maintained for the set (0.00 = exact match), else HCK_RECON_TOLERANCE
+      tolerance_set TYPE abap_bool,
       description TYPE zif_cd_hck_types=>ty_text,
     END OF ty_set.
   TYPES tt_set TYPE STANDARD TABLE OF ty_set WITH EMPTY KEY.
@@ -413,7 +417,21 @@ INTERFACE zif_cd_hck_recon_types
       stripe_diff  TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_STRIPE_DIFF',
       ach_open     TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_ACH_OPEN',
       breaks       TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_BREAKS',
+      "! Evidence of every group-day, balanced ones included (deterministic verification): the
+      "! bank leg (expected of bank / G/L), the G/L leg, the payment engine leg and the tolerance used
+      "! with its source in the metric name
+      bank         TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_BANK',
+      gl           TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_GL',
+      fica         TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_FICA',
+      tol_set      TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_TOLERANCE_SET',
+      tol_param    TYPE zif_cd_hck_types=>ty_metric_name VALUE 'RC_TOLERANCE_PARAM',
     END OF gc_metric.
+  "! Source of the tolerance used for a set
+  CONSTANTS:
+    BEGIN OF gc_tolerance_source,
+      set       TYPE string VALUE `SET`,
+      parameter TYPE string VALUE `PARAMETER`,
+    END OF gc_tolerance_source.
   "! Prefix of every metric of the check (ZI_CD_HckRecon selects by it; cds_abap_parity)
   CONSTANTS gc_metric_prefix TYPE string VALUE `RC_`.
 
@@ -457,6 +475,7 @@ INTERFACE zif_cd_hck_recon_types
       unmapped_codes   TYPE zif_cd_ops_types=>ty_msgno VALUE '697',
       summary          TYPE zif_cd_ops_types=>ty_msgno VALUE '698',
       set_not_used     TYPE zif_cd_ops_types=>ty_msgno VALUE '699',
+      evidence         TYPE zif_cd_ops_types=>ty_msgno VALUE '838',
     END OF gc_msg.
 
 ENDINTERFACE.

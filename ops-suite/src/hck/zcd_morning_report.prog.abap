@@ -12,6 +12,9 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: string templates.
 *& 2026-11-10 | In background an error ends the job with a type E message (was S: the job ended green).
+*& 2026-11-10 | Export: P_FILE is a file name only, resolved in logical path ZCD_OPS_HCK_OUT (FILE), validated
+*&            | and checked with S_DATASET WRITE (ZCL_CD_OPS_FILE_PATH); temporary file and the delete on
+*&            | error work only on that validated path.
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
 *& ZCL_CD_HCK_REPORT_HTML. Schedule daily (Control-M) with a variant that
@@ -60,7 +63,6 @@ CONSTANTS:
     green  TYPE c LENGTH 1 VALUE '3',
     none   TYPE c LENGTH 1 VALUE ' ',
   END OF gc_light.
-CONSTANTS gc_dataset_write TYPE authb-actvt VALUE 'WRITE'.
 
 CLASS lcl_app DEFINITION FINAL.
   PUBLIC SECTION.
@@ -385,22 +387,19 @@ CLASS lcl_app IMPLEMENTATION.
 
 
   METHOD export_csv.
-    DATA lv_file TYPE string.
-    lv_file = p_file.
-
-    CALL FUNCTION 'AUTHORITY_CHECK_DATASET'
-      EXPORTING
-        program          = sy-repid
-        activity         = gc_dataset_write
-        filename         = CONV authb-filename( lv_file )
-      EXCEPTIONS
-        no_authority     = 1
-        activity_unknown = 2
-        OTHERS           = 3.
-    IF sy-subrc <> 0.
-      MESSAGE s041(zcd_ops) WITH lv_file gc_dataset_write DISPLAY LIKE 'E'.
-      RETURN.
-    ENDIF.
+    " Directory traversal: only a file name, resolved in the logical path of the export,
+    " validated and authorised for WRITE - the temporary file and a delete on error stay in it
+    TRY.
+        DATA(lv_file) = zcl_cd_ops_file_path=>physical( is_logical   = zif_cd_ops_types=>gc_logical_file-hck_export
+                                                        iv_file_name = p_file
+                                                        iv_activity  = zif_cd_ops_types=>gc_dataset_activity-write ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_path).
+        IF sy-batch = abap_true.
+          MESSAGE lx_path TYPE 'E'.
+        ENDIF.
+        MESSAGE lx_path TYPE 'S' DISPLAY LIKE 'E'.
+        RETURN.
+    ENDTRY.
 
     " A61: complete file or none - temporary file first, target replaced only afterwards
     TRY.

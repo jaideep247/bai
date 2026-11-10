@@ -114,7 +114,7 @@
     <item>
      <ID>S</ID>
      <KEY>P_FILE</KEY>
-     <ENTRY>        Export file path</ENTRY>
+     <ENTRY>        Export file name</ENTRY>
      <LENGTH>24</LENGTH>
     </item>
     <item>

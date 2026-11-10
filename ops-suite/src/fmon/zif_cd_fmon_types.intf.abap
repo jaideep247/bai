@@ -46,6 +46,7 @@
 *&            | REQUESTS of the payment worklist).
 *& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): payment run key of a file (generation group
 *&            | split by GROUP_FIELDS), payment run totals (fallback), FMON_DEFAULT_CURRENCY.
+*& 2026-11-10 | GC_TABLE_AUTH moved to ZIF_CD_OPS_AUTH (one S_TABU_NAM check for every area).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -393,14 +394,6 @@ INTERFACE zif_cd_fmon_types
       next     TYPE ty_fcal_correct VALUE '+',
       previous TYPE ty_fcal_correct VALUE '-',
     END OF gc_fcal_correct.
-  "! Display authorisation checked at the dynamic read boundary (ZCL_CD_FMON_DDIC=>MAY_READ)
-  CONSTANTS:
-    BEGIN OF gc_table_auth,
-      object   TYPE xuobject VALUE 'S_TABU_NAM',
-      id_actvt TYPE xufield VALUE 'ACTVT',
-      id_table TYPE xufield VALUE 'TABLE',
-      display  TYPE activ_auth VALUE '03',
-    END OF gc_table_auth.
   "! Token in a done-value list that stands for an initial status
   CONSTANTS gc_blank_token TYPE string VALUE `<BLANK>`.
 

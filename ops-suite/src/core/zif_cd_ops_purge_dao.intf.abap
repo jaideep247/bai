@@ -11,6 +11,8 @@
 *& 2026-11-07 | Purge target PAY_OUTCOME: payment outcome versions (RETENTION_DAYS_PAY_OUTCOME).
 *& 2026-11-08 | PAY_OUTCOME: current versions only when final and the payment run is before the cutoff.
 *& 2026-11-08 | PAY_OUTCOME comment: exception history of the payment worklist; open rows never deleted.
+*& 2026-11-10 | RUN purges the exception history (ZCD_OPS_EXC_HIST) of its findings (EV_HISTORY); target
+*&            | FMON_FILE: file registry rows by business date, never a file an open exception names.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge repository</p>
 INTERFACE zif_cd_ops_purge_dao
@@ -33,6 +35,9 @@ INTERFACE zif_cd_ops_purge_dao
       "! (90 days after the exception closed); a current row only when its outcome is final and its
       "! payment run is before the cutoff - an open row (payment or request) is never deleted
       pay_outcome TYPE ty_target VALUE 'PAY_OUTCOME',
+      "! ZCD_FMON_FILE (file registry, 2026-11-10): files of a business date before the cutoff; a file an
+      "! open, assigned or validly waived FMON exception refers to (REFERENCE = file ID) is kept
+      fmon_file  TYPE ty_target VALUE 'FMON_FILE',
     END OF gc_target.
 
   "! Rows of the target older than iv_cutoff that may be purged
@@ -54,6 +59,8 @@ INTERFACE zif_cd_ops_purge_dao
       iv_max          TYPE i
     EXPORTING
       ev_findings     TYPE i
+      "! RUN only: exception history rows (ZCD_OPS_EXC_HIST) deleted with the findings
+      ev_history      TYPE i
     RETURNING
       VALUE(rv_count) TYPE i.
 

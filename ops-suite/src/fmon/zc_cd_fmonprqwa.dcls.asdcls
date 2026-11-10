@@ -1,0 +1,12 @@
+// Artifact: zc_cd_fmonprqwa.dcls.asdcls
+// Purpose: Read access to the app of PRISM payment requests handled manually (service
+//          ZUI_CD_FMON_PRQ): authorization object ZCD_OPS with ZCD_PE_AREA FMON and ACTVT 03 (fixed
+//          values; the view has no area element).
+// Modification log: 2026-11-10 | Initial version (read authorisation of the operations apps).
+// VERIFY-ADT: pfcg_auth with an empty element list and fixed field values (7.58).
+@EndUserText.label: 'PRISM requests handled manually - read'
+@MappingRole: true
+define role ZC_CD_FmonPrqWa {
+  grant select on ZC_CD_FmonPrqWa
+    where ( ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA = 'FMON', ACTVT = '03' );
+}

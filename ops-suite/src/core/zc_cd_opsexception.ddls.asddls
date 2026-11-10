@@ -1,4 +1,4 @@
-@AccessControl.authorizationCheck: #NOT_REQUIRED
+@AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Owned exceptions'
 @Metadata.allowExtensions: true
 define root view entity ZC_CD_OpsException

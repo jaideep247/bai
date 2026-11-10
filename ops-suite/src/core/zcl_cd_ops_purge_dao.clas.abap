@@ -22,6 +22,8 @@
 *& 2026-11-08 | PAY_OUTCOME comments: the worklist holds open rows and exception history only (clean payments are
 *&            | deleted by the snapshot); rule unchanged - closed history 90 days after the exception closed, open
 *&            | rows never.
+*& 2026-11-10 | RUN: exception history of the purged findings deleted first (was orphaned); FMON_FILE:
+*&            | registry rows by business date, files of open FMON exceptions kept (REFERENCE = file ID).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge SQL</p>
 CLASS zcl_cd_ops_purge_dao DEFINITION
@@ -41,6 +43,24 @@ CLASS zcl_cd_ops_purge_dao DEFINITION
         iv_cutoff      TYPE timestampl
       RETURNING
         VALUE(rv_date) TYPE d.
+
+    "! FMON_FILE: keys of registry files of a business date before the cutoff that no open,
+    "! assigned or validly waived FMON exception refers to (at most iv_max candidates per package)
+    METHODS purgeable_files
+      IMPORTING
+        iv_cutoff       TYPE timestampl
+        iv_today        TYPE d
+        iv_max          TYPE i
+      RETURNING
+        VALUE(rt_files) TYPE tt_file_key.
+
+    "! Upper bound of the FMON_FILE count in test mode (one candidate read, no unbounded scan)
+    CONSTANTS gc_count_cap TYPE i VALUE 1000000.
+    TYPES:
+      BEGIN OF ty_file_key,
+        file_id TYPE sysuuid_x16,
+      END OF ty_file_key.
+    TYPES tt_file_key TYPE STANDARD TABLE OF ty_file_key WITH EMPTY KEY.
 
     METHODS purgeable_runs
       IMPORTING
@@ -82,6 +102,9 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         SELECT COUNT(*) FROM zcd_fmon_prism WHERE received_at < @iv_cutoff INTO @rv_count.
       WHEN zif_cd_ops_purge_dao=>gc_target-hck_result.
         SELECT COUNT(*) FROM zcd_hck_result WHERE executed_at < @iv_cutoff INTO @rv_count.
+      WHEN zif_cd_ops_purge_dao=>gc_target-fmon_file.
+        " counted like it is deleted: the files of open exceptions are left out
+        rv_count = lines( purgeable_files( iv_cutoff = iv_cutoff iv_today = iv_today iv_max = gc_count_cap ) ).
       WHEN zif_cd_ops_purge_dao=>gc_target-pay_outcome.
         DATA(lv_cutoff_date) = cutoff_date( iv_cutoff ).
         DATA(lt_final) = zcl_cd_ops_pay_outcome=>final_outcomes( ).
@@ -101,6 +124,9 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
       WHEN zif_cd_ops_purge_dao=>gc_target-run.
         DATA(lt_runs) = purgeable_runs( iv_cutoff = iv_cutoff iv_today = iv_today iv_max = iv_max ).
         CHECK lt_runs IS NOT INITIAL.
+        " the action history belongs to the findings - never left without them (index FND)
+        DELETE FROM zcd_ops_exc_hist WHERE run_id IN @lt_runs.
+        ev_history = sy-dbcnt.
         DELETE FROM zcd_ops_finding WHERE run_id IN @lt_runs.
         ev_findings = sy-dbcnt.
         DELETE FROM zcd_ops_run WHERE run_id IN @lt_runs.
@@ -171,6 +197,12 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         DELETE zcd_pay_outcome FROM TABLE @lt_versions.
         rv_count = sy-dbcnt.
 
+      WHEN zif_cd_ops_purge_dao=>gc_target-fmon_file.
+        DATA(lt_files) = purgeable_files( iv_cutoff = iv_cutoff iv_today = iv_today iv_max = iv_max ).
+        CHECK lt_files IS NOT INITIAL.
+        DELETE zcd_fmon_file FROM TABLE @lt_files.
+        rv_count = sy-dbcnt.
+
       WHEN zif_cd_ops_purge_dao=>gc_target-fmon_prism.
         " By receipt time; FMON keeps its own events (ZCD_FMON_EVENT) for the file history
         SELECT event_id
@@ -188,6 +220,43 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
 
   METHOD cutoff_date.
     CONVERT TIME STAMP iv_cutoff TIME ZONE zif_cd_ops_types=>gc_time_zone_utc INTO DATE rv_date.
+  ENDMETHOD.
+
+
+  METHOD purgeable_files.
+    DATA lt_refs TYPE SORTED TABLE OF zif_cd_ops_types=>ty_reference WITH UNIQUE KEY table_line.
+    DATA lv_no_end TYPE d.
+
+    DATA(lv_cutoff_date) = cutoff_date( iv_cutoff ).
+    SELECT file_id
+      FROM zcd_fmon_file
+      WHERE business_date < @lv_cutoff_date
+      ORDER BY file_id
+      INTO TABLE @DATA(lt_candidates)
+      UP TO @iv_max ROWS.
+    IF lt_candidates IS INITIAL.
+      RETURN.
+    ENDIF.
+    " FMON findings refer to their file by REFERENCE = file ID (hex, ZCL_CD_FMON_UTIL=>FILE_HEX)
+    LOOP AT lt_candidates ASSIGNING FIELD-SYMBOL(<ls_candidate>).
+      INSERT CONV zif_cd_ops_types=>ty_reference( |{ <ls_candidate>-file_id }| ) INTO TABLE lt_refs.
+    ENDLOOP.
+    CHECK lt_refs IS NOT INITIAL.
+    SELECT DISTINCT reference
+      FROM zcd_ops_finding
+      FOR ALL ENTRIES IN @lt_refs
+      WHERE pe_area   = @zif_cd_ops_types=>gc_pe_area-file_monitor
+        AND reference = @lt_refs-table_line
+        AND ( disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
+                               @zif_cd_ops_types=>gc_disposition-assigned )
+              OR ( disposition = @zif_cd_ops_types=>gc_disposition-waived
+                   AND ( waiver_until >= @iv_today OR waiver_until = @lv_no_end ) ) )
+      INTO TABLE @DATA(lt_kept).
+    LOOP AT lt_candidates ASSIGNING <ls_candidate>.
+      IF NOT line_exists( lt_kept[ reference = |{ <ls_candidate>-file_id }| ] ).
+        INSERT VALUE #( file_id = <ls_candidate>-file_id ) INTO TABLE rt_files.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

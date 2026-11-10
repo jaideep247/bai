@@ -1,0 +1,15 @@
+// Artifact: zc_cd_opsexception.dcls.asdcls
+// Purpose: Read access to the exceptions app (service ZUI_CD_OPS_EXC): authorization object ZCD_OPS
+//          with ZCD_PE_AREA = the area of the exception and ACTVT 03, as the dashboard DCLs. The action
+//          history is shown with the area of its exception (path _Exception). Actions (assign, resolve,
+//          waive) keep their own instance checks in the behaviour pool.
+// Modification log: 2026-11-10 | Initial version (read authorisation of the operations apps).
+// VERIFY-ADT: aspect pfcg_auth on a projection view and on a path to the parent (7.58).
+@EndUserText.label: 'Exceptions app - read access'
+@MappingRole: true
+define role ZC_CD_OpsException {
+  grant select on ZC_CD_OpsException
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_OpsExcHist
+    where ( _Exception.PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+}

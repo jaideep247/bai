@@ -19,7 +19,7 @@
 | Selection text | P_MAIL | Send e-mail (route MORNING) |
 | Selection text | P_EXC | Show top open exceptions |
 | Selection text | P_EXP | Export CSV to app. server |
-| Selection text | P_FILE | Export file path |
+| Selection text | P_FILE | Export file name |
 | Selection text | P_BASE | Take configuration baseline |
 | Text symbol | T01 | (test mode, not saved) |
 | Text symbol | T02 | Oldest open exceptions (all payment engine areas) |

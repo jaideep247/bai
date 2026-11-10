@@ -23,6 +23,7 @@ CD_OPS,POSTAREA_RSN,P,CHAR,,,ZRSN,Z[A-Z0-9]{3},,X,X,Posting area of return / NOC
 CD_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,PE RTB
 CD_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),PE RTB
 CD_OPS,RETENTION_DAYS_FMON_EVENT,P,INT,,,400,,,,,Retention of file monitoring events (days; >= 30),PE RTB
+CD_OPS,RETENTION_DAYS_FMON_FILE,P,INT,,,400,,,,,Retention of the file registry (days; >= 30),PE RTB
 CD_OPS,RETENTION_DAYS_FMON_PRISM,P,INT,,,400,,,,,Retention of PRISM status events (days; >= 30),PE RTB
 CD_OPS,RETENTION_DAYS_HCK_METRIC,P,INT,,,400,,,,,Retention of health check metrics (days; >= 30),PE RTB
 CD_OPS,RETENTION_DAYS_HCK_RESULT,P,INT,,,400,,,,,Retention of health check verdicts per run (days; >= 30),PE RTB
@@ -91,6 +92,7 @@ CD_FMON,FMON_PRISM_THROTTLE_SCOPE,P,CHAR,,,C,[AC],,,,PRISM queue: C one per bank
 CD_FMON,FMON_REGEN_WAIT_MIN,P,INT,0,,60,,,,,Minutes to regenerate a PRISM_FAILED file (0 = no check),PE RTB
 CD_FMON,FMON_RETURNS_WEEKDAYS,P,LIST,,,,[1-7],,,,Weekdays (1 = Monday) that are ACH returns cycle days,PE RTB
 CD_FMON,FMON_TIME_ZONE,P,CHAR,,,UTC,,,X,,Time zone of legacy date/time fields and calendars,PE RTB
+CD_HCK,HCK_ALERT_CLAIM_MIN,P,INT,1,,30,,,,,Minutes after which an unfinished alert claim is stuck,PE RTB
 CD_HCK,HCK_BTC_INFO_BAI2,P,LIST,,,,,,,,BAI2 codes that never concern a payment (in-flight check),PE RTB
 CD_HCK,HCK_BTC_INFO_ISO,P,LIST,,,,,,,,ISO codes that never concern a payment (in-flight check),PE RTB
 CD_HCK,HCK_BTC_INFO_PRTRY,P,LIST,,,,,,,,Proprietary codes never concerning a payment (in-flight),PE RTB

@@ -53,9 +53,12 @@ annotate entity ZC_CD_HckReconSet with
   Tolerance;
 
   @UI.identification: [{ position: 130 }]
-  Description;
+  ToleranceSet;
 
   @UI.identification: [{ position: 140 }]
+  Description;
+
+  @UI.identification: [{ position: 150 }]
   Active;
 
   @UI.hidden: true

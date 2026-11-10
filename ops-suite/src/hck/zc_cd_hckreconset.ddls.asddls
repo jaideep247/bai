@@ -19,6 +19,7 @@ define view entity ZC_CD_HckReconSet
       LegBank,
       LegFica,
       Tolerance,
+      ToleranceSet,
       Description,
       Active,
       ChangedBy,

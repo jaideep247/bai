@@ -52,6 +52,9 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         ('required', field) must be filled - message 422; ('blank', field) must be blank - 423;
 #         ('reserved', field, 'A,B') must not be a value of the other usage - 424;
 #         ('form', field, pcre) must match the PCRE (whole value, case ignored) - 425
+#         ('approved', field, table_field): the field of the table must be approved for the EBS
+#         lookup rule R21 in ZCD_OPS_TABWL (area EBS, purpose LOOKUP, field-level;
+#         ZCL_CD_OPS_CFG_CHECKS=>LOOKUP_APPROVED, the runtime check) - message 812
 # ---------------------------------------------------------------------------
 BLANK, FILLED = '<blank>', '<filled>'
 SEV = 'B,E,W,I'
@@ -79,7 +82,8 @@ SPEC = {
              ['priority'], [('enum', 'flow_type', 'D,C'), ('pcre', 'pattern')]),
             ('zcd_ebs_lookup', 'EbsLookup', 'zcd_d_ebslkp', 'Lookup (rule R21)', 'Lookups (rule R21)', [],
              [('enum', 'key_kind', 'DOCNO,ZTNUM,REFERENCE'), ('table', 'table_name'),
-              ('field', 'key_field', 'table_name'), ('field', 'status_field', 'table_name')]),
+              ('field', 'key_field', 'table_name'), ('field', 'status_field', 'table_name'),
+              ('approved', 'key_field', 'table_name'), ('approved', 'status_field', 'table_name')]),
         ]),
     'fmon': dict(
         folder='fmon', pe_area='FMON', root='FmonCfgAll', draft='zcd_d_fmoncfg', service='ZUI_CD_FMON_CFG',
@@ -171,9 +175,11 @@ SPEC = {
             # lives in the core app; area + purpose say which reader may use a row
             ('zcd_ops_tabwl', 'ApprovedTable', 'zcd_d_opstabwl', 'Approved table', 'Approved tables per reader',
              ['field_name'],
-             [('enum', 'pe_area', 'FMON,HCK'),
+             [('enum', 'pe_area', 'FMON,HCK,EBS'),
               ('when', 'pe_area', 'FMON', [('enum', 'purpose', 'SOURCE')]),
               ('when', 'pe_area', 'HCK', [('enum', 'purpose', 'READ,DRIFT'), ('blank', 'field_name')]),
+              # EBS lookup rule R21 (2026-11-10): approved per field (key and status field of ZCD_EBS_LOOKUP)
+              ('when', 'pe_area', 'EBS', [('enum', 'purpose', 'LOOKUP'), ('required', 'field_name')]),
               ('table', 'table_name'), ('field', 'field_name', 'table_name')]),
         ]),
 }
@@ -610,6 +616,14 @@ def abap_check(t, chk, root, when=None):
                 f"       AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-{tab} )",
                 f"                                                iv_field = CONV #( ls_row-{e} ) ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}field_invalid v1 = ls_row-{e} v2 = ls_row-{tab}",
+                f"                      element = {el(e)} ) INTO TABLE lt_msg.",
+                '    ENDIF.']
+    if kind == 'approved':
+        e, tab = fmap[chk[1]], fmap[chk[2]]
+        return [f"    IF ls_row-{e} IS NOT INITIAL AND ls_row-{tab} IS NOT INITIAL",
+                f"       AND zcl_cd_ops_cfg_checks=>lookup_approved( iv_table = CONV #( ls_row-{tab} )",
+                f"                                                   iv_field = CONV #( ls_row-{e} ) ) = abap_false.",
+                f"      INSERT VALUE #( number = {msg}lookup_not_approved v1 = ls_row-{e} v2 = ls_row-{tab}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'window':

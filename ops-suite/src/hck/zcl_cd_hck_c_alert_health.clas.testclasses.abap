@@ -7,6 +7,8 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Throttled channel of the test is APPLOG (webhook channel removed).
+*& 2026-11-10 | stuck_claim_measured: claims older than HCK_ALERT_CLAIM_MIN measured per channel (B11);
+*&            | the expected metrics include ALERT_CLAIM_STUCK * = 0.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -51,6 +53,7 @@ CLASS ltc_alert_health DEFINITION FINAL FOR TESTING
     METHODS failed_measured_per_channel FOR TESTING.
     METHODS no_failure_measures_zero FOR TESTING.
     METHODS sent_is_not_measured FOR TESTING.
+    METHODS stuck_claim_measured FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -68,11 +71,13 @@ CLASS ltc_alert_health IMPLEMENTATION.
   METHOD setup.
     mo_dao = NEW #( ).
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
   ENDMETHOD.
 
 
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
     CLEAR mo_dao.
   ENDMETHOD.
 
@@ -122,10 +127,13 @@ CLASS ltc_alert_health IMPLEMENTATION.
           INTO TABLE lt_exp.
         INSERT VALUE #( metric = zcl_cd_hck_c_alert_health=>gc_metric-throttled dim1 = gc_applog value = gc_thrott )
           INTO TABLE lt_exp.
+        INSERT VALUE #( metric = zcl_cd_hck_c_alert_health=>gc_metric-stuck
+                        dim1   = zif_cd_hck_types=>gc_default_key ) INTO TABLE lt_exp.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics exp = lt_exp
                                             msg = 'Failed and throttled deliveries are measured per channel' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_calls exp = 1 msg = 'One statistics read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_calls exp = 2
+                                            msg = 'Window statistics and claims older than the limit' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -137,6 +145,8 @@ CLASS ltc_alert_health IMPLEMENTATION.
     DATA lt_exp TYPE zif_cd_hck_types=>tt_metric.
     TRY.
         INSERT VALUE #( metric = zcl_cd_hck_c_alert_health=>gc_metric-failed
+                        dim1   = zif_cd_hck_types=>gc_default_key ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = zcl_cd_hck_c_alert_health=>gc_metric-stuck
                         dim1   = zif_cd_hck_types=>gc_default_key ) INTO TABLE lt_exp.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics exp = lt_exp
@@ -153,11 +163,33 @@ CLASS ltc_alert_health IMPLEMENTATION.
     TRY.
         configure_scenario( VALUE #( sent_only = abap_true ) ).
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 1
-                                            msg = 'Only the zero failure metric' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 2
+                                            msg = 'Only the zero failure and zero stuck-claim metrics' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-dim1
                                             exp = zif_cd_hck_types=>gc_default_key
                                             msg = 'Zero metric is the * row' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B11: a claim never completed (status C past HCK_ALERT_CLAIM_MIN) is measured per channel
+  METHOD stuck_claim_measured.
+    DATA ls_stat TYPE zif_cd_hck_types=>ty_alert_stat.
+    TRY.
+        ls_stat-channel    = gc_mail.
+        ls_stat-status     = zif_cd_hck_types=>gc_alert_status-claimed.
+        ls_stat-item_count = 1.
+        INSERT ls_stat INTO TABLE mo_dao->mt_stats.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-metrics[ metric = zcl_cd_hck_c_alert_health=>gc_metric-stuck
+                                                         dim1   = gc_mail
+                                                         value  = 1 ] ) )
+          msg = 'One stuck claim of the e-mail channel' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_calls exp = 2
+                                            msg = 'Window statistics and claims older than the limit' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

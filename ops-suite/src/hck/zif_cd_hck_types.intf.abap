@@ -41,6 +41,7 @@
 *& 2026-11-08 | Table consolidation: TY_AGG_DEF-EXPECTED_GROUPS (comma list, TY_GROUP_LIST) replaces
 *&            | ZCD_HCK_AGGGRP; TY_AGG_GROUP removed.
 *& 2026-11-08 | Customer posting areas: GC_BTC_USAGE is key USAGE of ZBTR; check code POSTAREA_INVALID.
+*& 2026-11-10 | Alert status C (claimed) and HCK_ALERT_CLAIM_MIN: claims never completed (alert health).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -235,6 +236,8 @@ INTERFACE zif_cd_hck_types
       sent      TYPE ty_alert_status VALUE 'S',
       failed    TYPE ty_alert_status VALUE 'F',
       throttled TYPE ty_alert_status VALUE 'T',
+      "! Claimed before the send and never completed (dispatcher stopped between claim and send)
+      claimed   TYPE ty_alert_status VALUE 'C',
     END OF gc_alert_status.
 
   "! Score points per RAG and weights per priority (defaults; ZCA_PARAM overrides)
@@ -754,6 +757,8 @@ INTERFACE zif_cd_hck_types
       max_job_rows   TYPE i VALUE 5000,
       max_job_names  TYPE i VALUE 20000,
       max_agg_rows   TYPE i VALUE 5000,
+      "! A claimed alert not completed after this many minutes is stuck (alert health)
+      alert_claim_min TYPE i VALUE 30,
     END OF gc_param_default.
 
   "! Parameters (ZCA_PARAM) of the health check engine and of its row caps
@@ -775,6 +780,7 @@ INTERFACE zif_cd_hck_types
       max_job_rows   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_ROWS',
       max_job_names  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_NAMES',
       max_agg_rows   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGG_ROWS',
+      alert_claim_min TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_ALERT_CLAIM_MIN',
     END OF gc_param.
 
   "! Health check dashboard (CDS, docs/Dashboard_Health_Check.md): runs, findings and metrics of

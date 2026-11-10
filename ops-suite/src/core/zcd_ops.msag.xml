@@ -1110,7 +1110,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>255</MSGNR>
-     <TEXT>Body is not valid JSON:</TEXT>
+     <TEXT>Body is not valid JSON</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -3143,6 +3143,42 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>807</MSGNR>
+     <TEXT>File &amp;2 not resolved or not valid in logical path / file name &amp;1 (FILE)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>808</MSGNR>
+     <TEXT>File name &amp;1 not allowed: enter a name only, without a path or ..</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>809</MSGNR>
+     <TEXT>No authorisation to &amp;2 file &amp;1 (S_DATASET)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>810</MSGNR>
+     <TEXT>File &amp;1 could not be opened or read</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>812</MSGNR>
+     <TEXT>Field &amp;1 of table &amp;2 is not approved for EBS lookups (ZCD_OPS_TABWL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>813</MSGNR>
+     <TEXT>No authorisation to display table &amp;1 (S_TABU_NAM 03)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>815</MSGNR>
      <TEXT>Partner filter not applied: source field &amp;1 not usable -</TEXT>
     </T100>
@@ -3277,6 +3313,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>837</MSGNR>
      <TEXT>Missing or late bank ACK - evidence per file</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>838</MSGNR>
+     <TEXT>Expected &amp;1, actual &amp;2, difference &amp;3, tolerance &amp;4 - source:</TEXT>
     </T100>
    </T100>
   </asx:values>

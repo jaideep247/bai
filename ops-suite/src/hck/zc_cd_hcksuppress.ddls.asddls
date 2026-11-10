@@ -1,4 +1,4 @@
-@AccessControl.authorizationCheck: #NOT_REQUIRED
+@AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Health check suppressions'
 @Metadata.allowExtensions: true
 define root view entity ZC_CD_HckSuppress

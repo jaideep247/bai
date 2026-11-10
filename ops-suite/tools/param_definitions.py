@@ -117,6 +117,7 @@ DEFAULTS = {
     'RETENTION_DAYS_FMON_PRISM': ('regex', _PURGE, r'gc_target-fmon_prism\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_HCK_RESULT': ('regex', _PURGE, r'gc_target-hck_result\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_PAY_OUTCOME': ('regex', _PURGE, r'gc_target-pay_outcome\s+default_days\s*=\s*(\d+)'),
+    'RETENTION_DAYS_FMON_FILE': ('regex', _PURGE, r'gc_target-fmon_file\s+default_days\s*=\s*(\d+)'),
     # Stale thresholds (minutes): the values the dashboards' CDS literals hold (cds_abap_parity) -
     # FMON 3 x its 5-minute cadence, EBS / HCK = HCK_MAX_AGE_HOURS (26 h) in minutes
     'MON_STALE_AFTER_MIN_FMON': ('const', os.path.join('src', 'fmon', 'zif_cd_fmon_types.intf.abap'),

@@ -29,6 +29,13 @@ Suite-level alert: **RUN_LOCKED** (check code, every payment engine area) — a 
 
 **Suppressed findings are information.** A health-check finding under an active suppression becomes severity I — rules with a minimum severity of W or higher do not alert them (`RAP_Ops_Apps.md`).
 
+### Alert e-mail layout (2026-11-10)
+
+- **Subject** starts with the system ID: `[PS4][EBS][E] …` - a test-system alert is never mistaken for production.
+- **Body** names the run ID, the batch job (name / count, SM37) and the exceptions app (message 803) under the run line.
+- **Missing bank ACK** (file monitoring): impact-first subject and a dedicated table per file - see `config/alert_seed.md` (*Missing bank ACK mail*) and `FMON_FILE_MONITORING.md` §A3c.
+- **Failures of the router itself** are findings ALERT_FAILED of the run (every area) and stuck claims are measured by `E_ALERT_DELIVERY` (`ALERT_CLAIM_STUCK`).
+
 ## Part B — Technical
 
 ```mermaid
