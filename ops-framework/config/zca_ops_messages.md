@@ -53,6 +53,7 @@ texts <= 73 characters).
 | 073 | E-mail template &1 has no placeholder for &2 - table added at the end |
 | 074 | [&1][&2] &3: &4 finding(s), |
 | 075 | E-mail template &1 not used: ALERT_MAIL_RENDERER is BUILTIN |
+| 076 | Alert audit log incomplete: &1 of &2 row(s) not saved (ZCA_OPS_ALLOG) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

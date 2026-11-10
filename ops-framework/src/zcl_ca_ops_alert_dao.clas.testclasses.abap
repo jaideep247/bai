@@ -11,6 +11,8 @@
 *& 2026-11-07 | Second channel of the ordering test is APPLOG (webhook channel removed).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | facts_of_open_exceptions: GET_EXCEPTION_FACTS reads the open / assigned exceptions of the run.
+*& 2026-11-10 | decisions_get_own_intent: routing decisions without an intent get distinct audit keys
+*&            | (the unique index INT itself exists only in the target system - VERIFY V26).
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -196,6 +198,7 @@ CLASS ltc_alert_dao_reads DEFINITION FINAL FOR TESTING
     METHODS channels_ordered FOR TESTING.
     METHODS inserted_log_read_newest FOR TESTING.
     METHODS empty_log_inserts_nothing FOR TESTING.
+    METHODS decisions_get_own_intent FOR TESTING.
 ENDCLASS.
 
 
@@ -300,6 +303,29 @@ CLASS ltc_alert_dao_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial(
           act = mo_cut->get_log( iv_rule_id = gc_test-rule_first iv_since = gc_test-before )
           msg = 'Nothing written' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Pilot review: two routing decisions without an intent (e.g. throttled, quiet hours) each get their
+  " own audit key (alert ID, attempt 0) - with a blank key the unique index INT dropped the second one
+  METHOD decisions_get_own_intent.
+    DATA lt_log TYPE zif_ca_ops_types=>tt_alert_log.
+    TRY.
+        lt_log = VALUE #( ( alert_id = gc_test-alert_old rule_id = gc_test-rule_first sent_at = gc_test-early
+                            status = zif_ca_ops_types=>gc_alert_status-throttled )
+                          ( alert_id = gc_test-alert_new rule_id = gc_test-rule_first sent_at = gc_test-late
+                            status = zif_ca_ops_types=>gc_alert_status-throttled ) ).
+        mo_cut->insert_log( lt_log ).
+        SELECT alert_id, intent_key, attempt FROM zca_ops_allog ORDER BY alert_id INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Both decisions saved' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-intent_key exp = |{ gc_test-alert_old }|
+                                            msg = 'Audit key = alert ID' ).
+        cl_abap_unit_assert=>assert_differs( act = lt_rows[ 2 ]-intent_key exp = lt_rows[ 1 ]-intent_key
+                                             msg = 'Two decisions never share an audit key' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-attempt exp = 0 msg = 'A decision is no attempt' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -34,9 +34,15 @@ INTERFACE zif_ca_ops_alert_dao
     RETURNING
       VALUE(rt_log) TYPE zif_ca_ops_types=>tt_alert_log.
 
+  "! Audit rows of routing decisions (throttled, quiet hours, repeat, failed, sent by SEND). A row
+  "! without an alert intent gets its alert ID (hex) as INTENT_KEY and attempt 0, so the unique
+  "! index INT (MANDT, INTENT_KEY, ATTEMPT) never makes two decisions collide; a row the database
+  "! still does not take is an error (message 076), never a silent loss
   METHODS insert_log
     IMPORTING
-      it_log TYPE zif_ca_ops_types=>tt_alert_log.
+      it_log TYPE zif_ca_ops_types=>tt_alert_log
+    RAISING
+      zcx_ca_ops_error.
 
   "! Durable claim of an alert intent before the external send (audit A17): inserts
   "! is_log (status C) with the next attempt number unless the intent is already
@@ -50,7 +56,9 @@ INTERFACE zif_ca_ops_alert_dao
   "! Final status of a claimed alert (S, F or P) with error and time
   METHODS complete DEFAULT IGNORE
     IMPORTING
-      is_log TYPE zif_ca_ops_types=>ty_alert_log.
+      is_log TYPE zif_ca_ops_types=>ty_alert_log
+    RAISING
+      zcx_ca_ops_error.
 
   "! Findings of a run that were raised again only because an open exception was
   "! carried forward (OCCURRENCES > 1) - not alerted again (audit A17)

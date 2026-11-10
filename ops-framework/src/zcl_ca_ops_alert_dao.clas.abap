@@ -12,6 +12,11 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS.
 *& 2026-11-10 | Template fields of rules, channels and log rows; COMPLETE writes the rendered subject and
 *&            | the render outcome; GET_EXCEPTION_FACTS (e-mail context: new / repeated / overdue, due date).
+*& 2026-11-10 | Pilot review: routing decisions were logged with a blank intent key and attempt 0, so with
+*&            | the unique index INT a second decision collided and ACCEPTING DUPLICATE KEYS dropped it
+*&            | silently. A row without an intent now carries its alert ID (hex, 32 characters - a dispatch
+*&            | intent is a 40-character SHA-1, so the two never meet); rows the database refuses raise 076;
+*&            | COMPLETE's fallback insert is checked as well.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert repository</p>
 CLASS zcl_ca_ops_alert_dao DEFINITION
@@ -82,15 +87,23 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
       ls_db-error       = <ls_log>-error.
       ls_db-intent_key  = <ls_log>-intent_key.
       ls_db-attempt     = <ls_log>-attempt.
+      IF ls_db-intent_key IS INITIAL.
+        " a routing decision, not a dispatch attempt: its own alert ID keeps it unique in index INT
+        ls_db-intent_key = |{ <ls_log>-alert_id }|.
+        ls_db-attempt    = 0.
+      ENDIF.
       ls_db-template_id = <ls_log>-template_id.
       ls_db-renderer    = <ls_log>-renderer.
       ls_db-render_info = <ls_log>-render_info.
       ls_db-created_by  = sy-uname.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
-    " Audit rows; a duplicate key (UUID collision) must not lose the others, so
-    " sy-subrc 4 (some rows skipped) is accepted deliberately
-    INSERT zca_ops_allog FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS. "#EC CI_SUBRC
+    " The other rows are kept even if one is refused, but a refused row is reported, never skipped
+    INSERT zca_ops_allog FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS.
+    IF sy-dbcnt <> lines( lt_db ).
+      RAISE EXCEPTION TYPE zcx_ca_ops_error
+        MESSAGE e076(zca_ops) WITH |{ lines( lt_db ) - sy-dbcnt }| |{ lines( lt_db ) }|.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -141,7 +154,11 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
       WHERE alert_id = @is_log-alert_id.
     IF sy-subrc <> 0.
       " the claim row is gone (purged): keep the evidence as a new row
-      INSERT zca_ops_allog FROM @( CORRESPONDING #( is_log ) ).    "#EC CI_SUBRC
+      INSERT zca_ops_allog FROM @( CORRESPONDING #( is_log ) ).
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_ca_ops_error
+          MESSAGE e076(zca_ops) WITH '1' '1'.
+      ENDIF.
     ENDIF.
   ENDMETHOD.
 

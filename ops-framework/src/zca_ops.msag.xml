@@ -245,6 +245,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>076</MSGNR>
+     <TEXT>Alert audit log incomplete: &amp;1 of &amp;2 row(s) not saved (ZCA_OPS_ALLOG)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

@@ -2,6 +2,15 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-10 (pilot review: alert audit log)
+
+- Fixed: routing decisions (throttled, quiet hours, repeat, failed by `SEND`) were written with a blank
+  intent key and attempt 0; with the unique index `INT` (MANDT, INTENT_KEY, ATTEMPT) every decision after
+  the first collided and `INSERT ... ACCEPTING DUPLICATE KEYS` dropped it without a trace. Such a row now
+  carries its alert ID (hex) as intent key; a row the database refuses raises message 076 (the run records
+  `ALERT_FAILED`); the fallback insert of `COMPLETE` is checked. `INSERT_LOG` and `COMPLETE` declare
+  `ZCX_CA_OPS_ERROR`. Verification in DV1: `docs/VERIFY.md` V26.
+
 ## [Unreleased] - 2026-11-10 (alert e-mail templates)
 
 User decisions 2026-11-10: every alert e-mail is an editable template (SAP e-mail templates, object type
