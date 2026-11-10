@@ -4,10 +4,15 @@
 *& Domain tests of the missing bank ACK table: two files in different
 *& currencies give one row each (most overdue first) and totals per
 *& currency, the subject leads with files, payments and amounts, an unknown
-*& count is not added as 0, a finding without ACK evidence is no row.
+*& count is not added as 0, a finding without ACK evidence is no row; on
+*& the template mechanism of the framework the subject is the key SUBJECT,
+*& the table the block TABLE_SECTION of ZCD_OPS_ALERT_ACK (a rule's own
+*& template wins).
 *& No doubles. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-10 | Initial version (missing bank ACK alert, user request 2026-11-10).
+*& 2026-11-10 | Template mechanism: ACK subject = key SUBJECT, table = block TABLE_SECTION of ZCD_OPS_ALERT_ACK,
+*&            | rule template wins; subject test expects the area constant (was the former area name).
 *&---------------------------------------------------------------------*
 CLASS ltc_ack_mail DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -32,6 +37,15 @@ CLASS ltc_ack_mail DEFINITION FINAL FOR TESTING
     METHODS unknown_count_not_added   FOR TESTING.
     METHODS other_finding_is_no_row   FOR TESTING.
     METHODS html_has_totals_row       FOR TESTING.
+    METHODS template_section_and_subject FOR TESTING.
+    METHODS rule_template_wins        FOR TESTING.
+
+    "! The alert message of the framework's policy with this section for the ACK files
+    METHODS message
+      IMPORTING
+        iv_rule_template  TYPE zif_ca_ops_types=>ty_template_id OPTIONAL
+      RETURNING
+        VALUE(rs_message) TYPE zif_ca_ops_types=>ty_alert_message.
 
     METHODS ack_finding
       IMPORTING
@@ -98,7 +112,7 @@ CLASS ltc_ack_mail IMPLEMENTATION.
                                                      iv_severity = zif_ca_ops_types=>gc_severity-error ).
     cl_abap_unit_assert=>assert_equals(
       act = lv_subject
-      exp = |[FMON][E] { zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_ack_msg-subject
+      exp = |[{ zif_cd_ops_types=>gc_pe_area-file_monitor }][E] { zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_ack_msg-subject
                                                  iv_v1    = 2
                                                  iv_v2    = 121
                                                  iv_v3    = |{ gc_test-amount_cad }; { gc_test-amount_usd }| ) }|
@@ -136,6 +150,63 @@ CLASS ltc_ack_mail IMPLEMENTATION.
                                       msg = 'Totals row' ).
     cl_abap_unit_assert=>assert_true( act = xsdbool( lv_html CS `text-align:right` )
                                       msg = 'Amounts right-aligned' ).
+  ENDMETHOD.
+
+
+  METHOD message.
+    DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
+    DATA ls_run       TYPE zif_ca_ops_types=>ty_run.
+    ls_run-area   = zif_cd_ops_types=>gc_pe_area-file_monitor.
+    ls_run-status = zif_ca_ops_types=>gc_run_status-error.
+    ls_selection-rule-rule_id      = 'ZT_ACK'.
+    ls_selection-rule-channel      = zif_ca_ops_types=>gc_channel-email.
+    ls_selection-rule-digest       = abap_true.
+    ls_selection-rule-max_items    = 50.
+    ls_selection-rule-template_id  = iv_rule_template.
+    ls_selection-rule-show_amounts = abap_true.
+    ls_selection-findings          = two_files( ).
+    DATA(lt_messages) = NEW zcl_ca_ops_alert_policy( io_section = NEW zcl_cd_ops_ack_mail( ) )->build_messages(
+                          is_selection   = ls_selection
+                          is_run         = ls_run
+                          iv_destination = 'ZT_LIST' ).
+    rs_message = lt_messages[ 1 ].
+  ENDMETHOD.
+
+
+  " Template mechanism (2026-11-10): the ACK subject is the key SUBJECT, the file table the block
+  " TABLE_SECTION of ZCD_OPS_ALERT_ACK - same subject, sorting and totals as before
+  METHOD template_section_and_subject.
+    TRY.
+        DATA(ls_message) = message( ).
+        DATA(lt_rows) = zcl_cd_ops_ack_mail=>rows( two_files( ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-template_id exp = zif_cd_ops_types=>gc_ack_template
+                                            msg = 'The ACK template when the rule names none' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = CONV string( ls_message-context-header-subject )
+          exp = |[{ sy-sysid }]| && zcl_cd_ops_ack_mail=>subject( it_rows     = lt_rows
+                                                                 iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
+                                                                 iv_severity = zif_ca_ops_types=>gc_severity-error )
+          msg = 'The impact-first ACK subject is the key SUBJECT' ).
+        DATA(ls_block) = ls_message-context-blocks[ name = zif_ca_ops_types=>gc_mail_block-section ].
+        cl_abap_unit_assert=>assert_equals( act = ls_block-html exp = zcl_cd_ops_ack_mail=>html( lt_rows )
+                                            msg = 'The file table is the block TABLE_SECTION' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-html CS gc_test-amount_usd
+                                                         AND ls_message-html CS gc_test-file_cad )
+                                          msg = 'The built-in layout carries the table' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD rule_template_wins.
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = message( iv_rule_template = 'ZT_RULE_TPL' )-template_id
+                                            exp = 'ZT_RULE_TPL'
+                                            msg = 'A rule with its own template keeps it' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

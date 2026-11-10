@@ -9,11 +9,17 @@
 *& sorted most overdue first (earliest ACK due), the totals (files,
 *& payments, amount per currency), the impact-first subject and the HTML
 *& table / text version. Pure logic: no database, no delivery. A value that
-*& was not known is shown as such and never counted as 0.
+*& was not known is shown as such and never counted as 0. On the template
+*& mechanism of the framework (2026-11-10): the subject is the key SUBJECT
+*& and the table the block TABLE_SECTION of the template ZCD_OPS_ALERT_ACK
+*& (TEMPLATE_ID, used when the rule names none); the built-in layout and the
+*& template show the same subject, sorting, totals and unknown counts.
 *& Modification log:
 *& 2026-11-10 | Initial version (missing bank ACK alert, user request 2026-11-10).
 *& 2026-11-10 | Alert section plug-in of the framework ZCA_OPS (ZIF_CA_OPS_ALERT_SECTION, parameter
 *&            | ALERT_SECTION_CLASS): the framework's alert policy no longer calls this class directly.
+*& 2026-11-10 | Alert e-mail templates: TEMPLATE_ID names ZCD_OPS_ALERT_ACK; subject and table are the
+*&            | template's SUBJECT and TABLE_SECTION (behaviour of subject, sorting and totals unchanged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - missing bank ACK alert table</p>
 CLASS zcl_cd_ops_ack_mail DEFINITION
@@ -196,6 +202,14 @@ CLASS zcl_cd_ops_ack_mail IMPLEMENTATION.
 
   METHOD zif_ca_ops_alert_section~text.
     rv_text = text( rows( it_findings ) ).
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_section~template_id.
+    " the ACK template whatever files the message holds; a rule's own template still wins
+    IF it_findings IS NOT INITIAL.
+      rv_template_id = zif_cd_ops_types=>gc_ack_template.
+    ENDIF.
   ENDMETHOD.
 
 

@@ -7,7 +7,7 @@
   "passed": 28,
   "total": 28,
   "abap_files": 347,
-  "declared_unit_methods": 1515,
+  "declared_unit_methods": 1517,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,13 +79,13 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (3901 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (3914 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "426 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "427 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {
@@ -157,7 +157,7 @@
     {
       "name": "param_definitions_complete",
       "passed": true,
-      "detail": "139 delivered definitions in 5 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CA_OPS_PARAMS derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
+      "detail": "140 delivered definitions in 5 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CA_OPS_PARAMS derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
       "failures": []
     },
     {

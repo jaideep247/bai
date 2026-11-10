@@ -528,3 +528,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 836 | &1 h &2 min |
 | 837 | Missing or late bank ACK - evidence per file |
 | 838 | Expected &1, actual &2, difference &3, tolerance &4 - source: |
+| 839 | Health check &1 (category &2, priority &3): &4 |

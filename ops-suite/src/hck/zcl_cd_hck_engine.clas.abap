@@ -43,6 +43,8 @@
 *&            | closed as aborted (ZCL_CA_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
 *&            | re-raised - never left in status R. PLUGIN_ERROR and ALERT_FAILED keep the exception trace
 *&            | (DETAILS) and error class.
+*& 2026-11-10 | Alert e-mail context: every finding names its health check, category and priority (message
+*&            | 839, detail line); the morning report goes out in its e-mail template (HCK_MAIL_TEMPLATE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -636,12 +638,23 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
 
   METHOD finalize_result.
+    " alert e-mail context (2026-11-10): which health check, its category and priority - a labelled
+    " detail line after the finding's own lines (exceptions app and e-mail)
+    DATA(lv_check_line) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-check_context
+                                                 iv_v1    = cs_result-check_id
+                                                 iv_v2    = cs_result-category
+                                                 iv_v3    = cs_result-priority
+                                                 iv_v4    = cs_result-description ).
     LOOP AT cs_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
       <ls_finding>-object_type = zif_cd_hck_types=>gc_object_type.
       <ls_finding>-group1      = cs_result-category.
       <ls_finding>-group2      = cs_result-check_id.
       IF <ls_finding>-object_key IS INITIAL.
         <ls_finding>-object_key = cs_result-check_id.
+      ENDIF.
+      IF <ls_finding>-details NS lv_check_line.
+        <ls_finding>-details = COND #( WHEN <ls_finding>-details IS INITIAL THEN lv_check_line
+                                       ELSE |{ <ls_finding>-details }{ cl_abap_char_utilities=>newline }{ lv_check_line }| ).
       ENDIF.
     ENDLOOP.
 
@@ -1038,7 +1051,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                      iv_name    = zif_cd_hck_types=>gc_param-mail_route
                                                      iv_default = CONV #( zif_cd_hck_types=>gc_param_default-mail_route ) ) )
                           iv_subject = zcl_cd_hck_report_html=>subject( cs_report )
-                          iv_html    = zcl_cd_hck_report_html=>render( cs_report ) ).
+                          iv_html    = zcl_cd_hck_report_html=>render( cs_report )
+                          " e-mail template around the report (blank = the report as it is)
+                          iv_template_id = CONV #( mo_params->get_param(
+                                                     iv_name    = zif_cd_hck_types=>gc_param-mail_template
+                                                     iv_default = CONV #( zif_cd_hck_types=>gc_param_default-mail_template ) ) ) ).
         CATCH zcx_ca_ops_error INTO DATA(lx_send).
           INSERT VALUE #( object_type = zif_cd_hck_types=>gc_object_type
                           object_key  = zif_cd_hck_types=>gc_param_default-mail_route

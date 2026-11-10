@@ -45,6 +45,7 @@
 *&            | severities, RAG, dispositions, error classes, alerting, framework parameters); this interface
 *&            | keeps the payment engine constants. Areas are parameter areas of ZCA_PARAM (CD_EBS, CD_FMON,
 *&            | CD_HCK, CD_OPS; was EBS / FMON / HCK / CORE), typed ZIF_CA_OPS_TYPES=>TY_AREA.
+*& 2026-11-10 | GC_ACK_TEMPLATE: e-mail template of the missing bank ACK alert (alert e-mail templates).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Payment engine constants; the generic types are in ZIF_CA_OPS_TYPES (framework ZCA_OPS).
@@ -197,6 +198,10 @@ INTERFACE zif_cd_ops_types
     END OF gc_ack_msg.
   "! Between label and value of a detail line
   CONSTANTS gc_ack_label_separator TYPE string VALUE `: `.
+  "! E-mail template of a message with missing / late bank ACK files when its rule names none
+  "! (SAP e-mail template, ops-suite/templates/zcd_ops_alert_ack.md): the subject and the file
+  "! table of ZCL_CD_OPS_ACK_MAIL are its SUBJECT and TABLE_SECTION
+  CONSTANTS gc_ack_template TYPE zif_ca_ops_types=>ty_template_id VALUE 'ZCD_OPS_ALERT_ACK'.
 
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:

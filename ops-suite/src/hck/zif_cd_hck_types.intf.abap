@@ -42,6 +42,7 @@
 *&            | ZCD_HCK_AGGGRP; TY_AGG_GROUP removed.
 *& 2026-11-08 | Customer posting areas: GC_BTC_USAGE is key USAGE of ZBTR; check code POSTAREA_INVALID.
 *& 2026-11-10 | Alert status C (claimed) and HCK_ALERT_CLAIM_MIN: claims never completed (alert health).
+*& 2026-11-10 | HCK_MAIL_TEMPLATE (morning report e-mail template); message 839 (check line of a finding).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -752,6 +753,8 @@ INTERFACE zif_cd_hck_types
       top_n          TYPE i VALUE 20,
       watch_pe_areas TYPE string VALUE `CD_EBS,CD_FMON,CD_HCK`,
       mail_route     TYPE zif_ca_ops_types=>ty_param_name VALUE 'MORNING',
+      "! E-mail template of the morning report (SAP e-mail templates; the report is its TABLE_MAIN)
+      mail_template  TYPE zif_ca_ops_types=>ty_param_value VALUE 'ZCD_OPS_MORNING_REPORT',
       "! Row caps (HCK_MAX_JOB_ROWS / _JOB_NAMES / _AGG_ROWS); a larger value is cut to the
       "! hard ceiling GC_MAX_JOB_ROWS / GC_MAX_JOB_NAMES / ZIF_CD_HCK_DAO=>GC_MAX_AGG_ROWS
       max_job_rows   TYPE i VALUE 5000,
@@ -770,6 +773,7 @@ INTERFACE zif_cd_hck_types
       lookback       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS',
       top_n          TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
       mail_route     TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAIL_ROUTE',
+      mail_template  TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_MAIL_TEMPLATE',
       green_min      TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_SCORE_GREEN_MIN',
       amber_min      TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_SCORE_AMBER_MIN',
       weight_high    TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_H',
@@ -839,6 +843,8 @@ INTERFACE zif_cd_hck_types
       suppression_invalid         TYPE zif_ca_ops_types=>ty_msgno VALUE '372',
       "! Scope of a run in ZCD_HCK_RESULT-RUN_SCOPE (variant and the selection ranges)
       run_scope                   TYPE zif_ca_ops_types=>ty_msgno VALUE '300',
+      "! Detail line of every finding: health check &1 (category &2, priority &3): &4 (alert e-mail context)
+      check_context               TYPE zif_ca_ops_types=>ty_msgno VALUE '839',
     END OF gc_msg.
 
   "! Usage of a bank code role, key USAGE of the customer posting area ZBTR (was ZCD_HCK_BTCROLE-USAGE,

@@ -3140,6 +3140,12 @@
      <MSGNR>838</MSGNR>
      <TEXT>Expected &amp;1, actual &amp;2, difference &amp;3, tolerance &amp;4 - source:</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>839</MSGNR>
+     <TEXT>Health check &amp;1 (category &amp;2, priority &amp;3): &amp;4</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

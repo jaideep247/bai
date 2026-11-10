@@ -44,6 +44,8 @@
 *&            | closed as aborted (ZCL_CA_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
 *&            | re-raised; a failed alert dispatch is an ALERT_FAILED finding (was swallowed); PLUGIN_ERROR keeps the
 *&            | exception trace (DETAILS) and error class.
+*& 2026-11-10 | Alert e-mail context: findings of a package get company code, account label (masked), business
+*&            | date and payment method from the statements and lines in memory (ADD_CONTEXT, no read).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -245,6 +247,17 @@ CLASS zcl_cd_ebs_engine DEFINITION
         it_summary         TYPE tt_summary
       RETURNING
         VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
+
+    "! Business context of the alert e-mail (2026-11-10) from the package in memory, no read:
+    "! statement and line findings get company code, account label (house bank / account ID or
+    "! the masked number), business date (statement date; booking date of a line) and payment
+    "! method of the line - only where the finding has none
+    METHODS add_context
+      IMPORTING
+        it_statements TYPE zif_cd_ebs_types=>tt_statement
+        it_lines      TYPE zif_cd_ebs_types=>tt_line
+      CHANGING
+        ct_findings   TYPE zif_ca_ops_types=>tt_finding.
 
 
 ENDCLASS.
@@ -566,6 +579,77 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                                         it_lines      = lt_posted_lines ) INTO TABLE rt_findings.
         ENDIF.
       ENDLOOP.
+    ENDLOOP.
+    add_context( EXPORTING it_statements = cs_package-statements
+                           it_lines      = cs_package-lines
+                 CHANGING  ct_findings   = rt_findings ).
+  ENDMETHOD.
+
+
+  METHOD add_context.
+    TYPES:
+      BEGIN OF ty_context,
+        object_key    TYPE zif_ca_ops_types=>ty_object_key,
+        company_code  TYPE c LENGTH 4,
+        account       TYPE c LENGTH 40,
+        business_date TYPE d,
+        pay_method    TYPE c LENGTH 10,
+      END OF ty_context.
+    DATA lt_context TYPE HASHED TABLE OF ty_context WITH UNIQUE KEY object_key.
+    DATA lt_wanted  TYPE HASHED TABLE OF zif_ca_ops_types=>ty_object_key WITH UNIQUE KEY table_line.
+
+    IF ct_findings IS INITIAL.
+      RETURN.
+    ENDIF.
+    LOOP AT ct_findings ASSIGNING FIELD-SYMBOL(<ls_wanted>)
+         WHERE object_type = zcl_cd_ebs_finding=>gc_object_type-line
+            OR object_type = zcl_cd_ebs_finding=>gc_object_type-statement.
+      INSERT <ls_wanted>-object_key INTO TABLE lt_wanted.
+    ENDLOOP.
+    IF lt_wanted IS INITIAL.
+      RETURN.
+    ENDIF.
+    " one pass over the statements and lines of the package: only the objects of a finding
+    LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>).
+      DATA(ls_statement_context) = VALUE ty_context(
+        object_key    = <ls_statement>-stmt_key
+        company_code  = <ls_statement>-bukrs
+        account       = zcl_cd_ops_util=>account_label( iv_account = <ls_statement>-account_no
+                                                         iv_hbkid   = <ls_statement>-hbkid
+                                                         iv_hktid   = <ls_statement>-hktid )
+        business_date = <ls_statement>-stmt_date ).
+      IF line_exists( lt_wanted[ table_line = ls_statement_context-object_key ] ).
+        INSERT ls_statement_context INTO TABLE lt_context.
+      ENDIF.
+      LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>) USING KEY stmt WHERE stmt_key = <ls_statement>-stmt_key.
+        DATA(lv_line_key) = zcl_cd_ebs_finding=>line_key( <ls_line> ).
+        IF line_exists( lt_wanted[ table_line = lv_line_key ] ).
+          INSERT VALUE #( object_key    = lv_line_key
+                          company_code  = ls_statement_context-company_code
+                          account       = ls_statement_context-account
+                          business_date = COND #( WHEN <ls_line>-booking_date IS NOT INITIAL THEN <ls_line>-booking_date
+                                                  ELSE ls_statement_context-business_date )
+                          pay_method    = <ls_line>-pay_method ) INTO TABLE lt_context.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+    LOOP AT ct_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      READ TABLE lt_context ASSIGNING FIELD-SYMBOL(<ls_context>) WITH TABLE KEY object_key = <ls_finding>-object_key.
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+      IF <ls_finding>-company_code IS INITIAL.
+        <ls_finding>-company_code = <ls_context>-company_code.
+      ENDIF.
+      IF <ls_finding>-account IS INITIAL.
+        <ls_finding>-account = <ls_context>-account.
+      ENDIF.
+      IF <ls_finding>-business_date IS INITIAL.
+        <ls_finding>-business_date = <ls_context>-business_date.
+      ENDIF.
+      IF <ls_finding>-pay_method IS INITIAL.
+        <ls_finding>-pay_method = <ls_context>-pay_method.
+      ENDIF.
     ENDLOOP.
   ENDMETHOD.
 

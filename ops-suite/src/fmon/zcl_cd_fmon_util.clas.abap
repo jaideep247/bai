@@ -9,6 +9,7 @@
 *& 2026-11-06 | Long references keep their identity through a SHA-1 digest; IS_DIGEST_REF, CANONICAL_NAME (audit A100).
 *& 2026-11-06 | PCRE instead of the obsolete POSIX regex in matches( ).
 *& 2026-11-07 | IFACE_DAY_KEY: one object key of interface-day findings (expected files, stage deadlines).
+*& 2026-11-10 | NEW_FINDING: business date, payment method and record count of the file for the alert e-mail.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure helper functions</p>
 CLASS zcl_cd_fmon_util DEFINITION
@@ -148,6 +149,10 @@ CLASS zcl_cd_fmon_util IMPLEMENTATION.
     rs_finding-group2    = is_file-pay_method.
     rs_finding-reference = file_hex( is_file-file_id ).
     rs_finding-amount    = is_file-control_total.
+    " alert e-mail context (2026-11-10): what the registry knows of the file, blank = not known
+    rs_finding-business_date = is_file-business_date.
+    rs_finding-pay_method    = is_file-pay_method.
+    rs_finding-item_count    = nmax( val1 = is_file-record_count val2 = 0 ).
   ENDMETHOD.
 
 

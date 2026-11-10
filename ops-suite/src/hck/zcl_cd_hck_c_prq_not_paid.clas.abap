@@ -17,6 +17,7 @@
 *& C_PRQ_NO_SPE, paid-but-cancelled with C_PRQ_CANCEL. Read-only.
 *& Modification log:
 *& 2026-11-08 | Initial version (requests not paid on their requested payment date).
+*& 2026-11-10 | Alert e-mail context: business date (due date) and count (requests) of the finding.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payment requests not paid on the due date</p>
 "! No PARAM1-4: row cap HCK_INFLIGHT_MAX_ROWS (as A_INFLIGHT), examples PAYOUT_EXAMPLES. Metric
@@ -189,6 +190,8 @@ CLASS zcl_cd_hck_c_prq_not_paid IMPLEMENTATION.
                       amount     = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-amount )
                       currency   = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-currency )
                       reference  = <ls_cell>-source
+                      business_date = <ls_cell>-due_date
+                      item_count = <ls_cell>-requests
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-req_not_paid
                                                           iv_v1    = <ls_cell>-source
                                                           iv_v2    = <ls_cell>-stage

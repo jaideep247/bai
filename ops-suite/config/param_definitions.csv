@@ -79,6 +79,7 @@ CD_HCK,HCK_FLAT_TOL_PCT,P,INT,0,,10,,,,,Flat history: adverse change beyond this
 CD_HCK,HCK_INFLIGHT_MAX_ROWS,P,INT,,,5000,,,,,Payments read per window of A_INFLIGHT (ceiling 50000),PE RTB
 CD_HCK,HCK_LOOKBACK_RUNS,P,INT,1,,8,,,,,Default baseline history points,PE RTB
 CD_HCK,HCK_MAIL_ROUTE,P,CHAR,,,MORNING,[A-Z][A-Z0-9_]*,,X,,Route of the morning report e-mail (needs ALERT_<route>),PE RTB
+CD_HCK,HCK_MAIL_TEMPLATE,P,CHAR,,,ZCD_OPS_MORNING_REPORT,"[A-Z/][A-Z0-9_/]{0,29}",,,X,E-mail template of the morning report (SMTG template ID),PE RTB
 CD_HCK,HCK_MAX_AGE_HOURS,P,INT,1,,26,,,,,Default max age of an area's last run (hours),PE RTB
 CD_HCK,HCK_MAX_AGE_H_CD_EBS,P,INT,1,,,,,,,Max age of the last EBS run (hours; blank = default),PE RTB
 CD_HCK,HCK_MAX_AGE_H_CD_FMON,P,INT,1,,,,,,,Max age of the last FMON run (hours; blank = default),PE RTB
