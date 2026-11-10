@@ -55,7 +55,7 @@ derived from the code and configuration in this repository and becomes evidence 
 | Operator (user A) | CD_EBS, CD_FMON, CD_HCK, CD_OPS / 02, 03 / `<pilot company code>` | works exceptions, signs off controls of its company code |
 | Operator (user B) | same areas / 02, 03 / `<second company code>` | two-user isolation test |
 | Approver | same areas / 03, 85 / both company codes | approves waivers and long suppressions (never the requester) |
-| Reviewer (`ZCD_OPS_REVIEWER`) | CD_FMON, CD_EBS, CD_HCK / 02, 03 / as the slices to sign off | daily control review |
+| Reviewer (`ZCD_OPS_REVIEWER`) | CD_FMON, CD_EBS, CD_HCK, CD_COLL / 02, 03 / as the slices to sign off | daily control review |
 | Display (`Z_CD_OPS_DISPLAY`) | * / 03 / * | pilot lead, auditors |
 | Batch user (`Z_CA_OPS_BATCH`) | CA_OPS + CD_* / 16 / * | FMON monitor, EBS validation, morning report, retention |
 
