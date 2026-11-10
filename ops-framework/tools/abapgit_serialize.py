@@ -59,13 +59,13 @@ class Stage:
     def changed(self):
         out = []
         for path, text in self.pending.items():
-            if not os.path.exists(path) or open(path, encoding='utf-8').read() != text:
+            if not os.path.exists(path) or read(path) != text:
                 out.append(os.path.relpath(path, self.root))
         return sorted(out)
 
     def flush(self):
         for path, text in self.pending.items():
-            if not os.path.exists(path) or open(path, encoding='utf-8').read() != text:
+            if not os.path.exists(path) or read(path) != text:
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path, 'w', encoding='utf-8', newline='\n') as handle:
                     handle.write(text)

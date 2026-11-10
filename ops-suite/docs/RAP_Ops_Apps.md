@@ -14,7 +14,7 @@ Implements design §6 (`RAP_Apps_Design.md`, decision D-4). Status: written and 
 | Monitored files — manual status | `ZUI_CD_FMON_MAN` (`ZUI_CD_FMON_MAN_O4`) | `ZR_CD_FmonFile` | ZCD_FMON_FILE (+ event in ZCD_FMON_EVENT) | FMON | Operations |
 | PRISM requests handled manually | `ZUI_CD_FMON_PRQ` (`ZUI_CD_FMON_PRQ_O4`) | `ZR_CD_FmonPrqWa` | ZCD_FMON_PRQ_WA | FMON | Disbursement operations |
 
-All four: RAP **managed**, **no draft** (each action is one complete change), operations tables delivery class A (no transport, no change policy, no table log — the history is in the tables themselves), authorisation through `ZCL_CA_OPS_AUTH` (object `ZCD_OPS`, design §1), every decision in a pure policy class with unit tests, behaviour pools thin.
+All four: RAP **managed**, **no draft** (each action is one complete change), operations tables delivery class A (no transport, no change policy, no table log — the history is in the tables themselves), authorisation through `ZCL_CA_OPS_AUTH` (object `ZCA_OPS`, design §1), every decision in a pure policy class with unit tests, behaviour pools thin.
 
 ## 2. What each app does
 
@@ -61,8 +61,8 @@ Every action writes one row in ZCA_OPS_EXC_HIST (action, from / to disposition, 
 1. **VERIFY-ADT:** `internal create` on the history association (`ZR_CA_OpsException`); `READ ENTITIES` of the own BO in `save_modified` (PRISM saver); `RAISE SHORTDUMP` with a `ZCX_CD_OPS_ERROR` instance (manual-status saver).
 2. Activate: tables (ZCA_OPS_EXC_HIST, ZCD_HCK_SUPPRESS, ZCD_FMON_PRQ_WA, ZCA_OPS_FINDING with the waiver-request fields) → abstract entities `ZA_CD_*` → `ZR_CD_*` → `ZC_CD_*` → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions.
 3. Create and **publish** the OData V4 – UI service bindings `ZUI_CD_OPS_EXC_O4`, `ZUI_CD_HCK_SUP_O4`, `ZUI_CD_FMON_MAN_O4`, `ZUI_CD_FMON_PRQ_O4`; FLP tiles per business role.
-4. Roles: ZCD_OPS 02 per area for operations; **85 only for approvers who are not requesters** (segregation of duties); `S_SERVICE` for the four services.
-5. Read access: the CDS views carry `#NOT_REQUIRED`; restrict reading per area with a DCL on `ZR_CA_OpsException` (`pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )`) if the business roles are not already separated by service — decision for security.
+4. Roles: ZCA_OPS 02 per area for operations; **85 only for approvers who are not requesters** (segregation of duties); `S_SERVICE` for the four services.
+5. Read access: the CDS views carry `#NOT_REQUIRED`; restrict reading per area with a DCL on `ZR_CA_OpsException` (`pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )`) if the business roles are not already separated by service — decision for security.
 
 ## 5. QA1 cases
 

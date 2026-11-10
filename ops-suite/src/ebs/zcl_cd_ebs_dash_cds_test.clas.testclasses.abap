@@ -27,7 +27,7 @@
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    CONSTANTS gc_pe_area TYPE zif_ca_ops_types=>ty_area VALUE 'EBS'.
+    CONSTANTS gc_pe_area TYPE zif_ca_ops_types=>ty_area VALUE 'CD_EBS'.
     CONSTANTS gc_house_bank TYPE c LENGTH 5 VALUE 'PNC01'.
     CONSTANTS gc_account_id TYPE c LENGTH 5 VALUE 'DISB1'.
     CONSTANTS gc_company TYPE c LENGTH 4 VALUE 'US01'.

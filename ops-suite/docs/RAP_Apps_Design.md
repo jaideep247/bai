@@ -11,17 +11,17 @@ Decisions taken with the business owner (2026-11-06):
 | D-2 | **One configuration app per payment engine area** (EBS, FMON, HCK, Alerting) |
 | D-3 | **New configuration entries via transport** (created in DV1, recorded on a customizing request); **existing entries editable directly in production** (no transport; change-logged, authorised) |
 | D-4 | Operations apps: exception disposition, HCK check suppression, FMON manual file status, PRISM payment-request API handling (**record "handled manually with reference" only — no reprocessing**) |
-| D-5 | Also in this build: retention purge (G1), authorisation object `ZCD_OPS` (G3), run lock, exception carry-forward |
-| D-6 | **Wording: "payment engine", never "module" or FI-CA / FS-CD.** EBS validation, file monitoring and the morning report are **payment engine areas**. Applied everywhere: business text and app titles ("Payment engine – file monitoring"), and technical names — column `MODULE` → `PE_AREA`, authorisation field `ZCD_MODULE` → `ZCD_PE_AREA` (data element `ZCD_PE_AREA`, "Payment engine area"), constants `gc_module` → `gc_pe_area`, parameters `iv_module` → `iv_pe_area`. **Done 2026-11-06 (phase 4)** as one mechanical rename after phases 1–3, verified by lint and tests; CDS element `PaymentEngineArea`, label "Payment engine area" |
+| D-5 | Also in this build: retention purge (G1), authorisation object `ZCA_OPS` (G3), run lock, exception carry-forward |
+| D-6 | **Wording: "payment engine", never "module" or FI-CA / FS-CD.** EBS validation, file monitoring and the morning report are **payment engine areas**. Applied everywhere: business text and app titles ("Payment engine – file monitoring"), and technical names — column `MODULE` → `PE_AREA`, authorisation field `ZCD_MODULE` → `ZCA_PARAR` (data element `ZCA_PARAR`, "Payment engine area"), constants `gc_module` → `gc_pe_area`, parameters `iv_module` → `iv_pe_area`. **Done 2026-11-06 (phase 4)** as one mechanical rename after phases 1–3, verified by lint and tests; CDS element `PaymentEngineArea`, label "Payment engine area" |
 
 Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; **RAP managed BOs with draft** for the apps, OData V4 UI service, Fiori elements. House rules (`DEVELOPMENT_STANDARDS.md`) apply to every class.
 
-## 1. Authorisation object `ZCD_OPS` (G3)
+## 1. Authorisation object `ZCA_OPS` (G3)
 
 | Field | Data element | Values |
 |---|---|---|
 | `ACTVT` | standard | 03 display, 02 change, 01 create, 06 delete, 16 execute (run reports / purge), 85 approve / waive (second person) |
-| `ZCD_PE_AREA` (was `ZCD_MODULE`, D-6) | `ZCD_PE_AREA` (CHAR 4), "Payment engine area" | `EBS`, `FMON`, `HCK`, `CORE` (alerting, parameters, purge) |
+| `ZCA_PARAR` (was `ZCD_MODULE`, D-6) | `ZCA_PARAR` (CHAR 4), "Payment engine area" | `EBS`, `FMON`, `HCK`, `CORE` (alerting, parameters, purge) |
 | `BUKRS` | standard | Company code; `*` for payment engine area-wide objects |
 
 - One wrapper `ZCL_CA_OPS_AUTH` (`ZIF_CA_OPS_AUTH`, injectable through `ZCL_CD_OPS_INJECTOR`) — engines and RAP handlers never write `AUTHORITY-CHECK` themselves.
@@ -67,17 +67,17 @@ Pattern: SAP **business-configuration maintenance** shape — a **singleton root
 | Client setting | Create | Update existing | Delete | Transport |
 |---|---|---|---|---|
 | Customizing client, automatic recording (DV1) | yes | yes | yes | required — request selected on the root, every change recorded |
-| Changes not allowed / production (QA1, PS4) | **no** (message: "new entries via transport from DV1") | **yes** — direct, change-logged (table log flag set), `ZCD_OPS` 02 | **no** | none |
+| Changes not allowed / production (QA1, PS4) | **no** (message: "new entries via transport from DV1") | **yes** — direct, change-logged (table log flag set), `ZCA_OPS` 02 | **no** | none |
 
 - Transport recording isolated in `ZCL_CA_OPS_CFG_TRANSPORT` over SAP's business-configuration CTS API (`mbc_cp_api`, `VERIFY-ADT` — confirm class and method names in DV1 before activation); called from `save_modified` (`with additional save`).
 - Validations per table (in the handler, using the engines' existing pure checks): rule / check / adapter class exists and implements its interface; table and field names exist in the DDIC (FMON sources, HCK aggregates); BTC map row has a rule group with at least one active rule; thresholds amber < red; quiet-hours window valid; cron-free (Control-M owns schedules).
 
 ## 6. Operations apps (D-4)
 
-All transactional (delivery class A), no transport, `ZCD_OPS` authorised, every action with a mandatory reason and a history row. They write only suite records (read-only towards FS-CD / FI data, user decision 2026-11-07); the blocked-line release of the first design (6.2) is not part of the suite.
+All transactional (delivery class A), no transport, `ZCA_OPS` authorised, every action with a mandatory reason and a history row. They write only suite records (read-only towards FS-CD / FI data, user decision 2026-11-07); the blocked-line release of the first design (6.2) is not part of the suite.
 
 ### 6.1 Exceptions — `ZUI_CD_OPS_EXC_O4` (root `ZR_CA_OpsException` on ZCA_OPS_FINDING, rank ≥ 2, not superseded)
-- Actions: **Assign** (owner) → A; **Resolve** (reason) → R; **Request waiver** (reason, valid to) → pending; **Approve waiver** — different user than the requester (four-eyes), `ZCD_OPS` 85 → W.
+- Actions: **Assign** (owner) → A; **Resolve** (reason) → R; **Request waiver** (reason, valid to) → pending; **Approve waiver** — different user than the requester (four-eyes), `ZCA_OPS` 85 → W.
 - ETag `LastChangedAt` (2026-11-10): `etag master` in `ZR_CA_OpsException`, `use etag` in the projection; no draft, so no total ETag. An action on a version the batch store changed after the screen was loaded is refused - refresh and act again (§3).
 - Child `ZCA_OPS_EXC_HIST` (finding key, seq, action, from/to disposition, reason, user, timestamp) written for every action.
 

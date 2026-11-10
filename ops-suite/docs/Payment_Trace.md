@@ -117,8 +117,8 @@ Every configured table also needs a `ZCD_OPS_TABWL` row FMON / SOURCE (table + f
 
 ## 6. Access and masking
 
-- Report: `ZCD_OPS` ACTVT 03, `ZCD_PE_AREA` CORE (message 041 otherwise).
-- Engine: every open item is checked per company code (`ZCD_OPS` 03, BUKRS). An unauthorised item is one row `UNAVAILABLE / NOT_AUTHORISED` with no key, date or clearing reference; it is not traced further and never appears as MISSING.
+- Report: `ZCA_OPS` ACTVT 03, `ZCA_PARAR` CORE (message 041 otherwise).
+- Engine: every open item is checked per company code (`ZCA_OPS` 03, BUKRS). An unauthorised item is one row `UNAVAILABLE / NOT_AUTHORISED` with no key, date or clearing reference; it is not traced further and never appears as MISSING.
 - Configured reads additionally need `S_TABU_NAM` 03 (FMON reader boundary).
 - Member numbers are masked to their last four characters (`ZCL_CD_OPS_TRACE_ENGINE=>MASK`). Bank account numbers are not read.
 
@@ -151,7 +151,7 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 | `TFK042Z` key LAND1 / ZLSCH via `T001-LAND1` | Collection vs disbursement for the ACK level |
 | `BKPF-CPUDT/CPUTM/STBLG`, `DFKKSUMC-BUKRS` | As HCK (VERIFY-DDIC) |
 | Dynamic WHERE `IN @LT_IN` against DATS key (REGUT LAUFD) | FMON reader with a date key column (VERIFY-ADT) |
-| Authorisations | ZCD_OPS 03 CORE + BUKRS; S_TABU_NAM 03 for every configured table |
+| Authorisations | ZCA_OPS 03 CD_OPS + BUKRS; S_TABU_NAM 03 for every configured table |
 | Performance | Peak-volume run of 20 traces (FIN, clearing doc, cheque) in QA1 with ST05 |
 | OUTCOME stage | The trace outcome equals the dashboard bucket and A_INFLIGHT for the same payment (TXD-10, TRC-OUT-01); `TRACE_SRC_REQUEST` configured with KEY2 = SOURCE and STATUS (the source attribution needs both) |
 

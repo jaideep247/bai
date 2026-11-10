@@ -5,7 +5,7 @@
 @AbapCatalog.dataMaintenance : #RESTRICTED
 define table zcd_d_opstabwl {
   key mandt : abap.clnt not null;
-  key paymentenginearea : abap.char(4) not null;
+  key paymentenginearea : zca_param_area_id not null;
   key purpose : abap.char(10) not null;
   key tablename : abap.char(30) not null;
   key fieldname : abap.char(30) not null;

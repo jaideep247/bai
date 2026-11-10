@@ -24,10 +24,17 @@ maps every finding to the mechanism that prevents it.
 | Piece | Objects |
 |---|---|
 | Tables (customizing, table logging, foreign keys) | `ZCA_PARAM_AREA`, `ZCA_PARAM_DEF`, `ZCA_PARAM_VAL` |
-| Read API | `ZIF_CA_PARAM` from `ZCL_CA_PARAM_FACTORY=>GET( )`; exception `ZCX_CA_PARAM` (messages `ZCA_PARAM`) |
+| Read API | `ZIF_CA_PARAM` from `ZCL_CA_PARAM_FACTORY=>GET( )` (incl. `CHECK_AREA`); exception `ZCX_CA_PARAM` (messages `ZCA_PARAM`); release `ZIF_CA_PARAM_TYPES=>GC_VERSION` (1.1.0) |
 | Tests for consumers | `ZCL_CA_PARAM_BUILDER`, `ZCL_CA_PARAM_DAO_MEM`, `ZCL_CA_PARAM_INJECTOR` |
 | Maintenance app | Fiori elements (OData V4) on RAP BO `ZR_CA_PARAMAREA`, service `ZUI_CA_PARAM` |
 | Authorization | object `ZCA_PARAM` (field `ZCA_PARAR` = area, `ACTVT` 01/02/03/06) |
+
+## Consumers
+
+The operations framework ZCA_OPS (`ops-framework/`) is installed after this framework and needs release
+1.1.0 or later: its areas are parameter areas of `ZCA_PARAM_AREA` (one area register) and its
+authorisation object `ZCA_OPS` uses the object class `ZCA` and the field `ZCA_PARAR` defined here.
+Install order **ZCA_PARAM -> ZCA_OPS -> consumer** (e.g. the payment engine suite, `ops-suite/`).
 
 ## Install with abapGit
 

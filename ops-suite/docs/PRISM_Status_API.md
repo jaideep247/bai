@@ -126,7 +126,7 @@ Every answer is `Content-Type: application/json; charset=utf-8` with `{"eventId"
 | **200** OK | `DUPLICATE` | Same `eventId` already stored with the same content (idempotent retry) | done — do not resend |
 | 400 Bad Request | `REJECTED` | Validation failed; **all** errors listed | fix the payload; do not retry unchanged |
 | 401 Unauthorized | (ICF page) | Logon failed — answered by the ICF logon before the API runs | alert PRISM operations; check credentials / certificate |
-| 403 Forbidden | `REJECTED` | Logged-on user lacks `ZCD_OPS` 01 / FMON (or S_ICF, answered by ICF) | alert; role assignment |
+| 403 Forbidden | `REJECTED` | Logged-on user lacks `ZCA_OPS` 01 / FMON (or S_ICF, answered by ICF) | alert; role assignment |
 | 405 Method Not Allowed | `REJECTED` | Not POST (`Allow: POST` header) | fix the client |
 | **409** Conflict | `CONFLICT` | Same `eventId` already stored with **different** content | **do not retry**: PRISM reused an ID — raise a PRISM defect; SAP keeps the first event |
 | 413 Payload Too Large | `REJECTED` | Body above `FMON_PRISM_MAX_BYTES` | fix the client (one event per call) |
@@ -302,7 +302,7 @@ Every flow to and from SAP is routed through PRISM (`Interface_Inventory.md` §1
 
 - **HTTPS only** (SICF node: logon data → *Security requirement* = SSL; web dispatcher refuses plain HTTP).
 - **Technical user** for PRISM, user type **System (B)** (no dialog logon, password does not expire by policy), e.g. `PRISM_FMON` — one per landscape. Logon: X.509 client certificate (preferred; STRUST + certificate mapping) or basic authentication over TLS. SICF *Logon data*: *Required with* the chosen procedure, **no fixed user in the node** (a fixed user would let anyone reach the service).
-- **Authorisation:** role `Z_CD_OPS_PRISM` = `ZCD_OPS` ACTVT **01** (create) for `ZCD_PE_AREA` = FMON, `BUKRS` DUMMY, plus `S_ICF` for the node's authorisation value (SICF *Service Data* → *SAP Authorization* = `ZCD_PRISM`). Activity 01 / FMON is also held by the FMON configuration role; the `S_ICF` value restricts the endpoint to the PRISM user (`config/auth_zcd_ops.md`). The bgPF unit runs as the queuing user (PRISM technical user) and needs nothing more (it reads and writes only suite tables; VERIFY-ADT in QA1).
+- **Authorisation:** role `Z_CD_OPS_PRISM` = `ZCA_OPS` ACTVT **01** (create) for `ZCA_PARAR` = FMON, `BUKRS` DUMMY, plus `S_ICF` for the node's authorisation value (SICF *Service Data* → *SAP Authorization* = `ZCD_PRISM`). Activity 01 / FMON is also held by the FMON configuration role; the `S_ICF` value restricts the endpoint to the PRISM user (`config/auth_zcd_ops.md`). The bgPF unit runs as the queuing user (PRISM technical user) and needs nothing more (it reads and writes only suite tables; VERIFY-ADT in QA1).
 - **No PII:** the payload carries file / message references, system codes, counts, totals and an error text — never member, payee, bank-account or card data. `errorText` is masked and truncated (§3). `RECEIVED_BY` records the caller.
 - **Size / abuse:** 16 KB default limit; ICM / web dispatcher limits (`icm/HTTP/max_request_size_KB`) apply before the handler. No CSRF token: the endpoint keeps no session and accepts no browser logon.
 - SAL / security audit log for the technical user per landscape policy.

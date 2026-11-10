@@ -298,7 +298,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 397 | held: |
 | 398 | - not held: |
 | 399 | - holds but must not: |
-| 407 | No authorization for &1 of &2 configuration (object ZCD_OPS) |
+| 407 | No authorization for &1 of &2 configuration (object ZCA_OPS) |
 | 410 | Class &1 does not exist or does not implement &2 |
 | 411 | Table &1 does not exist in the ABAP dictionary |
 | 412 | Field &1 does not exist in table &2 |
@@ -424,7 +424,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |
 | 703 | Source not configured: parameter &1 in ZCA_PARAM |
 | 704 | Source &1 could not be read: |
-| 705 | Not authorised to display company code &1 (ZCD_OPS 03) |
+| 705 | Not authorised to display company code &1 (ZCA_OPS 03) |
 | 706 | Item &1 partner &2 company &3 amount &4 |
 | 707 | Items of FIN &1 belong to &2 partners - review the candidates |
 | 708 | Earlier clearing &1 of item &2 reset on &3 (&4) |

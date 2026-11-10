@@ -146,18 +146,18 @@ Since the table consolidation of 2026-11-08 the approved tables of every reader 
 
 | PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | ACTIVE | APPROVED_BY | DESCRIPTION |
 |---|---|---|---|---|---|---|
-| FMON | SOURCE | ZCDT_REGUT | (blank) | X | `<security reviewer>` | Generated payment files |
-| FMON | SOURCE | ZCD_ACH_ACK | (blank) | X | `<security reviewer>` | ACH bank acknowledgements |
-| FMON | SOURCE | ZCD_WIRE_ACK | (blank) | X | `<security reviewer>` | Wire bank acknowledgements |
-| FMON | SOURCE | ZCD_CHECK_HIST | (blank) | X | `<security reviewer>` | Check / positive pay history |
-| FMON | SOURCE | ZCD_ACH_RTRV_LOG | (blank) | X | `<security reviewer>` | ACH returns retrieval log |
-| FMON | SOURCE | ZCD_STRP_POUT_LOG | (blank) | X | `<security reviewer>` | Stripe payout log |
-| FMON | SOURCE | ZCD_PAYM_REQ_LOG | (blank) | X | `<security reviewer>` | PRISM payment request log |
-| FMON | SOURCE | DFKKNRK | (blank) | X | `<security reviewer>` | NOC lot header |
-| FMON | SOURCE | DFKKNRP | (blank) | X | `<security reviewer>` | NOC lot items |
-| FMON | SOURCE | DFKKRP | (blank) | X | `<security reviewer>` | Returns lot items |
-| FMON | SOURCE | ‹SE11: returns lot header› | (blank) | X | `<security reviewer>` | Returns lot header |
-| FMON | SOURCE | ZCD_FMON_PRISM | (blank) | X | `<security reviewer>` | PRISM status events (the PRISM adapter reads it through its own DAO; the row keeps the approval list complete and covers a generic source on the table) |
+| CD_FMON | SOURCE | ZCDT_REGUT | (blank) | X | `<security reviewer>` | Generated payment files |
+| CD_FMON | SOURCE | ZCD_ACH_ACK | (blank) | X | `<security reviewer>` | ACH bank acknowledgements |
+| CD_FMON | SOURCE | ZCD_WIRE_ACK | (blank) | X | `<security reviewer>` | Wire bank acknowledgements |
+| CD_FMON | SOURCE | ZCD_CHECK_HIST | (blank) | X | `<security reviewer>` | Check / positive pay history |
+| CD_FMON | SOURCE | ZCD_ACH_RTRV_LOG | (blank) | X | `<security reviewer>` | ACH returns retrieval log |
+| CD_FMON | SOURCE | ZCD_STRP_POUT_LOG | (blank) | X | `<security reviewer>` | Stripe payout log |
+| CD_FMON | SOURCE | ZCD_PAYM_REQ_LOG | (blank) | X | `<security reviewer>` | PRISM payment request log |
+| CD_FMON | SOURCE | DFKKNRK | (blank) | X | `<security reviewer>` | NOC lot header |
+| CD_FMON | SOURCE | DFKKNRP | (blank) | X | `<security reviewer>` | NOC lot items |
+| CD_FMON | SOURCE | DFKKRP | (blank) | X | `<security reviewer>` | Returns lot items |
+| CD_FMON | SOURCE | ‹SE11: returns lot header› | (blank) | X | `<security reviewer>` | Returns lot header |
+| CD_FMON | SOURCE | ZCD_FMON_PRISM | (blank) | X | `<security reviewer>` | PRISM status events (the PRISM adapter reads it through its own DAO; the row keeps the approval list complete and covers a generic source on the table) |
 
 The HCK rows of the same table (purposes `READ` and `DRIFT`) are in `config/hck_seed.md` §5 / §6; a row of another area or purpose never approves the FMON reader.
 

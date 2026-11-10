@@ -115,9 +115,9 @@ PAIRS = [
      ['gc_source-recheck', 'gc_source-nightly', 'gc_source-nightly_req'], 'set', None),
     ('ebs_hck_stale_fallback_minutes', ['src/ebs/zr_cd_ebsasof.ddls.asddls', 'src/hck/zr_cd_hckasof.ddls.asddls'],
      _STALE_FALLBACK, 'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
-    ('fmon_stale_seed_minutes', 'config/alert_seed.md', r"^\| `MON_STALE_AFTER_MIN_FMON` \| (\d+) \|",
+    ('fmon_stale_seed_minutes', 'config/alert_seed.md', r"^\| `MON_STALE_AFTER_MIN_CD_FMON` \| (\d+) \|",
      'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', None),
-    ('ebs_hck_stale_seed_minutes', 'config/alert_seed.md', r"^\| `MON_STALE_AFTER_MIN_(?:EBS|HCK)` \| (\d+) \|",
+    ('ebs_hck_stale_seed_minutes', 'config/alert_seed.md', r"^\| `MON_STALE_AFTER_MIN_CD_(?:EBS|HCK)` \| (\d+) \|",
      'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
     # Three-way reconciliation (A_RECON_3WAY, 2026-11-07): the bank leg scopes lines by the XBLNR
     # account exactly as EBS; the result view splits the group key by position and selects RC_*

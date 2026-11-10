@@ -1764,7 +1764,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>407</MSGNR>
-     <TEXT>No authorization for &amp;1 of &amp;2 configuration (object ZCD_OPS)</TEXT>
+     <TEXT>No authorization for &amp;1 of &amp;2 configuration (object ZCA_OPS)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2520,7 +2520,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>705</MSGNR>
-     <TEXT>Not authorised to display company code &amp;1 (ZCD_OPS 03)</TEXT>
+     <TEXT>Not authorised to display company code &amp;1 (ZCA_OPS 03)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

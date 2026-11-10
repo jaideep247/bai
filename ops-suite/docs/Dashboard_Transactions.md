@@ -96,7 +96,7 @@ Chart → worklist rows → object page → payment runs / returns and NOC lot i
 
 ## 8. Authorisation (applied on the base rows, before aggregation)
 
-Area **CORE** with **company code**: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, ACTVT = '03' )` on transactions, KPI, problems, returns / NOC (DCL `ZC_CD_TRXDASH`); payment run rows by area only; request funnel DCL `ZC_CD_TRXREQ`. On `ZC_CD_TrxKpi` the company code is a GROUP BY key passed through from the base rows (test `kpi_never_mixes_company`). **Request rows carry no company code** (the request log has none; the item may not exist yet): a role must grant BUKRS blank (or `*`) to see them - open point in `Release_Readiness.md` §5.
+Area **CORE** with **company code**: `pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' )` on transactions, KPI, problems, returns / NOC (DCL `ZC_CD_TRXDASH`); payment run rows by area only; request funnel DCL `ZC_CD_TRXREQ`. On `ZC_CD_TrxKpi` the company code is a GROUP BY key passed through from the base rows (test `kpi_never_mixes_company`). **Request rows carry no company code** (the request log has none; the item may not exist yet): a role must grant BUKRS blank (or `*`) to see them - open point in `Release_Readiness.md` §5.
 
 ## 9. Objects
 
@@ -114,7 +114,7 @@ Area **CORE** with **company code**: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, AC
 | `ZR_CD_TrxKpi`, `ZR_CD_TrxProblem` (+ `ZC_`) | src/core | roots / projections | KPI per worklist date, exceptions |
 | `ZI_CD_TrxItem`, `ZI_CD_TrxRetNocU`, `ZR_CD_TrxRetNoc` (+ `ZC_`), `ZR_CD_TrxPayRun` (+ `ZC_`) | src/core | views | Returns / NOC and payment runs of the 45-day evidence window |
 | `ZI_CD_TrxItemPay`, `ZI_CD_TrxItemChq` | src/core | views | Payment run / cheque per item (used by the request side) |
-| `ZC_CD_TRXDASH` | src/core | DCL | CORE + BUKRS |
+| `ZC_CD_TRXDASH` | src/core | DCL | CD_OPS + BUKRS |
 | `ZUI_CD_TRX_DASH` | src/core | SRVD | `Transaction`, `PaymentRun`, `ReturnNoc`, `TransactionKpi`, `TransactionProblem` |
 | `ZCL_CD_TRX_DASH_CDS_TEST` | src/core | class (test holder) | §11 |
 | `ZI_CD_TrxReqLog`, `ZI_CD_TrxRequest`, `ZI_CD_TrxReqWin`, `ZI_CD_TrxFinSrc`, `ZI_CD_TrxFinFlow`, `ZI_CD_TrxReqSap`, `ZI_CD_TrxChqPay`, `ZI_CD_TrxAckU`, `ZI_CD_TrxAck`, `ZI_CD_TrxChqStat`, `ZI_CD_TrxRtrv` | **cds/** | views | Request side with placeholders |
@@ -132,7 +132,7 @@ Area **CORE** with **company code**: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, AC
 | VERIFY-ADT: HANA prunes the OR branches of `P_DateKind` (PlanViz, TXD-12) | One root view per date kind |
 | VERIFY-ADT: `case … when … then cast( 'X' as abap_boolean )` for `IsToday` / `IsException` | A `char(1)` cast |
 | DFKKRP-RLGRD, DFKKNRP-FLGRD, DFKKRP key | Remove the reason element |
-| Two-field `pfcg_auth` (ZCD_PE_AREA, BUKRS); request rows with blank BUKRS | Area-only grant + BUKRS restriction in the role; grant blank BUKRS for request rows |
+| Two-field `pfcg_auth` (ZCA_PARAR, BUKRS); request rows with blank BUKRS | Area-only grant + BUKRS restriction in the role; grant blank BUKRS for request rows |
 | `COUNT( DISTINCT )`, `$apply` on transactional_query | As the other dashboards |
 | AML hold of a request (no SAP indicator known) | Open question - shown as `PRQ_NOT_IN_RUN` / `PRQ_PAYMENT_BLOCK` until a field is named |
 | Part B placeholders (§4) | Activate part B only after SE11 |

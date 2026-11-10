@@ -119,7 +119,7 @@ Repository `jaideep247/src`, commit `b17df42` (uploaded 18–19 Jan 2026; git hi
 | database, ddic | Result, summary, audit, parameter tables; CDS on FEBEP | 30 tables, 11 CDS | Covered |
 | docs, improvements, operations (79 md) | Design notes | Archived in `legacy/framework_v1_docs` | — |
 
-**Gaps to close (proposed):** G1 retention — a purge report for runs, findings, alert log, FMON events and HCK metrics, with retention days per table in ZCA_PARAM and a test mode. G2 exception maintenance — assign, resolve and waive with reason, history and authorisation (ALV report, or a RAP business object with a Fiori elements app). G3 authorisation — object `ZCD_OPS` (activity, payment engine area, company code) used by the three reports and by G2.
+**Gaps to close (proposed):** G1 retention — a purge report for runs, findings, alert log, FMON events and HCK metrics, with retention days per table in ZCA_PARAM and a test mode. G2 exception maintenance — assign, resolve and waive with reason, history and authorisation (ALV report, or a RAP business object with a Fiori elements app). G3 authorisation — object `ZCA_OPS` (activity, payment engine area, company code) used by the three reports and by G2.
 
 ## 4. How parity is confirmed before go-live (QA1)
 

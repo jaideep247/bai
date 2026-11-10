@@ -346,13 +346,13 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD overdue_open_and_assigned.
     DATA lt_exp TYPE zif_cd_hck_types=>tt_overdue.
     TRY.
-        add_finding( iv_no = 1 iv_pe_area = 'EBS'  iv_disposition = 'O' iv_due = '20261101' ).
-        add_finding( iv_no = 2 iv_pe_area = 'EBS'  iv_disposition = 'A' iv_due = '20261103' ).
-        add_finding( iv_no = 3 iv_pe_area = 'EBS'  iv_disposition = 'R' iv_due = '20261101' ).
-        add_finding( iv_no = 4 iv_pe_area = 'FMON' iv_disposition = 'O' iv_due = '20261110' ).
-        add_finding( iv_no = 5 iv_pe_area = 'FMON' iv_disposition = 'I' iv_due = '00000000' ).
+        add_finding( iv_no = 1 iv_pe_area = 'CD_EBS'  iv_disposition = 'O' iv_due = '20261101' ).
+        add_finding( iv_no = 2 iv_pe_area = 'CD_EBS'  iv_disposition = 'A' iv_due = '20261103' ).
+        add_finding( iv_no = 3 iv_pe_area = 'CD_EBS'  iv_disposition = 'R' iv_due = '20261101' ).
+        add_finding( iv_no = 4 iv_pe_area = 'CD_FMON' iv_disposition = 'O' iv_due = '20261110' ).
+        add_finding( iv_no = 5 iv_pe_area = 'CD_FMON' iv_disposition = 'I' iv_due = '00000000' ).
         go_env->insert_test_data( mt_findings ).
-        INSERT VALUE #( pe_area = 'EBS' item_count = 2 oldest_due = '20261101' ) INTO TABLE lt_exp.
+        INSERT VALUE #( pe_area = 'CD_EBS' item_count = 2 oldest_due = '20261101' ) INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->get_overdue_exceptions( gc_today )
                                             exp = lt_exp
                                             msg = 'Only open/assigned EBS items past due count' ).

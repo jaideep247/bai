@@ -24,7 +24,7 @@
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
-    CONSTANTS gc_pe_area TYPE zif_ca_ops_types=>ty_area VALUE 'HCK'.
+    CONSTANTS gc_pe_area TYPE zif_ca_ops_types=>ty_area VALUE 'CD_HCK'.
     CONSTANTS gc_metric TYPE c LENGTH 30 VALUE 'COUNT'.
 
     CLASS-METHODS now

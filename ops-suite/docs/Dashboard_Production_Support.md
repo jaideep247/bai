@@ -40,7 +40,7 @@ Alternative: an OVP over the four area services as separate data sources (`dataS
 | `MonitorFreshness` | `ZR_CD_OpsFreshness` over `ZI_CD_OpsFreshU` (UNION of `ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf` and, since 2026-11-08, `ZI_CD_PayOutLag` - row CORE: minutes since the oldest `ZCD_PAY_OUTWM-CURRENT_TO` of the FAST evidence sources, recheck and NIGHTLY cursors left out; never run = stale) | One row per batch monitor; each area's completion rule and threshold (FMON: full run, variant ALL, 15 min; EBS: any variant, S/W/E/N, 26 h; HCK: S/W/E, 26 h); no completed run = stale. Transactions: open payments, requests and exceptions come from the payment worklist written by the 5-minute FAST snapshot (CORE run variant `PAY_OUTCOME`); its freshness is the CORE row (stale after `MON_STALE_AFTER_MIN_CORE`, 30 min; `Operations_Runbook.md` §5n) |
 | `CriticalException` | `ZR_CD_OpsCritExc` over `ZCA_OPS_FINDING` | Disposition O / A, severity B / E, all areas; GROUP1 never exposed; EBS bank-file statement messages hidden; `DaysOverdue` = today − due date |
 
-DCL `ZC_CD_OPSOVERVIEW`: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on both — the area of each row.
+DCL `ZC_CD_OPSOVERVIEW`: `pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` on both — the area of each row.
 
 ## 4. Launchpad space "Production Support" (documentation only)
 
@@ -63,7 +63,7 @@ Dynamic tile URLs: `/sap/opu/odata4/sap/<binding>/srvd/sap/<service>/0001/<Entit
 
 | Business role | Space / pages | Catalogs | `S_SERVICE` | ZCD_OPS |
 |---|---|---|---|---|
-| `ZCD_OPS_PROD_SUPPORT` (L1 / L2, team leads) | Production Support, all pages | all `ZCD_OPS_BC_*` | `ZUI_CD_OPS_OVERVIEW_O4`, `ZUI_CD_FMON_FLOW_O4`, `ZUI_CD_EBS_DASH_O4`, `ZUI_CD_HCK_DASH_O4`, `ZUI_CD_TRX_DASH_O4` (+ `ZUI_CD_TRX_REQ_O4` after SE11) | ZCD_PE_AREA FMON, EBS, HCK, CORE; ACTVT 03; BUKRS own company codes (or *) |
+| `ZCD_OPS_PROD_SUPPORT` (L1 / L2, team leads) | Production Support, all pages | all `ZCD_OPS_BC_*` | `ZUI_CD_OPS_OVERVIEW_O4`, `ZUI_CD_FMON_FLOW_O4`, `ZUI_CD_EBS_DASH_O4`, `ZUI_CD_HCK_DASH_O4`, `ZUI_CD_TRX_DASH_O4` (+ `ZUI_CD_TRX_REQ_O4` after SE11) | ZCA_PARAR FMON, EBS, HCK, CORE; ACTVT 03; BUKRS own company codes (or *) |
 | `ZCD_OPS_FMON_DISPLAY`, `ZCD_OPS_EBS_DISPLAY`, `ZCD_OPS_HCK_DISPLAY`, `ZCD_OPS_TRX_DISPLAY` | one page each + Overview | the area catalog + `ZCD_OPS_BC_OVW` | the area binding + overview binding | that area, 03 |
 
 The roles grant no 02 / 16 / 43 / 85; working an exception still needs the operator role (`config/auth_zcd_ops.md` §3).

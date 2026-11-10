@@ -77,7 +77,7 @@ Service binding `ZUI_CD_EBS_DASH_O4` (`/sap/opu/odata4/sap/zui_cd_ebs_dash_o4/sr
 
 - **Window: 31 days** — statements by statement date (FEBKO-AZDAT), runs by start date, findings: open ones always, closed ones created in the last 31 days. Older evidence: `ZCD_EBS_VALIDATE` / SE16 / the exceptions app.
 - No balances and no **bank account number** from the bank file: statement findings carry the account number in GROUP1 — shown only masked (`****` + last 4); the message of statement / file findings of the **file source** (may contain the account number, parser texts) is not exposed. House bank account **ID** (HKTID) is a short key, not the number.
-- **XBLNR and the payment engine account are shown as they are** (user decision 2026-11-06): XBLNR holds the company's own house bank account plus a counter, not customer data, and the user needs the BAI code + XBLNR combination. Access is protected by the dashboard role `ZC_CD_EBSDASH` (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03).
+- **XBLNR and the payment engine account are shown as they are** (user decision 2026-11-06): XBLNR holds the company's own house bank account plus a counter, not customer data, and the user needs the BAI code + XBLNR combination. Access is protected by the dashboard role `ZC_CD_EBSDASH` (ZCD_OPS, ZCA_PARAR = EBS, ACTVT 03).
 - Amounts: line amounts in the line currency (else statement currency); finding amounts DEC without currency semantics — slice by currency before reading totals.
 - Company code (BUKRS) is not part of the DCL (area-wide like the EBS run); add it to the statement / line grants if required.
 
@@ -99,7 +99,7 @@ Service binding `ZUI_CD_EBS_DASH_O4` (`/sap/opu/odata4/sap/zui_cd_ebs_dash_o4/sr
 | `ZR_CD_EbsLine`, `ZR_CD_EbsFind`, `ZR_CD_EbsRetNoc`, `ZR_CD_EbsRun` (+ `ZC_`) | roots / projections | Lines, findings, returns / NOC, runs |
 | `ZR_CD_EbsKpi`, `ZR_CD_EbsProblem` (+ `ZC_`) | roots / projections | KPI per day, latest problems |
 | 8 metadata extensions `ZC_CD_EBS*` | DDLX | Charts, presentation / selection variants, facets, data points |
-| `ZC_CD_EBSDASH` | DCL | `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on the eight projections; rows carry `PaymentEngineArea` = EBS |
+| `ZC_CD_EBSDASH` | DCL | `pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` on the eight projections; rows carry `PaymentEngineArea` = EBS |
 | `ZUI_CD_EBS_DASH` | service definition | `EbsStatement`, `EbsLine`, `EbsFinding`, `EbsReturnNoc`, `EbsRun`, `ValidationAsOf`, `EbsKpi`, `LatestProblem` |
 | `ZUI_CD_EBS_DASH_O4` | service binding (OData V4 – UI) | Created in ADT |
 | `ZCL_CD_EBS_DASH_CDS_TEST` | class (test holder) | CDS unit tests (§10) |
@@ -152,5 +152,5 @@ ABAP Unit in `ZCL_CD_EBS_DASH_CDS_TEST` (doubles of FEBKO, FEBEP, ZCD_EBS_ACCT, 
 | EBD-08 | File-source run (bank file before import) with a balance error | Finding in `EbsFinding` (source FILE), message empty, account masked `****nnnn`; no statement row |
 | EBD-09 | ACH return line (lot with RLGRD) and an NOC (DFKKNRP, INFOF with leading zeros) | `EbsReturnNoc`: RETURN with DFKKRP-RLGRD, NOC with DFKKNRP-FLGRD; SE16 matches |
 | EBD-10 | Two runs on one day | KPI row of the day shows the later run only; `EbsRun` lists both |
-| EBD-11 | User with ZCD_OPS ZCD_PE_AREA = FMON only | No rows in any entity; with EBS / 03: rows visible |
+| EBD-11 | User with ZCD_OPS ZCA_PARAR = FMON only | No rows in any entity; with EBS / 03: rows visible |
 | EBD-12 | ST05 / PlanViz while using page, tiles and drill-down | SELECT only; FEBKO by AZDAT, FEBEP by KUKEY, findings by area / disposition; DFKKNRP join driven by the line set — record runtime |

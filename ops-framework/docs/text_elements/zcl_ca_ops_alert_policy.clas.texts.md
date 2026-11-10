@@ -1,7 +1,7 @@
 # ZCL_CA_OPS_ALERT_POLICY — text elements (class text pool)
 
-Column headers of the alert e-mail table. Sentences with values are messages of class ZCD_OPS
-(`gc_msg-alert_*` in `ZIF_CD_OPS_TYPES`).
+Column headers of the alert e-mail table. Sentences with values are messages of class ZCA_OPS
+(`gc_msg-alert_*` in `ZIF_CA_OPS_TYPES`).
 
 | Type | Key | Text |
 |---|---|---|

@@ -102,13 +102,13 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 plus HCK-QA-18 … 20 (2026-11-07: number
 | ALR-05b | Add a user to SO23 list `ZCD_RTBSUP`, trigger ALL_ABORT (test run stopped on the circuit breaker) | No rule change | The new member receives the e-mail (SOST shows the list expanded) | pending |
 | ALR-07 | Application log channel | ZCD_OPS/ALERT | Messages visible in SLG1 | pending |
 | ALR-08 | BAI deadline alert, no repeat spam (2026-11-07) | Rule FMON_BAIDL, deadline BAI_JPMC_IN 10:00, statement not imported | 10:00–10:05 one e-mail to ZCD_PAYOPS (log S); runs 10:05 … 10:25 log R, no mail; 10:30 escalation to ZCD_RTBLEAD; after import and posting the exception is resolved | pending |
-| ALR-09 | Deadline and alert rule: no create in production, existing rows editable (user decision 2026-11-07) | QA1 (production-like client, no changes): key user opens the FMON and alerting configuration apps; edits due time and ACTIVE of an existing ZCD_FMON_SLA DEADLINE row and the SO23 list of an existing alert rule; tries to create a ZCD_FMON_SLA row and an alert rule, and to delete a row | Edits saved without a request, visible in SCU3 with the user; *Create* and *Delete* greyed out for every table (also deadlines and alert rules); a user without ZCD_OPS 02 FMON cannot edit; next morning report CONFIG_DRIFT (E) for the drift-controlled table until the change is transported from DV1 and the baseline is retaken | pending |
+| ALR-09 | Deadline and alert rule: no create in production, existing rows editable (user decision 2026-11-07) | QA1 (production-like client, no changes): key user opens the FMON and alerting configuration apps; edits due time and ACTIVE of an existing ZCD_FMON_SLA DEADLINE row and the SO23 list of an existing alert rule; tries to create a ZCD_FMON_SLA row and an alert rule, and to delete a row | Edits saved without a request, visible in SCU3 with the user; *Create* and *Delete* greyed out for every table (also deadlines and alert rules); a user without ZCA_OPS 02 FMON cannot edit; next morning report CONFIG_DRIFT (E) for the drift-controlled table until the change is transported from DV1 and the baseline is retaken | pending |
 
 ### 6.5 Core controls (authorisation, run lock, exception carry-forward, purge)
 
 | ID | Scenario | Configuration | Expected | Result |
 |---|---|---|---|---|
-| CORE-01 | User without ZCD_OPS 16 for EBS starts `ZCD_EBS_VALIDATE` (same for FMON / HCK / CORE purge) | Role without the payment engine area | Message 041, nothing runs | pending |
+| CORE-01 | User without ZCA_OPS 16 for EBS starts `ZCD_EBS_VALIDATE` (same for CD_FMON / CD_HCK; the retention purge `ZCA_OPS_RETENTION` checks CA_OPS) | Role without the payment engine area | Message ZCA_OPS 041, nothing runs | pending |
 | CORE-02 | Second `ZCD_EBS_VALIDATE` with the same variant while the first runs | Two jobs | Second: no run row, RUN_LOCKED alert (rule RUN_LOCKED), job ends in error with message 040; first unaffected | pending |
 | CORE-03 | Lock released after a run that dumps (SM50 cancel) | — | Lock gone in SM12 when the job ends; next run starts | pending |
 | CORE-04 | Same EBS file validated twice with the same unmapped code | Exception assigned to a user after run 1 | Run 2 row: disposition A, same owner and due date, OCCURRENCES 2; run 1 row disposition S | pending |
@@ -160,7 +160,7 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 plus HCK-QA-18 … 20 (2026-11-07: number
 | TRC-05 | Reversed item whose history row is absent / history not configured | — | REVERSAL_HISTORY_MISSING (MISSING / UNAVAILABLE); never COMPLETE | pending |
 | TRC-06 | FIN with two SUCCESS rows; FEBEP with two lines for one reference | — | AMBIGUOUS, all candidates listed | pending |
 | TRC-07 | File sent to PRISM, no ACK; ACK without statement line | — | First gap BANK_ACK resp. SETTLEMENT; INCOMPLETE | pending |
-| TRC-08 | User without ZCD_OPS 03 for the item's company code | Role | Item row NOT_AUTHORISED, no key shown, nothing MISSING | pending |
+| TRC-08 | User without ZCA_OPS 03 for the item's company code | Role | Item row NOT_AUTHORISED, no key shown, nothing MISSING | pending |
 | TRC-04a | Returned payment (current clearing) and a reversed item whose return sits under the historical clearing reference; one clearing with two returns lot items of different reasons | DFKKRP-RLGRD confirmed in SE11 | Each return row shows its RLGRD; the two-reason clearing shows one AMBIGUOUS row listing both | pending |
 | TRC-04b | Payment with a NOC (C01) whose DFKKNRP item carries the AUGBL in INFOF; one whose INFOF carries the payment reference; one without NOC | DFKKNRP-INFOF / FLGRD confirmed in SE11 | NOC row VERIFIED with lot, item, FLGRD (both forms); NOT_APPLICABLE without NOC; the verdict is the same as without the NOC rows | pending |
 | TRC-09 | Side effects | ST05 during TRC-01..08 | SELECT only; no change in any business table, job, lock, file or interface; nothing written to ZCD_OPS_* | pending |
@@ -326,7 +326,7 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 | PA-02 | Seed entries in FQC0 | `config/postarea_zbtm.csv`, `postarea_zrsn.csv`, `hck_seed.md` §8a / §8b / §8e / §10b | `D_POSTAREA_INVALID` reports nothing; EBS run on a sample statement as before the move (same categories / R14) | pending |
 | PA-03 | FQC0 precedence | Guide §4.5 test entries in ZBTM | FQC0 / FKK_ACCOUNT_DETERMINE picks the entry `ZCL_CD_OPS_POSTAREA=>FIND` picks (left-most exact key) | pending |
 | PA-04 | Invalid entries | ZBTM scheme `*`, ZPMC house-bank entry without calendar, ZBTR LIFECYCLE role LEG | One `POSTAREA_INVALID` finding each (427 / 422 / 424) | pending |
-| AUTH-01 | ZCD_OPS per child (configuration apps) | Users with 02 only / 01 only / 06 only for HCK | 02: change yes, create / delete refused; 01: create yes, change refused; 06: delete yes; none: no Edit | pending |
+| AUTH-01 | ZCA_OPS per child (configuration apps) | Users with 02 only / 01 only / 06 only for HCK | 02: change yes, create / delete refused; 01: create yes, change refused; 06: delete yes; none: no Edit | pending |
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 
@@ -397,3 +397,8 @@ Runbook `Operations_Runbook.md` walked through by IT support on QA1 findings (on
 - [ ] QA1 cases executed; status column filled; screenshots in the evidence index
 - [ ] Shadow run differences all explained by D1–D11
 - [ ] Status changed from Draft to Final only after execution
+
+
+## Framework extraction ZCA_OPS (2026-11-10)
+
+The unit tests of the moved classes moved with them to `ops-framework/src` (store, exception DAO / policy, alert router / policy / DAO / channels, lock, run guard, configuration gate / client / transport / auth / policy / field checks, purge engine and DAO, utilities, clock, file path, auth, parameters adapter, factory incl. the version check, configuration app permission tests); the suite keeps the tests of its own objects and gains `ZCL_CD_OPS_FACTORY` (suite services, prefixes, `ZCX_CD_OPS_ERROR=>CLASSIFY`), `ZCL_CD_OPS_PURGE_TARGET` (OSQL: the suite's purge targets and keep rules) and `ZCL_CD_OPS_ACK_MAIL` as alert section. Offline evidence per folder: abaplint 0 issues (suite, framework, parameter framework), suite portable checks 28/28, framework `tools/checks.py` 14/14, parameter framework `tools/checks.py` 9/9, tool tests green. Nothing has run in an SAP system: ABAP Unit, activation and ATC are VERIFY items (`Release_Readiness.md`, `ops-framework/docs/VERIFY.md`).

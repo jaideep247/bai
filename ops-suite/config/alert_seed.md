@@ -36,19 +36,19 @@ and the channel refuses the route before anything is sent if a list was deleted 
 RULE / CHECK / GROUP1 / GROUP2 patterns are **PCRE matched to the complete value, case ignored** (blank = any;
 user decision 2026-11-06): `.*SLA.*` = any check code containing SLA, `RUN_LOCKED` = exactly that code. The
 configuration app refuses a pattern that does not compile (message 418); check what a pattern captures with
-`ZCD_OPS_PATTERN_CHECK` (areas ALERT_*). PE_AREA `*` is not a pattern (it means every area).
+`ZCD_OPS_PATTERN_CHECK` (areas ALERT_*). AREA `*` is not a pattern (it means every area). Since 2026-11-10 the alert rules and channels are tables of the operations framework (`ZCA_OPS_ALRULE` / `ZCA_OPS_ALCHN`, app `ZUI_CA_OPS_CFG`); AREA is a parameter area of ZCA_PARAM (`CD_EBS`, `CD_FMON`, `CD_HCK`, `CD_OPS`, or `*`).
 
-| RULE_ID | PE_AREA | MIN_SEVERITY | RULE_PATTERN | CHECK_PATTERN | MIN_RAG | ON_ABORT | CHANNEL | DESTINATION | DIGEST | MAX_ITEMS | THROTTLE_MIN | QUIET | ESCALATE_AFTER / DEST |
+| RULE_ID | AREA | MIN_SEVERITY | RULE_PATTERN | CHECK_PATTERN | MIN_RAG | ON_ABORT | CHANNEL | DESTINATION | DIGEST | MAX_ITEMS | THROTTLE_MIN | QUIET | ESCALATE_AFTER / DEST |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| EBS_BLOCK | EBS | B | | | | | EMAIL | ZCD_PAYOPS | X | 50 | 0 | — | 3 / ZCD_RTBLEAD |
-| EBS_ERROR | EBS | E | | | A | X | EMAIL | ZCD_PAYOPS | X | 50 | 60 | 22:00–06:00 | — |
-| FMON_PART | FMON | E | | .*PARTIAL.* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
-| FMON_SLA | FMON | E | | .*SLA.* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD |
-| FMON_BAIDL | FMON | E | | STAGE_DEADLINE_MISSED | | | EMAIL | ZCD_PAYOPS | X | 10 | 0 | — | 6 / ZCD_RTBLEAD |
-| NOC_AGING | FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — |
-| FMON_REGEN | FMON | E | | FILE_REGENERATED_NOT_FAILED\|PRISM_DUPLICATE_NAME\|REGENERATION_MISSING | | | EMAIL | ZCD_PAYOPS | X | 20 | 0 | — | 2 / ZCD_RTBLEAD |
-| HCK_RED | HCK | E | | | R | X | EMAIL | ZCD_RTBSUP | X | 50 | 60 | 22:00–06:00 | 2 / ZCD_RTBLEAD |
-| HCK_RECON | HCK | E | | (RECON_BREAK\|RECON_SUBLEDGER_BREAK\|STRIPE_GROUP_BREAK) | | | EMAIL | ZCD_RTBSUP | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
+| EBS_BLOCK | CD_EBS | B | | | | | EMAIL | ZCD_PAYOPS | X | 50 | 0 | — | 3 / ZCD_RTBLEAD |
+| EBS_ERROR | CD_EBS | E | | | A | X | EMAIL | ZCD_PAYOPS | X | 50 | 60 | 22:00–06:00 | — |
+| FMON_PART | CD_FMON | E | | .*PARTIAL.* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
+| FMON_SLA | CD_FMON | E | | .*SLA.* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD |
+| FMON_BAIDL | CD_FMON | E | | STAGE_DEADLINE_MISSED | | | EMAIL | ZCD_PAYOPS | X | 10 | 0 | — | 6 / ZCD_RTBLEAD |
+| NOC_AGING | CD_FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — |
+| FMON_REGEN | CD_FMON | E | | FILE_REGENERATED_NOT_FAILED\|PRISM_DUPLICATE_NAME\|REGENERATION_MISSING | | | EMAIL | ZCD_PAYOPS | X | 20 | 0 | — | 2 / ZCD_RTBLEAD |
+| HCK_RED | CD_HCK | E | | | R | X | EMAIL | ZCD_RTBSUP | X | 50 | 60 | 22:00–06:00 | 2 / ZCD_RTBLEAD |
+| HCK_RECON | CD_HCK | E | | (RECON_BREAK\|RECON_SUBLEDGER_BREAK\|STRIPE_GROUP_BREAK) | | | EMAIL | ZCD_RTBSUP | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
 | ALL_ABORT | * | B | | | | X | EMAIL | ZCD_RTBSUP | X | 20 | 15 | — | — |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | ZCD_RTBSUP | | 10 | 60 | — | — |
 
@@ -124,18 +124,18 @@ One parameter per payment engine area (INT, at least 1, app *Parameter areas* `Z
 
 | Parameter | Delivered default (minutes) | Why |
 |---|---|---|
-| `MON_STALE_AFTER_MIN_FMON` | 15 | Native SAP job every 5 minutes: 3 missed runs |
-| `MON_STALE_AFTER_MIN_EBS` | 1560 | Daily run + 2 h slack (26 h) |
-| `MON_STALE_AFTER_MIN_HCK` | 1560 | Daily morning report + 2 h slack (26 h) |
-| `MON_STALE_AFTER_MIN_CORE` | 30 | Payment outcome snapshot lag (2026-11-08): minutes behind the evidence, 6 x the 5-minute cadence; also A_INFLIGHT `PAY_SNAPSHOT_STALE` |
+| `MON_STALE_AFTER_MIN_CD_FMON` | 15 | Native SAP job every 5 minutes: 3 missed runs |
+| `MON_STALE_AFTER_MIN_CD_EBS` | 1560 | Daily run + 2 h slack (26 h) |
+| `MON_STALE_AFTER_MIN_CD_HCK` | 1560 | Daily morning report + 2 h slack (26 h) |
+| `MON_STALE_AFTER_MIN_CD_OPS` | 30 | Payment outcome snapshot lag (2026-11-08): minutes behind the evidence, 6 x the 5-minute cadence; also A_INFLIGHT `PAY_SNAPSHOT_STALE` |
 
 The delivered values equal the CDS fallback literals and their ABAP constants (`ZIF_CD_FMON_TYPES=>GC_DASHBOARD-STALE_AFTER_MIN`, `ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT-MAX_AGE_HOURS` × 60) — portable checks `cds_abap_parity` and `param_definitions_complete`. No value row is delivered (`config/param_values.csv`): a landscape changes a threshold with a value row. Time zone per area: not configurable (time stamps are UTC); future extension.
 
 ## Missing bank ACK mail — layout (user request 2026-11-10; sample with made-up values)
 
-Findings `NO_BANK_ACK`, `BANK_ACK_LATE`, `ACK_COUNT_MISMATCH`, `ACK_AMOUNT_MISMATCH` and `STAGE_DEADLINE_MISSED` of stage `ACK_RECEIVED` carry their file evidence; any FMON rule that selects them (e.g. `FMON_ERR`) sends this layout - no new rule is needed.
+Findings `NO_BANK_ACK`, `BANK_ACK_LATE`, `ACK_COUNT_MISMATCH`, `ACK_AMOUNT_MISMATCH` and `STAGE_DEADLINE_MISSED` of stage `ACK_RECEIVED` carry their file evidence; any FMON rule that selects them (e.g. `FMON_ERR`) sends this layout - no new rule is needed. Since 2026-11-10 the table is the suite's alert section plug-in `ZCL_CD_OPS_ACK_MAIL` (`ZIF_CA_OPS_ALERT_SECTION`) of the framework's alert policy, configured in parameter `ALERT_SECTION_CLASS` (area `CA_OPS`, value row in `config/param_values.csv`).
 
-Subject: `[PS4][FMON][E] Missing bank ACK: 2 file(s), 121 payments, CAD 2,500.00; USD 1,234,567.80`
+Subject: `[PS4][CD_FMON][E] Missing bank ACK: 2 file(s), 121 payments, CAD 2,500.00; USD 1,234,567.80`
 
 | House bank | Bank | File name | Payment method | Payments | Amount | Payment run (date / ID) | Generated in SAP | Delivered to bank | ACK due | Overdue by |
 |---|---|---|---|---:|---:|---|---|---|---|---|
@@ -146,3 +146,23 @@ Subject: `[PS4][FMON][E] Missing bank ACK: 2 file(s), 121 payments, CAD 2,500.00
 Below the table: the run / job line (message 803) and, if the alert also selected other findings, the general findings table. The text version lists the same columns separated by ` | `.
 
 **User decision 2026-11-10:** dollar amounts and payment counts are shown in the missing-ACK alert. Masking of amounts in other alerts remains an open decision (`Release_Readiness.md` §5). No payee or member data; bank accounts only as house bank / account ID.
+
+## Purge targets of the suite (registry ZCA_OPS_PURGE, 2026-11-10)
+
+The retention purge is the framework's (`ZCA_OPS_RETENTION`, `ZCL_CA_OPS_PURGE`): its own targets RUN (runs, findings,
+exception history) and ALERT_LOG, then every active row of `ZCA_OPS_PURGE`. The suite registers its targets in DV1 on a
+customizing request in the framework app `ZUI_CA_OPS_CFG` (entity *Purge targets*; class and parameter are checked on
+save, messages 410 / 434 / 435). Rows: `config/purge_targets.csv`.
+
+| TARGET | CLASS_NAME | PARAM_AREA | PARAM_NAME | ACTIVE |
+|---|---|---|---|---|
+| FMON_EVENT | ZCL_CD_OPS_PURGE_TARGET | CA_OPS | RETENTION_DAYS_FMON_EVENT | X |
+| FMON_FILE | ZCL_CD_OPS_PURGE_TARGET | CA_OPS | RETENTION_DAYS_FMON_FILE | X |
+| FMON_PRISM | ZCL_CD_OPS_PURGE_TARGET | CA_OPS | RETENTION_DAYS_FMON_PRISM | X |
+| HCK_METRIC | ZCL_CD_OPS_PURGE_TARGET | CA_OPS | RETENTION_DAYS_HCK_METRIC | X |
+| HCK_RESULT | ZCL_CD_OPS_PURGE_TARGET | CA_OPS | RETENTION_DAYS_HCK_RESULT | X |
+| PAY_OUTCOME | ZCL_CD_OPS_PURGE_TARGET | CA_OPS | RETENTION_DAYS_PAY_OUTCOME | X |
+
+Keep rules are unchanged (`ZCL_CD_OPS_PURGE_TARGET`): the current version of a payment that is not final is never deleted;
+a registry file an open, assigned or validly waived FMON exception refers to is kept; never below 30 days (engine); one
+package per commit (engine); test mode counts only (engine).

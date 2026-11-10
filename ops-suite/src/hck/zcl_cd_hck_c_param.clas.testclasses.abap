@@ -9,6 +9,7 @@
 *& runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
+*& 2026-11-10 | Database without a definition: built from the delivered sets of the suite and of ZCA_OPS (area CA_OPS).
 *&---------------------------------------------------------------------*
 CLASS ltc_param_check DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -87,12 +88,16 @@ CLASS ltc_param_check IMPLEMENTATION.
     IF is_flags-missing_def = abap_true OR is_flags-missing_area = abap_true.
       " a database without the delivered definition (or without the whole area)
       lo_dao = NEW #( ).
-      LOOP AT zcl_cd_ops_param_seed=>areas( ) ASSIGNING FIELD-SYMBOL(<ls_area>).
+      DATA(lt_areas) = zcl_cd_ops_param_seed=>areas( ).
+      INSERT LINES OF zcl_ca_ops_param_seed=>areas( ) INTO TABLE lt_areas.
+      LOOP AT lt_areas ASSIGNING FIELD-SYMBOL(<ls_area>).
         IF is_flags-missing_area = abap_false OR <ls_area>-area <> zif_cd_ops_types=>gc_param_area-hck.
           lo_dao->add_area( <ls_area> ).
         ENDIF.
       ENDLOOP.
-      LOOP AT zcl_cd_ops_param_seed=>definitions( ) ASSIGNING FIELD-SYMBOL(<ls_definition>)
+      DATA(lt_definitions) = zcl_cd_ops_param_seed=>definitions( ).
+      INSERT LINES OF zcl_ca_ops_param_seed=>definitions( ) INTO TABLE lt_definitions.
+      LOOP AT lt_definitions ASSIGNING FIELD-SYMBOL(<ls_definition>)
            WHERE name <> gc_test-name.
         lo_dao->add_definition( <ls_definition> ).
       ENDLOOP.

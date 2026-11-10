@@ -3,6 +3,8 @@
 > **First principle:** who hears about a problem, how fast and through which channel is customizing; the code only decides *what* happened.
 > **Analogy:** a building's fire panel — each zone (alert rule) is wired by the installer to sirens or the control room (channels); the sensors (checks) never dial anyone themselves.
 
+> **Since 2026-11-10 the alert router is part of the operations framework ZCA_OPS** (`ops-framework/`): `ZCL_CA_OPS_ALERT_ROUTER`, `_ALERT_POLICY`, `_ALERT_DAO`, channels `ZCL_CA_OPS_CHN_EMAIL` / `_CHN_APPLOG`, tables `ZCA_OPS_ALRULE` / `_ALCHN` / `_ALLOG`, maintained in the framework app `ZUI_CA_OPS_CFG` (generated). Rules name an area of ZCA_PARAM (`CD_EBS`, `CD_FMON`, `CD_HCK`, `CD_OPS` or `*`); recipients `ALERT_<route>` / `ALERT_DEFAULT` and `ALERT_ESCALATION_WINDOW_H` are parameters of area `CA_OPS`; the bank ACK table of the e-mail is the suite's alert section `ZCL_CD_OPS_ACK_MAIL` (`ZIF_CA_OPS_ALERT_SECTION`, parameter `ALERT_SECTION_CLASS`); messages are class ZCA_OPS (same numbers). Behaviour is unchanged.
+
 ## Part A — Business & Operations
 
 1. Every payment engine area (EBS validation, file monitoring, health checks) finishes a run and hands **all its findings** to one alert router.

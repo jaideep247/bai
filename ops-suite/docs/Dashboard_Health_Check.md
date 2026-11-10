@@ -82,7 +82,7 @@ Service binding `ZUI_CD_HCK_DASH_O4` (path VERIFY-ADT).
 | `ZR_CD_HckCategory`, `ZR_CD_HckRun`, `ZR_CD_HckMetric`, `ZR_CD_HckFind` (+ `ZC_`) | roots / projections | Scorecard, trend, metric history, findings |
 | `ZR_CD_HckKpi`, `ZR_CD_HckRed` (+ `ZC_`) | roots / projections | KPI (one row), red / amber checks |
 | 8 metadata extensions `ZC_CD_HCK*` | DDLX | UI |
-| `ZC_CD_HCKDASH` | DCL | `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )`, rows carry HCK |
+| `ZC_CD_HCKDASH` | DCL | `pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )`, rows carry HCK |
 | `ZUI_CD_HCK_DASH` | service definition | `HealthCheck`, `HealthCategory`, `HealthRun`, `MetricHistory`, `HealthFinding`, `ReportAsOf`, `HealthKpi`, `RedCheck` |
 | `ZCL_CD_HCK_DASH_CDS_TEST` | class (test holder) | CDS unit tests (§9) |
 

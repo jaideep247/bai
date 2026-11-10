@@ -141,7 +141,7 @@ File row → object page → **Events** (what each source said and when; `MANUAL
 | `ZR_CD_FmonFlowKpi` / `ZC_CD_FmonFlowKpi` | root view (grouped) / projection | KPI per business date (tiles, OVP) |
 | `ZR_CD_FmonFlowFail` / `ZC_CD_FmonFlowFail` | root view / projection | Latest failures list |
 | `ZC_CD_FMONFLOW`, `…EVT`, `…FIND`, `…KPI`, `…FAIL`, `ZC_CD_FMONASOF` | metadata extensions | UI: charts, presentation variants, selection fields, line items, facets, data points |
-| `ZC_CD_FMONFLOW` | access control (DCL) | `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on the six projections; every row carries `PaymentEngineArea` = FMON |
+| `ZC_CD_FMONFLOW` | access control (DCL) | `pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` on the six projections; every row carries `PaymentEngineArea` = FMON |
 | `ZUI_CD_FMON_FLOW` | service definition | `FileFlow`, `FileEvent`, `OpenException`, `MonitorAsOf`, `FileFlowKpi`, `LatestFailure` |
 | `ZUI_CD_FMON_FLOW_O4` | service binding (OData V4 – UI) | **Created in ADT** (the repository carries no bindings) |
 | `ZCL_CD_FMON_FLOW_CDS_TEST` | class (test holder, no logic) | CDS unit tests (§11) |
@@ -160,7 +160,7 @@ Existing classes are unchanged. `tools/abapgit_serialize.py` now also writes DCL
 | TIMESTAMPL → TIMESTAMP cast and `tstmp_seconds_between` / `tstmp_current_utctimestamp` | `ZR_CD_FmonAsOf` (as `ZI_CD_OpsRun`) | `tstmpl_to_utcl` + `utcl_seconds_between( utcl_current( ) )` |
 | OData V4 data aggregation (`$apply`) of a `transactional_query` projection without behaviour definition | `ZC_CD_FmonFlow`, `ZC_CD_FmonFlowKpi` | Annotate `@ObjectModel.supportedCapabilities: [ #ANALYTICAL_PROVIDER ]` / expose the cube via an analytical service |
 | `@UI.chart`, `@UI.presentationVariant`, `@UI.selectionVariant` (filter string) rendering in the V4 analytical list page and OVP | metadata extensions | Adjust in the app's annotation file of the Fiori project |
-| `pfcg_auth` on a literal-valued element of a projection | DCL `ZC_CD_FMONFLOW` | `where ( ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA = 'FMON', ACTVT = '03' )` |
+| `pfcg_auth` on a literal-valued element of a projection | DCL `ZC_CD_FMONFLOW` | `where ( ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR = 'FMON', ACTVT = '03' )` |
 | DCLS abapGit metadata (`DCLNAME`, `DESCRIPTION`) | `zc_cd_fmonflow.dcls.xml` | Create the role in ADT from the `.asdcls` source |
 | `cl_cds_test_environment=>create( i_select_base_dependencies = abap_true )` and `create_for_multiple_cds` doubling the tables behind the stack | test include | Double the first-level views and insert view rows instead |
 
@@ -187,7 +187,7 @@ The DCL is not covered by the unit tests (they select the `ZR_` views); QA case 
 | FMD-05 | BlackLine file (no ACK) sent to PRISM | Bucket SENT, successful |
 | FMD-06 | Returns file with open lot items | PARTIAL, unprocessed items = open items; tile *Unprocessed* counts it; listed in *Latest failures* |
 | FMD-07 | File with an open NO_BANK_ACK exception, then resolve it in the exceptions app and re-run | SLA BREACHED (red) → NO_FINDINGS |
-| FMD-08 | User with ZCD_OPS ZCD_PE_AREA = HCK only | No rows in any entity (DCL); with FMON / 03: rows visible |
+| FMD-08 | User with ZCD_OPS ZCA_PARAR = HCK only | No rows in any entity (DCL); with FMON / 03: rows visible |
 | FMD-09 | Filter source PCLM, LOB, payment method ACH, bank PNC, business date today | Chart and table restricted; totals equal SE16 sums on ZCD_FMON_FILE for the same filter (with the interface → bank mapping) |
 | FMD-10 | Drill to a file → events → open exceptions | Events equal ZCD_FMON_EVENT for the file ID; exceptions equal the open ZCA_OPS_FINDING rows with that reference |
 | FMD-11 | Expected file not received (FILE_MISSING) | Not a file row; tile *Missing files* = 1; listed under OpenException |

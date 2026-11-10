@@ -202,15 +202,15 @@ Since the table consolidation of 2026-11-08 the HCK whitelist (was `ZCD_HCK_TABW
 
 | PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE | APPROVED_BY |
 |---|---|---|---|---|---|---|
-| HCK | READ | DFKKOP | (blank) | payment engine open items (aging; `A_INFLIGHT` Stripe evidence: payment intent ID by AUGBL) | X | `<security reviewer>` |
-| HCK | READ | ZCD_STRP_POUT_LOG | (blank) | Stripe payout log (`A_INFLIGHT` Stripe evidence, fields VERIFY-SE11) | X | `<security reviewer>` |
-| HCK | READ | DFKKRP | (blank) | payment engine returns items | X | `<security reviewer>` |
-| HCK | READ | FEBKO | (blank) | Bank statement headers (volume) | X | `<security reviewer>` |
-| HCK | READ | ZCD_PAYM_REQ_LOG | (blank) | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
-| HCK | READ | ZCD_SPE_EXCP_LOG | (blank) | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
-| HCK | READ | ZCD_CHECK_HIST | (blank) | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
-| HCK | READ | /SAPPO/ORDER_HDR | (blank) | Postprocessing orders (backlog) | X | `<security reviewer>` |
-| HCK | READ | `<bgRFC unit / error table, VERIFY>` | (blank) | bgRFC units in error (`E_QUEUES` PARAM4); counts only | X | `<security reviewer>` |
+| CD_HCK | READ | DFKKOP | (blank) | payment engine open items (aging; `A_INFLIGHT` Stripe evidence: payment intent ID by AUGBL) | X | `<security reviewer>` |
+| CD_HCK | READ | ZCD_STRP_POUT_LOG | (blank) | Stripe payout log (`A_INFLIGHT` Stripe evidence, fields VERIFY-SE11) | X | `<security reviewer>` |
+| CD_HCK | READ | DFKKRP | (blank) | payment engine returns items | X | `<security reviewer>` |
+| CD_HCK | READ | FEBKO | (blank) | Bank statement headers (volume) | X | `<security reviewer>` |
+| CD_HCK | READ | ZCD_PAYM_REQ_LOG | (blank) | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
+| CD_HCK | READ | ZCD_SPE_EXCP_LOG | (blank) | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
+| CD_HCK | READ | ZCD_CHECK_HIST | (blank) | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
+| CD_HCK | READ | /SAPPO/ORDER_HDR | (blank) | Postprocessing orders (backlog) | X | `<security reviewer>` |
+| CD_HCK | READ | `<bgRFC unit / error table, VERIFY>` | (blank) | bgRFC units in error (`E_QUEUES` PARAM4); counts only | X | `<security reviewer>` |
 
 No HR, partner bank or card tables — the aggregate check returns counts/sums only, but the whitelist is the
 security boundary; every new row needs a reviewer.
@@ -221,8 +221,8 @@ The EBS lookup rule R21 (`ZCD_EBS_LOOKUP`) reads a configured table and echoes t
 
 | PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE | APPROVED_BY |
 |---|---|---|---|---|---|---|
-| EBS | LOOKUP | `<lookup table>` | `<KEY_FIELD of the lookup>` | R21 lookup `<LOOKUP_ID>`: key | X | `<security reviewer>` |
-| EBS | LOOKUP | `<lookup table>` | `<STATUS_FIELD of the lookup>` | R21 lookup `<LOOKUP_ID>`: status | X | `<security reviewer>` |
+| CD_EBS | LOOKUP | `<lookup table>` | `<KEY_FIELD of the lookup>` | R21 lookup `<LOOKUP_ID>`: key | X | `<security reviewer>` |
+| CD_EBS | LOOKUP | `<lookup table>` | `<STATUS_FIELD of the lookup>` | R21 lookup `<LOOKUP_ID>`: status | X | `<security reviewer>` |
 
 The EBS configuration app refuses a lookup whose fields are not approved (message 812); at run time the same check and `S_TABU_NAM` (813) stop the read, and the rule reports PLUGIN_ERROR (fail closed).
 
@@ -230,15 +230,15 @@ The EBS configuration app refuses a lookup whose fields are not approved (messag
 
 | PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE |
 |---|---|---|---|---|---|
-| HCK | DRIFT | TFK042Z | (blank) | Payment program: collections vs disbursements (XEINZ) | X |
-| HCK | DRIFT | TFK033D | (blank) | Account determination (`*` wildcard works in FQC0 - confirmed by the user 2026-11-08) | X |
-| HCK | DRIFT | ZCD_HCK_DEF | (blank) | Health check catalog | X |
-| HCK | DRIFT | ZCD_HCK_THRESH | (blank) | Health check thresholds | X |
-| HCK | DRIFT | ZCD_HCK_AGG | (blank) | Generic aggregates with their expected groups (A103) | X |
-| HCK | DRIFT | ZCD_JOB_STEP | (blank) | Job cycle steps | X |
-| HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs: durations and deadlines (ZCD_FMON_DEADL merged) | X |
-| HCK | DRIFT | ZCD_FMON_CAL | (blank) | FMON expected files | X |
-| HCK | DRIFT | ZCA_OPS_ALRULE | (blank) | Alert rules | X |
+| CD_HCK | DRIFT | TFK042Z | (blank) | Payment program: collections vs disbursements (XEINZ) | X |
+| CD_HCK | DRIFT | TFK033D | (blank) | Account determination (`*` wildcard works in FQC0 - confirmed by the user 2026-11-08) | X |
+| CD_HCK | DRIFT | ZCD_HCK_DEF | (blank) | Health check catalog | X |
+| CD_HCK | DRIFT | ZCD_HCK_THRESH | (blank) | Health check thresholds | X |
+| CD_HCK | DRIFT | ZCD_HCK_AGG | (blank) | Generic aggregates with their expected groups (A103) | X |
+| CD_HCK | DRIFT | ZCD_JOB_STEP | (blank) | Job cycle steps | X |
+| CD_HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs: durations and deadlines (ZCD_FMON_DEADL merged) | X |
+| CD_HCK | DRIFT | ZCD_FMON_CAL | (blank) | FMON expected files | X |
+| CD_HCK | DRIFT | ZCA_OPS_ALRULE | (blank) | Alert rules | X |
 
 A drift row hashes the whole table; it approves no read (the hash is read by the HCK DAO with its own static rule, `ZCL_CD_HCK_DAO=>COMPUTE_TABLE_HASH`).
 

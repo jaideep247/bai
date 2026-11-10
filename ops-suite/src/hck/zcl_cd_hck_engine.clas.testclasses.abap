@@ -295,7 +295,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
 
     CONSTANTS gc_two_hours_sec TYPE i VALUE 7200.
     "! Stale threshold of FMON (core parameter, was ZCD_OPS_MONCFG) and a value ZCA_PARAM refuses (INT)
-    CONSTANTS gc_fmon_stale_param TYPE zif_ca_ops_types=>ty_param_name VALUE 'MON_STALE_AFTER_MIN_FMON'.
+    CONSTANTS gc_fmon_stale_param TYPE zif_ca_ops_types=>ty_param_name VALUE 'MON_STALE_AFTER_MIN_CD_FMON'.
     CONSTANTS gc_not_an_integer TYPE string VALUE `FIFTEEN`.
     DATA mo_store TYPE REF TO ltd_store.
     DATA mo_alert TYPE REF TO ltd_alert.
@@ -501,7 +501,7 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDIF.
     " the current HCK run (run ID of ltd_store=>start_run) seen as running
     IF is_flags-own_run_running = abap_true.
-      mo_store->mo_params->set( iv_name = 'HCK_WATCH_PE_AREAS' iv_value = 'HCK' ).
+      mo_store->mo_params->set( iv_name = 'HCK_WATCH_PE_AREAS' iv_value = 'CD_HCK' ).
       CLEAR ls_last_run.
       ls_last_run-run_id     = '0123456789ABCDEF0123456789ABCDEF'.
       ls_last_run-area    = zif_cd_ops_types=>gc_pe_area-health_check.
@@ -697,9 +697,9 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_self-rag exp = gc_red msg = 'Self check must be RED' ).
         cl_abap_unit_assert=>assert_equals( act = lines( ls_self-findings ) exp = 1 msg = 'Only EBS is stale' ).
         cl_abap_unit_assert=>assert_equals( act = ls_self-findings[ 1 ]-object_key
-                                            exp = 'EBS'
+                                            exp = 'CD_EBS'
                                             msg = 'The stale payment engine area is EBS' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_report-pe_areas[ pe_area = 'FMON' ]-stale
+        cl_abap_unit_assert=>assert_equals( act = ls_report-pe_areas[ pe_area = 'CD_FMON' ]-stale
                                             exp = abap_false
                                             msg = 'FMON ran recently' ).
       CATCH cx_root INTO DATA(lx_error).

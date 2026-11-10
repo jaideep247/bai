@@ -7,18 +7,18 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import auth_checks  # noqa: E402
 
-_DOC = ("# sheet\n\n## 1. Authorisation field (SU20)\n\n| Field | Data element |\n|---|---|\n"
-        "| `ZCD_PE_AREA` | `ZCD_PE_AREA` |\n\n## 2. Authorisation object (SU21)\n\n"
+_DOC = ("# sheet\n\n## 1. Authorisation fields (SU20)\n\n| Field | Data element |\n|---|---|\n"
+        "| `ZCA_PARAR` | `ZCA_PARAM_AREA_ID` |\n\n## 2. Authorisation object (SU21)\n\n"
         "| Object | Class | Fields | Text |\n|---|---|---|---|\n"
-        "| `ZCD_OPS` | `ZCD` | `ACTVT`, `ZCD_PE_AREA`, `BUKRS` | ops |\n\n## 3. Roles\n")
+        "| `ZCA_OPS` | `ZCA` | `ZCA_PARAR`, `ACTVT`, `BUKRS` | ops |\n\n## 3. Roles\n")
 
 
 class AuthFieldsTest(unittest.TestCase):
 
     def _root(self, root):
         os.makedirs(os.path.join(root, 'src', 'core'))
-        os.makedirs(os.path.join(root, 'config'))
-        with open(os.path.join(root, 'config', 'auth_zcd_ops.md'), 'w', encoding='utf-8') as fh:
+        os.makedirs(os.path.join(root, 'docs'))
+        with open(os.path.join(root, 'docs', 'auth_zca_ops.md'), 'w', encoding='utf-8') as fh:
             fh.write(_DOC)
 
     def _failures(self, name, code):
@@ -26,20 +26,21 @@ class AuthFieldsTest(unittest.TestCase):
             self._root(root)
             with open(os.path.join(root, 'src', 'core', name), 'w', encoding='utf-8') as fh:
                 fh.write(code)
-            return auth_checks.failures(root)
+            return auth_checks.failures(root, os.path.join(root, 'docs', 'auth_zca_ops.md'))
 
     def test_defined_fields_read_from_doc(self):
         with tempfile.TemporaryDirectory() as root:
             self._root(root)
-            self.assertEqual(auth_checks.defined_fields(root), {'ACTVT', 'ZCD_PE_AREA', 'BUKRS'})
+            self.assertEqual(auth_checks.defined_fields(root, os.path.join(root, 'docs', 'auth_zca_ops.md')),
+                             {'ACTVT', 'ZCA_PARAR', 'BUKRS'})
 
     def test_defined_field_is_accepted(self):
         code = ("    AUTHORITY-CHECK OBJECT zif_ca_ops_auth=>gc_object\n"
-                "      ID 'ACTVT' FIELD lv_a\n      ID 'ZCD_PE_AREA' FIELD lv_b\n      ID 'BUKRS' DUMMY.\n")
+                "      ID 'ACTVT' FIELD lv_a\n      ID 'ZCA_PARAR' FIELD lv_b\n      ID 'BUKRS' DUMMY.\n")
         self.assertEqual(self._failures('zcl_x.clas.abap', code), [])
 
     def test_unknown_field_is_reported(self):
-        code = ("    AUTHORITY-CHECK OBJECT 'ZCD_OPS'\n"
+        code = ("    AUTHORITY-CHECK OBJECT 'ZCA_OPS'\n"
                 "      ID 'ACTVT' FIELD lv_a\n      ID 'ZCD_MODULE' FIELD lv_b.\n")
         self.assertEqual(len(self._failures('zcl_x.clas.abap', code)), 1)
 
@@ -49,13 +50,18 @@ class AuthFieldsTest(unittest.TestCase):
 
     def test_dcl_unknown_field_is_reported(self):
         code = ("define role X {\n  grant select on Y\n"
-                "    where ( A ) = aspect pfcg_auth( ZCD_OPS, ZCD_MODULE, ACTVT = '03' );\n}\n")
+                "    where ( A ) = aspect pfcg_auth( ZCA_OPS, ZCD_MODULE, ACTVT = '03' );\n}\n")
         self.assertEqual(len(self._failures('x.dcls.asdcls', code)), 1)
 
     def test_dcl_defined_fields_accepted(self):
-        code = ("// pfcg_auth( ZCD_OPS, WRONG ) in a comment\ndefine role X {\n  grant select on Y\n"
-                "    where ( A, B ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, ACTVT = '03' );\n}\n")
+        code = ("// pfcg_auth( ZCA_OPS, WRONG ) in a comment\ndefine role X {\n  grant select on Y\n"
+                "    where ( A, B ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );\n}\n")
         self.assertEqual(self._failures('x.dcls.asdcls', code), [])
+
+    def test_retired_object_is_reported(self):
+        code = ("define role X {\n  grant select on Y\n"
+                "    where ( A ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );\n}\n")
+        self.assertTrue(any('retired' in f for f in self._failures('x.dcls.asdcls', code)))
 
 
 if __name__ == '__main__':

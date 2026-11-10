@@ -133,7 +133,7 @@
     {
       "name": "auth_fields_defined",
       "passed": true,
-      "detail": "Every AUTHORITY-CHECK on ZCD_OPS (zif_ca_ops_auth=>gc_object) and every pfcg_auth( ZCD_OPS, ... ) in a DCL (src/ and cds/) names only the fields config/auth_zcd_ops.md defines (section 1 field, section 2 object field list).",
+      "detail": "Every AUTHORITY-CHECK on ZCA_OPS (zif_ca_ops_auth=>gc_object) and every pfcg_auth( ZCA_OPS, ... ) in a DCL (src/, cds/ and ../ops-framework/src) names only the fields ops-framework/docs/auth_zca_ops.md defines (section 1 fields, section 2 object field list); the retired ZCD_OPS / ZCD_PE_AREA appear nowhere.",
       "failures": []
     },
     {

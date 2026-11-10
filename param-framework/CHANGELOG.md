@@ -2,14 +2,25 @@
 
 All notable changes of the parameter framework (`param-framework/` in jaideep247/bai).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-10
 
-### Changed (2026-11-10)
+### Added
+- `ZIF_CA_PARAM_TYPES=>GC_VERSION` (`1.1.0`): release of the framework; consumers compare it with the
+  release they need (the operations framework ZCA_OPS needs 1.1.0 and checks it at startup).
+- `ZIF_CA_PARAM=>CHECK_AREA` / `ZCL_CA_PARAM`: the area exists and is active (messages 001 / 002, same
+  buffer as the reads) - ZCA_PARAM_AREA is the one area register of ZCA_OPS and its consumers (user
+  decision 2026-11-10). Test `check_area_known_and_active`.
+- Object class `ZCA` and field `ZCA_PARAR` are also used by the operations framework's object `ZCA_OPS`
+  (defined there, `ops-framework/config/authorizations.json`).
+
+### Changed
 - `ZCL_CA_PARAM`: a conversion error is kept as `PREVIOUS` of the raised `ZCX_CA_PARAM`
   (helper `RAISE` has `IX_PREVIOUS`).
 - `ZCL_CA_PARAM_SYSTEM=>READ_CLIENT` stays fail closed but returns the error text of the
   business configuration API (`TY_CLIENT-CUST_REASON`); the app shows it with message 048
   instead of 044 (`ZCL_CA_PARAM_MAINT=>CHECK_CONFIG_CHANGE`, test `client_check_reason_shown`).
+
+## [1.0.0] - 2026-11-07 (first release, never activated)
 
 ### Added
 - Repository scaffold: abapGit settings (starting folder `/src/`, folder logic PREFIX),

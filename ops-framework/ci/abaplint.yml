@@ -1,0 +1,36 @@
+# Quality gate of the operations framework ZCA_OPS. The framework lives in the folder
+# ops-framework/ of the repository jaideep247/bai; copy this file to
+# .github/workflows/ops-framework-abaplint.yml there (paths filter below). Its abaplint.json
+# reads ../param-framework/src as a dependency, so both folders are checked out.
+name: ops-framework
+
+on:
+  push:
+    paths: ['ops-framework/**', 'param-framework/**', '.github/workflows/ops-framework-abaplint.yml']
+  pull_request:
+    paths: ['ops-framework/**', 'param-framework/**']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ops-framework
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # pinned: the offline evidence in CHANGELOG.md was produced with this version
+      - name: Install abaplint
+        run: npm install -g @abaplint/cli@2.120.92
+      - name: Show versions
+        run: abaplint --version && python3 --version
+      - name: Syntax and house rules (abaplint.json)
+        run: abaplint abaplint.json
+      - name: abapGit metadata up to date
+        run: python3 tools/abapgit_serialize.py --check
+      - name: House checks
+        run: python3 tools/checks.py
+      - name: Tool tests
+        run: python3 -m unittest discover -s tools/tests -v

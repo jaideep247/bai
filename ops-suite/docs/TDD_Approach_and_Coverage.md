@@ -250,7 +250,7 @@ each is listed in the modification log of its class.
 
 | Test seam(s) | Class | Replaces |
 |---|---|---|
-| `AUTH_AREA`, `AUTH_BUKRS` | ZCL_CA_OPS_AUTH | `AUTHORITY-CHECK` on ZCD_OPS |
+| `AUTH_AREA`, `AUTH_BUKRS` | ZCL_CA_OPS_AUTH | `AUTHORITY-CHECK` on ZCA_OPS |
 | `ENQUEUE`, `DEQUEUE` | ZCL_CA_OPS_LOCK | `ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE` (return code and holder kept in locals) |
 | `BAL_CREATE`, `BAL_ADD`, `BAL_SAVE`, `BAL_REFRESH` | ZCL_CA_OPS_CHN_APPLOG | BAL function modules |
 | `BCS_SEND`, `BCS_COMMIT` | ZCL_CA_OPS_CHN_EMAIL | BCS send and its `COMMIT WORK` (BCS error kept in a local) |

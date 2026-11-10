@@ -45,7 +45,6 @@
     "unused_ddic": {
       "exclude": [
         "/src/[a-z]+/zcd_d_[a-z]+\\.tabl\\.xml$",
-        "/src/core/zca_ops_lock\\.tabl\\.xml$",
         "/src/fmon/zcd_fmon_prq_wa\\.tabl\\.xml$"
       ]
     },

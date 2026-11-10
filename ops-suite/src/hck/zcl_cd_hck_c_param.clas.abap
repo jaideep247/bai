@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_hck_c_param.clas.abap
 *& Purpose:
 *& Configuration check PARAM_INVALID: reads every parameter of the suite's
-*& areas in ZCA_PARAM (CD_OPS, CD_EBS, CD_FMON, CD_HCK) through ZIF_CA_PARAM
+*& areas in ZCA_PARAM (CD_OPS, CD_EBS, CD_FMON, CD_HCK, CA_OPS) through ZIF_CA_PARAM
 *& - every definition of the area in the database and every delivered
 *& definition (ZCL_CD_OPS_PARAM_SEED) - and reports each one the framework
 *& refuses (unknown area / name, invalid value or default, mandatory value
@@ -11,6 +11,8 @@
 *& morning at the latest.
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
+*& 2026-11-10 | Also area CA_OPS of the operations framework ZCA_OPS (its delivered definitions,
+*&            | ZCL_CA_OPS_PARAM_SEED, and the suite's names there: ALERT_MORNING, SLA_DAYS_CD_*, RETENTION_DAYS_*).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - invalid parameters (ZCA_PARAM)</p>
 "! One PARAM_INVALID finding (E) per parameter that ZIF_CA_PARAM refuses, object key
@@ -59,8 +61,12 @@ CLASS zcl_cd_hck_c_param IMPLEMENTATION.
 
     DATA(lo_dao) = zcl_cd_hck_factory=>get_param_dao( ).
     DATA(lo_param) = zcl_ca_param_factory=>get( ).
+    " the suite's areas and the operations framework's area CA_OPS (its definitions and the suite's names there)
     DATA(lt_delivered) = zcl_cd_ops_param_seed=>definitions( ).
-    LOOP AT zcl_cd_ops_param_seed=>areas( ) ASSIGNING FIELD-SYMBOL(<ls_area>).
+    INSERT LINES OF zcl_ca_ops_param_seed=>definitions( ) INTO TABLE lt_delivered.
+    DATA(lt_areas) = zcl_cd_ops_param_seed=>areas( ).
+    INSERT LINES OF zcl_ca_ops_param_seed=>areas( ) INTO TABLE lt_areas.
+    LOOP AT lt_areas ASSIGNING FIELD-SYMBOL(<ls_area>).
       DATA(ls_data) = lo_dao->read_area( <ls_area>-area ).
       IF ls_data-found = abap_false OR ls_data-area-active = abap_false.
         " The whole area is unreadable: one finding, not one per parameter
