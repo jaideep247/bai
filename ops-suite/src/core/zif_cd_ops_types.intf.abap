@@ -33,6 +33,7 @@
 *& 2026-11-08 | Prefix POSTAREA_ -> CD_OPS: posting areas of the mapping tables (customer posting areas).
 *& 2026-11-08 | Transactions dashboard on the payment worklist: GC_TRX_DASHBOARD-RETENTION_DAYS retired (no 400-day
 *&            | driver), date kinds WORKLIST / RUN / VALUE / DUE (POSTING retired).
+*& 2026-11-10 | GC_MSGNO_FREE removed: the PRISM handled-manually save no longer turns a failed closure into a warning.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -162,8 +163,6 @@ INTERFACE zif_cd_ops_types
       yellow TYPE c LENGTH 1 VALUE '2',
       green  TYPE c LENGTH 1 VALUE '3',
     END OF gc_light.
-  "! Message 000 (&1 &2 &3 &4): carries a text that is already a message
-  CONSTANTS gc_msgno_free TYPE ty_msgno VALUE '000'.
   TYPES ty_action      TYPE c LENGTH 10.
   TYPES ty_param_name  TYPE c LENGTH 30.
   "! Value of a parameter (ZCA_PARAM_VAL-LOW, CHAR 255) and its select-option style view

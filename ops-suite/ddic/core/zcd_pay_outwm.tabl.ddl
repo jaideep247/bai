@@ -20,6 +20,9 @@ define table zcd_pay_outwm {
   // evidence of the source processed completely up to this instant (UTC, 2026-11-08): the run time
   // when the run caught up, else the watermark's own entry date / time; basis of the snapshot lag
   current_to  : timestampl;
+  // consecutive runs (FAST / NIGHTLY) in which a package of the source failed (2026-11-10): 0 after a
+  // run without failure; from PAYOUT_FAIL_ESCALATE on the failure finding is an error (before: warning)
+  fail_count  : abap.int4;
 }
 // One row per evidence source, written by the 5-minute snapshot after each committed package.
 // A missing row = first run: the source starts PAYOUT_INITIAL_DAYS before today.
@@ -27,3 +30,6 @@ define table zcd_pay_outwm {
 // the last contiguous completed package of the source (ZCD_PAY_OUTPKG), never past a failed one.
 // Snapshot lag = now - MIN( CURRENT_TO ) of the evidence sources (RECHECK excluded): the
 // production-support freshness row (ZI_CD_PayOutLag) and A_INFLIGHT (stale = evidence PARTIAL).
+// Row WORKLIST (2026-11-10) is no source: the guard every worklist write locks (SELECT SINGLE FOR UPDATE)
+// from its re-read of the current rows to its commit, so FAST, NIGHTLY, SWEEP and the parallel units
+// validate and write one after the other (CURRENT_TO stays 0: never part of the lag).

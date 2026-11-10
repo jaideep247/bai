@@ -7,6 +7,9 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-07 | Resolve test uses history action MANUAL (RELEASE removed, read-only scope).
+*& 2026-11-10 | Concurrency review: find_open returns the stamp read; resolve sets LAST_CHANGED_AT; an
+*&            | exception a user changed after it was read is not resolved and no history row is written
+*&            | (787 - the caller ends the LUW without commit).
 *&---------------------------------------------------------------------*
 CLASS ltc_exc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -21,6 +24,9 @@ CLASS ltc_exc_dao DEFINITION FINAL FOR TESTING
         user   TYPE syuname VALUE 'APPROVER',
         at     TYPE timestampl VALUE '20261106090000.0000000',
         reason TYPE zif_cd_ops_exc_types=>ty_reason VALUE 'Released after bank confirmation',
+        read   TYPE timestampl VALUE '20261106080000.0000000',
+        waived TYPE timestampl VALUE '20261106083000.0000000',
+        owner  TYPE syuname VALUE 'OPS_OWNER',
       END OF gc_test.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
@@ -36,6 +42,7 @@ CLASS ltc_exc_dao DEFINITION FINAL FOR TESTING
 
     METHODS find_open_skips_closed       FOR TESTING.
     METHODS resolve_closes_with_history  FOR TESTING.
+    METHODS changed_meanwhile_not_closed FOR TESTING.
 ENDCLASS.
 
 
@@ -69,6 +76,8 @@ CLASS ltc_exc_dao IMPLEMENTATION.
     ls_row-check_code  = gc_test-code.
     ls_row-severity    = zif_cd_ops_types=>gc_severity-block.
     ls_row-disposition = iv_disposition.
+    ls_row-owner       = gc_test-owner.
+    ls_row-last_changed_at = gc_test-read.
     INSERT ls_row INTO TABLE lt_rows.
     go_env->insert_test_data( lt_rows ).
   ENDMETHOD.
@@ -92,22 +101,21 @@ CLASS ltc_exc_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: resolving sets R with user, time and reason, and leaves one history row
+  " Rule: resolving sets R with user, time, reason and change stamp, and leaves one history row
   METHOD resolve_closes_with_history.
-    DATA lt_keys TYPE zif_cd_ops_exc_types=>tt_exc_key.
-    DATA ls_key TYPE zif_cd_ops_exc_types=>ty_exc_key.
     TRY.
         add_finding( iv_finding_no = 1 iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
-        ls_key-run_id     = gc_test-run_id.
-        ls_key-finding_no = 1.
-        INSERT ls_key INTO TABLE lt_keys.
-        mo_cut->resolve( it_keys      = lt_keys
+        DATA(lt_open) = mo_cut->find_open( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-ebs
+                                           iv_object_key = gc_test-key ).
+        cl_abap_unit_assert=>assert_equals( act = lt_open[ 1 ]-last_changed_at exp = gc_test-read
+                                            msg = 'The stamp read is returned' ).
+        mo_cut->resolve( it_open      = lt_open
                          iv_action    = zif_cd_ops_exc_types=>gc_action-manual
                          iv_reason    = gc_test-reason
                          iv_reference = 'PRQ-1'
                          iv_user      = gc_test-user
                          iv_at        = gc_test-at ).
-        SELECT SINGLE disposition, resolved_by, resolution
+        SELECT SINGLE disposition, resolved_by, resolution, last_changed_at
           FROM zcd_ops_finding
           WHERE run_id = @gc_test-run_id AND finding_no = 1
           INTO @DATA(ls_row).
@@ -116,6 +124,7 @@ CLASS ltc_exc_dao IMPLEMENTATION.
                                             msg = 'The exception must be resolved' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-resolved_by exp = gc_test-user msg = 'Resolver must be recorded' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-resolution exp = gc_test-reason msg = 'Reason must be recorded' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-last_changed_at exp = gc_test-at msg = 'Change stamp set' ).
         SELECT action, from_disp, to_disp, reference
           FROM zcd_ops_exc_hist
           WHERE run_id = @gc_test-run_id AND finding_no = 1
@@ -129,6 +138,42 @@ CLASS ltc_exc_dao IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): an exception a user waived after it was read (early save) is not resolved
+  " by the late save - 787, no history row; the user's waiver stays
+  METHOD changed_meanwhile_not_closed.
+    DATA lx_changed TYPE REF TO zcx_cd_ops_error.
+    add_finding( iv_finding_no = 1 iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
+    DATA(lt_open) = mo_cut->find_open( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-ebs
+                                       iv_object_key = gc_test-key ).
+    " The user waives the exception between the read and the write (exceptions app)
+    UPDATE zcd_ops_finding
+      SET disposition     = @zif_cd_ops_types=>gc_disposition-waived,
+          last_changed_at = @gc_test-waived
+      WHERE run_id = @gc_test-run_id AND finding_no = 1.
+    cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'Test data: the waiver is written' ).
+    TRY.
+        mo_cut->resolve( it_open   = lt_open
+                         iv_action = zif_cd_ops_exc_types=>gc_action-manual
+                         iv_reason = gc_test-reason
+                         iv_user   = gc_test-user
+                         iv_at     = gc_test-at ).
+      CATCH zcx_cd_ops_error INTO lx_changed.
+        " expected
+    ENDTRY.
+    cl_abap_unit_assert=>assert_bound( act = lx_changed msg = 'A changed exception raises' ).
+    cl_abap_unit_assert=>assert_equals( act = lx_changed->if_t100_message~t100key-msgno
+                                        exp = zif_cd_ops_exc_types=>gc_msg-changed_meanwhile
+                                        msg = 'Message 787' ).
+    SELECT SINGLE disposition FROM zcd_ops_finding WHERE run_id = @gc_test-run_id AND finding_no = 1
+      INTO @DATA(lv_disposition).
+    cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The exception must still exist' ).
+    cl_abap_unit_assert=>assert_equals( act = lv_disposition exp = zif_cd_ops_types=>gc_disposition-waived
+                                        msg = 'The waiver is kept' ).
+    SELECT COUNT(*) FROM zcd_ops_exc_hist INTO @DATA(lv_hist).
+    cl_abap_unit_assert=>assert_equals( act = lv_hist exp = 0 msg = 'No history row' ).
   ENDMETHOD.
 
 ENDCLASS.

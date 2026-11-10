@@ -522,3 +522,12 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 777 | Worklist re-check &1 not completed today (&2): requests unchecked |
 | 778 | Cancelled after SUCCESS (&1): not expected to be paid |
 | 779 | Request &1 &2: stage &3, &4 |
+| 780 | &1 worklist entities changed by a concurrent run since judged (first &2) |
+| 781 | A second current worklist row of &1 prevented |
+| 782 | Database error in source &1 - package rolled back: |
+| 783 | Source &1 not judged in &2 runs in a row (limit &3): |
+| 784 | Source &1 stopped by a configuration error (&2 runs) - fix by transport: |
+| 785 | Evidence &1 (&2) could not be read - its purposes are not judged: |
+| 786 | Exception &1 (&2) changed by a user during the run - left for next run |
+| 787 | Exception &1 / &2 changed meanwhile - not resolved, nothing saved |
+| 788 | Open exceptions of request &1 could not be read - record not saved |

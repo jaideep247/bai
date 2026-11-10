@@ -28,6 +28,10 @@
 *&            | ZCA_PARAM parameters HCK_STRIPE_*, delivered blank = not configured).
 *& 2026-11-08 | Table consolidation: runtime DAO double without get_pm_banks (house-bank calendars are
 *&            | ZCD_HCK_PMCLASS rows).
+*& 2026-11-10 | Error classification (concurrency review): a configuration message (also chained) or a cast
+*&            | to the evidence interface is a configuration error, a read or runtime error is not; the chain of
+*&            | an error is its reason; an evidence class that does not exist is CLEARING_RULE_INVALID, never
+*&            | PAY_EVIDENCE_FAILED.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -149,6 +153,8 @@ CLASS ltc_outcome DEFINITION FINAL FOR TESTING
     CONSTANTS gc_context TYPE zif_cd_hck_types=>ty_check_id VALUE 'PAY_OUTCOME'.
     CONSTANTS gc_cap TYPE i VALUE 1000.
     CONSTANTS gc_unwatched TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'Z'.
+    "! An evidence class that does not exist (configuration error 030)
+    CONSTANTS gc_no_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_HCK_EV_NONE'.
     CONSTANTS gc_reversal TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000990001'.
     CONSTANTS gc_request_spec TYPE string VALUE `TABLE=ZCD_PAYM_REQ_LOG;KEY=ZZ_FIN_TRANS_NUM;KEY2=SOURCE;STATUS=ZZ_STATUS`.
 
@@ -177,6 +183,11 @@ CLASS ltc_outcome DEFINITION FINAL FOR TESTING
     METHODS stopped_and_voided_cheque   FOR TESTING.
     METHODS stopped_cheque_cashed       FOR TESTING.
     METHODS stop_reissue_judged_apart   FOR TESTING.
+    METHODS config_message_is_config    FOR TESTING.
+    METHODS read_error_is_not_config    FOR TESTING.
+    METHODS chained_config_is_config    FOR TESTING.
+    METHODS reason_chain_lists_origin   FOR TESTING.
+    METHODS missing_class_rule_invalid  FOR TESTING.
 
     "! Verdict of a cheque scenario: VOIDED, consistent (excluded)
     METHODS assert_voided
@@ -390,6 +401,91 @@ CLASS ltc_outcome IMPLEMENTATION.
 
 
   " Rule: a payment whose method is in no watched class has no verdict (never a guessed outcome)
+  " Rule (review 2026-11-10): a configuration message (032: class without the interface) and a cast to the
+  " evidence interface are configuration errors - CLEARING_RULE_INVALID, fix by transport
+  METHOD config_message_is_config.
+    TRY.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e032(zcd_ops) WITH gc_no_class gc_no_class.
+      CATCH zcx_cd_ops_error INTO DATA(lx_config).
+        cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_pay_outcome=>is_config_error( lx_config )
+                                          msg = 'Message 032 is configuration' ).
+    ENDTRY.
+    cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_pay_outcome=>is_config_error( NEW cx_sy_move_cast_error( ) )
+                                      msg = 'A plug-in not of its interface is configuration' ).
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a read failure (012) or a runtime error is not a configuration error - its own
+  " code PAY_EVIDENCE_FAILED, nobody changes a correct rule
+  METHOD read_error_is_not_config.
+    TRY.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH gc_no_class.
+      CATCH zcx_cd_ops_error INTO DATA(lx_read).
+        cl_abap_unit_assert=>assert_false( act = zcl_cd_ops_pay_outcome=>is_config_error( lx_read )
+                                           msg = 'A read failure is no configuration error' ).
+    ENDTRY.
+    cl_abap_unit_assert=>assert_false( act = zcl_cd_ops_pay_outcome=>is_config_error( NEW cx_sy_zerodivide( ) )
+                                       msg = 'A runtime error is no configuration error' ).
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a configuration error anywhere in the chain counts (703 wrapped in 751)
+  METHOD chained_config_is_config.
+    TRY.
+        TRY.
+            RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e703(zcd_ops) WITH zif_cd_ops_trace_types=>gc_param-src_request.
+          CATCH zcx_cd_ops_error INTO DATA(lx_inner).
+            RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e751(zcd_ops) WITH gc_context EXPORTING previous = lx_inner.
+        ENDTRY.
+      CATCH zcx_cd_ops_error INTO DATA(lx_outer).
+        cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_pay_outcome=>is_config_error( lx_outer )
+                                          msg = 'The chained 703 decides' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): the reason of an error is its text and the text of every error it chains,
+  " the origin last
+  METHOD reason_chain_lists_origin.
+    TRY.
+        TRY.
+            RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH gc_no_class.
+          CATCH zcx_cd_ops_error INTO DATA(lx_inner).
+            RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e751(zcd_ops) WITH gc_context EXPORTING previous = lx_inner.
+        ENDTRY.
+      CATCH zcx_cd_ops_error INTO DATA(lx_outer).
+        DATA(lv_reason) = zcl_cd_ops_pay_outcome=>reason_chain( lx_outer ).
+        cl_abap_unit_assert=>assert_equals( act = lv_reason
+                                            exp = |{ lx_outer->get_text( ) } - { lx_inner->get_text( ) }|
+                                            msg = 'Outer text, then the origin' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): an evidence class that does not exist (030) is a configuration error of the
+  " rule: CLEARING_RULE_INVALID, not PAY_EVIDENCE_FAILED; its purposes are not judged
+  METHOD missing_class_rule_invalid.
+    TRY.
+        load( zcl_cd_ops_pay_fixture=>gc_scenario-two_runs ).
+        LOOP AT mo_runtime->mt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>).
+          <ls_rule>-evidence_class = gc_no_class.
+        ENDLOOP.
+        DATA(lo_cut) = zcl_cd_ops_factory=>get_pay_outcome( ).
+        lo_cut->load( iv_context = gc_context iv_max_rows = gc_cap ).
+        DATA(ls_evaluation) = lo_cut->evaluate_documents(
+                                VALUE #( ( mo_fixture->scenario( zcl_cd_ops_pay_fixture=>gc_scenario-two_runs )-augbl ) ) ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_evaluation-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-clrrule_invalid ] ) )
+          msg = 'CLEARING_RULE_INVALID' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_evaluation-findings[ check_code = zif_cd_ops_payout_types=>gc_code-evidence_failed ] ) )
+          msg = 'Not an evidence read failure' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD unwatched_method_no_verdict.
     TRY.
         DATA(ls_scenario) = load( zcl_cd_ops_pay_fixture=>gc_scenario-two_runs ).

@@ -2,12 +2,12 @@
   "_artifact": {
     "name": "portable_checks.json",
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
-    "generated": "2026-11-08"
+    "generated": "2026-11-10"
   },
   "passed": 27,
   "total": 27,
   "abap_files": 401,
-  "declared_unit_methods": 1663,
+  "declared_unit_methods": 1685,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,13 +79,13 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (4020 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (4060 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "439 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "448 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {
@@ -151,7 +151,7 @@
     {
       "name": "param_definitions_complete",
       "passed": true,
-      "detail": "141 delivered definitions in 4 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CD_OPS_PARAMS_CA derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
+      "detail": "142 delivered definitions in 4 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CD_OPS_PARAMS_CA derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
       "failures": []
     },
     {
@@ -169,7 +169,7 @@
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1256 file(s), 3 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1257 file(s), 3 documented exemption(s).",
       "failures": []
     }
   ]

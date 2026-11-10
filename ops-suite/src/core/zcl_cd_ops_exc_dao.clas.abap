@@ -1,9 +1,11 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_ops_exc_dao.clas.abap
 *& Purpose:
-*& Exception repository: finds the open exceptions of an object and closes
-*& them as resolved with one ZCD_OPS_EXC_HIST row each. Used where an
-*& exception is closed by another app's save (PRISM
+*& Exception repository: finds the open exceptions of an object (with the
+*& disposition and change stamp read) and closes them as resolved with one
+*& ZCD_OPS_EXC_HIST row each - all or nothing: an exception is written only
+*& while it is as read, the history rows only when every exception was
+*& written. Used where an exception is closed by another app's save (PRISM
 *& payment request handled manually). No commit - caller's LUW.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
@@ -11,6 +13,10 @@
 *& 2026-11-06 | Performance fix 5: index OBJ is (MANDT, PE_AREA, OBJECT_KEY) - the object type is not known here.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Purpose: the EBS release approval is no longer a caller (read-only scope).
+*& 2026-11-10 | Concurrency review: guarded resolve (WHERE key AND disposition AND LAST_CHANGED_AT as read,
+*&            | sy-dbcnt counted) - a half-written closure is never possible: a count short of the exceptions
+*&            | raises 787 before the history insert; LAST_CHANGED_AT set; history inserted accepting duplicate
+*&            | keys with a count check.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - exception repository</p>
 CLASS zcl_cd_ops_exc_dao DEFINITION
@@ -23,8 +29,17 @@ CLASS zcl_cd_ops_exc_dao DEFINITION
 
   PRIVATE SECTION.
     TYPES tt_hist TYPE STANDARD TABLE OF zcd_ops_exc_hist WITH EMPTY KEY.
-    TYPES ty_db_update TYPE zcd_ops_finding WITH INDICATORS col_ind TYPE abap_bool.
-    TYPES tt_db_update TYPE STANDARD TABLE OF ty_db_update WITH EMPTY KEY.
+
+    "! Resolve one exception only while its disposition and change stamp are the ones read; abap_false =
+    "! changed meanwhile, nothing written
+    METHODS guarded_resolve
+      IMPORTING
+        is_open        TYPE zif_cd_ops_exc_types=>ty_exc_open
+        iv_reason      TYPE zif_cd_ops_exc_types=>ty_reason
+        iv_user        TYPE syuname
+        iv_at          TYPE timestampl
+      RETURNING
+        VALUE(rv_done) TYPE abap_bool.
 ENDCLASS.
 
 
@@ -33,15 +48,15 @@ CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_exc_dao~find_open.
     " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_KEY (fix 5: callers know no object type)
-    SELECT run_id, finding_no
+    SELECT run_id, finding_no, disposition, owner, last_changed_at
       FROM zcd_ops_finding
-      WHERE pe_area     = @iv_pe_area
+      WHERE pe_area    = @iv_pe_area
         AND object_key = @iv_object_key
         AND ( check_code = @iv_check_code OR @iv_check_code = @space )
         AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
                              @zif_cd_ops_types=>gc_disposition-assigned )
       ORDER BY run_id, finding_no
-      INTO CORRESPONDING FIELDS OF TABLE @rt_keys.
+      INTO CORRESPONDING FIELDS OF TABLE @rt_open.
   ENDMETHOD.
 
 
@@ -49,29 +64,18 @@ CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
     DATA lt_hist TYPE tt_hist.
     DATA ls_hist TYPE zcd_ops_exc_hist.
 
-    CHECK it_keys IS NOT INITIAL.
-    SELECT run_id, finding_no, disposition, owner
-      FROM zcd_ops_finding
-      FOR ALL ENTRIES IN @it_keys
-      WHERE run_id     = @it_keys-run_id
-        AND finding_no = @it_keys-finding_no
-      INTO TABLE @DATA(lt_current).
-
-    DATA lt_update TYPE tt_db_update.
-    DATA ls_update TYPE ty_db_update.
-    LOOP AT lt_current ASSIGNING FIELD-SYMBOL(<ls_current>).
-      CLEAR ls_update.
-      ls_update-run_id              = <ls_current>-run_id.
-      ls_update-finding_no          = <ls_current>-finding_no.
-      ls_update-disposition         = zif_cd_ops_types=>gc_disposition-resolved.
-      ls_update-resolved_by         = iv_user.
-      ls_update-resolved_at         = iv_at.
-      ls_update-resolution          = iv_reason.
-      ls_update-col_ind-disposition = abap_true.
-      ls_update-col_ind-resolved_by = abap_true.
-      ls_update-col_ind-resolved_at = abap_true.
-      ls_update-col_ind-resolution  = abap_true.
-      INSERT ls_update INTO TABLE lt_update.
+    CHECK it_open IS NOT INITIAL.
+    DATA(lv_done) = 0.
+    DATA(ls_changed) = VALUE zif_cd_ops_exc_types=>ty_exc_open( ).
+    LOOP AT it_open ASSIGNING FIELD-SYMBOL(<ls_open>).
+      IF guarded_resolve( is_open   = <ls_open>
+                          iv_reason = iv_reason
+                          iv_user   = iv_user
+                          iv_at     = iv_at ) = abap_true.
+        lv_done = lv_done + 1.
+      ELSEIF ls_changed IS INITIAL.
+        ls_changed = <ls_open>.
+      ENDIF.
 
       CLEAR ls_hist.
       TRY.
@@ -82,12 +86,12 @@ CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
             EXPORTING
               previous = lx_uuid.
       ENDTRY.
-      ls_hist-run_id     = <ls_current>-run_id.
-      ls_hist-finding_no = <ls_current>-finding_no.
+      ls_hist-run_id     = <ls_open>-run_id.
+      ls_hist-finding_no = <ls_open>-finding_no.
       ls_hist-action     = iv_action.
-      ls_hist-from_disp  = <ls_current>-disposition.
+      ls_hist-from_disp  = <ls_open>-disposition.
       ls_hist-to_disp    = zif_cd_ops_types=>gc_disposition-resolved.
-      ls_hist-owner      = <ls_current>-owner.
+      ls_hist-owner      = <ls_open>-owner.
       ls_hist-reason     = iv_reason.
       ls_hist-reference  = iv_reference.
       ls_hist-created_by = iv_user.
@@ -95,19 +99,35 @@ CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
       INSERT ls_hist INTO TABLE lt_hist.
     ENDLOOP.
 
-    CHECK lt_update IS NOT INITIAL.
-    UPDATE zcd_ops_finding FROM TABLE @lt_update INDICATORS SET STRUCTURE col_ind.
-    IF sy-subrc <> 0.
+    " All or nothing: every exception written before any history row. One changed by a user or a run since
+    " it was read means nothing of this closure may stay - the caller ends the LUW without commit (RAP
+    " save: short dump, the framework rolls back the rows already written)
+    IF lv_done <> lines( it_open ).
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e011(zcd_ops) WITH 'ZCD_OPS_FINDING'.
+        MESSAGE e787(zcd_ops) WITH ls_changed-run_id ls_changed-finding_no.
     ENDIF.
-
-    CHECK lt_hist IS NOT INITIAL.
-    INSERT zcd_ops_exc_hist FROM TABLE @lt_hist.
-    IF sy-subrc <> 0.
+    INSERT zcd_ops_exc_hist FROM TABLE @lt_hist ACCEPTING DUPLICATE KEYS.
+    IF sy-subrc <> 0 OR sy-dbcnt <> lines( lt_hist ).
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e010(zcd_ops) WITH 'ZCD_OPS_EXC_HIST'.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD guarded_resolve.
+    " One keyed UPDATE per exception (an app save closes the few exceptions of one request): ABAP SQL has
+    " no set-based compare-and-set, an UPDATE FROM TABLE matches by key only and would overwrite a change
+    UPDATE zcd_ops_finding
+      SET disposition     = @zif_cd_ops_types=>gc_disposition-resolved,
+          resolved_by     = @iv_user,
+          resolved_at     = @iv_at,
+          resolution      = @iv_reason,
+          last_changed_at = @iv_at
+      WHERE run_id          = @is_open-run_id
+        AND finding_no      = @is_open-finding_no
+        AND disposition     = @is_open-disposition
+        AND last_changed_at = @is_open-last_changed_at.
+    rv_done = xsdbool( sy-subrc = 0 AND sy-dbcnt = 1 ).
   ENDMETHOD.
 
 ENDCLASS.

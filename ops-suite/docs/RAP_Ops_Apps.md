@@ -26,7 +26,7 @@ All four: RAP **managed**, **no draft** (each action is one complete change), op
 | Request waiver | O or A; no request pending; reason; end date not in the past | Requester, time, reason, end date stored; disposition unchanged | 02 |
 | Approve waiver | Request pending; approver ≠ requester (**four-eyes**) | Disposition W until the end date | 85 |
 
-Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, owner, reason, user, time). A waiver request survives a re-run (carry-forward keeps requester, reason and end date); a valid waiver is not reopened by re-runs (phase 1). Buttons are switched off where an action is not allowed (the requester never sees an active *Approve*).
+Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, owner, reason, user, time). A waiver request survives a re-run (carry-forward keeps requester, reason and end date); a valid waiver is not reopened by re-runs (phase 1). Buttons are switched off where an action is not allowed (the requester never sees an active *Approve*). **ETag (2026-11-10):** every action sets `LastChangedAt`; an action on a version the batch store changed after the screen was loaded is refused (refresh and act again), and the store never overwrites a user's action (guarded writes, `RAP_Apps_Design.md` §3).
 
 ### 2.2 Health check suppressions (design 6.3)
 - **Create** (02): check ID, optional object-key pattern (PCRE, complete key, case ignored: `HCK_C04/.*/US01`; refused with 418 when it does not compile) and company code, period, reason. Up to `HCK_SUPPRESS_MAX_DAYS` (default 7) the suppression is active at once; longer waits for a **second user** (85, *Approve*). *End now* stops it from the next run.
@@ -40,6 +40,7 @@ Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, 
 ### 2.4 PRISM requests handled manually (design 6.5, record only)
 - **Create** = handled manually (02): PRISM request reference, source, handling reference (payment document, ticket), reason — all mandatory except source. Status H.
 - On save the open FMON exception whose object key is the request reference (upper case) is **resolved** (history action MANUAL, reference = handling reference). SAP re-sends nothing and re-posts nothing.
+- **All or nothing (2026-11-10):** the open exceptions are read in the early save (`CHECK_BEFORE_SAVE`; a read failure refuses the save with message 788) and resolved in the late save only while each is still as read; a write failure or an exception changed meanwhile ends the save with nothing saved (short dump with message 787 - reload and record again). Before, the record was saved and the failure was only a warning.
 
 ## 3. Tests
 

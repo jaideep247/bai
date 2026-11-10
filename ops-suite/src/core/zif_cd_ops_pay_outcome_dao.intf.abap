@@ -20,6 +20,11 @@
 *&            | items with payment run and block, due requests of A_PRQ_NOT_PAID, NIGHTLY / NIGHTLYREQ cursors and
 *&            | the SWEEP upper date (GET_CHANGES iv_to), package rows per mode's sources, not yet snapshotted =
 *&            | after the DOCUMENTS watermark.
+*& 2026-11-10 | Concurrency review: SAVE_VERSIONS validates the judgement under the worklist guard (rows it
+*&            | was based on, IT_BASIS; no second current row of a key) and inserts accepting duplicate keys
+*&            | with a count check; package rows with their mode and members (ZCD_PAY_OUTPKGM, GET_PACKAGE for
+*&            | the unit), DELETE_PACKAGES per mode; SAVE_FAILURES (consecutive failed runs of a source);
+*&            | SAVE_WATERMARK keeps FAIL_COUNT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot repository</p>
 "! Implementation ZCL_CD_OPS_PAY_OUTCOME_DAO, factory ZCL_CD_OPS_FACTORY=>GET_PAY_OUTCOME_DAO.
@@ -32,7 +37,7 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     RETURNING
       VALUE(rt_watermarks) TYPE zif_cd_ops_payout_types=>tt_watermark.
 
-  "! Write the watermark of a source (no commit)
+  "! Write the watermark of a source (no commit); FAIL_COUNT is not written (SAVE_FAILURES)
   METHODS save_watermark
     IMPORTING
       is_watermark TYPE zif_cd_ops_payout_types=>ty_watermark
@@ -95,16 +100,26 @@ INTERFACE zif_cd_ops_pay_outcome_dao
       VALUE(rt_keys) TYPE zif_cd_ops_payout_types=>tt_req_key.
 
   "! Write the worklist, set-based, no commit: delete rows (open rows of a payment that left the
-  "! worklist), close versions (VALID_TO set), update open rows in place, insert new rows
-  "! @raising zcx_cd_ops_error | a row could not be written (a concurrent run changed it: retried)
+  "! worklist), close versions (VALID_TO set), update open rows in place, insert new rows. Optimistic
+  "! (2026-11-10): first the worklist guard row is locked (SELECT SINGLE FOR UPDATE, held until the
+  "! caller's commit or rollback), then the current rows of every entity written (payment document, or
+  "! FIN + source of a request) are read again in one keyed read and must be exactly the current rows of
+  "! it_basis (key, VALID_FROM, EVALUATED_AT, OUTCOME, FINDING), and no row inserted as current may meet
+  "! a current row of its key that is not closed or deleted here - else nothing is written
+  "! @parameter it_basis | the rows the judgement was based on (GET_VERSIONS / GET_REQUEST_VERSIONS)
+  "! @raising zcx_cd_ops_error | the judgement is stale (780: another run changed the rows, 781: a second
+  "! current row) or a row could not be written - the caller rolls back, the next run retries
   METHODS save_versions
     IMPORTING
+      it_basis  TYPE zif_cd_ops_payout_types=>tt_version
       it_close  TYPE zif_cd_ops_payout_types=>tt_version
       it_insert TYPE zif_cd_ops_payout_types=>tt_version
       it_delete TYPE zif_cd_ops_payout_types=>tt_version OPTIONAL
       it_update TYPE zif_cd_ops_payout_types=>tt_version OPTIONAL
     RAISING
-      zcx_cd_ops_error.
+      zcx_cd_ops_error
+      "! Technical database error: the caller (package boundary) rolls back
+      cx_sy_open_sql_db.
 
   "! Items of the FIN numbers of payment requests (DFKKOP-ZZ_FIN_TRANS_NUM) with the payment run of
   "! their clearing document (DPAYH-DOC1R = AUGBL, no proposal run) and the payment block
@@ -126,8 +141,9 @@ INTERFACE zif_cd_ops_pay_outcome_dao
       VALUE(rt_rows) TYPE zif_cd_ops_payout_types=>tt_due_request.
 
   " ------------------------------------------------------------ parallel packages (ZCD_PAY_OUTPKG)
-  "! Plan the packages of a run (status P), no commit
-  "! @raising zcx_cd_ops_error | a package row could not be written
+  "! Plan the packages of a run (status P, mode) with their documents and requests (ZCD_PAY_OUTPKGM),
+  "! no commit
+  "! @raising zcx_cd_ops_error | a package or member row could not be written
   METHODS save_packages
     IMPORTING
       it_packages TYPE zif_cd_ops_payout_types=>tt_package
@@ -150,6 +166,14 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     RAISING
       zcx_cd_ops_error.
 
+  "! One package as its unit judges it: the key, the run time and the documents and requests planned for
+  "! it (ZCD_PAY_OUTPKGM) - the bgPF unit carries the key only (2026-11-10)
+  METHODS get_package
+    IMPORTING
+      is_key            TYPE zif_cd_ops_payout_types=>ty_pkg_key
+    RETURNING
+      VALUE(rs_package) TYPE zif_cd_ops_payout_types=>ty_package.
+
   "! Packages of a run with status and counts (no document lists)
   METHODS get_packages
     IMPORTING
@@ -165,14 +189,25 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     RETURNING
       VALUE(rv_count) TYPE i.
 
-  "! Delete the package rows of the sources of every run but this one (run lock of the mode held - the
-  "! rows of another mode's sources stay), no commit; rows deleted
+  "! Delete the package rows and members of every earlier run of the mode (its run lock held: those runs
+  "! have ended - SWEEP and FAST read the same sources, so the mode decides, never the source), no
+  "! commit; rows deleted (package rows and members)
   METHODS delete_packages
     IMPORTING
       iv_keep_run_id  TYPE zif_cd_ops_types=>ty_run_id
-      it_sources      TYPE zif_cd_ops_payout_types=>tt_source_id
+      iv_mode         TYPE zif_cd_ops_payout_types=>ty_mode
     RETURNING
       VALUE(rv_count) TYPE i.
+
+  "! Consecutive failed runs of a source (ZCD_PAY_OUTWM-FAIL_COUNT; a source without watermark row gets one
+  "! without position - its next run is still a first run), no commit
+  "! @raising zcx_cd_ops_error | the row could not be written
+  METHODS save_failures
+    IMPORTING
+      iv_source TYPE zif_cd_ops_payout_types=>ty_source_id
+      iv_count  TYPE i
+    RAISING
+      zcx_cd_ops_error.
 
   "! Versions written by a run (VALID_FROM = the run time) with a finding, with the method and flow
   "! indicator of the payment (DPAYH by key, TFK042Z) - aggregated findings of parallel packages

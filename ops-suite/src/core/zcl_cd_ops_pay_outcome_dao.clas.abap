@@ -17,8 +17,10 @@
 *& exceptions): every row of payments (index DOC) and requests (index FIN),
 *& deleted / closed / updated / inserted FROM TABLE (no commit). Request
 *& items (DFKKOP by FIN with their payment run), due requests with item
-*& sums (A_PRQ_NOT_PAID). Reads business tables only; writes
-*& ZCD_PAY_OUTCOME, ZCD_PAY_OUTWM and ZCD_PAY_OUTPKG only.
+*& sums (A_PRQ_NOT_PAID). Every worklist write is optimistic: under the guard
+*& row of ZCD_PAY_OUTWM the rows the judgement was based on are compared
+*& with the current rows first. Reads business tables only; writes
+*& ZCD_PAY_OUTCOME, ZCD_PAY_OUTWM, ZCD_PAY_OUTPKG and ZCD_PAY_OUTPKGM only.
 *& Modification log:
 *& 2026-11-07 | Initial version (incremental 5-minute payment outcome snapshot).
 *& 2026-11-08 | RECHECK reads the outcomes that are not final by the one definition
@@ -38,6 +40,12 @@
 *&            | over the current rows, SWEEP upper date of every change read, package rows deleted per mode's
 *&            | sources, not yet snapshotted = entered after the DOCUMENTS watermark (no NOT EXISTS on the
 *&            | worklist).
+*& 2026-11-10 | Concurrency review: SAVE_VERSIONS locks the worklist guard row (ZCD_PAY_OUTWM WORKLIST, SELECT
+*&            | SINGLE FOR UPDATE), reads the current rows of the entities written again (one keyed read per kind)
+*&            | and writes nothing on a stale judgement (780) or a second current row of a key (781); INSERT FROM
+*&            | TABLE accepting duplicate keys with a count check (a duplicate raised CX_SY_OPEN_SQL_DB, the
+*&            | sy-subrc check never fired); package rows with the mode and members (ZCD_PAY_OUTPKGM), GET_PACKAGE,
+*&            | DELETE_PACKAGES per mode; SAVE_FAILURES; SAVE_WATERMARK keeps FAIL_COUNT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot SQL</p>
 CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
@@ -131,6 +139,55 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
       RETURNING
         VALUE(rs_db) TYPE zcd_pay_outcome.
 
+    "! What a judgement saw of a current row: key, start, evaluation, outcome and finding
+    TYPES:
+      BEGIN OF ty_stamp,
+        fin_id       TYPE zif_cd_ops_trace_types=>ty_fin,
+        source       TYPE zif_cd_ops_trace_types=>ty_source,
+        bukrs        TYPE zif_cd_ops_trace_types=>ty_bukrs,
+        augbl        TYPE zif_cd_ops_trace_types=>ty_docno,
+        laufd        TYPE d,
+        laufi        TYPE c LENGTH 6,
+        valid_from   TYPE zif_cd_ops_payout_types=>ty_timestamp,
+        evaluated_at TYPE zif_cd_ops_payout_types=>ty_timestamp,
+        outcome      TYPE zif_cd_ops_payout_types=>ty_outcome,
+        finding      TYPE zif_cd_ops_types=>ty_check_code,
+      END OF ty_stamp.
+    TYPES tt_stamp TYPE SORTED TABLE OF ty_stamp WITH NON-UNIQUE KEY table_line.
+    "! Rows closed or deleted by a write, by key and start
+    TYPES tt_retired TYPE SORTED TABLE OF ty_stamp
+                     WITH NON-UNIQUE KEY fin_id source bukrs augbl laufd laufi valid_from.
+    "! Current rows by worklist key (FIN, source, company code, payment document, payment run)
+    TYPES tt_current TYPE SORTED TABLE OF zif_cd_ops_payout_types=>ty_version
+                     WITH NON-UNIQUE KEY fin_id source bukrs augbl laufd laufi.
+
+    "! Lock the guard row of the worklist (ZCD_PAY_OUTWM, source WORKLIST) until the caller's commit or
+    "! rollback; the first write ever creates it
+    "! @raising zcx_cd_ops_error | the guard row could not be locked
+    METHODS lock_worklist
+      RAISING
+        zcx_cd_ops_error.
+
+    "! Under the guard: the current rows of every entity written must be the current rows the judgement
+    "! was based on, and no row inserted as current may meet a current row of its key that stays
+    "! @raising zcx_cd_ops_error | 780 stale judgement, 781 second current row
+    METHODS validate
+      IMPORTING
+        it_basis  TYPE zif_cd_ops_payout_types=>tt_version
+        it_close  TYPE zif_cd_ops_payout_types=>tt_version
+        it_insert TYPE zif_cd_ops_payout_types=>tt_version
+        it_delete TYPE zif_cd_ops_payout_types=>tt_version
+        it_update TYPE zif_cd_ops_payout_types=>tt_version
+      RAISING
+        zcx_cd_ops_error.
+
+    "! Entity of a row for a message: the payment document, else FIN / source of the request
+    CLASS-METHODS entity_text
+      IMPORTING
+        is_stamp       TYPE ty_stamp
+      RETURNING
+        VALUE(rv_text) TYPE string.
+
     "! Payment method range of a query (an empty method list reads nothing)
     CLASS-METHODS method_range
       IMPORTING
@@ -145,8 +202,9 @@ ENDCLASS.
 CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_pay_outcome_dao~get_watermarks.
-    SELECT source, wm_date, wm_time, wm_key, wm_seq, updated_at, last_rows, current_to
+    SELECT source, wm_date, wm_time, wm_key, wm_seq, updated_at, last_rows, current_to, fail_count
       FROM zcd_pay_outwm
+      WHERE source <> @zif_cd_ops_payout_types=>gc_guard_source
       ORDER BY source
       INTO CORRESPONDING FIELDS OF TABLE @rt_watermarks.
   ENDMETHOD.
@@ -154,6 +212,20 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_pay_outcome_dao~save_watermark.
     DATA ls_db TYPE zcd_pay_outwm.
+    " The position only: the count of failed runs belongs to the run (SAVE_FAILURES), never to a package
+    UPDATE zcd_pay_outwm
+      SET wm_date    = @is_watermark-wm_date,
+          wm_time    = @is_watermark-wm_time,
+          wm_key     = @is_watermark-wm_key,
+          wm_seq     = @is_watermark-wm_seq,
+          updated_at = @is_watermark-updated_at,
+          last_rows  = @is_watermark-last_rows,
+          current_to = @is_watermark-current_to
+      WHERE source = @is_watermark-source.
+    IF sy-subrc = 0.
+      RETURN.
+    ENDIF.
+    " First watermark of the source
     ls_db-source     = is_watermark-source.
     ls_db-wm_date    = is_watermark-wm_date.
     ls_db-wm_time    = is_watermark-wm_time.
@@ -162,7 +234,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
     ls_db-updated_at = is_watermark-updated_at.
     ls_db-last_rows  = is_watermark-last_rows.
     ls_db-current_to = is_watermark-current_to.
-    MODIFY zcd_pay_outwm FROM @ls_db.
+    INSERT zcd_pay_outwm FROM @ls_db.
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e010(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-watermark.
@@ -629,9 +701,22 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
     LOOP AT it_update ASSIGNING FIELD-SYMBOL(<ls_update>).
       INSERT to_db( <ls_update> ) INTO TABLE lt_update.
     ENDLOOP.
-    " Open rows of payments that left the worklist (clean, or an exception now): no history. A row a
-    " concurrent run (FAST and NIGHTLY) already removed means the evaluation is stale: the package fails
-    " and is judged again by the next run
+    IF lt_close IS INITIAL AND lt_insert IS INITIAL AND lt_delete IS INITIAL AND lt_update IS INITIAL.
+      RETURN.
+    ENDIF.
+    " Optimistic concurrency (review 2026-11-10): the judgement read the rows without a lock, and FAST,
+    " NIGHTLY, SWEEP and the parallel units run at the same time (own run locks - FAST is never held up
+    " by a nightly run). Under the guard the current rows are read again: a stale judgement writes
+    " nothing (the caller rolls back, the next run judges again) - never two current rows of a key, never
+    " a cleared payment that keeps an open exception, never last writer wins
+    lock_worklist( ).
+    validate( it_basis  = it_basis
+              it_close  = it_close
+              it_insert = it_insert
+              it_delete = it_delete
+              it_update = it_update ).
+    " Open rows of payments that left the worklist (clean, or an exception now): no history. A row
+    " already removed means the evaluation is stale: the package fails and is judged again
     IF lt_delete IS NOT INITIAL.
       DELETE zcd_pay_outcome FROM TABLE @lt_delete.
       IF sy-subrc <> 0.
@@ -656,12 +741,131 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       ENDIF.
     ENDIF.
     IF lt_insert IS NOT INITIAL.
-      INSERT zcd_pay_outcome FROM TABLE @lt_insert.
-      IF sy-subrc <> 0.
+      " A duplicate key is a sy-subrc / count here, not CX_SY_OPEN_SQL_DB: the package fails closed
+      INSERT zcd_pay_outcome FROM TABLE @lt_insert ACCEPTING DUPLICATE KEYS.
+      IF sy-subrc <> 0 OR sy-dbcnt <> lines( lt_insert ).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
           MESSAGE e010(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-outcome.
       ENDIF.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD lock_worklist.
+    DATA ls_guard TYPE zcd_pay_outwm.
+    " One guard row for every writer of the worklist, held from the re-read of the current rows to the
+    " commit of the package (seconds): validation and write are one step for every other writer. Per-row
+    " locks would need one SELECT SINGLE FOR UPDATE per payment (ABAP SQL locks several rows only by
+    " changing them). VERIFY-ADT: lock wait of a parallel unit on the guard (QA1 VOL-01)
+    SELECT SINGLE FOR UPDATE source
+      FROM zcd_pay_outwm
+      WHERE source = @zif_cd_ops_payout_types=>gc_guard_source
+      INTO @DATA(lv_guard).
+    IF sy-subrc = 0 AND lv_guard IS NOT INITIAL.
+      RETURN.
+    ENDIF.
+    " First write ever: the new row is locked by its insert until the commit
+    ls_guard-source = zif_cd_ops_payout_types=>gc_guard_source.
+    INSERT zcd_pay_outwm FROM @ls_guard.
+    IF sy-subrc = 0.
+      RETURN.
+    ENDIF.
+    " Created by a parallel first writer meanwhile (its commit released it): lock that row
+    SELECT SINGLE FOR UPDATE source
+      FROM zcd_pay_outwm
+      WHERE source = @zif_cd_ops_payout_types=>gc_guard_source
+      INTO @lv_guard.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e012(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-watermark.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validate.
+    DATA lt_docno TYPE zif_cd_ops_trace_types=>tt_docno.
+    DATA lt_requests TYPE zif_cd_ops_payout_types=>tt_req_key.
+    DATA lt_written TYPE zif_cd_ops_payout_types=>tt_version.
+    DATA lt_now TYPE tt_current.
+    DATA lt_then TYPE tt_stamp.
+    DATA lt_seen TYPE tt_stamp.
+    DATA lt_retired TYPE tt_retired.
+    DATA lt_new_keys TYPE tt_current.
+    DATA lt_changed TYPE SORTED TABLE OF string WITH UNIQUE KEY table_line.
+    INSERT LINES OF it_close INTO TABLE lt_written.
+    INSERT LINES OF it_insert INTO TABLE lt_written.
+    INSERT LINES OF it_delete INTO TABLE lt_written.
+    INSERT LINES OF it_update INTO TABLE lt_written.
+    " The entities written: payment documents and requests (FIN + source, payment document blank)
+    LOOP AT lt_written ASSIGNING FIELD-SYMBOL(<ls_written>).
+      IF <ls_written>-augbl IS NOT INITIAL.
+        INSERT <ls_written>-augbl INTO TABLE lt_docno.
+      ELSE.
+        INSERT VALUE #( fin = <ls_written>-fin_id source = <ls_written>-source ) INTO TABLE lt_requests.
+      ENDIF.
+    ENDLOOP.
+    " Their current rows now: one keyed read per kind (index DOC / FIN), never one per payment
+    DATA(lt_read) = zif_cd_ops_pay_outcome_dao~get_versions( lt_docno ).
+    INSERT LINES OF zif_cd_ops_pay_outcome_dao~get_request_versions( lt_requests ) INTO TABLE lt_read.
+    LOOP AT lt_read ASSIGNING FIELD-SYMBOL(<ls_read>) WHERE valid_to = zif_cd_ops_payout_types=>gc_valid_to_open.
+      INSERT <ls_read> INTO TABLE lt_now.
+      INSERT CORRESPONDING ty_stamp( <ls_read> ) INTO TABLE lt_seen.
+    ENDLOOP.
+    " ... and the current rows the judgement saw of the same entities
+    LOOP AT it_basis ASSIGNING FIELD-SYMBOL(<ls_basis>) WHERE valid_to = zif_cd_ops_payout_types=>gc_valid_to_open.
+      IF ( <ls_basis>-augbl IS NOT INITIAL AND line_exists( lt_docno[ table_line = <ls_basis>-augbl ] ) )
+         OR ( <ls_basis>-augbl IS INITIAL
+              AND line_exists( lt_requests[ fin = <ls_basis>-fin_id source = <ls_basis>-source ] ) ).
+        INSERT CORRESPONDING ty_stamp( <ls_basis> ) INTO TABLE lt_then.
+      ENDIF.
+    ENDLOOP.
+    IF lt_seen <> lt_then.
+      " Another run closed, inserted or re-evaluated a row of these entities after this judgement
+      LOOP AT lt_then ASSIGNING FIELD-SYMBOL(<ls_then>).
+        IF NOT line_exists( lt_seen[ table_line = <ls_then> ] ).
+          INSERT entity_text( <ls_then> ) INTO TABLE lt_changed.
+        ENDIF.
+      ENDLOOP.
+      LOOP AT lt_seen ASSIGNING FIELD-SYMBOL(<ls_seen>).
+        IF NOT line_exists( lt_then[ table_line = <ls_seen> ] ).
+          INSERT entity_text( <ls_seen> ) INTO TABLE lt_changed.
+        ENDIF.
+      ENDLOOP.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e780(zcd_ops) WITH lines( lt_changed ) VALUE #( lt_changed[ 1 ] OPTIONAL ).
+    ENDIF.
+    " Never a second current row of a key: before a row is inserted as current, every current row of its
+    " key is closed or deleted in the same write, and no key is inserted as current twice
+    LOOP AT it_close ASSIGNING FIELD-SYMBOL(<ls_close>).
+      INSERT CORRESPONDING ty_stamp( <ls_close> ) INTO TABLE lt_retired.
+    ENDLOOP.
+    LOOP AT it_delete ASSIGNING FIELD-SYMBOL(<ls_delete>).
+      INSERT CORRESPONDING ty_stamp( <ls_delete> ) INTO TABLE lt_retired.
+    ENDLOOP.
+    LOOP AT it_insert ASSIGNING FIELD-SYMBOL(<ls_new>) WHERE valid_to = zif_cd_ops_payout_types=>gc_valid_to_open.
+      IF line_exists( lt_new_keys[ fin_id = <ls_new>-fin_id source = <ls_new>-source bukrs = <ls_new>-bukrs
+                                   augbl = <ls_new>-augbl laufd = <ls_new>-laufd laufi = <ls_new>-laufi ] ).
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e781(zcd_ops) WITH entity_text( CORRESPONDING #( <ls_new> ) ).
+      ENDIF.
+      INSERT <ls_new> INTO TABLE lt_new_keys.
+      LOOP AT lt_now ASSIGNING FIELD-SYMBOL(<ls_now>)
+           WHERE fin_id = <ls_new>-fin_id AND source = <ls_new>-source AND bukrs = <ls_new>-bukrs
+             AND augbl = <ls_new>-augbl AND laufd = <ls_new>-laufd AND laufi = <ls_new>-laufi.
+        IF NOT line_exists( lt_retired[ fin_id = <ls_now>-fin_id source = <ls_now>-source bukrs = <ls_now>-bukrs
+                                        augbl = <ls_now>-augbl laufd = <ls_now>-laufd laufi = <ls_now>-laufi
+                                        valid_from = <ls_now>-valid_from ] ).
+          RAISE EXCEPTION TYPE zcx_cd_ops_error
+            MESSAGE e781(zcd_ops) WITH entity_text( CORRESPONDING #( <ls_new> ) ).
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD entity_text.
+    rv_text = COND #( WHEN is_stamp-augbl IS NOT INITIAL THEN |{ is_stamp-augbl }|
+                      ELSE |{ is_stamp-fin_id } / { is_stamp-source }| ).
   ENDMETHOD.
 
 
@@ -695,21 +899,73 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
   METHOD zif_cd_ops_pay_outcome_dao~save_packages.
     DATA lt_db TYPE STANDARD TABLE OF zcd_pay_outpkg WITH EMPTY KEY.
     DATA ls_db TYPE zcd_pay_outpkg.
+    DATA lt_members TYPE STANDARD TABLE OF zcd_pay_outpkgm WITH EMPTY KEY.
+    DATA ls_member TYPE zcd_pay_outpkgm.
     CHECK it_packages IS NOT INITIAL.
     LOOP AT it_packages ASSIGNING FIELD-SYMBOL(<ls_package>).
       CLEAR ls_db.
       ls_db-run_id    = <ls_package>-run_id.
       ls_db-source    = <ls_package>-source.
       ls_db-pkg_no    = <ls_package>-pkg_no.
+      ls_db-run_mode  = <ls_package>-mode.
       ls_db-status    = zif_cd_ops_payout_types=>gc_pkg_status-planned.
-      ls_db-documents = lines( <ls_package>-docno ).
+      ls_db-documents = lines( <ls_package>-docno ) + lines( <ls_package>-requests ).
       INSERT ls_db INTO TABLE lt_db.
+      " The members: the unit of the package re-reads them by its key (2026-11-10)
+      LOOP AT <ls_package>-docno ASSIGNING FIELD-SYMBOL(<lv_docno>).
+        CLEAR ls_member.
+        ls_member-run_id = <ls_package>-run_id.
+        ls_member-source = <ls_package>-source.
+        ls_member-pkg_no = <ls_package>-pkg_no.
+        ls_member-augbl  = <lv_docno>.
+        INSERT ls_member INTO TABLE lt_members.
+      ENDLOOP.
+      LOOP AT <ls_package>-requests ASSIGNING FIELD-SYMBOL(<ls_request>).
+        CLEAR ls_member.
+        ls_member-run_id     = <ls_package>-run_id.
+        ls_member-source     = <ls_package>-source.
+        ls_member-pkg_no     = <ls_package>-pkg_no.
+        ls_member-fin_id     = <ls_request>-fin.
+        ls_member-req_source = <ls_request>-source.
+        INSERT ls_member INTO TABLE lt_members.
+      ENDLOOP.
     ENDLOOP.
-    INSERT zcd_pay_outpkg FROM TABLE @lt_db.
-    IF sy-subrc <> 0.
+    INSERT zcd_pay_outpkg FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS.
+    IF sy-subrc <> 0 OR sy-dbcnt <> lines( lt_db ).
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e010(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-package.
     ENDIF.
+    IF lt_members IS INITIAL.
+      RETURN.
+    ENDIF.
+    INSERT zcd_pay_outpkgm FROM TABLE @lt_members ACCEPTING DUPLICATE KEYS.
+    IF sy-subrc <> 0 OR sy-dbcnt <> lines( lt_members ).
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e010(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-member.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_package.
+    rs_package-run_id = is_key-run_id.
+    rs_package-source = is_key-source.
+    rs_package-pkg_no = is_key-pkg_no.
+    rs_package-run_at = is_key-run_at.
+    SELECT augbl, fin_id, req_source
+      FROM zcd_pay_outpkgm
+      WHERE run_id = @is_key-run_id
+        AND source = @is_key-source
+        AND pkg_no = @is_key-pkg_no
+      ORDER BY augbl, fin_id, req_source
+      INTO TABLE @DATA(lt_members).
+    LOOP AT lt_members ASSIGNING FIELD-SYMBOL(<ls_member>).
+      IF <ls_member>-augbl IS NOT INITIAL.
+        INSERT CONV #( <ls_member>-augbl ) INTO TABLE rs_package-docno.
+      ELSE.
+        INSERT VALUE #( fin = <ls_member>-fin_id source = <ls_member>-req_source ) INTO TABLE rs_package-requests.
+      ENDIF.
+    ENDLOOP.
+    rs_package-documents = lines( lt_members ).
   ENDMETHOD.
 
 
@@ -747,7 +1003,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ops_pay_outcome_dao~get_packages.
-    SELECT run_id, source, pkg_no, status, documents, evaluated, inserted, closed, message
+    SELECT run_id, source, pkg_no, run_mode AS mode, status, documents, evaluated, inserted, closed, message
       FROM zcd_pay_outpkg
       WHERE run_id = @iv_run_id
       ORDER BY source, pkg_no
@@ -765,14 +1021,37 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ops_pay_outcome_dao~delete_packages.
-    DATA lt_sources TYPE RANGE OF zif_cd_ops_payout_types=>ty_source_id.
-    CHECK it_sources IS NOT INITIAL.
-    " Only the sources of the mode whose run lock is held: a NIGHTLY run's packages survive a FAST run
-    lt_sources = VALUE #( FOR lv_source IN it_sources ( sign   = zif_cd_ops_types=>gc_range-sign_include
-                                                        option = zif_cd_ops_types=>gc_range-option_equal
-                                                        low    = lv_source ) ).
-    DELETE FROM zcd_pay_outpkg WHERE run_id <> @iv_keep_run_id AND source IN @lt_sources.
+    " Only the earlier runs of the mode whose run lock is held (they have ended): SWEEP reads the same
+    " evidence sources as FAST, so the mode decides, never the source (review 2026-11-10). Rows without a
+    " mode were written before the mode existed - their runs have ended long since
+    DELETE FROM zcd_pay_outpkgm
+      WHERE run_id IN ( SELECT run_id FROM zcd_pay_outpkg
+                          WHERE ( run_mode = @iv_mode OR run_mode = @space )
+                            AND run_id <> @iv_keep_run_id ).
     rv_count = sy-dbcnt.
+    DELETE FROM zcd_pay_outpkg
+      WHERE ( run_mode = @iv_mode OR run_mode = @space )
+        AND run_id <> @iv_keep_run_id.
+    rv_count = rv_count + sy-dbcnt.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_pay_outcome_dao~save_failures.
+    DATA ls_db TYPE zcd_pay_outwm.
+    UPDATE zcd_pay_outwm
+      SET fail_count = @iv_count
+      WHERE source = @iv_source.
+    IF sy-subrc = 0.
+      RETURN.
+    ENDIF.
+    " The source failed before its first watermark: a row without position (its next run is a first run)
+    ls_db-source     = iv_source.
+    ls_db-fail_count = iv_count.
+    INSERT zcd_pay_outwm FROM @ls_db.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e010(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-watermark.
+    ENDIF.
   ENDMETHOD.
 
 

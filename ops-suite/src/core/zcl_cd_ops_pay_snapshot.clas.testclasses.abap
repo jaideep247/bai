@@ -32,6 +32,12 @@
 *&            | closing version, open row changed in place, late payment, re-entry through RETURNS,
 *&            | payment requests, NIGHTLY and SWEEP modes, duplicate current rows of a race, lag of the
 *&            | FAST sources only.
+*& 2026-11-10 | Concurrency review: the package write gets the rows the judgement was based on; a stale
+*&            | judgement (a concurrent mode changed the rows) and a database error fail the package closed
+*&            | (rollback, nothing written, watermark kept, finding); the units re-read their package by key
+*&            | (the queue double runs the operation with the key only); packages deleted per mode; the count of
+*&            | consecutive failed runs: a warning first, an error from PAYOUT_FAIL_ESCALATE on, reset by a run
+*&            | without failure; a configuration error is PAY_OUTCOME_CONFIG.
 *&---------------------------------------------------------------------*
 "! Worklist repository double: evidence events per source, rows in memory
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
@@ -56,6 +62,13 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     "! Package rows (ZCD_PAY_OUTPKG) and every watermark saved, in order
     DATA mt_packages TYPE zif_cd_ops_payout_types=>tt_package.
     DATA mt_wm_history TYPE STANDARD TABLE OF zif_cd_ops_payout_types=>ty_watermark WITH EMPTY KEY.
+    "! Members of the planned packages (documents and requests, as ZCD_PAY_OUTPKGM)
+    DATA mt_members TYPE zif_cd_ops_payout_types=>tt_package.
+    "! The rows the last package write was based on
+    DATA mt_basis TYPE zif_cd_ops_payout_types=>tt_version.
+    "! A concurrent run changed the rows of the next package write (780), or the database fails (SQL error)
+    DATA mv_stale TYPE abap_bool.
+    DATA mv_db_error TYPE abap_bool.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -64,10 +77,13 @@ CLASS ltd_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome_dao~save_watermark.
+    " As the repository: the position only, the count of failed runs stays
+    DATA(ls_watermark) = is_watermark.
+    ls_watermark-fail_count = VALUE #( mt_watermarks[ source = is_watermark-source ]-fail_count OPTIONAL ).
     mv_wm_saves = mv_wm_saves + 1.
     DELETE mt_watermarks WHERE source = is_watermark-source.
-    INSERT is_watermark INTO TABLE mt_watermarks.
-    INSERT is_watermark INTO TABLE mt_wm_history.
+    INSERT ls_watermark INTO TABLE mt_watermarks.
+    INSERT ls_watermark INTO TABLE mt_wm_history.
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome_dao~get_changes.
@@ -148,6 +164,7 @@ CLASS ltd_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_pay_outcome_dao~save_packages.
     LOOP AT it_packages ASSIGNING FIELD-SYMBOL(<ls_package>).
+      INSERT <ls_package> INTO TABLE mt_members.
       DATA(ls_row) = <ls_package>.
       ls_row-status = zif_cd_ops_payout_types=>gc_pkg_status-planned.
       ls_row-documents = lines( ls_row-docno ).
@@ -156,14 +173,34 @@ CLASS ltd_dao IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
+  METHOD zif_cd_ops_pay_outcome_dao~get_package.
+    READ TABLE mt_members INTO DATA(ls_member)
+         WITH KEY run_id = is_key-run_id source = is_key-source pkg_no = is_key-pkg_no.
+    IF sy-subrc = 0.
+      rs_package = ls_member.
+    ENDIF.
+    rs_package-run_at = is_key-run_at.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome_dao~save_failures.
+    READ TABLE mt_watermarks ASSIGNING FIELD-SYMBOL(<ls_watermark>) WITH TABLE KEY source = iv_source.
+    IF sy-subrc = 0.
+      <ls_watermark>-fail_count = iv_count.
+      RETURN.
+    ENDIF.
+    INSERT VALUE #( source = iv_source fail_count = iv_count ) INTO TABLE mt_watermarks.
+  ENDMETHOD.
+
   METHOD zif_cd_ops_pay_outcome_dao~claim_package.
-    rv_claimed = xsdbool( VALUE #( mt_packages[ source = is_package-source pkg_no = is_package-pkg_no ]-status OPTIONAL )
+    rv_claimed = xsdbool( VALUE #( mt_packages[ run_id = is_package-run_id
+                                                source = is_package-source
+                                                pkg_no = is_package-pkg_no ]-status OPTIONAL )
                           = zif_cd_ops_payout_types=>gc_pkg_status-planned ).
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome_dao~finish_package.
     READ TABLE mt_packages ASSIGNING FIELD-SYMBOL(<ls_row>)
-         WITH KEY source = is_package-source pkg_no = is_package-pkg_no.
+         WITH KEY run_id = is_package-run_id source = is_package-source pkg_no = is_package-pkg_no.
     IF sy-subrc = 0.
       <ls_row>-status    = is_package-status.
       <ls_row>-evaluated = is_package-evaluated.
@@ -174,11 +211,14 @@ CLASS ltd_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome_dao~get_packages.
-    rt_packages = mt_packages.
+    LOOP AT mt_packages ASSIGNING FIELD-SYMBOL(<ls_row>) WHERE run_id = iv_run_id.
+      INSERT <ls_row> INTO TABLE rt_packages.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome_dao~abandon_packages.
-    LOOP AT mt_packages ASSIGNING FIELD-SYMBOL(<ls_row>) WHERE status = zif_cd_ops_payout_types=>gc_pkg_status-planned.
+    LOOP AT mt_packages ASSIGNING FIELD-SYMBOL(<ls_row>)
+         WHERE run_id = iv_run_id AND status = zif_cd_ops_payout_types=>gc_pkg_status-planned.
       <ls_row>-status = zif_cd_ops_payout_types=>gc_pkg_status-abandoned.
       rv_count = rv_count + 1.
     ENDLOOP.
@@ -186,12 +226,8 @@ CLASS ltd_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_pay_outcome_dao~delete_packages.
     DATA(lv_before) = lines( mt_packages ).
-    LOOP AT mt_packages ASSIGNING FIELD-SYMBOL(<ls_row>) WHERE run_id <> iv_keep_run_id.
-      IF line_exists( it_sources[ table_line = <ls_row>-source ] ).
-        CLEAR <ls_row>.
-      ENDIF.
-    ENDLOOP.
-    DELETE mt_packages WHERE source IS INITIAL.
+    DELETE mt_packages WHERE run_id <> iv_keep_run_id AND mode = iv_mode.
+    DELETE mt_members WHERE run_id <> iv_keep_run_id AND mode = iv_mode.
     rv_count = lv_before - lines( mt_packages ).
   ENDMETHOD.
 
@@ -203,6 +239,13 @@ CLASS ltd_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome_dao~save_versions.
+    mt_basis = it_basis.
+    IF mv_stale = abap_true.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e780(zcd_ops) WITH 1 space.
+    ENDIF.
+    IF mv_db_error = abap_true.
+      RAISE EXCEPTION NEW cx_sy_open_sql_db( ).
+    ENDIF.
     LOOP AT it_delete ASSIGNING FIELD-SYMBOL(<ls_delete>).
       DELETE mt_versions WHERE fin_id = <ls_delete>-fin_id AND source = <ls_delete>-source
                            AND bukrs = <ls_delete>-bukrs AND augbl = <ls_delete>-augbl
@@ -245,6 +288,8 @@ CLASS ltd_outcome DEFINITION FINAL FOR TESTING.
     "! Documents asked for, per call
     DATA mt_asked TYPE zif_cd_ops_trace_types=>tt_docno.
     DATA mv_calls TYPE i.
+    "! The request source is not configured (configuration error 703)
+    DATA mv_no_source TYPE abap_bool.
 ENDCLASS.
 
 CLASS ltd_outcome IMPLEMENTATION.
@@ -264,6 +309,10 @@ CLASS ltd_outcome IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome~sources_of.
+    IF mv_no_source = abap_true.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e703(zcd_ops) WITH zif_cd_ops_trace_types=>gc_param-src_request.
+    ENDIF.
     LOOP AT mt_sources ASSIGNING FIELD-SYMBOL(<ls_source>).
       IF line_exists( it_fin[ table_line = <ls_source>-fin ] ).
         INSERT <ls_source> INTO TABLE rt_sources.
@@ -353,7 +402,8 @@ CLASS ltd_queue IMPLEMENTATION.
       mo_dao->zif_cd_ops_pay_outcome_dao~finish_package( ls_failed ).
       RETURN.
     ENDIF.
-    NEW zcl_cd_ops_pay_snap_op( is_package )->if_bgmc_op_single_tx_uncontr~execute( ).
+    " As bgPF: the operation carries the package key only, the unit re-reads its members
+    NEW zcl_cd_ops_pay_snap_op( CORRESPONDING #( is_package ) )->if_bgmc_op_single_tx_uncontr~execute( ).
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_snap_queue~pause.
@@ -460,6 +510,9 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
         fin       TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009100',
         parallel  TYPE string VALUE `4`,
         serial    TYPE string VALUE `1`,
+        "! Runs of other modes with package rows before the run
+        sweep_run TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000E1',
+        fast_run  TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000E2',
         one       TYPE string VALUE `1`,
         wait_sec  TYPE string VALUE `30`,
         second    TYPE i VALUE 2,
@@ -537,6 +590,22 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
     METHODS contiguous_done_rule       FOR TESTING.
     METHODS lag_oldest_source          FOR TESTING.
     METHODS lag_unknown_without_run    FOR TESTING.
+    METHODS write_gets_judged_rows     FOR TESTING.
+    METHODS stale_package_fails_closed FOR TESTING.
+    METHODS db_error_rolls_back        FOR TESTING.
+    METHODS failure_escalates          FOR TESTING.
+    METHODS success_resets_failures    FOR TESTING.
+    METHODS config_error_is_config     FOR TESTING.
+    METHODS unit_reads_members_by_key  FOR TESTING.
+    METHODS packages_deleted_per_mode  FOR TESTING.
+
+    "! The finding of the source in the run's findings (failed or configuration)
+    METHODS source_finding
+      IMPORTING
+        is_result         TYPE zcl_cd_ops_pay_snapshot=>ty_result
+        iv_code           TYPE zif_cd_ops_types=>ty_check_code
+      RETURNING
+        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
 
     "! Parameters of the run: parallel packages, package size, wait (seed values, else delivered)
     METHODS parameters
@@ -731,6 +800,189 @@ CLASS ltc_snapshot IMPLEMENTATION.
 
   METHOD act.
     rs_result = NEW zcl_cd_ops_pay_snapshot( )->run( iv_test_mode = iv_test_mode is_selection = is_selection ).
+  ENDMETHOD.
+
+
+  METHOD source_finding.
+    rs_finding = VALUE #( is_result-findings[ check_code = iv_code
+                                              object_key = |{ zif_cd_ops_payout_types=>gc_context }/| &&
+                                                           |{ zif_cd_ops_payout_types=>gc_source-documents }| ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): the package write gets every row the judgement was based on - the
+  " repository compares them with the current rows under the worklist guard
+  METHOD write_gets_judged_rows.
+    TRY.
+        DATA(ls_scenario) = given( zcl_cd_ops_pay_fixture=>gc_scenario-success_old ).
+        current_version( is_scenario = ls_scenario iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        DATA(lt_judged) = mo_dao->mt_versions.
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_basis exp = lt_judged msg = 'The rows judged are the basis' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a concurrent mode changed the rows after this run read them - the package
+  " writes nothing (rolled back), the watermark stays, the next run judges again; a first failure is a
+  " warning
+  METHOD stale_package_fails_closed.
+    TRY.
+        DATA(ls_scenario) = given( zcl_cd_ops_pay_fixture=>gc_scenario-success_old ).
+        current_version( is_scenario = ls_scenario iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        mo_dao->mv_stale = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_deleted msg = 'Nothing deleted' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_versions ) exp = 1 msg = 'The open row stays' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollbacks exp = 1 msg = 'The package is rolled back' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-wm_date
+          exp = VALUE d( ) msg = 'Watermark not advanced' ).
+        DATA(ls_finding) = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'First failure: a warning, the next run retries' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-fail_count
+          exp = 1 msg = 'One failed run counted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a database error of the package write (CX_SY_OPEN_SQL_DB) is caught at the
+  " package boundary: rollback, finding with message 782, the run ends normally
+  METHOD db_error_rolls_back.
+    TRY.
+        given( zcl_cd_ops_pay_fixture=>gc_scenario-success_old ).
+        mo_dao->mv_db_error = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_inserted msg = 'Nothing written' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollbacks exp = 1 msg = 'Rolled back' ).
+        DATA(ls_finding) = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_finding-message
+                                             exp = |*{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-db_error
+                                                                             iv_v1    = zif_cd_ops_payout_types=>gc_source-documents ) }*|
+                                             msg = 'Message 782 with the source' ).
+        cl_abap_unit_assert=>assert_not_initial( act = ls_result-run-ended_at msg = 'The run ends normally' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): the source failed in PAYOUT_FAIL_ESCALATE - 1 runs before: this third
+  " failure in a row is an error with the count (783)
+  METHOD failure_escalates.
+    TRY.
+        given( zcl_cd_ops_pay_fixture=>gc_scenario-success_old ).
+        INSERT VALUE #( source     = zif_cd_ops_payout_types=>gc_source-documents
+                        fail_count = zif_cd_ops_payout_types=>gc_param_default-fail_escalate - 1 )
+          INTO TABLE mo_dao->mt_watermarks.
+        mo_dao->mv_stale = abap_true.
+        DATA(ls_result) = act( ).
+        DATA(ls_finding) = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'Escalated to an error' ).
+        cl_abap_unit_assert=>assert_char_cp(
+          act = ls_finding-message
+          exp = |*{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-failed_escalated
+                                           iv_v1    = zif_cd_ops_payout_types=>gc_source-documents
+                                           iv_v2    = zif_cd_ops_payout_types=>gc_param_default-fail_escalate
+                                           iv_v3    = zif_cd_ops_payout_types=>gc_param_default-fail_escalate ) }*|
+          msg = 'Message 783 with the count' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-fail_count
+          exp = zif_cd_ops_payout_types=>gc_param_default-fail_escalate msg = 'Counted' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-error
+                                            msg = 'Run in error' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a run in which the source is judged without failure resets its count
+  METHOD success_resets_failures.
+    TRY.
+        given( zcl_cd_ops_pay_fixture=>gc_scenario-success_old ).
+        INSERT VALUE #( source     = zif_cd_ops_payout_types=>gc_source-documents
+                        fail_count = zif_cd_ops_payout_types=>gc_param_default-fail_escalate )
+          INTO TABLE mo_dao->mt_watermarks.
+        act( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-fail_count
+          exp = 0 msg = 'Reset by a run without failure' ).
+        cl_abap_unit_assert=>assert_not_initial(
+          act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-wm_date
+          msg = 'A row with only its count is a first run: the source was read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a configuration error (703: request source not configured) is reported as
+  " configuration (PAY_OUTCOME_CONFIG, 784), never as a failure that a retry heals
+  METHOD config_error_is_config.
+    TRY.
+        given( zcl_cd_ops_pay_fixture=>gc_scenario-success_old ).
+        mo_outcome->mv_no_source = abap_true.
+        DATA(ls_result) = act( ).
+        DATA(ls_finding) = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-config_failed ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'A configuration finding, an error at once' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = source_finding( is_result = ls_result iv_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed )
+          msg = 'Not reported as a failure to retry' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_inserted msg = 'Nothing written' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): the bgPF unit carries the package key only - it judges exactly the documents
+  " planned for its package, read back by the key
+  METHOD unit_reads_members_by_key.
+    TRY.
+        parameters( iv_parallel = gc_par-parallel iv_package = gc_par-one ).
+        given_three_payments( ).
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_queue->mv_dispatched exp = 3 msg = 'Three units' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_outcome->mt_asked
+                                            exp = VALUE zif_cd_ops_trace_types=>tt_docno( ( gc_par-doc_a ) ( gc_par-doc_b )
+                                                                                           ( gc_par-doc_c ) )
+                                            msg = 'Each unit judged the documents of its package' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_inserted ) exp = 3 msg = 'Every payment written once' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a run deletes the package rows of earlier runs of its own mode only - the
+  " rows of a SWEEP run on the same evidence source survive a FAST run
+  METHOD packages_deleted_per_mode.
+    TRY.
+        INSERT VALUE #( run_id = gc_par-sweep_run source = zif_cd_ops_payout_types=>gc_source-documents pkg_no = 1
+                        mode   = zif_cd_ops_payout_types=>gc_mode-sweep
+                        status = zif_cd_ops_payout_types=>gc_pkg_status-planned ) INTO TABLE mo_dao->mt_packages.
+        INSERT VALUE #( run_id = gc_par-fast_run source = zif_cd_ops_payout_types=>gc_source-documents pkg_no = 1
+                        mode   = zif_cd_ops_payout_types=>gc_mode-fast
+                        status = zif_cd_ops_payout_types=>gc_pkg_status-done ) INTO TABLE mo_dao->mt_packages.
+        parameters( iv_parallel = gc_par-parallel iv_package = gc_par-one ).
+        given_three_payments( ).
+        act( ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_dao->mt_packages[ run_id = gc_par-sweep_run ] ) )
+                                          msg = 'The SWEEP rows of the source kept' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( mo_dao->mt_packages[ run_id = gc_par-fast_run ] ) )
+                                           msg = 'The earlier FAST rows deleted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
@@ -1219,8 +1471,9 @@ CLASS ltc_snapshot IMPLEMENTATION.
           act = mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-wm_key
           exp = CONV zif_cd_ops_payout_types=>ty_wm_key( gc_par-doc_a )
           msg = 'Watermark before the abandoned package' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-error
-                                            msg = 'Run in error' ).
+        " 2026-11-10: a first failed run of the source is a warning, error from PAYOUT_FAIL_ESCALATE on
+        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-warning
+                                            msg = 'Run in warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -1368,14 +1621,15 @@ CLASS ltc_snapshot IMPLEMENTATION.
         INSERT VALUE #( check_code = zif_cd_hck_runtime_types=>gc_code-read_capped ) INTO TABLE mo_outcome->mt_findings.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_inserted msg = 'No row' ).
-        cl_abap_unit_assert=>assert_false(
-          act = xsdbool( line_exists( mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ] ) )
-          msg = 'Watermark not advanced' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = VALUE #( mo_dao->mt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-updated_at OPTIONAL )
+          msg = 'Watermark not advanced (only the failed run is counted)' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed ] ) )
           msg = 'PAY_OUTCOME_FAILED reported' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-error
-                                            msg = 'Run in error' ).
+        " 2026-11-10: a first failed run is a warning (the next run retries); error from PAYOUT_FAIL_ESCALATE on
+        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-warning
+                                            msg = 'Run in warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

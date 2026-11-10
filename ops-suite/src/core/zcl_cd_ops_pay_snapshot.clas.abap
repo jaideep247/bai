@@ -26,8 +26,14 @@
 *& packages are planned first, judged in waves of bgPF units
 *& (ZCL_CD_OPS_PAY_SNAP_OP, rows ZCD_PAY_OUTPKG) and a watermark advances
 *& only to the end of the last contiguous completed package. A package that
-*& cannot be judged completely writes nothing (PAY_OUTCOME_FAILED). Run lock
-*& per mode; test mode writes nothing. Read-only towards business tables.
+*& cannot be judged completely writes nothing (PAY_OUTCOME_FAILED; a
+*& configuration error PAY_OUTCOME_CONFIG; an error from the consecutive
+*& failed run PAYOUT_FAIL_ESCALATE of a source on, a warning before). Every
+*& package write is optimistic: the repository compares the rows the
+*& judgement was based on with the current rows under the worklist guard and
+*& writes nothing on a change by a concurrent mode (fail closed, retried).
+*& Run lock per mode; test mode writes nothing. Read-only towards business
+*& tables.
 *& Modification log:
 *& 2026-11-07 | Initial version (incremental 5-minute payment outcome snapshot).
 *& 2026-11-08 | Scale (2 million payments a peak day, user 2026-11-08): parallel packages as bgPF units
@@ -45,10 +51,19 @@
 *&            | range without watermarks, PAYOUT_BATCH_MAX_PACKAGES); payment requests (source REQUESTS,
 *&            | due date and stage by ZIF_CD_OPS_PAY_REQUEST, re-judged with their payment); FLOW_CLASS
 *&            | and DUE_DATE of a row; the lag counts the FAST evidence sources only.
+*& 2026-11-10 | Concurrency review: the judgement carries the rows it was based on (SAVE_VERSIONS validates
+*&            | them under the worklist guard - FAST / NIGHTLY / SWEEP never close or insert on a stale view);
+*&            | package rows of earlier runs deleted per mode (SWEEP shares the FAST sources); a bgPF unit
+*&            | carries the package key only and re-reads its members (RUN_PACKAGE); CX_SY_OPEN_SQL_DB of a
+*&            | package write caught at the package boundary (rollback, finding with the chained reason);
+*&            | consecutive failed runs per source (ZCD_PAY_OUTWM-FAIL_COUNT): warning, error from
+*&            | PAYOUT_FAIL_ESCALATE on, configuration errors (GC_CONFIG_MSG, package status C) reported as
+*&            | PAY_OUTCOME_CONFIG.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment worklist - FAST / NIGHTLY / SWEEP snapshot</p>
 "! Parameters (ZCA_PARAM, CD_OPS): PAYOUT_PACKAGE_SIZE, PAYOUT_MAX_PACKAGES, PAYOUT_INITIAL_DAYS,
-"! PAYOUT_PARALLEL, PAYOUT_PARALLEL_WAIT_SEC, PAYOUT_EXAMPLES, PAYOUT_BATCH_MAX_PACKAGES; evidence
+"! PAYOUT_PARALLEL, PAYOUT_PARALLEL_WAIT_SEC, PAYOUT_EXAMPLES, PAYOUT_BATCH_MAX_PACKAGES,
+"! PAYOUT_FAIL_ESCALATE; evidence
 "! row cap HCK_INFLIGHT_MAX_ROWS (as A_INFLIGHT); AGE_OLDEST limits and PARAM1 of A_INFLIGHT.
 CLASS zcl_cd_ops_pay_snapshot DEFINITION
   PUBLIC
@@ -81,12 +96,13 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! One parallel package as its bgPF unit runs it: judge the documents and requests, claim the
-    "! package row (still planned), write the worklist rows and status D in one commit; on any error
-    "! nothing of the package is written and its status is F. Never raises
+    "! One parallel package as its bgPF unit runs it: re-read the documents and requests of the package
+    "! (its key only is carried), judge them, claim the package row (still planned), write the worklist
+    "! rows and status D in one commit; on any error nothing of the package is written and its status is
+    "! F (C on a configuration error). Never raises
     METHODS run_package
       IMPORTING
-        is_package TYPE zif_cd_ops_payout_types=>ty_package.
+        is_key TYPE zif_cd_ops_payout_types=>ty_pkg_key.
 
     "! The worklist writes that make the rows of the evaluated payments and requests what the
     "! evaluation wants (entity = payment document, or FIN + source of a request):
@@ -167,6 +183,8 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
         delete    TYPE zif_cd_ops_payout_types=>tt_version,
         update    TYPE zif_cd_ops_payout_types=>tt_version,
         flagged   TYPE tt_flagged,
+        "! The rows the judgement was based on (the write validates them under the worklist guard)
+        basis     TYPE zif_cd_ops_payout_types=>tt_version,
       END OF ty_judgement.
 
     "! A worklist row with its entity (payment document, or FIN + source of a request)
@@ -200,8 +218,14 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
     DATA mv_parallel TYPE i.
     DATA mv_wait_sec TYPE i.
     DATA mv_examples TYPE i.
+    "! Consecutive failed runs of a source from which its failure is an error (PAYOUT_FAIL_ESCALATE)
+    DATA mv_escalate TYPE i.
     "! Row cap of every evidence read (HCK_INFLIGHT_MAX_ROWS)
     DATA mv_cap TYPE i.
+    "! Watermarks as the run started (consecutive failed runs of every source)
+    DATA mt_start_wm TYPE zif_cd_ops_payout_types=>tt_watermark.
+    "! Sources with a failed package in this run (counted once per run)
+    DATA mt_failed TYPE zif_cd_ops_payout_types=>tt_source_id.
     "! Payment documents / requests already judged (or planned) in this run (in several sources: once)
     DATA mt_done TYPE zif_cd_ops_trace_types=>tt_docno.
     DATA mt_req_done TYPE zif_cd_ops_payout_types=>tt_req_key.
@@ -256,7 +280,8 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       CHANGING
         cs_result  TYPE zif_cd_ops_payout_types=>ty_source_result
       RAISING
-        zcx_cd_ops_error.
+        zcx_cd_ops_error
+        cx_sy_open_sql_db.
 
     "! PAYOUT_PARALLEL > 1: plan every source, judge the packages in waves of bgPF units, advance each
     "! watermark to the end of its last contiguous completed package after every wave
@@ -401,10 +426,22 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
       RETURNING
         VALUE(rv_key) TYPE zif_cd_hck_runtime_types=>ty_flow_class.
 
+    "! A package or source that could not be judged: PAY_OUTCOME_CONFIG (E) for a configuration error;
+    "! else PAY_OUTCOME_FAILED - for a FAST / NIGHTLY source a warning until its consecutive failed runs
+    "! reach PAYOUT_FAIL_ESCALATE, then an error (SWEEP and a run without source: an error)
     METHODS failure
       IMPORTING
         iv_source TYPE zif_cd_ops_payout_types=>ty_source_id
-        iv_text   TYPE string.
+        iv_text   TYPE string
+        iv_config TYPE abap_bool DEFAULT abap_false.
+
+    "! FAST / NIGHTLY: the consecutive failed runs of every source the run processed - one more for a
+    "! source that failed, zero for one that did not (written only when it changes)
+    METHODS save_failures
+      IMPORTING
+        it_sources TYPE zif_cd_ops_payout_types=>tt_source_result
+      RAISING
+        zcx_cd_ops_error.
 
     METHODS finish
       CHANGING
@@ -413,6 +450,13 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
         zcx_cd_ops_error.
 
     METHODS release_lock.
+
+    "! A unit's package that could not be judged or written: rolled back, then status F (C on a
+    "! configuration error) with the chained reason in its own commit
+    METHODS package_failed
+      IMPORTING
+        is_package TYPE zif_cd_ops_payout_types=>ty_package
+        ix_error   TYPE REF TO cx_root.
 
     "! Entity of a row: the payment document, else FIN + source of the request
     CLASS-METHODS entity_of
@@ -471,7 +515,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
 
 
   METHOD execute.
-    CLEAR: mt_done, mt_req_done, mt_findings, mt_flagged, ms_config, mo_ageing.
+    CLEAR: mt_done, mt_req_done, mt_findings, mt_flagged, ms_config, mo_ageing, mt_start_wm, mt_failed.
     mv_test_mode = iv_test_mode.
     rs_result-mode = ms_selection-mode.
     mo_store   = zcl_cd_ops_factory=>get_store( ).
@@ -497,12 +541,15 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                                       iv_max_rows = mv_cap ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
         " No configuration: nothing can be judged, nothing is written
-        failure( iv_source = space iv_text = lx_error->get_text( ) ).
+        failure( iv_source = space
+                 iv_text   = zcl_cd_ops_pay_outcome=>reason_chain( lx_error )
+                 iv_config = zcl_cd_ops_pay_outcome=>is_config_error( lx_error ) ).
         finish( CHANGING cs_result = rs_result ).
         RETURN.
     ENDTRY.
 
     DATA(lt_watermarks) = mo_dao->get_watermarks( ).
+    mt_start_wm = lt_watermarks.
     IF mv_parallel > 1 AND iv_test_mode = abap_false.
       rs_result-sources = process_parallel( lt_watermarks ).
     ELSE.
@@ -511,7 +558,8 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
         " SWEEP never starts from (or moves) a watermark: its range is its own
         DATA(ls_watermark) = COND #( WHEN ms_selection-mode <> zif_cd_ops_payout_types=>gc_mode-sweep
                                      THEN VALUE #( lt_watermarks[ source = lv_source ] OPTIONAL ) ).
-        IF ls_watermark IS INITIAL.
+        " No position yet (no row, or only its count of failed runs): a first run
+        IF ls_watermark-updated_at IS INITIAL.
           ls_watermark = initial_watermark( lv_source ).
         ENDIF.
         INSERT process_source( iv_source = lv_source is_watermark = ls_watermark ) INTO TABLE rs_result-sources.
@@ -562,6 +610,11 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                                  io_params  = lo_params
                                  iv_name    = zif_cd_ops_payout_types=>gc_param-examples
                                  iv_default = zif_cd_ops_payout_types=>gc_param_default-examples ) ).
+    mv_escalate = nmax( val1 = 1
+                        val2 = zcl_cd_ops_util=>param_int(
+                                 io_params  = lo_params
+                                 iv_name    = zif_cd_ops_payout_types=>gc_param-fail_escalate
+                                 iv_default = zif_cd_ops_payout_types=>gc_param_default-fail_escalate ) ).
   ENDMETHOD.
 
 
@@ -628,9 +681,21 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
           process_package( EXPORTING is_changes = ls_changes
                            CHANGING  cs_result  = rs_result ).
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
-          " Fail closed: nothing of the package is written, the watermark stays; the next run retries
+          " Fail closed: nothing of the package is written, the watermark stays; the next run retries (a
+          " stale judgement - another mode changed the rows - too: 780 / 781)
           mo_store->rollback( ).
-          failure( iv_source = iv_source iv_text = lx_error->get_text( ) ).
+          failure( iv_source = iv_source
+                   iv_text   = zcl_cd_ops_pay_outcome=>reason_chain( lx_error )
+                   iv_config = zcl_cd_ops_pay_outcome=>is_config_error( lx_error ) ).
+          RETURN.
+        CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+          " A database error of the package write (e.g. a duplicate key the repository did not expect):
+          " the package boundary rolls back as for any other failure, never a dump of the whole run
+          mo_store->rollback( ).
+          failure( iv_source = iv_source
+                   iv_text   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-db_error
+                                                      iv_v1    = iv_source
+                                                      iv_tail  = zcl_cd_ops_pay_outcome=>reason_chain( lx_sql ) ) ).
           RETURN.
       ENDTRY.
       rs_result-packages = rs_result-packages + 1.
@@ -663,7 +728,8 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     ENDIF.
     " Rows and watermark of the package are durable together (SWEEP moves no watermark)
     IF lt_judged IS NOT INITIAL OR lt_requests IS NOT INITIAL.
-      mo_dao->save_versions( it_close  = ls_judgement-close
+      mo_dao->save_versions( it_basis  = ls_judgement-basis
+                             it_close  = ls_judgement-close
                              it_insert = ls_judgement-insert
                              it_delete = ls_judgement-delete
                              it_update = ls_judgement-update ).
@@ -749,6 +815,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       INSERT LINES OF ls_req_wanted-clean INTO TABLE ls_wanted-clean.
       INSERT LINES OF mo_dao->get_request_versions( lt_requests ) INTO TABLE lt_rows.
     ENDIF.
+    rs_judgement-basis = lt_rows.
     IF ls_wanted IS INITIAL.
       RETURN.
     ENDIF.
@@ -1092,19 +1159,16 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
 
   METHOD process_parallel.
     DATA lt_plans TYPE tt_plan.
-    DATA lt_mode_sources TYPE zif_cd_ops_payout_types=>tt_source_id.
-    LOOP AT sources( ms_selection ) ASSIGNING FIELD-SYMBOL(<lv_mode_source>).
-      INSERT CONV #( <lv_mode_source> ) INTO TABLE lt_mode_sources.
-    ENDLOOP.
-    " Packages of earlier runs of this mode are history (its run lock is held): only this run's rows stay
-    IF mo_dao->delete_packages( iv_keep_run_id = mv_run_id it_sources = lt_mode_sources ) > 0.
+    " Packages of earlier runs of this mode are history (its run lock is held, they have ended): only this
+    " run's rows stay. By mode, not by source - SWEEP reads the FAST sources (review 2026-11-10)
+    IF mo_dao->delete_packages( iv_keep_run_id = mv_run_id iv_mode = ms_selection-mode ) > 0.
       mo_store->commit( ).
     ENDIF.
     LOOP AT sources( ms_selection ) ASSIGNING FIELD-SYMBOL(<lv_source>).
       DATA(lv_source) = CONV zif_cd_ops_payout_types=>ty_source_id( <lv_source> ).
       DATA(ls_watermark) = COND #( WHEN ms_selection-mode <> zif_cd_ops_payout_types=>gc_mode-sweep
                                    THEN VALUE #( it_watermarks[ source = lv_source ] OPTIONAL ) ).
-      IF ls_watermark IS INITIAL.
+      IF ls_watermark-updated_at IS INITIAL.
         ls_watermark = initial_watermark( lv_source ).
       ENDIF.
       INSERT VALUE #( source = lv_source ) INTO TABLE rt_results.
@@ -1152,12 +1216,15 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
           DATA(ls_changes) = changes( iv_source = iv_source is_watermark = ls_watermark ).
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " The source cannot be read: its later packages are not planned, the watermark stays
-          failure( iv_source = iv_source iv_text = lx_error->get_text( ) ).
+          failure( iv_source = iv_source
+                   iv_text   = zcl_cd_ops_pay_outcome=>reason_chain( lx_error )
+                   iv_config = zcl_cd_ops_pay_outcome=>is_config_error( lx_error ) ).
           RETURN.
       ENDTRY.
       DATA(ls_plan) = VALUE ty_plan( package-run_id   = mv_run_id
                                      package-source   = iv_source
                                      package-pkg_no   = sy-index
+                                     package-mode     = ms_selection-mode
                                      package-status   = zif_cd_ops_payout_types=>gc_pkg_status-planned
                                      package-docno    = documents_of( ls_changes )
                                      package-requests = requests_of( ls_changes )
@@ -1181,6 +1248,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     " A source with a failed package is not continued in this run (its watermark cannot pass it)
     LOOP AT ct_plans ASSIGNING FIELD-SYMBOL(<ls_plan>)
          WHERE package-status = zif_cd_ops_payout_types=>gc_pkg_status-failed
+            OR package-status = zif_cd_ops_payout_types=>gc_pkg_status-config
             OR package-status = zif_cd_ops_payout_types=>gc_pkg_status-abandoned.
       INSERT <ls_plan>-package-source INTO TABLE lt_failed.
     ENDLOOP.
@@ -1222,7 +1290,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                                                                  iv_tail  = lx_error->get_text( ) ) ) INTO TABLE mt_findings.
           ENDIF.
           mo_store->commit( ).
-          run_package( <ls_package> ).
+          run_package( CORRESPONDING #( <ls_package> ) ).
       ENDTRY.
     ENDLOOP.
     " The units start with this commit
@@ -1271,6 +1339,8 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       CASE <ls_plan>-package-status.
         WHEN zif_cd_ops_payout_types=>gc_pkg_status-failed.
           failure( iv_source = <ls_package>-source iv_text = CONV #( ls_row-message ) ).
+        WHEN zif_cd_ops_payout_types=>gc_pkg_status-config.
+          failure( iv_source = <ls_package>-source iv_text = CONV #( ls_row-message ) iv_config = abap_true ).
         WHEN zif_cd_ops_payout_types=>gc_pkg_status-abandoned.
           failure( iv_source = <ls_package>-source
                    iv_text   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-pkg_abandoned
@@ -1330,23 +1400,29 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
 
 
   METHOD run_package.
-    DATA(ls_package) = is_package.
     mo_store   = zcl_cd_ops_factory=>get_store( ).
     mo_dao     = zcl_cd_ops_factory=>get_pay_outcome_dao( ).
     mo_outcome = zcl_cd_ops_factory=>get_pay_outcome( ).
     mo_request = zcl_cd_ops_factory=>get_pay_request( ).
-    mv_now     = is_package-run_at.
+    mv_now     = is_key-run_at.
+    " The unit carries the key only: the documents and requests planned for it are read again
+    DATA(ls_package) = VALUE zif_cd_ops_payout_types=>ty_package( run_id = is_key-run_id
+                                                                  source = is_key-source
+                                                                  pkg_no = is_key-pkg_no
+                                                                  run_at = is_key-run_at ).
     TRY.
+        DATA(ls_members) = mo_dao->get_package( is_key ).
         mv_cap = zcl_cd_ops_pay_outcome=>evidence_cap( ).
         ms_config = mo_outcome->load( iv_context  = zif_cd_ops_payout_types=>gc_context
                                       iv_max_rows = mv_cap ).
-        DATA(ls_judgement) = judge( it_docno = is_package-docno it_requests = is_package-requests ).
+        DATA(ls_judgement) = judge( it_docno = ls_members-docno it_requests = ls_members-requests ).
         " An abandoned package (the run stopped waiting) writes nothing
         IF mo_dao->claim_package( ls_package ) = abap_false.
           mo_store->rollback( ).
           RETURN.
         ENDIF.
-        mo_dao->save_versions( it_close  = ls_judgement-close
+        mo_dao->save_versions( it_basis  = ls_judgement-basis
+                               it_close  = ls_judgement-close
                                it_insert = ls_judgement-insert
                                it_delete = ls_judgement-delete
                                it_update = ls_judgement-update ).
@@ -1356,20 +1432,31 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
         ls_package-closed    = lines( ls_judgement-close ) + lines( ls_judgement-delete ).
         mo_dao->finish_package( ls_package ).
         mo_store->commit( ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        package_failed( is_package = ls_package ix_error = lx_sql ).
       CATCH cx_root INTO DATA(lx_error).
-        " Fail closed: nothing of the package is written; the run keeps the watermark before it
+        package_failed( is_package = ls_package ix_error = lx_error ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD package_failed.
+    " Fail closed: nothing of the package is written; the run keeps the watermark before it. A
+    " configuration error is status C: the run reports it as configuration, not as a retry
+    mo_store->rollback( ).
+    DATA(ls_package) = is_package.
+    ls_package-status  = COND #( WHEN zcl_cd_ops_pay_outcome=>is_config_error( ix_error ) = abap_true
+                                 THEN zif_cd_ops_payout_types=>gc_pkg_status-config
+                                 ELSE zif_cd_ops_payout_types=>gc_pkg_status-failed ).
+    ls_package-message = zcl_cd_ops_pay_outcome=>reason_chain( ix_error ).
+    TRY.
+        IF mo_dao->claim_package( ls_package ) = abap_true.
+          mo_dao->finish_package( ls_package ).
+        ENDIF.
+        mo_store->commit( ).
+      CATCH zcx_cd_ops_error.
+        " The run sees the package still planned and abandons it after its wait
         mo_store->rollback( ).
-        ls_package-status  = zif_cd_ops_payout_types=>gc_pkg_status-failed.
-        ls_package-message = lx_error->get_text( ).
-        TRY.
-            IF mo_dao->claim_package( ls_package ) = abap_true.
-              mo_dao->finish_package( ls_package ).
-            ENDIF.
-            mo_store->commit( ).
-          CATCH zcx_cd_ops_error.
-            " The run sees the package still planned and abandons it after its wait
-            mo_store->rollback( ).
-        ENDTRY.
     ENDTRY.
   ENDMETHOD.
 
@@ -1510,14 +1597,55 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
 
 
   METHOD failure.
-    INSERT VALUE #( object_type = zif_cd_ops_payout_types=>gc_object_type
-                    object_key  = |{ zif_cd_ops_payout_types=>gc_context }/{ iv_source }|
-                    check_code  = zif_cd_ops_payout_types=>gc_code-snapshot_failed
-                    severity    = zif_cd_ops_types=>gc_severity-error
-                    action      = zif_cd_ops_types=>gc_action-notify
-                    message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-snapshot_failed
-                                                         iv_v1    = iv_source
-                                                         iv_tail  = iv_text ) ) INTO TABLE mt_findings.
+    " Consecutive failed runs of a FAST / NIGHTLY source, this run included (a run counts once)
+    DATA(lv_runs) = 0.
+    IF iv_source IS NOT INITIAL AND ms_selection-mode <> zif_cd_ops_payout_types=>gc_mode-sweep.
+      INSERT iv_source INTO TABLE mt_failed.
+      lv_runs = VALUE #( mt_start_wm[ source = iv_source ]-fail_count OPTIONAL ) + 1.
+    ENDIF.
+    DATA(ls_finding) = VALUE zif_cd_ops_types=>ty_finding(
+                         object_type = zif_cd_ops_payout_types=>gc_object_type
+                         object_key  = |{ zif_cd_ops_payout_types=>gc_context }/{ iv_source }|
+                         check_code  = zif_cd_ops_payout_types=>gc_code-snapshot_failed
+                         severity    = zif_cd_ops_types=>gc_severity-error
+                         action      = zif_cd_ops_types=>gc_action-notify
+                         message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-snapshot_failed
+                                                              iv_v1    = iv_source
+                                                              iv_tail  = iv_text ) ).
+    IF iv_config = abap_true.
+      " A retry never helps: said as configuration (fix by transport), whatever the count
+      ls_finding-check_code = zif_cd_ops_payout_types=>gc_code-config_failed.
+      ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-config_failed
+                                                     iv_v1    = iv_source
+                                                     iv_v2    = nmax( val1 = lv_runs val2 = 1 )
+                                                     iv_tail  = iv_text ).
+    ELSEIF lv_runs >= mv_escalate.
+      " The next runs did not heal it: an error with the count
+      ls_finding-message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-failed_escalated
+                                                  iv_v1    = iv_source
+                                                  iv_v2    = lv_runs
+                                                  iv_v3    = mv_escalate
+                                                  iv_tail  = iv_text ).
+    ELSEIF lv_runs > 0.
+      " A first failure of a watermark source: the next run retries it (a concurrent mode, a lock)
+      ls_finding-severity = zif_cd_ops_types=>gc_severity-warning.
+    ENDIF.
+    INSERT ls_finding INTO TABLE mt_findings.
+  ENDMETHOD.
+
+
+  METHOD save_failures.
+    IF mv_test_mode = abap_true OR ms_selection-mode = zif_cd_ops_payout_types=>gc_mode-sweep.
+      RETURN.
+    ENDIF.
+    LOOP AT it_sources ASSIGNING FIELD-SYMBOL(<ls_source>).
+      DATA(lv_before) = VALUE #( mt_start_wm[ source = <ls_source>-source ]-fail_count OPTIONAL ).
+      DATA(lv_after) = COND i( WHEN line_exists( mt_failed[ table_line = <ls_source>-source ] )
+                               THEN lv_before + 1 ).
+      IF lv_after <> lv_before.
+        mo_dao->save_failures( iv_source = <ls_source>-source iv_count = lv_after ).
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -1545,6 +1673,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
       mo_store->save_findings( EXPORTING it_findings = mt_findings
                                CHANGING  cs_run      = cs_result-run ).
     ENDIF.
+    save_failures( cs_result-sources ).
     mo_store->finish_run( cs_result-run ).
     IF mv_test_mode = abap_false.
       mo_store->commit( ).

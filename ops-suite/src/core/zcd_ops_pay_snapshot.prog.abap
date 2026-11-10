@@ -19,6 +19,7 @@
 *&            | "not run yet" (762); parallel packages are the class's (PAYOUT_PARALLEL).
 *& 2026-11-08 | Exceptions-only worklist: modes FAST (default, unchanged job step), NIGHTLY and SWEEP (date
 *&            | range and evidence sources); the lag is said after a FAST run only.
+*& 2026-11-10 | Job log: configuration failures of a source (PAY_OUTCOME_CONFIG, message 784) as well.
 *&---------------------------------------------------------------------*
 REPORT zcd_ops_pay_snapshot.
 
@@ -75,6 +76,7 @@ CLASS lcl_app IMPLEMENTATION.
     ENDLOOP.
     LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
          WHERE check_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed
+            OR check_code = zif_cd_ops_payout_types=>gc_code-config_failed
             OR check_code = zif_cd_ops_payout_types=>gc_code-batch_incomplete.
       MESSAGE <ls_finding>-message TYPE 'S' DISPLAY LIKE 'E'.
     ENDLOOP.

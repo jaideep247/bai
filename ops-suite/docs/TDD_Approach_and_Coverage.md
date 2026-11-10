@@ -86,7 +86,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 | Core | ZCL_CD_OPS_CHN_APPLOG | own test include | 5 |  |
 | Core | ZCL_CD_OPS_CHN_EMAIL | own test include | 4 |  |
 | Core | ZCL_CD_OPS_CLOCK | own test include | 3 |  |
-| Core | ZCL_CD_OPS_EXC_DAO | own test include | 2 |  |
+| Core | ZCL_CD_OPS_EXC_DAO | own test include | 3 |  |
 | Core | ZCL_CD_OPS_EXC_POLICY | own test include | 9 |  |
 | Core | ZCL_CD_OPS_FACTORY | own test include | 11 |  |
 | Core | ZCL_CD_OPS_INJECTOR | covered | 0 | ZCL_CD_OPS_FACTORY |

@@ -7,12 +7,14 @@
 *& and pause between two looks at the package rows (ZCD_PAY_OUTPKG).
 *& Modification log:
 *& 2026-11-08 | Initial version (parallel snapshot packages, 2 million payments a peak day).
+*& 2026-11-10 | DISPATCH: the unit carries the package key only (concurrency review).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - queue of parallel snapshot packages</p>
 INTERFACE zif_cd_ops_pay_snap_queue
   PUBLIC.
 
-  "! Register the background unit of the package in the current LUW (starts at COMMIT WORK)
+  "! Register the background unit of the package in the current LUW (starts at COMMIT WORK); the unit
+  "! carries the package key only and re-reads its documents and requests (2026-11-10)
   "! @raising zcx_cd_ops_error | the unit could not be registered (the run judges the package itself)
   METHODS dispatch
     IMPORTING

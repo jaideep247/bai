@@ -157,7 +157,7 @@ ZCL_CD_OPS_CHEQUE_LINK,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_APPLOG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_EMAIL,own test include,,7,90,,Not run in target SAP
 ZCL_CD_OPS_CLOCK,own test include,,3,90,,Not run in target SAP
-ZCL_CD_OPS_EXC_DAO,own test include,,2,90,,Not run in target SAP
+ZCL_CD_OPS_EXC_DAO,own test include,,3,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_POLICY,own test include,,9,90,,Not run in target SAP
 ZCL_CD_OPS_FACTORY,own test include,,11,90,,Not run in target SAP
 ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test seam: every slot injected and reset in the factory test)
@@ -168,10 +168,10 @@ ZCL_CD_OPS_PARAM_SEED,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_CHECK,own test include,,19,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_DAO,own test include,,7,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_FIXTURE,covered,ZCL_CD_OPS_PAY_OUTCOME,0,90,,"Not run in target SAP; measured in ZCL_CD_OPS_PAY_OUTCOME (test support (shared negative fixtures, no logic): used by the tests of the evaluator, A_INFLIGHT, the trace, the snapshot and the dashboard CDS)"
-ZCL_CD_OPS_PAY_OUTCOME,own test include,,17,90,,Not run in target SAP
-ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,28,90,,Not run in target SAP
+ZCL_CD_OPS_PAY_OUTCOME,own test include,,22,90,,Not run in target SAP
+ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,32,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_REQUEST,own test include,,13,90,,Not run in target SAP
-ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,29,90,,Not run in target SAP
+ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,37,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_SNAP_OP,covered,ZCL_CD_OPS_PAY_SNAPSHOT,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_PAY_SNAPSHOT (bgPF operation (one call): the snapshot tests run it through their queue double (parallel packages); bgPF execution itself - QA case POC-14)
 ZCL_CD_OPS_PAY_SNAP_QUEUE,own test include,,2,90,,Not run in target SAP; partial exemption: CX_BGMC branch not injected: CX_BGMC instantiation is VERIFY-ADT on 7.58 SP01 - QA case POC-14
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test helper class of the plug-in creation tests)
@@ -183,7 +183,7 @@ ZCL_CD_OPS_POSTAREA_MEM,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target SAP;
 ZCL_CD_OPS_PURGE,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,own test include,,4,90,,Not run in target SAP
-ZCL_CD_OPS_STORE,own test include,,23,90,,Not run in target SAP; partial exemption: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
+ZCL_CD_OPS_STORE,own test include,,27,90,,Not run in target SAP; partial exemption: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
 ZCL_CD_OPS_TRACE_DAO,own test include,,14,90,,"Not run in target SAP; partial exemption: reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"
 ZCL_CD_OPS_TRACE_ENGINE,own test include,,37,90,,Not run in target SAP
 ZCL_CD_OPS_UTIL,own test include,,22,90,,Not run in target SAP

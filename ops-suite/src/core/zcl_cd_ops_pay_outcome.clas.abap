@@ -35,6 +35,10 @@
 *&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
 *& 2026-11-08 | Verdict carries the value date and house bank of the payment run (age of a payment in flight for the
 *&            | worklist).
+*& 2026-11-10 | Error classification (concurrency review): an evidence kind that cannot be used is
+*&            | CLEARING_RULE_INVALID only for a configuration error (IS_CONFIG_ERROR: configuration messages
+*&            | GC_CONFIG_MSG, plug-in without its interface); any other error is PAY_EVIDENCE_FAILED with the
+*&            | chained reason (REASON_CHAIN) - both fail closed as before.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! One instance per run (configuration and listing state); create it through
@@ -67,7 +71,26 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
       RETURNING
         VALUE(rv_cap) TYPE i.
 
+    "! A configuration error (fix by transport, a retry never helps): the error or an error it chains is a
+    "! ZCD_OPS message of ZIF_CD_OPS_PAYOUT_TYPES=>GC_CONFIG_MSG, a plug-in that is not of its interface or a
+    "! dynamic read the database refuses (configured table / field name)
+    CLASS-METHODS is_config_error
+      IMPORTING
+        ix_error         TYPE REF TO cx_root
+      RETURNING
+        VALUE(rv_config) TYPE abap_bool.
+
+    "! The text of the error and of every error it chains (previous), the origin last
+    CLASS-METHODS reason_chain
+      IMPORTING
+        ix_error       TYPE REF TO cx_root
+      RETURNING
+        VALUE(rv_text) TYPE string.
+
   PRIVATE SECTION.
+    "! Separator of two texts of an error chain
+    CONSTANTS gc_chain_sep TYPE string VALUE ` - `.
+
     "! One evidence kind with its parameters, collected once for every payment that needs it
     TYPES:
       BEGIN OF ty_group,
@@ -123,6 +146,14 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
     METHODS capped
       IMPORTING
         iv_table TYPE clike.
+
+    "! An evidence kind that could not be used: CLEARING_RULE_INVALID for a configuration error, else
+    "! PAY_EVIDENCE_FAILED with the chained reason; its purposes are not judged either way (fail closed)
+    METHODS kind_failed
+      IMPORTING
+        ix_error TYPE REF TO cx_root
+      CHANGING
+        cs_group TYPE ty_group.
 
     METHODS config_finding
       IMPORTING
@@ -234,6 +265,79 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     rv_cap = zcl_cd_hck_param=>row_cap( iv_name    = zif_cd_hck_runtime_types=>gc_param-inflight_max_rows
                                         iv_default = zif_cd_hck_runtime_types=>gc_param_default-inflight_max_rows
                                         iv_ceiling = zif_cd_hck_runtime_types=>gc_max_inflight_rows ).
+  ENDMETHOD.
+
+
+  METHOD is_config_error.
+    DATA(lt_config) = VALUE string_table( ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-class_missing ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-class_no_plugin ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-class_no_intf ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-intf_missing ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-config_missing ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-config_invalid ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-table_missing ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-param_pcre ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-no_method_class ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-two_classes ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-evidence_param ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-seqout_pcre ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-expectation ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-source_unconfig ) )
+                                          ( CONV #( zif_cd_ops_payout_types=>gc_config_msg-pattern_pcre ) ) ).
+    DATA(lx_error) = ix_error.
+    WHILE lx_error IS BOUND.
+      " A plug-in class that is not of its interface, a configured table or field the database refuses in
+      " a dynamic read: configured wrongly (names in customizing)
+      IF lx_error IS INSTANCE OF cx_sy_move_cast_error OR lx_error IS INSTANCE OF cx_sy_dynamic_osql_error.
+        rv_config = abap_true.
+        RETURN.
+      ENDIF.
+      IF lx_error IS INSTANCE OF if_t100_message.
+        DATA(ls_key) = CAST if_t100_message( lx_error )->t100key.
+        IF ls_key-msgid = zif_cd_ops_types=>gc_message_class
+           AND line_exists( lt_config[ table_line = CONV string( ls_key-msgno ) ] ).
+          rv_config = abap_true.
+          RETURN.
+        ENDIF.
+      ENDIF.
+      lx_error = lx_error->previous.
+    ENDWHILE.
+  ENDMETHOD.
+
+
+  METHOD reason_chain.
+    DATA(lx_error) = ix_error.
+    WHILE lx_error IS BOUND.
+      rv_text = COND #( WHEN rv_text IS INITIAL THEN lx_error->get_text( )
+                        ELSE rv_text && gc_chain_sep && lx_error->get_text( ) ).
+      lx_error = lx_error->previous.
+    ENDWHILE.
+  ENDMETHOD.
+
+
+  METHOD kind_failed.
+    " Fail closed: the purposes of these rows are not judged (a payment stays in flight)
+    cs_group-invalid = abap_true.
+    IF is_config_error( ix_error ) = abap_true.
+      config_finding( EXPORTING iv_object   = |{ cs_group-evidence_class }/{ cs_group-param1 }|
+                                iv_severity = zif_cd_ops_types=>gc_severity-error
+                                iv_code     = zif_cd_hck_runtime_types=>gc_code-clrrule_invalid
+                                iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-rule_invalid
+                                                                     iv_v1    = cs_group-evidence_class
+                                                                     iv_v2    = cs_group-param1
+                                                                     iv_tail  = reason_chain( ix_error ) )
+                      CHANGING  ct_findings = mt_findings ).
+      RETURN.
+    ENDIF.
+    " A read or runtime error is no configuration error: its own code, so nobody changes a correct rule
+    config_finding( EXPORTING iv_object   = |{ cs_group-evidence_class }/{ cs_group-param1 }|
+                              iv_severity = zif_cd_ops_types=>gc_severity-error
+                              iv_code     = zif_cd_ops_payout_types=>gc_code-evidence_failed
+                              iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-evidence_failed
+                                                                   iv_v1    = cs_group-evidence_class
+                                                                   iv_v2    = cs_group-param1
+                                                                   iv_tail  = reason_chain( ix_error ) )
+                    CHANGING  ct_findings = mt_findings ).
   ENDMETHOD.
 
 
@@ -502,17 +606,14 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
                               CHANGING  ct_findings = mt_findings ).
             ENDIF.
           ENDIF.
+        CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+          " Configuration (class, interface, parameters) or a read of the plug-in: classified by message
+          kind_failed( EXPORTING ix_error = lx_ops
+                       CHANGING  cs_group = <ls_group> ).
         CATCH cx_root INTO DATA(lx_error).
-          " Fail closed: the purposes of these rows are not judged (a payment stays in flight)
-          <ls_group>-invalid = abap_true.
-          config_finding( EXPORTING iv_object   = |{ <ls_group>-evidence_class }/{ <ls_group>-param1 }|
-                                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                                    iv_code     = zif_cd_hck_runtime_types=>gc_code-clrrule_invalid
-                                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-rule_invalid
-                                                                         iv_v1    = <ls_group>-evidence_class
-                                                                         iv_v2    = <ls_group>-param1
-                                                                         iv_tail  = lx_error->get_text( ) )
-                          CHANGING  ct_findings = mt_findings ).
+          " A cast to the evidence interface is configuration; a runtime error of the plug-in is not
+          kind_failed( EXPORTING ix_error = lx_error
+                       CHANGING  cs_group = <ls_group> ).
       ENDTRY.
     ENDLOOP.
   ENDMETHOD.

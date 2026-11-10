@@ -8,6 +8,7 @@ CD_OPS,MON_STALE_AFTER_MIN_FMON,P,INT,1,,15,,,,,Minutes after the last FMON run 
 CD_OPS,MON_STALE_AFTER_MIN_HCK,P,INT,1,,1560,,,,,Minutes after the last HCK run before its monitor is stale,PE RTB
 CD_OPS,PAYOUT_BATCH_MAX_PACKAGES,P,INT,1,,1000,,,,,Packages per NIGHTLY / SWEEP run of the payment worklist,PE RTB
 CD_OPS,PAYOUT_EXAMPLES,P,INT,1,100,10,,,,,Payments listed per aggregated finding (oldest first),PE RTB
+CD_OPS,PAYOUT_FAIL_ESCALATE,P,INT,1,100,3,,,,,Snapshot runs failed in a row before the failure is an error,PE RTB
 CD_OPS,PAYOUT_INITIAL_DAYS,P,INT,0,400,10,,,,,First outcome snapshot run: days read back (from go-live),PE RTB
 CD_OPS,PAYOUT_MAX_PACKAGES,P,INT,1,,20,,,,,Packages per evidence source and 5-minute snapshot run,PE RTB
 CD_OPS,PAYOUT_PACKAGE_SIZE,P,INT,100,50000,5000,,,,,Payment documents per package of the outcome snapshot,PE RTB

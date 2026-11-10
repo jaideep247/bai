@@ -41,6 +41,7 @@ Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; *
 - `save_findings`: for a finding of rank ≥ 2, look up the open exception (disposition O or A) for the same PE_AREA + OBJECT_TYPE + OBJECT_KEY + CHECK_CODE from an earlier run. Found → the new row inherits `DISPOSITION`, `OWNER`, `DUE_DATE`, `FIRST_SEEN_AT`, `OCCURRENCES + 1`; the old row gets disposition `S` (superseded) and `SUPERSEDED_BY`.
 - New store method `reconcile( is_run, it_scope )`: `it_scope` = object keys the run actually evaluated. Open exceptions of the payment engine area for keys in scope that were **not** found again → disposition `R`, `RESOLUTION = 'Passed on re-run <run id>'`, resolved by the run user. Each engine passes its scope (EBS: lines validated; FMON: files evaluated; HCK: checks executed).
 - Waived (W) exceptions are not reopened by re-runs while the waiver is valid (see §6.1).
+- **Change stamp (2026-11-10, concurrency review).** New field `LAST_CHANGED_AT` (timestampl) on `ZCD_OPS_FINDING`, set by every write: the store (insert, supersede, resolve), the exception repository (`ZCL_CD_OPS_EXC_DAO`) and the actions of the exceptions BO (its ETag, §6.1). The store's supersede and resolve and the repository's resolve write a row only while its disposition and stamp are the ones read (one keyed UPDATE each, sy-dbcnt compared): a row a user changed in between is read again and carried forward / resolved once more from what the user left; a second change during that attempt keeps the user's change, the new row of the run stays information and an information finding `EXC_CHANGED_DEFERRED` (786) leaves the exception for the next run. A waiver, assignment or resolution is never overwritten.
 
 ## 4. Retention purge (G1)
 
@@ -77,6 +78,7 @@ All transactional (delivery class A), no transport, `ZCD_OPS` authorised, every 
 
 ### 6.1 Exceptions — `ZUI_CD_OPS_EXC_O4` (root `ZR_CD_OpsException` on ZCD_OPS_FINDING, rank ≥ 2, not superseded)
 - Actions: **Assign** (owner) → A; **Resolve** (reason) → R; **Request waiver** (reason, valid to) → pending; **Approve waiver** — different user than the requester (four-eyes), `ZCD_OPS` 85 → W.
+- ETag `LastChangedAt` (2026-11-10): `etag master` in `ZR_CD_OpsException`, `use etag` in the projection; no draft, so no total ETag. An action on a version the batch store changed after the screen was loaded is refused - refresh and act again (§3).
 - Child `ZCD_OPS_EXC_HIST` (finding key, seq, action, from/to disposition, reason, user, timestamp) written for every action.
 
 ### 6.3 HCK suppression — `ZUI_CD_HCK_SUP_O4` (root on new `ZCD_HCK_SUPPRESS`)
@@ -97,7 +99,7 @@ All four apps built as designed (`RAP_Ops_Apps.md`). Deviations:
 - **No draft** for any operations BO — every action is one complete change; draft would add a second, unaudited state.
 - **Suppression company code** is matched inside the finding's object key (HCK object keys carry the company code as dimension); a separate column on the finding does not exist.
 - **Manual status** only for files already in the registry; an expected file that never arrived is worked as an exception.
-- **History of PRISM handling** is written by `ZCL_CD_OPS_EXC_DAO` in the other BO's saver (EML of a second BO is not allowed in the save sequence).
+- **History of PRISM handling** is written by `ZCL_CD_OPS_EXC_DAO` in the other BO's saver (EML of a second BO is not allowed in the save sequence). Since 2026-11-10 the open exceptions are read in `CHECK_BEFORE_SAVE` (a read failure refuses the save, message 788) and resolved in `SAVE_MODIFIED` all or nothing: each exception only while it is as read, the history only when every exception was written; a failure there ends the save (`RAISE SHORTDUMP`, as the manual file status) - before, it was a warning and a half-written closure could be committed.
 - **Read authorisation** per area: CDS views `#NOT_REQUIRED`, actions instance- / globally authorised; a DCL is a DV1 decision (`RAP_Ops_Apps.md` §4 step 5).
 
 ## 7. Delivery and verification

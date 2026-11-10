@@ -33,5 +33,6 @@ define root view entity ZC_CD_OpsException
       WaiverReqAt,
       WaiverReason,
       CreatedAt,
+      LastChangedAt,
       _History : redirected to composition child ZC_CD_OpsExcHist
 }

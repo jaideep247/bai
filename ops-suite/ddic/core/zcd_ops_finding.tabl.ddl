@@ -42,6 +42,10 @@ define table zcd_ops_finding {
   waiver_reason : abap.char(255);
   created_by    : syuname;
   created_at    : timestampl;
+  // Change stamp (UTC, 2026-11-10): set by every write - the store (insert, supersede, resolve), the
+  // exception repository and the exceptions app (ETag of ZR_CD_OpsException); a batch write is guarded
+  // by the stamp it read, so a user's change in between is never overwritten
+  last_changed_at : timestampl;
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and

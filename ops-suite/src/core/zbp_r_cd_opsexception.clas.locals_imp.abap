@@ -10,6 +10,8 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
+*& 2026-11-10 | Every action sets LastChangedAt (ETag of the BO, concurrency review: the batch store writes
+*&            | an exception only while its stamp is the one it read).
 *&---------------------------------------------------------------------*
 "! Content IDs of the history rows created by each action (one per action)
 INTERFACE lif_c.
@@ -131,10 +133,11 @@ CLASS lhc_exception IMPLEMENTATION.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE
         ENTITY Exception
-          UPDATE FIELDS ( Owner Disposition )
-          WITH VALUE #( ( %tky        = ls_exception-%tky
-                          Owner       = ls_key-%param-Owner
-                          Disposition = zif_cd_ops_types=>gc_disposition-assigned ) )
+          UPDATE FIELDS ( Owner Disposition LastChangedAt )
+          WITH VALUE #( ( %tky          = ls_exception-%tky
+                          Owner         = ls_key-%param-Owner
+                          Disposition   = zif_cd_ops_types=>gc_disposition-assigned
+                          LastChangedAt = lv_now ) )
         ENTITY Exception
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner CreatedBy CreatedAt )
@@ -175,12 +178,13 @@ CLASS lhc_exception IMPLEMENTATION.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE
         ENTITY Exception
-          UPDATE FIELDS ( Disposition ResolvedBy ResolvedAt Resolution )
-          WITH VALUE #( ( %tky        = ls_exception-%tky
-                          Disposition = zif_cd_ops_types=>gc_disposition-resolved
-                          ResolvedBy  = sy-uname
-                          ResolvedAt  = lv_now
-                          Resolution  = ls_key-%param-Reason ) )
+          UPDATE FIELDS ( Disposition ResolvedBy ResolvedAt Resolution LastChangedAt )
+          WITH VALUE #( ( %tky          = ls_exception-%tky
+                          Disposition   = zif_cd_ops_types=>gc_disposition-resolved
+                          ResolvedBy    = sy-uname
+                          ResolvedAt    = lv_now
+                          Resolution    = ls_key-%param-Reason
+                          LastChangedAt = lv_now ) )
         ENTITY Exception
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner Reason CreatedBy CreatedAt )
@@ -225,12 +229,13 @@ CLASS lhc_exception IMPLEMENTATION.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE
         ENTITY Exception
-          UPDATE FIELDS ( WaiverReqBy WaiverReqAt WaiverReason WaiverUntil )
-          WITH VALUE #( ( %tky         = ls_exception-%tky
-                          WaiverReqBy  = sy-uname
-                          WaiverReqAt  = lv_now
-                          WaiverReason = ls_key-%param-Reason
-                          WaiverUntil  = ls_key-%param-ValidTo ) )
+          UPDATE FIELDS ( WaiverReqBy WaiverReqAt WaiverReason WaiverUntil LastChangedAt )
+          WITH VALUE #( ( %tky          = ls_exception-%tky
+                          WaiverReqBy   = sy-uname
+                          WaiverReqAt   = lv_now
+                          WaiverReason  = ls_key-%param-Reason
+                          WaiverUntil   = ls_key-%param-ValidTo
+                          LastChangedAt = lv_now ) )
         ENTITY Exception
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner Reason CreatedBy CreatedAt )
@@ -271,12 +276,13 @@ CLASS lhc_exception IMPLEMENTATION.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE
         ENTITY Exception
-          UPDATE FIELDS ( Disposition ResolvedBy ResolvedAt Resolution )
-          WITH VALUE #( ( %tky        = ls_exception-%tky
-                          Disposition = zif_cd_ops_types=>gc_disposition-waived
-                          ResolvedBy  = sy-uname
-                          ResolvedAt  = lv_now
-                          Resolution  = ls_exception-WaiverReason ) )
+          UPDATE FIELDS ( Disposition ResolvedBy ResolvedAt Resolution LastChangedAt )
+          WITH VALUE #( ( %tky          = ls_exception-%tky
+                          Disposition   = zif_cd_ops_types=>gc_disposition-waived
+                          ResolvedBy    = sy-uname
+                          ResolvedAt    = lv_now
+                          Resolution    = ls_exception-WaiverReason
+                          LastChangedAt = lv_now ) )
         ENTITY Exception
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner Reason CreatedBy CreatedAt )

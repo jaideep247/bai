@@ -22,6 +22,13 @@
 *&            | SLA parameter names / default from ZIF_CD_OPS_TYPES.
 *& 2026-11-07 | Parameters moved to ZCA_PARAM: ZCD_OPS_PARAM reads removed; start_run renews the
 *&            | snapshot of ZCL_CD_OPS_FACTORY=>GET_PARAMS (A64), SLA days read there.
+*& 2026-11-10 | Lost update with the exceptions app (concurrency review): every write sets LAST_CHANGED_AT;
+*&            | supersede (carry-forward) and resolve (reconcile) write a row only while its disposition and
+*&            | stamp are the ones read (one keyed UPDATE per exception, sy-dbcnt compared); a row a user changed
+*&            | meanwhile is read again and carried forward / resolved once more from what the user left, and if
+*&            | it changes again it is left for the next run with an information finding EXC_CHANGED_DEFERRED -
+*&            | a waiver, assignment or resolution is never overwritten. Findings inserted accepting duplicate
+*&            | keys with a count check; numbering continues after the run's highest finding number.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -44,21 +51,107 @@ CLASS zcl_cd_ops_store DEFINITION
 
   PRIVATE SECTION.
     TYPES tt_db_finding TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
-    "! Partial update: only the columns flagged in COL_IND are written (DETAILS, a
-    "! STRING, is neither read with FOR ALL ENTRIES nor overwritten)
-    TYPES ty_db_update TYPE zcd_ops_finding WITH INDICATORS col_ind TYPE abap_bool.
-    TYPES tt_db_update TYPE STANDARD TABLE OF ty_db_update WITH EMPTY KEY.
+    "! An exception object of the run: type and key
+    TYPES:
+      BEGIN OF ty_object,
+        object_type TYPE zcd_ops_finding-object_type,
+        object_key  TYPE zcd_ops_finding-object_key,
+      END OF ty_object.
+    TYPES tt_object TYPE SORTED TABLE OF ty_object WITH UNIQUE KEY object_type object_key.
+    "! One exception carried forward: object type, key and check code
+    TYPES:
+      BEGIN OF ty_block,
+        object_type TYPE zcd_ops_finding-object_type,
+        object_key  TYPE zcd_ops_finding-object_key,
+        check_code  TYPE zcd_ops_finding-check_code,
+      END OF ty_block.
+    TYPES tt_block TYPE SORTED TABLE OF ty_block WITH UNIQUE KEY object_type object_key check_code.
+
     "! New exceptions inherit from the open / assigned / waived exception of an
     "! earlier run (same payment engine area, object type, object key, check code), which is
-    "! superseded. Only rows with disposition O are candidates.
+    "! superseded. Only rows with disposition O are candidates. A superseded row is written only while it
+    "! is as read; a row a user changed meanwhile is read and carried forward once more, and if it changed
+    "! again the new row stays information and an information finding says so (the user's change wins)
     METHODS carry_forward
       IMPORTING
-        is_run   TYPE zif_cd_ops_types=>ty_run
         iv_today TYPE d
       CHANGING
+        cs_run   TYPE zif_cd_ops_types=>ty_run
         ct_new   TYPE tt_db_finding
       RAISING
         zcx_cd_ops_error.
+
+    "! The open / assigned / waived exceptions of earlier runs of the objects, newest first per block
+    "! (type, key, check code)
+    METHODS read_prev
+      IMPORTING
+        is_run         TYPE zif_cd_ops_types=>ty_run
+        it_keys        TYPE tt_object
+      RETURNING
+        VALUE(rt_prev) TYPE tt_db_finding.
+
+    "! Inherit and supersede (guarded) for the new open exceptions found in ct_prev; the exceptions whose
+    "! earlier row was changed by someone else meanwhile
+    METHODS supersede
+      IMPORTING
+        is_run              TYPE zif_cd_ops_types=>ty_run
+        iv_today            TYPE d
+        iv_now              TYPE timestampl
+      CHANGING
+        ct_prev             TYPE tt_db_finding
+        ct_new              TYPE tt_db_finding
+      RETURNING
+        VALUE(rt_conflicts) TYPE tt_block.
+
+    "! Supersede one earlier row only while its disposition and change stamp are the ones read
+    "! (optimistic lock against the exceptions app); abap_false = changed meanwhile, nothing written
+    METHODS guarded_supersede
+      IMPORTING
+        is_read        TYPE zcd_ops_finding
+        iv_run_id      TYPE zif_cd_ops_types=>ty_run_id
+        iv_now         TYPE timestampl
+      RETURNING
+        VALUE(rv_done) TYPE abap_bool.
+
+    "! Resolve one exception only while its disposition and change stamp are the ones read; abap_false =
+    "! changed meanwhile, nothing written
+    METHODS guarded_resolve
+      IMPORTING
+        is_read        TYPE zcd_ops_finding
+        is_change      TYPE zcd_ops_finding
+      RETURNING
+        VALUE(rv_done) TYPE abap_bool.
+
+    "! The objects of exceptions (for a read by type and key)
+    CLASS-METHODS objects_of
+      IMPORTING
+        it_blocks         TYPE tt_block
+      RETURNING
+        VALUE(rt_objects) TYPE tt_object.
+
+    "! Resolve the rows (guarded); the rows changed meanwhile
+    METHODS resolve_rows
+      IMPORTING
+        is_run            TYPE zif_cd_ops_types=>ty_run
+        it_open           TYPE tt_db_finding
+      RETURNING
+        VALUE(rt_changed) TYPE tt_db_finding.
+
+    "! Information finding of an exception left for the next run (changed by a user twice during the run)
+    METHODS deferred
+      IMPORTING
+        is_row            TYPE zcd_ops_finding
+        iv_finding_no     TYPE i
+        iv_now            TYPE timestampl
+      RETURNING
+        VALUE(rs_finding) TYPE zcd_ops_finding.
+
+    "! Highest finding number of the run in the store (reconcile may have written information findings)
+    METHODS last_finding_no
+      IMPORTING
+        iv_run_id    TYPE zif_cd_ops_types=>ty_run_id
+      RETURNING
+        VALUE(rv_no) TYPE i.
 
     METHODS inherit
       IMPORTING
@@ -138,6 +231,10 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     DATA(lv_today) = lo_clock->today( ).
     DATA(lv_now)   = lo_clock->now( ).
     DATA(lv_seq)   = cs_run-finding_count.
+    IF cs_run-test_mode = abap_false.
+      " Numbering continues after the highest number stored (a deferred information finding of reconcile)
+      lv_seq = nmax( val1 = lv_seq val2 = last_finding_no( cs_run-run_id ) ).
+    ENDIF.
 
     LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
       lv_seq += 1.
@@ -160,6 +257,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       ls_db-details     = <ls_finding>-details.
       ls_db-created_at  = lv_now.
       ls_db-created_by  = sy-uname.
+      ls_db-last_changed_at = lv_now.
       ls_db-first_seen_at = lv_now.
       ls_db-occurrences   = 1.
       IF zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ) >= 2.
@@ -178,12 +276,13 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    carry_forward( EXPORTING is_run   = cs_run
-                             iv_today = lv_today
-                   CHANGING  ct_new   = lt_db ).
+    carry_forward( EXPORTING iv_today = lv_today
+                   CHANGING  cs_run   = cs_run
+                             ct_new   = lt_db ).
 
-    INSERT zcd_ops_finding FROM TABLE @lt_db.
-    IF sy-subrc <> 0.
+    " A duplicate key is a sy-subrc / count here, never CX_SY_OPEN_SQL_DB (the caller rolls back)
+    INSERT zcd_ops_finding FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS.
+    IF sy-subrc <> 0 OR sy-dbcnt <> lines( lt_db ).
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e010(zcd_ops) WITH 'ZCD_OPS_FINDING'.
     ENDIF.
@@ -204,16 +303,8 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
 
   METHOD carry_forward.
-    TYPES:
-      BEGIN OF ty_object,
-        object_type TYPE zcd_ops_finding-object_type,
-        object_key  TYPE zcd_ops_finding-object_key,
-      END OF ty_object.
-    DATA lt_keys TYPE SORTED TABLE OF ty_object WITH UNIQUE KEY object_type object_key.
+    DATA lt_keys TYPE tt_object.
     DATA ls_object TYPE ty_object.
-    DATA lt_prev TYPE tt_db_finding.
-    DATA lt_superseded TYPE tt_db_update.
-    DATA ls_superseded TYPE ty_db_update.
 
     " Fix 5: the object type of every candidate is known - only (type, key) pairs are read
     LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_candidate>) WHERE disposition = zif_cd_ops_types=>gc_disposition-open.
@@ -222,30 +313,93 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       INSERT ls_object INTO TABLE lt_keys.
     ENDLOOP.
     CHECK lt_keys IS NOT INITIAL.
+    DATA(lt_original) = ct_new.
+    DATA(lo_clock) = zcl_cd_ops_factory=>get_clock( ).
 
+    DATA(lt_prev) = read_prev( is_run = cs_run it_keys = lt_keys ).
+    CHECK lt_prev IS NOT INITIAL.
+    DATA(lt_conflicts) = supersede( EXPORTING is_run   = cs_run
+                                              iv_today = iv_today
+                                              iv_now   = lo_clock->now( )
+                                    CHANGING  ct_prev  = lt_prev
+                                              ct_new   = ct_new ).
+    IF lt_conflicts IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    " A user changed an earlier row between the read and the write (exceptions app): those exceptions are
+    " read again and carried forward once more from what the user left - e.g. a waiver given meanwhile
+    LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_redo>).
+      IF line_exists( lt_conflicts[ object_type = <ls_redo>-object_type
+                                    object_key  = <ls_redo>-object_key
+                                    check_code  = <ls_redo>-check_code ] ).
+        <ls_redo> = lt_original[ sy-tabix ].
+      ENDIF.
+    ENDLOOP.
+    lt_prev = read_prev( is_run = cs_run it_keys = objects_of( lt_conflicts ) ).
+    lt_conflicts = supersede( EXPORTING is_run   = cs_run
+                                        iv_today = iv_today
+                                        iv_now   = lo_clock->now( )
+                              CHANGING  ct_prev  = lt_prev
+                                        ct_new   = ct_new ).
+    IF lt_conflicts IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    " Changed again: the user's disposition wins - the new row of the run stays information (the earlier
+    " row remains the exception) and the next run carries it forward; said once per exception
+    DATA(lv_now) = lo_clock->now( ).
+    DATA(lt_info) = VALUE tt_db_finding( ).
+    LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_left>) WHERE disposition <> zif_cd_ops_types=>gc_disposition-information.
+      IF NOT line_exists( lt_conflicts[ object_type = <ls_left>-object_type
+                                        object_key  = <ls_left>-object_key
+                                        check_code  = <ls_left>-check_code ] ).
+        CONTINUE.
+      ENDIF.
+      <ls_left> = lt_original[ sy-tabix ].
+      <ls_left>-disposition = zif_cd_ops_types=>gc_disposition-information.
+      CLEAR <ls_left>-due_date.
+      cs_run-finding_count = cs_run-finding_count + 1.
+      INSERT deferred( is_row = <ls_left> iv_finding_no = cs_run-finding_count iv_now = lv_now ) INTO TABLE lt_info.
+    ENDLOOP.
+    INSERT LINES OF lt_info INTO TABLE ct_new.
+  ENDMETHOD.
+
+
+  METHOD read_prev.
+    CHECK it_keys IS NOT INITIAL.
     " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_KEY (fix 5; OBJECT_TYPE is a filter)
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
            due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
-           waiver_req_by, waiver_req_at, waiver_reason
+           waiver_req_by, waiver_req_at, waiver_reason, last_changed_at
       FROM zcd_ops_finding
-      FOR ALL ENTRIES IN @lt_keys
+      FOR ALL ENTRIES IN @it_keys
       WHERE pe_area      = @is_run-pe_area
-        AND object_key  = @lt_keys-object_key
-        AND object_type = @lt_keys-object_type
+        AND object_key  = @it_keys-object_key
+        AND object_type = @it_keys-object_type
         AND run_id     <> @is_run-run_id
         AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
                              @zif_cd_ops_types=>gc_disposition-assigned,
                              @zif_cd_ops_types=>gc_disposition-waived )
-      INTO CORRESPONDING FIELDS OF TABLE @lt_prev.
-    CHECK lt_prev IS NOT INITIAL.
+      INTO CORRESPONDING FIELDS OF TABLE @rt_prev.
     " newest first: the latest earlier row is the one inherited
-    SORT lt_prev BY object_type object_key check_code created_at DESCENDING.
+    SORT rt_prev BY object_type object_key check_code created_at DESCENDING.
+  ENDMETHOD.
 
+
+  METHOD objects_of.
+    LOOP AT it_blocks ASSIGNING FIELD-SYMBOL(<ls_block>).
+      INSERT VALUE #( object_type = <ls_block>-object_type object_key = <ls_block>-object_key ) INTO TABLE rt_objects.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD supersede.
     LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_new>) WHERE disposition = zif_cd_ops_types=>gc_disposition-open.
       DATA(lv_inherited) = abap_false.
       " Fix 5: first row of the (type, key, check) block by binary search on the sort order
       " above - a sorted key could not keep CREATED_AT descending inside the block
-      READ TABLE lt_prev TRANSPORTING NO FIELDS
+      READ TABLE ct_prev TRANSPORTING NO FIELDS
            WITH KEY object_type = <ls_new>-object_type
                     object_key  = <ls_new>-object_key
                     check_code  = <ls_new>-check_code
@@ -254,7 +408,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       DATA(lv_first) = sy-tabix.
-      LOOP AT lt_prev ASSIGNING FIELD-SYMBOL(<ls_prev>) FROM lv_first.
+      LOOP AT ct_prev ASSIGNING FIELD-SYMBOL(<ls_prev>) FROM lv_first.
         IF <ls_prev>-object_type <> <ls_new>-object_type
            OR <ls_prev>-object_key <> <ls_new>-object_key
            OR <ls_prev>-check_code <> <ls_new>-check_code.
@@ -270,23 +424,74 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
           lv_inherited = abap_true.
         ENDIF.
         <ls_prev>-superseded_by = is_run-run_id.
-        CLEAR ls_superseded.
-        ls_superseded-run_id                = <ls_prev>-run_id.
-        ls_superseded-finding_no            = <ls_prev>-finding_no.
-        ls_superseded-disposition           = zif_cd_ops_types=>gc_disposition-superseded.
-        ls_superseded-superseded_by         = is_run-run_id.
-        ls_superseded-col_ind-disposition   = abap_true.
-        ls_superseded-col_ind-superseded_by = abap_true.
-        INSERT ls_superseded INTO TABLE lt_superseded.
+        " Guarded: only while disposition and stamp are as read - never over a user's waiver / owner
+        IF guarded_supersede( is_read = <ls_prev> iv_run_id = is_run-run_id iv_now = iv_now ) = abap_false.
+          INSERT VALUE #( object_type = <ls_new>-object_type
+                          object_key  = <ls_new>-object_key
+                          check_code  = <ls_new>-check_code ) INTO TABLE rt_conflicts.
+        ENDIF.
       ENDLOOP.
     ENDLOOP.
+  ENDMETHOD.
 
-    CHECK lt_superseded IS NOT INITIAL.
-    UPDATE zcd_ops_finding FROM TABLE @lt_superseded INDICATORS SET STRUCTURE col_ind.
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e011(zcd_ops) WITH 'ZCD_OPS_FINDING'.
-    ENDIF.
+
+  METHOD guarded_supersede.
+    " One keyed UPDATE per exception the run supersedes (bounded by the run's own exceptions): ABAP SQL
+    " has no set-based compare-and-set - an UPDATE FROM TABLE matches by key only and would overwrite a
+    " user's change (Performance_Review.md section 10b)
+    UPDATE zcd_ops_finding
+      SET disposition     = @zif_cd_ops_types=>gc_disposition-superseded,
+          superseded_by   = @iv_run_id,
+          last_changed_at = @iv_now
+      WHERE run_id          = @is_read-run_id
+        AND finding_no      = @is_read-finding_no
+        AND disposition     = @is_read-disposition
+        AND last_changed_at = @is_read-last_changed_at.
+    rv_done = xsdbool( sy-subrc = 0 AND sy-dbcnt = 1 ).
+  ENDMETHOD.
+
+
+  METHOD guarded_resolve.
+    " One keyed UPDATE per exception the run resolves, as GUARDED_SUPERSEDE
+    UPDATE zcd_ops_finding
+      SET disposition     = @is_change-disposition,
+          resolved_by     = @is_change-resolved_by,
+          resolved_at     = @is_change-resolved_at,
+          resolution      = @is_change-resolution,
+          last_changed_at = @is_change-last_changed_at
+      WHERE run_id          = @is_read-run_id
+        AND finding_no      = @is_read-finding_no
+        AND disposition     = @is_read-disposition
+        AND last_changed_at = @is_read-last_changed_at.
+    rv_done = xsdbool( sy-subrc = 0 AND sy-dbcnt = 1 ).
+  ENDMETHOD.
+
+
+  METHOD deferred.
+    rs_finding-run_id          = is_row-run_id.
+    rs_finding-finding_no      = iv_finding_no.
+    rs_finding-pe_area         = is_row-pe_area.
+    rs_finding-object_type     = is_row-object_type.
+    rs_finding-object_key      = is_row-object_key.
+    rs_finding-group1          = is_row-group1.
+    rs_finding-group2          = is_row-group2.
+    rs_finding-check_code      = zif_cd_ops_exc_types=>gc_code_deferred.
+    rs_finding-severity        = zif_cd_ops_types=>gc_severity-info.
+    rs_finding-action          = zif_cd_ops_types=>gc_action-notify.
+    rs_finding-message         = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_exc_types=>gc_msg-changed_deferred
+                                                        iv_v1    = is_row-object_key
+                                                        iv_v2    = is_row-check_code ).
+    rs_finding-disposition     = zif_cd_ops_types=>gc_disposition-information.
+    rs_finding-occurrences     = 1.
+    rs_finding-first_seen_at   = iv_now.
+    rs_finding-created_at      = iv_now.
+    rs_finding-created_by      = sy-uname.
+    rs_finding-last_changed_at = iv_now.
+  ENDMETHOD.
+
+
+  METHOD last_finding_no.
+    SELECT MAX( finding_no ) FROM zcd_ops_finding WHERE run_id = @iv_run_id INTO @rv_no.
   ENDMETHOD.
 
 
@@ -328,8 +533,9 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
     IF it_object_keys IS NOT INITIAL.
       " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_KEY (fix 5: the caller knows no object type)
-      SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
-             due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
+      SELECT run_id, finding_no, pe_area, object_type, object_key, group1, group2, check_code, disposition,
+             owner, due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
+             last_changed_at
         FROM zcd_ops_finding
         FOR ALL ENTRIES IN @it_object_keys
         WHERE pe_area      = @is_run-pe_area
@@ -340,8 +546,9 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
         INTO CORRESPONDING FIELDS OF TABLE @lt_open.
     ENDIF.
     IF it_groups IS NOT INITIAL.
-      SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
-             due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
+      SELECT run_id, finding_no, pe_area, object_type, object_key, group1, group2, check_code, disposition,
+             owner, due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
+             last_changed_at
         FROM zcd_ops_finding
         FOR ALL ENTRIES IN @it_groups
         WHERE pe_area      = @is_run-pe_area
@@ -355,29 +562,58 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     SORT lt_open BY run_id finding_no.
     DELETE ADJACENT DUPLICATES FROM lt_open COMPARING run_id finding_no.
 
-    DATA lt_resolved TYPE tt_db_update.
-    DATA ls_resolved TYPE ty_db_update.
-    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
-    LOOP AT lt_open ASSIGNING FIELD-SYMBOL(<ls_open>).
-      CLEAR ls_resolved.
-      ls_resolved-run_id              = <ls_open>-run_id.
-      ls_resolved-finding_no          = <ls_open>-finding_no.
-      ls_resolved-disposition         = zif_cd_ops_types=>gc_disposition-resolved.
-      ls_resolved-resolved_by         = sy-uname.
-      ls_resolved-resolved_at         = lv_now.
-      ls_resolved-resolution          = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-passed_on_rerun
-                                                             iv_v1    = |{ is_run-run_id }| ).
-      ls_resolved-col_ind-disposition = abap_true.
-      ls_resolved-col_ind-resolved_by = abap_true.
-      ls_resolved-col_ind-resolved_at = abap_true.
-      ls_resolved-col_ind-resolution  = abap_true.
-      INSERT ls_resolved INTO TABLE lt_resolved.
-    ENDLOOP.
-    UPDATE zcd_ops_finding FROM TABLE @lt_resolved INDICATORS SET STRUCTURE col_ind.
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e011(zcd_ops) WITH 'ZCD_OPS_FINDING'.
+    DATA(lt_changed) = resolve_rows( is_run = is_run it_open = lt_open ).
+    IF lt_changed IS INITIAL.
+      RETURN.
     ENDIF.
+    " A user changed these exceptions between the read and the write: read again - what is still open or
+    " assigned is resolved once more; a waiver, resolution or new owner the user gave is never overwritten
+    CLEAR lt_open.
+    SELECT run_id, finding_no, pe_area, object_type, object_key, group1, group2, check_code, disposition,
+           owner, due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
+           last_changed_at
+      FROM zcd_ops_finding
+      FOR ALL ENTRIES IN @lt_changed
+      WHERE run_id     = @lt_changed-run_id
+        AND finding_no = @lt_changed-finding_no
+        AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
+                             @zif_cd_ops_types=>gc_disposition-assigned )
+      INTO CORRESPONDING FIELDS OF TABLE @lt_open.
+    lt_changed = resolve_rows( is_run = is_run it_open = lt_open ).
+    IF lt_changed IS INITIAL.
+      RETURN.
+    ENDIF.
+    " Changed again: left for the next run, said once per exception (numbered after the run's highest)
+    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    DATA(lv_no) = last_finding_no( is_run-run_id ).
+    DATA(lt_info) = VALUE tt_db_finding( ).
+    LOOP AT lt_changed ASSIGNING FIELD-SYMBOL(<ls_changed>).
+      lv_no = lv_no + 1.
+      DATA(ls_info) = deferred( is_row = <ls_changed> iv_finding_no = lv_no iv_now = lv_now ).
+      ls_info-run_id = is_run-run_id.
+      INSERT ls_info INTO TABLE lt_info.
+    ENDLOOP.
+    INSERT zcd_ops_finding FROM TABLE @lt_info ACCEPTING DUPLICATE KEYS.
+    IF sy-subrc <> 0 OR sy-dbcnt <> lines( lt_info ).
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e010(zcd_ops) WITH 'ZCD_OPS_FINDING'.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD resolve_rows.
+    DATA ls_change TYPE zcd_ops_finding.
+    ls_change-disposition     = zif_cd_ops_types=>gc_disposition-resolved.
+    ls_change-resolved_by     = sy-uname.
+    ls_change-resolved_at     = zcl_cd_ops_factory=>get_clock( )->now( ).
+    ls_change-last_changed_at = ls_change-resolved_at.
+    ls_change-resolution      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-passed_on_rerun
+                                                       iv_v1    = |{ is_run-run_id }| ).
+    LOOP AT it_open ASSIGNING FIELD-SYMBOL(<ls_open>).
+      IF guarded_resolve( is_read = <ls_open> is_change = ls_change ) = abap_false.
+        INSERT <ls_open> INTO TABLE rt_changed.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

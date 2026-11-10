@@ -10,6 +10,7 @@
 *& BGPF and PAUSE (own test include); the framework is QA case POC-14.
 *& Modification log:
 *& 2026-11-08 | Initial version (parallel snapshot packages; test seams BGPF, PAUSE).
+*& 2026-11-10 | The operation carries the package key only (concurrency review: keys, never the documents).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - bgPF queue of snapshot packages</p>
 "! VERIFY-ADT: CL_BGMC_PROCESS_FACTORY=>GET_DEFAULT( )->CREATE( ), SET_NAME,
@@ -37,7 +38,7 @@ CLASS zcl_cd_ops_pay_snap_queue IMPLEMENTATION.
       TRY.
           lo_process = cl_bgmc_process_factory=>get_default( )->create( ).
           lo_process->set_name( CONV #( zif_cd_ops_payout_types=>gc_process_name ) ).
-          lo_process->set_operation_tx_uncontrolled( NEW zcl_cd_ops_pay_snap_op( is_package ) ).
+          lo_process->set_operation_tx_uncontrolled( NEW zcl_cd_ops_pay_snap_op( CORRESPONDING #( is_package ) ) ).
           lo_process->save_for_execution( ).
         CATCH cx_bgmc INTO lx_error.
           " raised below: the run judges the package itself

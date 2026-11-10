@@ -2,6 +2,7 @@ projection;
 strict ( 2 );
 
 define behavior for ZC_CD_OpsException alias Exception
+use etag
 {
   use action assignOwner;
   use action resolveException;

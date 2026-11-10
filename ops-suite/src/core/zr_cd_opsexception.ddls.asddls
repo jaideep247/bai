@@ -62,6 +62,10 @@ define root view entity ZR_CD_OpsException
       waiver_reason as WaiverReason,
       @EndUserText.label: 'Created at'
       created_at    as CreatedAt,
+      // ETag (2026-11-10): set by every write - the store, the exception repository and the actions
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      @EndUserText.label: 'Changed at'
+      last_changed_at as LastChangedAt,
       _History
 }
 where

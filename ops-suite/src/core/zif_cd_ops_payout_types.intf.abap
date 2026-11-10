@@ -29,6 +29,11 @@
 *&            | TY_REQ_ITEM), FLOW_CLASS and DUE_DATE of a row, VALUT / HBKID of a verdict, codes PRQ_NOT_PAID /
 *&            | PAY_BATCH_INCOMPLETE / PAY_NIGHTLY_MISSING, parameters PAYOUT_BATCH_MAX_PACKAGES /
 *&            | PAYOUT_REQ_CUTOFF, messages 766-780, reused check configuration GC_CHECK.
+*& 2026-11-10 | Concurrency review: FAIL_COUNT of a watermark (consecutive failed runs of a source), MODE of a
+*&            | package (rows of earlier runs deleted per mode), TY_PKG_KEY (a bgPF unit carries keys only,
+*&            | members ZCD_PAY_OUTPKGM), package status C (configuration error), guard row GC_GUARD_SOURCE,
+*&            | configuration messages GC_CONFIG_MSG, codes PAY_OUTCOME_CONFIG / PAY_EVIDENCE_FAILED, parameter
+*&            | PAYOUT_FAIL_ESCALATE, messages 780-785.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -337,8 +342,16 @@ INTERFACE zif_cd_ops_payout_types
       "! Evidence of the source processed completely up to this instant (UTC): the run time when the
       "! run caught up, else the watermark's own entry time; basis of the snapshot lag
       current_to TYPE timestampl,
+      "! Consecutive runs (FAST / NIGHTLY) in which a package of the source failed; 0 after a run without
+      "! failure (2026-11-10). Not written by SAVE_WATERMARK (SAVE_FAILURES)
+      fail_count TYPE i,
     END OF ty_watermark.
   TYPES tt_watermark TYPE SORTED TABLE OF ty_watermark WITH UNIQUE KEY source.
+
+  "! Row of ZCD_PAY_OUTWM that is no evidence source: the guard every worklist write locks (SELECT SINGLE
+  "! FOR UPDATE) from its re-read of the current rows to its commit (2026-11-10) - FAST, NIGHTLY, SWEEP and
+  "! the parallel units validate and write one after the other, never on a stale judgement
+  CONSTANTS gc_guard_source TYPE ty_source_id VALUE 'WORKLIST'.
 
   "! Payment documents with new evidence of one source and the watermark after them
   TYPES:
@@ -406,6 +419,7 @@ INTERFACE zif_cd_ops_payout_types
       outcome   TYPE zif_cd_ops_trace_types=>ty_tabname VALUE 'ZCD_PAY_OUTCOME',
       watermark TYPE zif_cd_ops_trace_types=>ty_tabname VALUE 'ZCD_PAY_OUTWM',
       package   TYPE zif_cd_ops_trace_types=>ty_tabname VALUE 'ZCD_PAY_OUTPKG',
+      member    TYPE zif_cd_ops_trace_types=>ty_tabname VALUE 'ZCD_PAY_OUTPKGM',
     END OF gc_table.
 
   "! Run lock variant and evaluation context of the snapshot (object keys of its findings)
@@ -450,18 +464,50 @@ INTERFACE zif_cd_ops_payout_types
       "! The nightly re-evaluation of the worklist has not completed since the start of the day: requests
       "! due yesterday may not be judged yet (A_PRQ_NOT_PAID evidence PARTIAL)
       nightly_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_NIGHTLY_MISSING',
+      "! A snapshot package failed on a configuration error (GC_CONFIG_MSG): nothing written, the source
+      "! waits for a fix by transport - a retry alone never helps (2026-11-10)
+      config_failed    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_CONFIG',
+      "! An evidence kind could not be read for a technical reason (not a configuration error): its purposes
+      "! are not judged, the payments stay in flight (fail closed, 2026-11-10)
+      evidence_failed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_EVIDENCE_FAILED',
     END OF gc_code.
+
+  "! ZCD_OPS messages that mean a configuration error (fix by transport, a retry never helps): plug-in
+  "! class missing / not instantiable / without its interface, plug-in interface missing, configuration
+  "! missing / invalid, configured table not in the DDIC, invalid PCRE in check parameters / sequence
+  "! outcomes / a pattern, evidence parameter required, evidence expectation invalid, no or two method
+  "! classes of a payment method, request source not configured
+  CONSTANTS:
+    BEGIN OF gc_config_msg,
+      class_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '030',
+      class_no_plugin  TYPE zif_cd_ops_types=>ty_msgno VALUE '031',
+      class_no_intf    TYPE zif_cd_ops_types=>ty_msgno VALUE '032',
+      intf_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '033',
+      config_missing   TYPE zif_cd_ops_types=>ty_msgno VALUE '050',
+      config_invalid   TYPE zif_cd_ops_types=>ty_msgno VALUE '051',
+      table_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '303',
+      param_pcre       TYPE zif_cd_ops_types=>ty_msgno VALUE '373',
+      no_method_class  TYPE zif_cd_ops_types=>ty_msgno VALUE '384',
+      two_classes      TYPE zif_cd_ops_types=>ty_msgno VALUE '385',
+      evidence_param   TYPE zif_cd_ops_types=>ty_msgno VALUE '665',
+      seqout_pcre      TYPE zif_cd_ops_types=>ty_msgno VALUE '666',
+      expectation      TYPE zif_cd_ops_types=>ty_msgno VALUE '671',
+      source_unconfig  TYPE zif_cd_ops_types=>ty_msgno VALUE '703',
+      pattern_pcre     TYPE zif_cd_ops_types=>ty_msgno VALUE '743',
+    END OF gc_config_msg.
 
   " ------------------------------------------------------------ parallel packages (ZCD_PAY_OUTPKG)
   "! Status of a parallel package: P planned (dispatched), D done (its versions committed), F failed
-  "! (nothing written), A abandoned (not finished within PAYOUT_PARALLEL_WAIT_SEC - the unit writes
-  "! nothing any more)
+  "! (nothing written), C failed on a configuration error (nothing written, reported as configuration,
+  "! 2026-11-10), A abandoned (not finished within PAYOUT_PARALLEL_WAIT_SEC - the unit writes nothing any
+  "! more)
   TYPES ty_pkg_status TYPE c LENGTH 1.
   CONSTANTS:
     BEGIN OF gc_pkg_status,
       planned   TYPE ty_pkg_status VALUE 'P',
       done      TYPE ty_pkg_status VALUE 'D',
       failed    TYPE ty_pkg_status VALUE 'F',
+      config    TYPE ty_pkg_status VALUE 'C',
       abandoned TYPE ty_pkg_status VALUE 'A',
     END OF gc_pkg_status.
 
@@ -472,6 +518,8 @@ INTERFACE zif_cd_ops_payout_types
       run_id    TYPE zif_cd_ops_types=>ty_run_id,
       source    TYPE ty_source_id,
       pkg_no    TYPE i,
+      "! Mode of the run that planned the package (its rows are deleted by the next run of that mode)
+      mode      TYPE ty_mode,
       status    TYPE ty_pkg_status,
       "! Time of the run: VALID_FROM / VALID_TO of the versions the package writes
       run_at    TYPE ty_timestamp,
@@ -485,6 +533,16 @@ INTERFACE zif_cd_ops_payout_types
       message   TYPE zif_cd_ops_types=>ty_message,
     END OF ty_package.
   TYPES tt_package TYPE STANDARD TABLE OF ty_package WITH EMPTY KEY.
+
+  "! What the bgPF unit of a package carries (2026-11-10): the package key and the run time only - the
+  "! unit re-reads the documents and requests of the package (ZCD_PAY_OUTPKGM), never a payload
+  TYPES:
+    BEGIN OF ty_pkg_key,
+      run_id TYPE zif_cd_ops_types=>ty_run_id,
+      source TYPE ty_source_id,
+      pkg_no TYPE i,
+      run_at TYPE ty_timestamp,
+    END OF ty_pkg_key.
 
   "! Snapshot lag: minutes between now and the oldest instant up to which an evidence source is
   "! processed completely (MIN of CURRENT_TO, RECHECK excluded). KNOWN = blank: no source has run
@@ -596,6 +654,9 @@ INTERFACE zif_cd_ops_payout_types
       "! Payment documents listed as examples in an aggregated finding (oldest first) [10]; also read
       "! by A_INFLIGHT
       examples     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_EXAMPLES',
+      "! Consecutive runs with a failed package of a source after which its failure finding is an error [3];
+      "! before, a warning (the next run retries) - FAST / NIGHTLY (2026-11-10)
+      fail_escalate TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_FAIL_ESCALATE',
       "! Packages per run of the NIGHTLY and SWEEP modes [1000]; NIGHTLY continues from its cursor
       batch_max_packages TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_BATCH_MAX_PACKAGES',
       "! Cut-off of a payment request per source (LIST SOURCE=HHMMSS, * = every other source) in the
@@ -612,6 +673,7 @@ INTERFACE zif_cd_ops_payout_types
       parallel     TYPE i VALUE 4,
       wait_sec     TYPE i VALUE 600,
       examples     TYPE i VALUE 10,
+      fail_escalate TYPE i VALUE 3,
       batch_max_packages TYPE i VALUE 1000,
       req_cutoff   TYPE string VALUE `*=190000`,
       "! Snapshot lag (minutes) above which it is stale: MON_STALE_AFTER_MIN_CORE (core freshness row of
@@ -637,7 +699,7 @@ INTERFACE zif_cd_ops_payout_types
   "! Request log rows read per FIN at most (attempts of all sources); reaching it = fail closed
   CONSTANTS gc_max_attempts TYPE i VALUE 50.
 
-  " ------------------------------------------------------------ messages (ZCD_OPS 750-769)
+  " ------------------------------------------------------------ messages (ZCD_OPS 750-785)
   CONSTANTS:
     BEGIN OF gc_msg,
       "! &1 is in &2 sources (&3): outcome AMBIGUOUS, evaluated &4
@@ -700,6 +762,18 @@ INTERFACE zif_cd_ops_payout_types
       req_cancelled    TYPE zif_cd_ops_types=>ty_msgno VALUE '778',
       "! Request &1 &2: stage &3, &4
       trace_request    TYPE zif_cd_ops_types=>ty_msgno VALUE '779',
+      "! &1 worklist entities changed by a concurrent run since judged (first &2)
+      worklist_changed TYPE zif_cd_ops_types=>ty_msgno VALUE '780',
+      "! A second current worklist row of &1 prevented
+      second_current   TYPE zif_cd_ops_types=>ty_msgno VALUE '781',
+      "! Database error in source &1 - package rolled back:
+      db_error         TYPE zif_cd_ops_types=>ty_msgno VALUE '782',
+      "! Source &1 not judged in &2 runs in a row (limit &3):
+      failed_escalated TYPE zif_cd_ops_types=>ty_msgno VALUE '783',
+      "! Source &1 stopped by a configuration error (&2 runs) - fix by transport:
+      config_failed    TYPE zif_cd_ops_types=>ty_msgno VALUE '784',
+      "! Evidence &1 (&2) could not be read - its purposes are not judged:
+      evidence_failed  TYPE zif_cd_ops_types=>ty_msgno VALUE '785',
     END OF gc_msg.
 
 ENDINTERFACE.

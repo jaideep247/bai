@@ -3104,6 +3104,60 @@
      <MSGNR>779</MSGNR>
      <TEXT>Request &amp;1 &amp;2: stage &amp;3, &amp;4</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>780</MSGNR>
+     <TEXT>&amp;1 worklist entities changed by a concurrent run since judged (first &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>781</MSGNR>
+     <TEXT>A second current worklist row of &amp;1 prevented</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>782</MSGNR>
+     <TEXT>Database error in source &amp;1 - package rolled back:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>783</MSGNR>
+     <TEXT>Source &amp;1 not judged in &amp;2 runs in a row (limit &amp;3):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>784</MSGNR>
+     <TEXT>Source &amp;1 stopped by a configuration error (&amp;2 runs) - fix by transport:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>785</MSGNR>
+     <TEXT>Evidence &amp;1 (&amp;2) could not be read - its purposes are not judged:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>786</MSGNR>
+     <TEXT>Exception &amp;1 (&amp;2) changed by a user during the run - left for next run</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>787</MSGNR>
+     <TEXT>Exception &amp;1 / &amp;2 changed meanwhile - not resolved, nothing saved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>788</MSGNR>
+     <TEXT>Open exceptions of request &amp;1 could not be read - record not saved</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

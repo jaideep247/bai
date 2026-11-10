@@ -2,17 +2,20 @@ managed implementation in class zbp_r_cd_opsexception unique;
 strict ( 2 );
 
 // Exceptions app (design 6.1). Operations change an exception only through actions;
-// every action writes a history row. No draft: each action is one complete change.
+// every action writes a history row. No draft: each action is one complete change, so no total etag.
+// ETag LastChangedAt (2026-11-10): an action on a version the user did not see (the batch store
+// superseded or resolved the exception meanwhile) is refused - the user refreshes, nothing is lost.
 define behavior for ZR_CD_OpsException alias Exception
 persistent table zcd_ops_finding
 lock master
 authorization master ( instance )
+etag master LastChangedAt
 {
   internal update;
   field ( readonly ) RunId, FindingNo, PaymentEngineArea, ObjectType, ObjectKey, Group1, Group2, RuleId, CheckCode,
                      Severity, ActionCode, Amount, Currency, Reference, Message, Disposition, Owner, DueDate,
                      ResolvedBy, ResolvedAt, Resolution, FirstSeenAt, Occurrences, WaiverUntil, WaiverReqBy,
-                     WaiverReqAt, WaiverReason, CreatedAt;
+                     WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt;
 
   // VERIFY-ADT: internal create by association (history written only by the actions)
   association _History { internal create; }
@@ -52,6 +55,7 @@ authorization master ( instance )
     WaiverReqAt  = waiver_req_at;
     WaiverReason = waiver_reason;
     CreatedAt    = created_at;
+    LastChangedAt = last_changed_at;
   }
 }
 

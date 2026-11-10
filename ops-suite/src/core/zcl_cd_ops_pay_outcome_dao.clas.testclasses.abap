@@ -21,6 +21,12 @@
 *&            | NIGHTLY / NIGHTLYREQ cursors, request keys and items (payment run, block), due requests with item
 *&            | sums, SWEEP upper date, package rows per mode, not yet snapshotted after the DOCUMENTS watermark
 *&            | (and the first-run window).
+*& 2026-11-10 | Concurrency review: a judgement made on rows another run changed meanwhile writes nothing
+*&            | (780), a second current row of a key is refused (781), an unchanged basis writes as before;
+*&            | package members round trip (a unit re-reads its documents and requests) and are deleted with
+*&            | their package; a run deletes the packages of earlier runs of its own mode only (SWEEP and FAST
+*&            | share sources); the count of failed runs survives a watermark save and a source without
+*&            | watermark gets a row without position.
 *&---------------------------------------------------------------------*
 CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -75,6 +81,11 @@ CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
     CLASS-METHODS class_teardown.
     METHODS setup.
 
+    "! Rows of the worklist in the table (all versions), ordered by key
+    METHODS worklist_rows
+      RETURNING
+        VALUE(rt_rows) TYPE zif_cd_ops_payout_types=>tt_version.
+
     METHODS documents_after_watermark   FOR TESTING.
     METHODS package_size_sets_more      FOR TESTING.
     METHODS reversal_of_payment_doc     FOR TESTING.
@@ -103,6 +114,10 @@ CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
     METHODS due_requests_with_amount    FOR TESTING.
     METHODS sweep_stops_at_upper_date   FOR TESTING.
     METHODS packages_of_other_mode_kept FOR TESTING.
+    METHODS stale_judgement_writes_none FOR TESTING.
+    METHODS second_current_row_refused  FOR TESTING.
+    METHODS package_members_round_trip  FOR TESTING.
+    METHODS failures_kept_by_watermark  FOR TESTING.
 
     "! A worklist row of a payment request (payment document blank)
     METHODS request_row
@@ -158,7 +173,16 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'DFKKKO' ) ( 'DFKKOP' ) ( 'FEBEP' ) ( 'DFKKRP' ) ( 'BKPF' ) ( 'BSEG' )
                                    ( 'DFKKCR' ) ( 'ZCD_PAY_OUTCOME' ) ( 'ZCD_PAY_OUTWM' ) ( 'ZCD_PAY_OUTPKG' )
-                                   ( 'DPAYH' ) ( 'T001' ) ( 'TFK042Z' ) ) ).
+                                   ( 'ZCD_PAY_OUTPKGM' ) ( 'DPAYH' ) ( 'T001' ) ( 'TFK042Z' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD worklist_rows.
+    SELECT fin_id, source, bukrs, augbl, laufd, laufi, valid_from, valid_to, outcome,
+           evidence_kind, evidence_ref, finding, severity, evaluated_at, flow_class, due_date
+      FROM zcd_pay_outcome
+      ORDER BY fin_id, source, bukrs, augbl, laufd, laufi, valid_from
+      INTO CORRESPONDING FIELDS OF TABLE @rt_rows.
   ENDMETHOD.
 
 
@@ -375,7 +399,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   " or a final outcome; the end of the list resets the cursor
   METHOD recheck_only_open_not_final.
     TRY.
-        mo_cut->save_versions( it_close  = VALUE #( )
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( )
                                it_insert = VALUE #( ( version( iv_augbl = gc-doc_old
                                                                iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) )
                                                     ( version( iv_augbl = gc-doc_new
@@ -390,6 +415,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_changes-docno[ table_line = gc-doc_old ] ) )
                                           msg = 'The open payment not final' ).
         cl_abap_unit_assert=>assert_initial( act = ls_changes-watermark-wm_key msg = 'End of list: cursor reset' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -420,12 +447,14 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     TRY.
         given_item( iv_augbl = gc-doc_old iv_fin = gc-fin ).
         DATA(ls_first) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
-        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_first ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( ) it_insert = VALUE #( ( ls_first ) ) ).
         DATA(ls_closed) = ls_first.
         ls_closed-valid_to = gc-now.
         DATA(ls_second) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-cleared ).
         ls_second-valid_from = gc-now.
-        mo_cut->save_versions( it_close = VALUE #( ( ls_closed ) ) it_insert = VALUE #( ( ls_second ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( ( ls_first ) )
+                               it_close  = VALUE #( ( ls_closed ) ) it_insert = VALUE #( ( ls_second ) ) ).
         DATA(lt_open) = mo_cut->get_versions( VALUE #( ( gc-doc_old ) ) ).
         DELETE lt_open WHERE valid_to <> zif_cd_ops_payout_types=>gc_valid_to_open.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_open ) exp = 1 msg = 'One current version' ).
@@ -435,6 +464,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lv_versions exp = 2 msg = 'History kept' ).
         DATA(lt_items) = mo_cut->get_fin_items( VALUE #( ( gc-doc_old ) ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 1 msg = 'FIN item of the payment' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -543,13 +574,16 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     TRY.
         DATA(ls_pending) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
         ls_pending-finding = zif_cd_ops_payout_types=>gc_code-status_pending.
-        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_pending ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( ) it_insert = VALUE #( ( ls_pending ) ) ).
         DATA(ls_changes) = mo_cut->get_changes( iv_source    = zif_cd_ops_payout_types=>gc_source-recheck
                                                 is_watermark = VALUE #( source = zif_cd_ops_payout_types=>gc_source-recheck
                                                                         wm_key = gc-doc_new )
                                                 iv_max       = 100 ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_changes-docno[ table_line = gc-doc_old ] ) )
                                           msg = 'Pending payment rechecked before the cursor' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -557,13 +591,14 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
 
 
   " Rule: a planned package is claimed once; finished D keeps its counts; the run abandons what is
-  " still planned (an abandoned package cannot be claimed); rows of other runs are deleted
+  " still planned (an abandoned package cannot be claimed); rows of other runs of the mode are deleted
   METHOD package_rows_life_cycle.
     DATA ls_first TYPE zif_cd_ops_payout_types=>ty_package.
     TRY.
         ls_first-run_id = '000000000000000000000000000000B1'.
         ls_first-source = zif_cd_ops_payout_types=>gc_source-documents.
         ls_first-pkg_no = 1.
+        ls_first-mode   = zif_cd_ops_payout_types=>gc_mode-fast.
         INSERT gc-doc_old INTO TABLE ls_first-docno.
         DATA(ls_second) = ls_first.
         ls_second-pkg_no = 2.
@@ -577,7 +612,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         mo_cut->abandon_packages( ls_first-run_id ).
         cl_abap_unit_assert=>assert_false( act = mo_cut->claim_package( ls_second ) msg = 'Abandoned: not claimed' ).
         mo_cut->delete_packages( iv_keep_run_id = ls_first-run_id
-                                 it_sources     = VALUE #( ( zif_cd_ops_payout_types=>gc_source-documents ) ) ).
+                                 iv_mode        = ls_first-mode ).
         DATA(lt_rows) = mo_cut->get_packages( ls_first-run_id ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Rows of the run kept' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-status exp = zif_cd_ops_payout_types=>gc_pkg_status-done
@@ -600,12 +635,15 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         given_payment( gc-doc_old ).
         DATA(ls_ambiguous) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-ambiguous ).
         ls_ambiguous-finding = zif_cd_ops_payout_types=>gc_code-source_ambiguous.
-        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_ambiguous ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( ) it_insert = VALUE #( ( ls_ambiguous ) ) ).
         DATA(lt_new) = mo_cut->get_new_versions( iv_valid_from = gc-from
                                                  iv_finding    = zif_cd_ops_payout_types=>gc_code-source_ambiguous ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_new ) exp = 1 msg = 'The ambiguous version of the run' ).
         cl_abap_unit_assert=>assert_equals( act = lt_new[ 1 ]-pymet exp = gc_agg-wire msg = 'Method of the payment' ).
         cl_abap_unit_assert=>assert_false( act = lt_new[ 1 ]-xeinz msg = 'Disbursement' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -624,13 +662,16 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         DATA(ls_row3) = ls_row.
         ls_row3-fin_id = gc_agg-fin3.
         DATA(ls_eur) = version( iv_augbl = gc_agg-doc_eur iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
-        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_row ) ( ls_row2 ) ( ls_row3 ) ( ls_eur ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( ) it_insert = VALUE #( ( ls_row ) ( ls_row2 ) ( ls_row3 ) ( ls_eur ) ) ).
         DATA(lt_groups) = mo_cut->get_outcome_groups( query( ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_groups ) exp = 2 msg = 'One group per currency' ).
         DATA(ls_usd) = lt_groups[ currency = gc_agg-usd ].
         cl_abap_unit_assert=>assert_equals( act = ls_usd-payments exp = 1 msg = 'Three FIN rows, one payment' ).
         cl_abap_unit_assert=>assert_equals( act = ls_usd-amount exp = abs( gc_agg-amount ) msg = 'Amount once, positive' ).
         cl_abap_unit_assert=>assert_equals( act = ls_usd-due exp = abap_true msg = 'Valid since before the lag limit' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -648,12 +689,15 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         ls_old-laufd = gc_agg-old_day.
         DATA(ls_final) = version( iv_augbl = gc_agg-doc_final iv_outcome = zif_cd_ops_payout_types=>gc_outcome-cleared ).
         ls_final-laufd = gc_agg-old_day.
-        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_old ) ( ls_final ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( ) it_insert = VALUE #( ( ls_old ) ( ls_final ) ) ).
         DATA(lt_groups) = mo_cut->get_outcome_groups( query( ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_groups ) exp = 1 msg = 'Only the old payment in flight' ).
         cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-outcome exp = zif_cd_ops_payout_types=>gc_outcome-in_flight
                                             msg = 'In flight since September' ).
         cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-valut exp = gc_agg-old_day msg = 'Value date for the age' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -667,7 +711,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         given_payment( iv_doc = gc-doc_old iv_valut = gc_agg-old_day ).
         given_payment( iv_doc = gc-doc_new ).
         given_payment( iv_doc = gc_agg-doc_eur ).
-        mo_cut->save_versions( it_close  = VALUE #( )
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( )
                                it_insert = VALUE #( ( version( iv_augbl = gc-doc_old
                                                                iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) )
                                                     ( version( iv_augbl = gc-doc_new
@@ -678,6 +723,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_examples ) exp = 2 msg = 'First 2 of the partition' ).
         cl_abap_unit_assert=>assert_equals( act = lt_examples[ 1 ]-doc1r exp = gc-doc_old msg = 'Oldest value date first' ).
         cl_abap_unit_assert=>assert_equals( act = lt_examples[ 2 ]-doc1r exp = gc-doc_new msg = 'Then by document' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -690,7 +737,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         given_country( ).
         given_payment( iv_doc = gc-doc_old iv_status = gc_agg-issued ).
         given_payment( iv_doc = gc-doc_new iv_status = gc_agg-confirmed ).
-        mo_cut->save_versions( it_close  = VALUE #( )
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( )
                                it_insert = VALUE #( ( version( iv_augbl = gc-doc_old
                                                                iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) )
                                                     ( version( iv_augbl = gc-doc_new
@@ -701,6 +749,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         DATA(lt_rows) = mo_cut->get_outcome_rows( is_query = ls_query iv_max = 100 ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'Only the ISSUED payment' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-doc1r exp = gc-doc_old msg = 'The ISSUED payment' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -718,11 +768,14 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         DATA(ls_mixed) = version( iv_augbl = gc-doc_new iv_outcome = zif_cd_ops_payout_types=>gc_outcome-ambiguous ).
         DATA(ls_known) = version( iv_augbl = gc-doc_new iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
         ls_known-fin_id = gc_agg-fin2.
-        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_ambiguous ) ( ls_mixed ) ( ls_known ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( ) it_insert = VALUE #( ( ls_ambiguous ) ( ls_mixed ) ( ls_known ) ) ).
         DATA(lt_docno) = mo_cut->get_ambiguous_only( is_query = query( ) iv_max = 100 ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_docno ) exp = 1 msg = 'Only the AMBIGUOUS-only payment' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_docno[ table_line = gc-doc_old ] ) )
                                           msg = 'The payment without another outcome' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -774,10 +827,12 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     TRY.
         DATA(ls_open) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
         DATA(ls_other) = version( iv_augbl = gc-doc_new iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
-        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_open ) ( ls_other ) ) ).
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( ) it_insert = VALUE #( ( ls_open ) ( ls_other ) ) ).
         DATA(ls_changed) = ls_open.
         ls_changed-outcome = zif_cd_ops_payout_types=>gc_outcome-pending.
-        mo_cut->save_versions( it_close  = VALUE #( )
+        mo_cut->save_versions( it_basis  = VALUE #( ( ls_open ) ( ls_other ) )
+                               it_close  = VALUE #( )
                                it_insert = VALUE #( )
                                it_delete = VALUE #( ( ls_other ) )
                                it_update = VALUE #( ( ls_changed ) ) ).
@@ -786,6 +841,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-outcome exp = zif_cd_ops_payout_types=>gc_outcome-pending
                                             msg = 'Changed in place' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-valid_from exp = gc-from msg = 'Open since kept' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -797,6 +854,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   METHOD nightly_cursor_rows.
     TRY.
         mo_cut->save_versions(
+          it_basis  = VALUE #( )
           it_close  = VALUE #( )
           it_insert = VALUE #( ( version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) )
                                ( version( iv_augbl    = gc-doc_new
@@ -810,6 +868,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_changes-docno exp = VALUE zif_cd_ops_trace_types=>tt_docno( ( gc-doc_old ) )
                                             msg = 'The current payment row only' ).
         cl_abap_unit_assert=>assert_initial( act = ls_changes-watermark-wm_key msg = 'End of the list: cursor cleared' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -820,6 +880,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   METHOD nightly_request_rows.
     TRY.
         mo_cut->save_versions(
+          it_basis  = VALUE #( )
           it_close  = VALUE #( )
           it_insert = VALUE #( ( request_row( iv_fin = gc-fin iv_outcome = zif_cd_ops_payout_types=>gc_outcome-req_open
                                               iv_due = gc-day ) )
@@ -841,6 +902,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
           act = mo_cut->get_request_keys( VALUE #( ( gc-fin ) ) )
           exp = VALUE zif_cd_ops_payout_types=>tt_req_key( ( fin = gc-fin source = gc-source ) )
           msg = 'Request of a FIN' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -888,6 +951,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     DATA ls_item TYPE dfkkop.
     TRY.
         mo_cut->save_versions(
+          it_basis  = VALUE #( )
           it_close  = VALUE #( )
           it_insert = VALUE #( ( request_row( iv_fin = gc-fin iv_outcome = zif_cd_ops_payout_types=>gc_outcome-req_not_paid
                                               iv_due = gc_agg-old_day ) )
@@ -904,6 +968,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-amount exp = gc_agg-amount msg = 'Item sum of the FIN' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-stage exp = zif_cd_ops_payout_types=>gc_req_stage-not_in_run
                                             msg = 'Stage of the row' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -935,24 +1001,180 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a run deletes the package rows of its own mode's sources only (a NIGHTLY run's rows survive a
-  " FAST run)
+  " Rule (review 2026-11-10): a run deletes the package rows and members of earlier runs of its own mode
+  " only - a SWEEP run reads the same evidence source as FAST, its in-flight rows survive a FAST run
   METHOD packages_of_other_mode_kept.
     DATA ls_fast TYPE zif_cd_ops_payout_types=>ty_package.
     TRY.
         ls_fast-run_id = '000000000000000000000000000000C1'.
         ls_fast-source = zif_cd_ops_payout_types=>gc_source-documents.
         ls_fast-pkg_no = 1.
-        DATA(ls_night) = ls_fast.
-        ls_night-run_id = '000000000000000000000000000000C2'.
-        ls_night-source = zif_cd_ops_payout_types=>gc_source-nightly.
-        mo_cut->save_packages( VALUE #( ( ls_fast ) ( ls_night ) ) ).
-        DATA(lv_deleted) = mo_cut->delete_packages(
-                             iv_keep_run_id = '000000000000000000000000000000C3'
-                             it_sources     = VALUE #( ( zif_cd_ops_payout_types=>gc_source-documents ) ) ).
-        cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'The FAST row only' ).
-        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_packages( ls_night-run_id ) ) exp = 1
-                                            msg = 'The NIGHTLY row kept' ).
+        ls_fast-mode   = zif_cd_ops_payout_types=>gc_mode-fast.
+        INSERT gc-doc_old INTO TABLE ls_fast-docno.
+        DATA(ls_sweep) = ls_fast.
+        ls_sweep-run_id = '000000000000000000000000000000C2'.
+        ls_sweep-mode   = zif_cd_ops_payout_types=>gc_mode-sweep.
+        mo_cut->save_packages( VALUE #( ( ls_fast ) ( ls_sweep ) ) ).
+        DATA(lv_deleted) = mo_cut->delete_packages( iv_keep_run_id = '000000000000000000000000000000C3'
+                                                    iv_mode        = zif_cd_ops_payout_types=>gc_mode-fast ).
+        cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 2 msg = 'The earlier FAST row and its member only' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_packages( ls_sweep-run_id ) ) exp = 1
+                                            msg = 'The SWEEP row of the same source kept' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_package( CORRESPONDING #( ls_fast ) )-docno
+                                             msg = 'Members of the deleted package deleted' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_package( CORRESPONDING #( ls_sweep ) )-docno
+                                            exp = ls_sweep-docno
+                                            msg = 'Members of the SWEEP package kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a judgement made on rows another run changed meanwhile (here: NIGHTLY
+  " re-evaluated the open row after FAST read it) writes nothing - 780, the package is retried
+  METHOD stale_judgement_writes_none.
+    DATA lx_stale TYPE REF TO zcx_cd_ops_error.
+    DATA(ls_read) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+    ls_read-evaluated_at = gc-from.
+    TRY.
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( )
+                               it_insert = VALUE #( ( ls_read ) ) ).
+        " The concurrent run: the same row evaluated again (in place) after this judgement read it
+        DATA(ls_concurrent) = ls_read.
+        ls_concurrent-evaluated_at = gc-now.
+        ls_concurrent-outcome      = zif_cd_ops_payout_types=>gc_outcome-pending.
+        mo_cut->save_versions( it_basis  = VALUE #( ( ls_read ) )
+                               it_close  = VALUE #( )
+                               it_insert = VALUE #( )
+                               it_update = VALUE #( ( ls_concurrent ) ) ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_setup).
+        cl_abap_unit_assert=>fail( msg = lx_setup->get_text( ) ).
+    ENDTRY.
+    DATA(lt_before) = worklist_rows( ).
+    " This judgement, made on ls_read: the payment cleared - close the exception, insert the closing version
+    DATA(ls_closed) = ls_read.
+    ls_closed-valid_to = gc-now.
+    DATA(ls_closing) = ls_read.
+    ls_closing-valid_from = gc-now.
+    ls_closing-valid_to   = gc-now.
+    ls_closing-outcome    = zif_cd_ops_payout_types=>gc_outcome-cleared.
+    TRY.
+        mo_cut->save_versions( it_basis  = VALUE #( ( ls_read ) )
+                               it_close  = VALUE #( ( ls_closed ) )
+                               it_insert = VALUE #( ( ls_closing ) ) ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_db).
+        cl_abap_unit_assert=>fail( msg = lx_db->get_text( ) ).
+      CATCH zcx_cd_ops_error INTO lx_stale.
+        " expected
+    ENDTRY.
+    cl_abap_unit_assert=>assert_bound( act = lx_stale msg = 'A stale judgement raises' ).
+    cl_abap_unit_assert=>assert_equals( act = lx_stale->if_t100_message~t100key-msgno
+                                        exp = zif_cd_ops_payout_types=>gc_msg-worklist_changed
+                                        msg = 'Message 780: changed by a concurrent run' ).
+    cl_abap_unit_assert=>assert_equals( act = worklist_rows( ) exp = lt_before msg = 'Nothing written' ).
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): before a row is inserted as current, every current row of its key is
+  " closed or deleted in the same write - never two current rows of one key
+  METHOD second_current_row_refused.
+    DATA lx_second TYPE REF TO zcx_cd_ops_error.
+    DATA(ls_current) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-inconsistent ).
+    TRY.
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( )
+                               it_insert = VALUE #( ( ls_current ) ) ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_setup).
+        cl_abap_unit_assert=>fail( msg = lx_setup->get_text( ) ).
+    ENDTRY.
+    DATA(ls_second) = ls_current.
+    ls_second-valid_from = gc-now.
+    ls_second-outcome    = zif_cd_ops_payout_types=>gc_outcome-ambiguous.
+    TRY.
+        " The basis is right, but the current row is neither closed nor deleted
+        mo_cut->save_versions( it_basis  = VALUE #( ( ls_current ) )
+                               it_close  = VALUE #( )
+                               it_insert = VALUE #( ( ls_second ) ) ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_db).
+        cl_abap_unit_assert=>fail( msg = lx_db->get_text( ) ).
+      CATCH zcx_cd_ops_error INTO lx_second.
+        " expected
+    ENDTRY.
+    cl_abap_unit_assert=>assert_bound( act = lx_second msg = 'A second current row raises' ).
+    cl_abap_unit_assert=>assert_equals( act = lx_second->if_t100_message~t100key-msgno
+                                        exp = zif_cd_ops_payout_types=>gc_msg-second_current
+                                        msg = 'Message 781' ).
+    cl_abap_unit_assert=>assert_equals( act = worklist_rows( ) exp = VALUE zif_cd_ops_payout_types=>tt_version( ( ls_current ) )
+                                        msg = 'Only the first current row' ).
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): the bgPF unit carries the package key only - the documents and requests
+  " planned for the package are read back by the key, exactly
+  METHOD package_members_round_trip.
+    DATA ls_package TYPE zif_cd_ops_payout_types=>ty_package.
+    TRY.
+        ls_package-run_id = '000000000000000000000000000000D1'.
+        ls_package-source = zif_cd_ops_payout_types=>gc_source-documents.
+        ls_package-pkg_no = 2.
+        ls_package-mode   = zif_cd_ops_payout_types=>gc_mode-nightly.
+        ls_package-run_at = gc-now.
+        INSERT gc-doc_old INTO TABLE ls_package-docno.
+        INSERT gc-doc_new INTO TABLE ls_package-docno.
+        INSERT VALUE #( fin = gc-fin source = gc-source ) INTO TABLE ls_package-requests.
+        DATA(ls_other) = ls_package.
+        ls_other-pkg_no = 3.
+        CLEAR ls_other-requests.
+        mo_cut->save_packages( VALUE #( ( ls_package ) ( ls_other ) ) ).
+        DATA(ls_read) = mo_cut->get_package( CORRESPONDING #( ls_package ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_read-docno exp = ls_package-docno msg = 'The documents of the package' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_read-requests exp = ls_package-requests msg = 'Its requests' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_read-run_at exp = gc-now msg = 'The run time of the key' ).
+        DATA(lt_rows) = mo_cut->get_packages( ls_package-run_id ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-mode
+                                            exp = zif_cd_ops_payout_types=>gc_mode-nightly
+                                            msg = 'The mode of the package row' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): the count of consecutive failed runs is the run's - a watermark save keeps
+  " it; a source that failed before its first watermark gets a row without position (still a first run)
+  METHOD failures_kept_by_watermark.
+    TRY.
+        mo_cut->save_failures( iv_source = zif_cd_ops_payout_types=>gc_source-returns iv_count = 1 ).
+        DATA(lt_watermarks) = mo_cut->get_watermarks( ).
+        DATA(ls_first) = lt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-returns ].
+        cl_abap_unit_assert=>assert_equals( act = ls_first-fail_count exp = 1 msg = 'Counted before a watermark' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_first-updated_at msg = 'No position: still a first run' ).
+        DATA(ls_watermark) = watermark( zif_cd_ops_payout_types=>gc_source-returns ).
+        ls_watermark-updated_at = gc-now.
+        mo_cut->save_watermark( ls_watermark ).
+        mo_cut->save_failures( iv_source = zif_cd_ops_payout_types=>gc_source-returns iv_count = 2 ).
+        mo_cut->save_watermark( ls_watermark ).
+        lt_watermarks = mo_cut->get_watermarks( ).
+        DATA(ls_after) = lt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-returns ].
+        cl_abap_unit_assert=>assert_equals( act = ls_after-fail_count exp = 2 msg = 'A watermark save keeps the count' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_after-wm_time exp = gc-wm_time msg = 'And writes the position' ).
+        " The guard row of the worklist (written by a package write) is never a watermark
+        mo_cut->save_versions( it_basis  = VALUE #( )
+                               it_close  = VALUE #( )
+                               it_insert = VALUE #( ( version( iv_augbl   = gc-doc_old
+                                                               iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) ) ) ).
+        lt_watermarks = mo_cut->get_watermarks( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( lt_watermarks[ source = zif_cd_ops_payout_types=>gc_guard_source ] ) )
+          msg = 'The worklist guard is no watermark' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = lx_sql->get_text( ) ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

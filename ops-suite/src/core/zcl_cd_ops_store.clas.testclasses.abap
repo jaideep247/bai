@@ -20,15 +20,42 @@
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED, ZCD_OPS_PARAM no longer doubled); the
 *&            | read semantics (blank, condensed, range) moved to ZCL_CD_OPS_PARAMS_CA's tests; A64 proved
 *&            | through ZCL_CD_OPS_FACTORY=>GET_PARAMS.
+*& 2026-11-10 | Concurrency review (lost update with the exceptions app): a user who waives an exception
+*&            | while the run carries it forward keeps the waiver (the new row inherits it); a user who changes
+*&            | it twice keeps the change and the run leaves it for the next run with an information finding;
+*&            | a waiver given while reconcile resolves is never overwritten; every write sets the change
+*&            | stamp. The user's action is simulated by the clock double (the run asks the clock for the
+*&            | stamp right after its read).
 *&---------------------------------------------------------------------*
+"! Clock double. A user of the exceptions app can act "during" a run: from the hook_from-th to the
+"! hook_to-th call of NOW (the store asks for the write stamp right after its read) the exception
+"! S0001/1 of the earlier run is waived with a new change stamp
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_clock.
+    CONSTANTS gc_prior_run TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000AA'.
+    CONSTANTS gc_waiver_end TYPE d VALUE '20261231'.
+    CONSTANTS gc_user_time TYPE timestampl VALUE '20261105070000.0000000'.
+    DATA mv_calls TYPE i.
+    DATA mv_hook_from TYPE i.
+    DATA mv_hook_to TYPE i.
 ENDCLASS.
 
 CLASS ltd_clock IMPLEMENTATION.
   METHOD zif_cd_ops_clock~now.
+    mv_calls = mv_calls + 1.
     rv_timestamp = '20261105080000.0000000'.
+    IF mv_hook_from = 0 OR mv_calls < mv_hook_from OR mv_calls > mv_hook_to.
+      RETURN.
+    ENDIF.
+    " The user waives the exception (new change stamp on every call)
+    DATA(lv_stamp) = gc_user_time + mv_calls.
+    UPDATE zcd_ops_finding
+      SET disposition     = @zif_cd_ops_types=>gc_disposition-waived,
+          waiver_until    = @gc_waiver_end,
+          last_changed_at = @lv_stamp
+      WHERE run_id = @gc_prior_run AND finding_no = 1.
+    cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'Test data: the user waives the exception' ).
   ENDMETHOD.
   METHOD zif_cd_ops_clock~today.
     rv_date = '20261105'.
@@ -106,6 +133,11 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS param_stable_within_run      FOR TESTING.
     METHODS carry_other_type_untouched   FOR TESTING.
     METHODS carry_newest_prior_inherited FOR TESTING.
+    METHODS user_waives_during_carry     FOR TESTING.
+    METHODS user_changes_twice_deferred  FOR TESTING.
+    METHODS user_waives_during_reconcile FOR TESTING.
+    METHODS writes_set_change_stamp      FOR TESTING.
+    DATA mo_clock TYPE REF TO ltd_clock.
     "! Fix 5: an earlier exception row with explicit type, owner and creation time (test data)
     METHODS prior_row
       IMPORTING
@@ -143,7 +175,8 @@ CLASS ltc_store IMPLEMENTATION.
 
   METHOD setup.
     go_env->clear_doubles( ).
-    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    mo_clock = NEW #( ).
+    zcl_cd_ops_injector=>inject_clock( mo_clock ).
     mo_params = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     mo_cut = NEW zcl_cd_ops_store( ).
@@ -152,7 +185,102 @@ CLASS ltc_store IMPLEMENTATION.
 
   METHOD teardown.
     zcl_cd_ops_injector=>reset( ).
-    CLEAR: mo_cut, mo_params.
+    CLEAR: mo_cut, mo_params, mo_clock.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a user waives the exception after the run read it and before the run
+  " supersedes it - the run's guarded write misses, it reads again and the new row inherits the waiver;
+  " the waived row is superseded only now (NOW calls: 1 start_run, 2 save_findings, 3 the stamp after the read)
+  METHOD user_waives_during_carry.
+    TRY.
+        prior_exception( iv_object_key = gc_cf-key iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
+        mo_clock->mv_hook_from = 3.
+        mo_clock->mv_hook_to   = 3.
+        DATA(ls_run) = save_again( ).
+        DATA(ls_new) = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-disposition exp = zif_cd_ops_types=>gc_disposition-waived
+                                            msg = 'The waiver given during the run is kept' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-waiver_until exp = gc_cf-waiver_end
+                                            msg = 'With its end date' ).
+        DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-superseded
+                                            msg = 'The waived row is superseded after the second read' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_old-superseded_by exp = ls_run-run_id msg = 'By this run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): the user changes the exception again during the second attempt - the
+  " user's disposition wins: the earlier row stays waived, the run's new row is information and an
+  " information finding says the exception is left for the next run
+  METHOD user_changes_twice_deferred.
+    TRY.
+        prior_exception( iv_object_key = gc_cf-key iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
+        mo_clock->mv_hook_from = 3.
+        mo_clock->mv_hook_to   = 4.
+        DATA(ls_run) = save_again( ).
+        DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-waived
+                                            msg = 'The user''s waiver is never overwritten' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_old-superseded_by msg = 'Not superseded' ).
+        DATA(ls_new) = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-disposition exp = zif_cd_ops_types=>gc_disposition-information
+                                            msg = 'The new row does not compete with the waived one' ).
+        SELECT SINGLE check_code, severity FROM zcd_ops_finding
+          WHERE run_id = @ls_run-run_id AND finding_no = 2
+          INTO @DATA(ls_info).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'One information finding' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_info-check_code exp = zif_cd_ops_exc_types=>gc_code_deferred
+                                            msg = 'EXC_CHANGED_DEFERRED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_info-severity exp = zif_cd_ops_types=>gc_severity-info
+                                            msg = 'Information only' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_run-finding_count exp = 2 msg = 'Counted in the run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): a user waives an open exception while reconcile resolves it (NOW calls: 1
+  " start_run, 2 the resolve stamp after the read) - the waiver is never overwritten by "passed on re-run"
+  METHOD user_waives_during_reconcile.
+    TRY.
+        prior_exception( iv_object_key = gc_cf-key iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
+        mo_clock->mv_hook_from = 2.
+        mo_clock->mv_hook_to   = 2.
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
+        mo_cut->reconcile( is_run = ls_run it_object_keys = VALUE #( ( gc_cf-key ) ) ).
+        DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-waived
+                                            msg = 'The waiver is kept' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_old-resolved_by msg = 'Not resolved by the run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (review 2026-11-10): every write of the store sets the change stamp (ETag of the exceptions app)
+  METHOD writes_set_change_stamp.
+    TRY.
+        prior_exception( iv_object_key = gc_cf-key iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
+        DATA(ls_run) = save_again( ).
+        SELECT SINGLE last_changed_at FROM zcd_ops_finding
+          WHERE run_id = @ls_run-run_id AND finding_no = 1
+          INTO @DATA(lv_inserted).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The new row exists' ).
+        SELECT SINGLE last_changed_at FROM zcd_ops_finding
+          WHERE run_id = @gc_cf-prior_run AND finding_no = 1
+          INTO @DATA(lv_superseded).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The earlier row exists' ).
+        cl_abap_unit_assert=>assert_not_initial( act = lv_inserted msg = 'Insert stamped' ).
+        cl_abap_unit_assert=>assert_not_initial( act = lv_superseded msg = 'Supersede stamped' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

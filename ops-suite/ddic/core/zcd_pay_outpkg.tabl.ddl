@@ -10,8 +10,12 @@ define table zcd_pay_outpkg {
   // evidence source (ZIF_CD_OPS_PAYOUT_TYPES=>GC_SOURCE) and position of the package in it
   key source    : abap.char(10) not null;
   key pkg_no    : abap.int4 not null;
-  // P planned, D done (versions committed), F failed (nothing written), A abandoned (not finished
-  // in time: the unit writes nothing any more)
+  // mode of the run (FAST / NIGHTLY / SWEEP, 2026-11-10): a run deletes only the rows of earlier runs of
+  // its own mode - SWEEP reads the same evidence sources as FAST
+  run_mode      : abap.char(7);
+  // P planned, D done (versions committed), F failed (nothing written), C failed on a configuration
+  // error (nothing written, reported as configuration), A abandoned (not finished in time: the unit
+  // writes nothing any more)
   status        : abap.char(1);
   documents     : abap.int4;
   evaluated     : abap.int4;
@@ -20,8 +24,9 @@ define table zcd_pay_outpkg {
   message       : abap.char(255);
   finished_at   : timestampl;
 }
-// Written by ZCL_CD_OPS_PAY_SNAPSHOT: the run plans the packages (P) and dispatches them as bgPF
-// units (ZCL_CD_OPS_PAY_SNAP_OP); each unit claims its row (SELECT FOR UPDATE, still P), writes its
-// versions and sets D in one commit, or F. The run advances each source's watermark only to the end
-// of the last contiguous D package. Rows of earlier runs are deleted at the start of the next run
-// (run lock held). Never read by the dashboards.
+// Written by ZCL_CD_OPS_PAY_SNAPSHOT: the run plans the packages (P) with their members
+// (ZCD_PAY_OUTPKGM) and dispatches them as bgPF units (ZCL_CD_OPS_PAY_SNAP_OP, keys only); each unit
+// re-reads its members, claims its row (SELECT FOR UPDATE, still P), writes its versions and sets D in
+// one commit, or F / C. The run advances each source's watermark only to the end of the last
+// contiguous D package. Rows (and members) of earlier runs of the same mode are deleted at the start
+// of the next run of that mode (its run lock held). Never read by the dashboards.
