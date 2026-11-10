@@ -37,7 +37,8 @@ activity **02** of the control's area, not a new activity: the reviewer is the o
 area's exceptions with 02, so no SU21 change and no new role field are needed; a display role (03) sees the
 review but cannot sign off. A landscape that wants sign-off separated from exception handling adds an activity
 (e.g. a customer activity in TACT) to the object and changes `ZBP_R_CA_OPSCTLREVIEW` - documented here as the
-alternative, not built.
+alternative, not built. **Confirmed by the user 2026-11-10:** 02 stays shared between sign-off and exception handling;
+no separate sign-off activity.
 
 ## 3. Roles (PFCG) — proposal
 
