@@ -280,3 +280,10 @@ and confirm the next morning that the onboarding check reports nothing for `BASE
   partial. No retrigger, no posting, no outbound call: read-only towards business tables.
 - Freshness is per area and schedule group (one run variant); a process that needs another threshold gets its own
   `CHECK_STALE_MIN_<area>` - or its own area.
+
+## Related: a customer's payment model (2026-11-11)
+
+A business process registers checks; the **payment model** gives the same customer a categorised, drillable view of
+its payments and requests (persona overview pages, payment and request object pages, business-date trend) from a
+mapping spec and the product templates - `docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md`. The two are independent: a
+process's findings appear in the payment model's exception trend when its area is listed in the spec (`model.areas`).

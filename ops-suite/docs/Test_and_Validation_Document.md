@@ -490,3 +490,17 @@ Runbook `Operations_Runbook.md` walked through by IT support on QA1 findings (on
 ## Framework extraction ZCA_OPS (2026-11-10)
 
 The unit tests of the moved classes moved with them to `ops-framework/src` (store, exception DAO / policy, alert router / policy / DAO / channels, lock, run guard, configuration gate / client / transport / auth / policy / field checks, purge engine and DAO, utilities, clock, file path, auth, parameters adapter, factory incl. the version check, configuration app permission tests); the suite keeps the tests of its own objects and gains `ZCL_CD_OPS_FACTORY` (suite services, prefixes, `ZCX_CD_OPS_ERROR=>CLASSIFY`), `ZCL_CD_OPS_PURGE_TARGET` (OSQL: the suite's purge targets and keep rules) and `ZCL_CD_OPS_ACK_MAIL` as alert section. Offline evidence per folder: abaplint 0 issues (suite, framework, parameter framework), suite portable checks 28/28, framework `tools/checks.py` 14/14, parameter framework `tools/checks.py` 9/9, tool tests green. Nothing has run in an SAP system: ABAP Unit, activation and ATC are VERIFY items (`Release_Readiness.md`, `ops-framework/docs/VERIFY.md`).
+
+## Service health, process flow, missing volume, payment model (2026-11-11)
+
+| ID | Level | Case | Expected | Executable offline |
+|---|---|---|---|---|
+| HCK-QA-11 | QA1 | `B_VOL_PAYRUN` daily for 4 weeks, then a Tuesday with no payment run of one method | `BASELINE_OUTLIER` (AMBER) for that method; a quiet Sunday compared with Sundays raises nothing | no |
+| HCK-QA-12 | QA1 | First three weeks of a `B_VOL_*` check | `BASELINE_WARMUP` information, check grey, never GREEN (unchanged warm-up) | no |
+| SVC-UT | ABAP Unit | `ZCL_CD_OPS_SVC_CDS_TEST`: `raised_twice_counts_once`, `slice_adds_area_level`, `stale_costs_points_today`, `stuck_and_drop_per_stage` | green | no (DV1) |
+| PM-UT | ABAP Unit | `ZCL_CD_PAYM_CDS_TEST`: `amounts_per_currency`, `flows_kept_apart`, `same_weekday_last_week`, `payment_to_many_requests`, `request_to_many_payments` (+ `reference_masked_by_default` once the request section is active) | green | no (DV1) |
+| HCK-UT | ABAP Unit | `weekday_season_steps_weeks`, `day_season_steps_days`, `season_needs_a_day_series`, `season_latest_point_per_day`, `volume_below_same_weekday` | green | no (DV1) |
+| GEN-UT | Python | `tools/tests/test_payment_model.py` (8 tests) | green | **yes** (run 2026-11-11) |
+| UI-01 ... UI-10 | OPA5 | `ui/tests/integration` | green after the apps are generated | no |
+| PT-01 ... PT-13 | manual / Tosca | `ui/tests/Payment_Trace_Test_Cases.md` | as listed | no (QA1) |
+| OVP-17 ... OVP-20, PM-01 ... PM-05 | QA1 | `Dashboard_Production_Support.md` §8h | as listed | no |

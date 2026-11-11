@@ -1,0 +1,17 @@
+<!--
+  Artifact: ui/cards/processflow/ProcessFlow.fragment.xml
+  Purpose:  Content of the custom "Process flow" card: sap.suite.ui.commons.ProcessFlow bound to the JSON model "flow"
+            built by ProcessFlow.controller.js. VERIFY (V97): not run.
+  Modification log: 2026-11-11 | Initial version.
+-->
+<core:FragmentDefinition xmlns="sap.suite.ui.commons" xmlns:core="sap.ui.core">
+  <ProcessFlow id="processFlow" scrollable="true" lanes="{flow>/lanes}" nodes="{flow>/nodes}">
+    <lanes>
+      <ProcessFlowLaneHeader laneId="{flow>id}" text="{flow>text}" position="{flow>position}"/>
+    </lanes>
+    <nodes>
+      <ProcessFlowNode nodeId="{flow>id}" laneId="{flow>lane}" title="{flow>title}" state="{flow>state}"
+                       texts="{flow>texts}" children="{flow>children}"/>
+    </nodes>
+  </ProcessFlow>
+</core:FragmentDefinition>

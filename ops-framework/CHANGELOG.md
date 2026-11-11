@@ -2,6 +2,21 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (payment model product layer)
+
+Goal (user, 2026-11-11): categorised, drillable payment views (business users, managers, IT support) sold to
+several customers - the generic part is product, a customer's tables are a mapping spec.
+
+### Added
+- Payment model contract and product templates (`templates/payment_model`): cube per currency and flow, business-date
+  trend with the same weekday of the previous week and peak days, payment drill-down list and object page, payment -
+  request link (n:m), request object page with attempts, feeder timeline and masked feeder reference with deep link,
+  exceptions raised vs resolved per day, persona card annotations, DCL with the company-code rule, service, CDS test
+  holder. Generator `tools/abaptools/payment_model.py` (repository tools; `--check`, tests in `tools/tests`).
+- Tables `ZCA_OPS_PMDIM` (dimension texts and display order) and `ZCA_OPS_FEEDER` (feeder systems, deep-link URL
+  template, reference visibility), entities `PaymDimText` / `PaymFeeder` of `ZUI_CA_OPS_CFG`, CDS
+  `ZI_CA_PaymDimText`, `ZI_CA_PaymFeeder`. Guide `docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md`; VERIFY V94-V99.
+
 ## [Unreleased] - 2026-11-10 (process onboarding)
 
 Goal (user, 2026-11-10): a new business process is added and integrated end to end - from Fiori to backend -

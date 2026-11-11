@@ -54,3 +54,10 @@ Facts below were confirmed in production work in 2026 (payment engine reference)
 | Payment trace by payment reference (**built 2026-11-08**) | Core (read-only) | FEBEP-CHECT = AUGBL (E G H I J K L) / last 13 of ZTNUM (C, `ZCL_CD_OPS_CHEQUE_LINK`) | `DFKKCR-ZTNUM` length / padding |
 
 Every field name above that is not confirmed goes into configuration (not code) and is validated against the DDIC at runtime, so a wrong name produces a PLUGIN_ERROR / configuration finding instead of a wrong result.
+
+## 3. Confirmed by the user 2026-11-11
+
+| Fact | Where the suite applies it | Still to confirm |
+|---|---|---|
+| `ZCD_PAYM_REQ_LOG` carries the **source** (field `SOURCE`, known) **and the transaction** (the payment transaction / request type) of each request | Payment model dimension *Transaction* (`config/payment_model/mapping.json`, `TransactionType`; texts in `ZCA_OPS_PMDIM`, dimension `TRANSACTION`); source x transaction is the business grouping of the persona pages; missing-volume rows may group by it (`B_VOL_PRQ`) | **VERIFY-SE11 (V83):** the field name, its values and texts; until then the dimension is blank (no guessed field) |
+| The **reconciliation key (FIKEY)** links the FI-CA subledger and the G/L: FI-CA documents (DFKKKO-FIKEY) -> summary records (DFKKSUMC by FIKEY / account / currency) -> G/L document (BKPF-AWKEY = FIKEY, AWTYP `TRACE_GL_AWTYP`, same company code, not reversed) -> its journal lines | Primary link of the ledger drill-down and the group reconciliation (designed, `Dashboard_Production_Support.md` §9; the G/L transfer gap stays `ZCL_CD_HCK_DAO=>GET_FIKEYS_WITHOUT_GL` / `A_GL_TRANSFER`) | Reconciliation key status field (open / closed / transferred) - VERIFY-SE11; ACDOCA ledger and line mapping (V-items of the ledger build) |

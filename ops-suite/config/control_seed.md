@@ -10,7 +10,7 @@ Seed files (one row per table row, header = field names):
 | File | Table | Rows |
 |---|---|---|
 | `config/control_register.csv` | `ZCA_OPS_CONTROL` (area, control, name, category, owner, backup, team, cut-off, runbook link, active, sequence) | 12 controls (the mockup's 13 without *IDoc / interface checks*, user decision 2026-11-10: no IDocs in use) |
-| `config/control_checks.csv` | `ZCA_OPS_CTLCHK` (control → area of the findings, finding field, exact value) | 52 covered checks (2026-11-10: *Clearing job* covered by its own two checks instead of the three general job checks) |
+| `config/control_checks.csv` | `ZCA_OPS_CTLCHK` (control → area of the findings, finding field, exact value) | 55 covered checks (2026-11-10: *Clearing job* covered by its own two checks instead of the three general job checks; 2026-11-11: the missing-volume checks `B_VOL_PAYRUN`, `B_VOL_FILES` under *Payment files* and `B_VOL_STMT` under *BAI exceptions*, `config/hck_seed.md` §4b) |
 | `config/control_guidance.csv` | `ZCA_OPS_CTLT` (language E: what the reviewer checks) | 12 |
 | `config/pay_stages.csv` | `ZCD_OPS_PAYSTAGE` (payment lifecycle card) | 10 stages |
 

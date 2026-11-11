@@ -153,3 +153,109 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | OVP-14 | Peak day (2 M payments) - payment lifecycle card and *View payments* | Counts equal SE16H on DPAYH (LAUFD, XVORL blank, newest run per DOC1R); response < 5 s; PlanViz recorded (§11 of `Performance_Review.md`) |
 | OVP-15 | User with CD_OPS / BUKRS US01 only | Lifecycle and payments of US01 only |
 | OVP-16 | One business process active (test area), one check with an open error in company code 1000, one check whose schedule group has not run within its threshold | *Business processes*: registered checks = active checks (not doubled by the 1000 slice), flagged 1, stale 1; *Process checks - attention* lists both, error first; a fresh check without exceptions is not listed; a user of 2000 sees the stale check but not the 1000 slice; tap opens the area dashboard |
+
+## 8. Service health, process flow and the persona pages (2026-11-11)
+
+Status: CDS, configuration seeds and annotations written, checked offline (abaplint 0 issues); **not activated**; ABAP Unit not executed (VERIFY V91-V93, V97 of `ops-framework/docs/VERIFY.md`).
+
+### 8a. Service health (entities `ServiceHealth`, `ServiceContributor` of `ZUI_CD_OPS_OVERVIEW`)
+
+| Element | Rule |
+|---|---|
+| Business services | `ZCD_OPS_SVC` (core configuration app, entity *Business services*; seed `config/service_register.csv`): Collections, Disbursements, Bank statements, Interfaces, Batch / jobs, Reconciliation - label, order, points per open B / E / W finding (25 / 15 / 5), points per stale monitor (20), bands good >= 90, watch >= 70 |
+| What a service covers | `ZCD_OPS_SVCMAP` (entity *What a business service covers*; seed `config/service_map.csv`): area + `AREA` (every finding of the area) / `CONTROL` (the covered checks of a control of the daily review) / `RULE_ID` / `CHECK_CODE` / `GROUP2` + exact value + weight. Batch / jobs maps area `CD_JOBS` (build J): it finds nothing until J is merged |
+| Score | 100 - points, at least 0, per service, business date and company-code slice; points = severity points x weight of each **live** finding (open, assigned, superseded) of the runs of the date - a problem raised by several runs or caught by two rows counts once (object key, highest points) - plus stale points of the service's areas on the current business date (`ZR_CD_OpsFreshness`) |
+| Worst contributors | `ServiceContributor`: per service, date, company code, area and check code - problems and points, largest first |
+| Cards | List card *Service health* (presentation variant `Worst`, data point `Score` with criticality, selection variant `Today`); list card *Service health - worst contributors* (`Worst`); header navigation to the exceptions app filtered by area |
+
+**Patterns - decision.** The brief asked for check-code patterns (PCRE). CDS cannot apply a pattern held in a column (`replace_regexpr` takes a literal) and the house rule says SQL never receives a pattern (`DEVELOPMENT_STANDARDS.md` §2). The service map therefore uses **exact values**, exactly like the framework's covered-check rows of a control (`ZCA_OPS_CTLCHK`); several codes = several rows, and a `CONTROL` row follows a control's checks without repeating them. Alternative (decision **D-B1**): a CDS table function (AMDP) with HANA `LIKE_REGEXPR` on the configured pattern - more power, but a database-specific object and a new VERIFY item.
+
+**Severity weights - decision.** The weights and bands are columns of the service register, not ZCA_PARAM parameters: CDS reads them directly (one source, validated by the configuration app, transported like every row), a service may weigh differently, and a parameter read only by CDS would have no ABAP reader (portable check `params_used`). Same for the expected days of a process-flow stage (`ZCD_OPS_PAYSTAGE-STUCK_DAYS`). No `SVC_` / `FLOW_` / `VOL_` / `PERS_` parameter was needed.
+
+### 8b. Company-code isolation of the score - decision
+
+A score is **not additive** (100 - 30 and 100 - 15 are not 100 - 45), so it is never summed over company codes. Each row is complete for its slice: the **area-level row** (company code blank) = area-level problems + stale monitors; a **company-code row** = area-level problems + that company code's problems + stale monitors. The DCL `ZC_CD_OPSOVERVIEW` applies the framework rule (area authorised and (company code blank or (area, company code) authorised)), so a user of company code 1000 sees the area-level row and the 1000 row - never points of another company code; a central user sees the area-level row and one row per company code with problems (worst first). Rejected: area-level only (a user of 1000 would see a score lowered by 2000's problems).
+
+### 8c. Process flow (entity `PaymentFlow`)
+
+Per business date, company code and configured stage (`ZCD_OPS_PAYSTAGE` order): payments in the stage, **stuck** (older than `STUCK_DAYS` of the stage: calendar days since the run date / due date - the age of a status is not stored, so the age of the payment is used), reached (in the stage or a later one of the same source), **drop** from the previous stage, criticality (0 final stage, 3 none stuck, 2 stuck, 1 stuck for more than twice the expected time). Delivered expected days (`config/pay_stages.csv`): ISSUED 1, CONFIRMED 4, request stages 0-1 - **confirm with the payments team**. Card now: list card *Process flow* (row criticality) and bar card `FlowBars`. A flow diagram needs the custom card `ui/cards/processflow` (spec `docs/Process_Flow_Card.md`, VERIFY V97).
+
+### 8d. Payment model and the three persona pages (service `ZUI_CD_PAYM`)
+
+Generated from the mapping spec `config/payment_model/mapping.json` with the framework's product templates (`ops-framework/docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md`): entities `PaymentCategory` (cube), `PaymentTrend`, `Payment` (drill-down list + object page), `PaymentRequestLink`, `ExceptionTrend`; `PaymentRequest`, attempts and the feeder timeline are **pending** (request-log field names VERIFY V82, V90; generated for review into `config/payment_model/pending`) and appear when the spec section is set active. **Decision:** the control center page `ZCD_OPS_OVW` stays the shared page of the support lead and keeps working unchanged; the three persona pages are separate OVP app descriptors on the one service `ZUI_CD_PAYM` (+ the service health / flow entities of `ZUI_CD_OPS_OVERVIEW` as second data source of the managers' and IT pages - or a tile, if the second model is not supported, as §2).
+
+**Business users** (payment operations, source / business owners) - app `ZCD_PAYM_BIZ`, plain texts (dimension texts of `ZCA_OPS_PMDIM`), amounts per currency:
+
+| Card | Entity / annotation | Question it answers | Drill-down |
+|---|---|---|---|
+| Payments by source and status | `PaymentCategory` chart `BizBySourceStatus`, variant `Today` | How many payments of each feeder system are issued / confirmed / cleared / returned today? | `Payment` list -> object page -> payment trace |
+| Payments by payment type and status | `BizByClassStatus` | Which payment types (ACH, wire, cheque, card ...) are still open? | as above |
+| Payments by source and payment type | `BizBySourceClass` | How does each source pay? | as above |
+| Amount by source (per currency) | `BizAmountBySource`, variant `LocalCurrency` (+ `OtherCurrencies`) | How much money per source - in the company code currency, other currencies separately | as above |
+| Requests not paid on the due date | `TransactionKpi` / `TransactionProblem` (existing, request rows `REQ_NOT_PAID`); per source x request status after V82 / V84 | Which requests missed their date? | payment trace |
+| Returns / retrievals / stops by source | `BizBySourceStatus` filtered to RETURNED / RETRIEVED / STOPPED | Which sources have returned or stopped payments? | as above |
+| Payments by house bank / company code | `BizByBank`, `BizByCompany` | Volumes per bank and per company code | as above |
+| Daily payments by source / transaction | `PaymentTrend` `BizDailyBySource`, `BizDailyByTransaction` (transaction blank until V83), variant `Last30` | Is today normal for this source? | the day's `Payment` list |
+| Stripe premium refunds | not built - depends on P2 / R3 (`config/control_seed.md` §2a) | - | - |
+
+**Managers** - app `ZCD_PAYM_MGR`:
+
+| Card | Entity / annotation | Question |
+|---|---|---|
+| Volume vs same weekday last week | `PaymentTrend` `MgrVolumeVsLastWeek`, variant `Last30`; variant `PeakDays` | Is the volume normal? Was a peak handled? |
+| On time and late by payment type / house bank / company code | `PaymentCategory` `MgrOnTimeByClass`, `MgrOnTimeByBank`, `MgrOnTimeByCompany` (late = worklist finding `PAYMENT_NOT_CLEARED`: the in-flight rules of `config/hck_seed.md` §8 per method class - reused, not restated) | Share paid on time |
+| Late payments per day | `PaymentTrend` `MgrLatePerDay` | Is lateness growing? |
+| Amount per day per currency | `MgrAmountPerDay` | Money moved |
+| Service health | `ServiceHealth` | Which business service needs attention? |
+| Daily controls signed off / flagged | `ControlDay` cards (existing) | Is the shift closed? |
+| Exceptions raised vs resolved | `ExceptionTrend` `MgrRaisedResolved` | Is the backlog shrinking? |
+| Open exceptions by age | `CriticalException` (existing, `DaysOverdue`) | What is overdue? |
+| Response times (time to assign / resolve) | **placeholder** - entities of build A, wired by the lead at merge by the names in A's documentation | How fast does the team react? |
+| Reconciliation variances | `ReconVariance` (existing) | Where does money not tie out? |
+
+**IT support** - app `ZCD_PAYM_IT` (counts; amounts only on the object page - the `SHOW_AMOUNTS` idea of the alert e-mails):
+
+| Card | Entity / annotation | Question |
+|---|---|---|
+| Monitor freshness | `MonitorFreshness` (existing) | Are the monitors alive? |
+| File / interface status | `FileFlowKpi`, `FileFailure` (existing) | Which file failed? |
+| SAP job failures incl. "parent finished, child failed" | **placeholder** - build J, area `CD_JOBS` | Which job broke? |
+| Open exceptions with check codes and runbook links | `CriticalException` (existing) + runbook link of build A (**placeholder**) | What do I fix first? |
+| Process checks | `ProcessCheck` (existing) | Which process check is red or stale? |
+| Open payments by method class and outcome | `PaymentCategory` `ItOpenByClass` | What is in flight / undetermined / inconsistent? |
+| Evidence gaps by method class | `ItGapsByClass` (cheque register / ECT status for cheques, Stripe payout for cards, bank ACK for ACH / wire - the worklist finding) | Which evidence is missing? |
+| Payments per house bank and status | `ItByBankStatus` (heat map) | Is one bank stuck? |
+| Daily failures per area | `ExceptionTrend` `ItRaisedByArea` | Which area fails more? |
+| Payment trace entry | tile *Payment trace* and the object page link | Follow one payment |
+
+### 8e. Company code view and house bank view
+
+Both are card sections with the company code / house bank as first dimension on each persona page, not only filters: payments by company code (`BizByCompany`), on time by company code (`MgrOnTimeByCompany`), service health per company code (slice, §8b), controls flagged per company-code slice (`ControlDay`), open exceptions per company code (`CriticalException`), variances (`ReconVariance` - RECON3 groups carry the company code). **The company-code DCL is what limits each user to his company codes**: a user of 1000 sees only 1000 plus the area-level rows (blank company code) on every card; counts and amounts are summed after the DCL. House bank: payments per house bank and status (`BizByBank`, `ItByBankStatus`), on time per house bank (`MgrOnTimeByBank`); files and bank ACKs per house bank, the PRISM queue per bank (2-minute throttle per bank queue) and BAI statements received / posted by the 10:00 CST deadline per payment-engine account (FEBEP-XBLNR rule) come from the existing FMON and EBS dashboards as cards of the IT page. The house bank account ID (DPAYH-HKTID) is blank until V87; bank account numbers are never read (masking rule of the payment trace).
+
+### 8f. Amounts and currencies
+
+Every amount is grouped with its currency (`@Semantics.amount.currencyCode`, currency in every amount chart); two currencies are never added; no conversion (no exchange-rate type is confirmed - a reporting-currency view is **decision D-B2**: rate type, rate date and the reporting currency are open questions). KPI cards show the **company code currency** (variant `LocalCurrency`) with *Other currencies* as second variant - no parameter needed. Amounts are **absolute** (DPAYH-RWBTR, as the lifecycle and the trace show it); collections and disbursements are separated by the flow dimension, never netted. Request amounts stay empty until the request-log fields are confirmed (V82). Business and manager pages show amounts; the IT page shows counts.
+
+### 8g. Business-date trend
+
+`PaymentTrend`: per business date and category - count, late, amount per currency, the same weekday of the previous week (same category and currency), days ago, peak day (company code volume >= 1 000 000 payments, spec `peak_day_min`). Aggregated in the database; the window is the payment model's (45 days of DPAYH by LAUFD - a key range, `Performance_Review.md` §12), the cards select the last 30 days. The missing-volume baselines (`B_VOL_*`, same weekday) are the metric history of the health check dashboard - shown next to the trend, not recomputed. Requests by received date: after V82 / V85 (fallback: requests by due date from the worklist, as today).
+
+### 8h. QA1 cases
+
+| ID | Case | Expected |
+|---|---|---|
+| OVP-17 | Two open E findings of `PAYMENT_FILES` checks, one in 1000, one area-level; FMON monitor stale | Disbursements: area-level row 100 - 15 - 20 = 65, 1000 row 50; a user of 2000 sees 65 only; contributors list both, largest first |
+| OVP-18 | The same late file raised by three runs of the day | Counted once (highest points) |
+| OVP-19 | Payments of 3 days ago still ISSUED | Process flow: ISSUED stuck, critical (more than twice 1 day); drop ISSUED -> CONFIRMED = the ISSUED count |
+| OVP-20 | Service map row `BATCHJOBS` / `CD_JOBS` before build J | Batch / jobs shows 100, no error |
+| PM-01 | Business page, payments of today by source and status | Counts equal SE16H on DPAYH (LAUFD, XVORL blank, newest run per DOC1R); source blank for payments without worklist row |
+| PM-02 | USD and CAD payments of one source | Two amounts, never one total; KPI in the company code currency, *Other currencies* the rest |
+| PM-03 | User of company code 1000 | Every card and the payment list show 1000 only |
+| PM-04 | Payment object page of a payment settling two FIN numbers | Requests table lists both; the payment trace link opens the trace |
+| PM-05 | Trend on a peak day | Peak flag, volume vs the same weekday of the previous week |
+
+## 9. Not built in this change - ledger to the universal journal, reversals and clearing resets (designed 2026-11-11)
+
+**Ledger / reconciliation to ACDOCA.** (a) Per payment: payment -> FI-CA documents (DFKKOP / DFKKKO, mapping) -> reconciliation key -> summary G/L document (DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY, AWTYP `TRACE_GL_AWTYP`, same company code, not reversed - the payment trace's rule) -> its journal lines (ACDOCA only by RCLNT / RLDNR / RBUKRS / GJAHR / BELNR; ledger from a parameter, default `0L` - VERIFY). The G/L receives **consolidated** amounts per clearing account and FIKEY: the page shows the summary document and the payment's **share** (its amount within the FIKEY total), never a 1:1 G/L line. Bank side: FEBEP -> clearing line in BSEG (XREF2 = AUGBL) -> journal line by company code / year / document / line (VERIFY that ACDOCA-BUZEI maps 1:1 to the BSEG line in 2023; ACDOCA is never searched by reference). (b) Group level per business date, company code, G/L account (RECON3 clearing / transit accounts), currency: subledger vs journal vs bank totals with the existing variance buckets - the three-way reconciliation already stores the legs and differences (`A_RECON_3WAY`, `ZCD_HCK_METRIC`, `ReconVariance`): **reuse, not recompute**; a journal leg (ACDOCA aggregated by RBUKRS, RACCT, BUDAT for the configured accounts) only where it adds evidence over BSEG / BKPF. Line-item accounting attributes (ledger, period, document type, dates, account + text, posting key, debit / credit, amounts in transaction / company code / group currency each with its currency, assignment, text, clearing, profit center, segment, business area, cost center, reference key, reversal; FI-CA: FIKEY, main / sub transaction, contract account, partner masked, document / item, DFKKSUMC lines; bank: statement, line, transaction code, posted flags) with roll-up account x date x currency -> FIKEY -> FI-CA documents -> line items -> payment / request / feeder. Product part: contract section `ledger` (standard S/4HANA tables allowed in the product; DFKK* only in the mapping); every standard field (DRCRK, KSL / RKCUR, SEGMENT, XREVERSAL ...) on the VERIFY-SE11 list first. **Remaining: contract section, templates, FS-CD mapping, CDS tests (share of summary, per-currency totals, account / date aggregation, reversal exclusion).**
+
+**Document-change events.** Event model in the product (REVERSAL / CLEARING_RESET / RECLEARING / GL_REVERSAL / VOID_REISSUE; original, new and reversal document, user, time, reason); FS-CD mapping: DFKKKO-STBEL, worklist source REVERSALS / outcome REVERSED (reuse), clearing reset history `TRACE_SRC_HISTORY` (DFKKRAPT / XRAGL, `Payment_Trace.md` §4.2 - VERIFY-SE11, inactive until confirmed), stop and reissue (new payment document and cheque number), returns (DFKKRP) apart. "Changes" timeline on the payment / request page with the old -> new clearing document (the bank line keeps the OLD AUGBL - the known cause of clearing-account breaks). Risk findings (suite, E, set-based evidence reads): reset / reversal after the payment left SAP (file sent, bank ACK, bank line, cheque cashed) = possible double payment; reset without re-clearing after N days; reversal without its G/L reversal; bank line referencing a reset / reversed clearing document (variance bucket "reset / reversal"). User names only where the exceptions app already shows them. **Remaining: all of it.**

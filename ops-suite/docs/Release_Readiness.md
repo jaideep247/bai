@@ -176,3 +176,15 @@ Daily controls with sign-off (framework `ZCA_OPS`: control register, review app 
 - **Gap controls (reviewer):** *Base-rejected items*, *ECT pending items*, *Missing check IDs* delivered inactive; *Returns notifications*, *BlackLine*, *Manual retrievals* partially covered - proposals P1-P7 (`config/control_seed.md` §2) need a decision each. Update 2026-11-10 (pre-pilot hardening): P1 built as configuration (*Clearing job*); P2, P3, P6, P7 stay open with the exact questions of `config/control_seed.md` §2a.
 - **Sign-off activity:** the existing change activity 02 of `ZCA_OPS` (decision documented in `ops-framework/docs/auth_zca_ops.md`); a separate activity is an alternative if segregation is wanted.
 - **No incidents in SAP** (user decision 2026-11-10): no incident card or field; the *Open incidents* tile of the mockup is not built.
+
+## Service health, process flow, missing volume, payment model (2026-11-11)
+
+Built offline (abaplint 0 issues, portable checks, generator tests); **nothing activated, no ABAP Unit run**. VERIFY V82-V99 (`ops-framework/docs/VERIFY.md`).
+
+| Gate | Evidence |
+|---|---|
+| Gate 1 (DV1) | Activation in the order of `Implementation_Order.md` (2026-11-11 section); ABAP Unit `ZCL_CD_HCK_THRESHOLD`, `ZCL_CD_HCK_DAO`, `ZCL_CD_HCK_ENGINE` (seasonal baseline), `ZCL_CD_OPS_SVC_CDS_TEST`, `ZCL_CD_PAYM_CDS_TEST`; generator round trip (V99) |
+| Gate 2 (QA1) | OVP-17 ... OVP-20, PM-01 ... PM-05 (`Dashboard_Production_Support.md` §8h), HCK-QA-11 / -12 (`Test_and_Validation_Document.md`), UI journeys UI-01 ... UI-10 (`ui/tests`), payment trace PT-01 ... PT-13; PlanViz of `ZI_CD_PaymFact` on a 2 million payment day (V93) |
+| Configuration | Service weights / bands and map rows confirmed by the support lead; expected days per stage confirmed by the payments team; `B_VOL_*` expected groups (methods, house banks, interfaces) filled; dimension texts and feeder rows maintained |
+
+**Decisions for the user:** D-B1 PCRE patterns in the service map (exact values delivered; AMDP alternative); D-B2 reporting-currency view (rate type / date); D-TL1 ... D-TL5 (`Tool_Landscape.md`); feeder references masked by default (shown in full per feeder row).
