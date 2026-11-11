@@ -1,7 +1,7 @@
 # Message class ZCA_OPS
 
 Messages of the operations framework ZCA_OPS (package `ZCA_OPS`). Numbers of messages that moved from
-the message class of its first consumer (ZCD_OPS) are kept (ZCD_OPS nnn = ZCA_OPS nnn), new messages use free
+the message class of its first consumer are kept (the consumer's nnn = ZCA_OPS nnn), new messages use free
 numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock, authorisation, version
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and

@@ -2,6 +2,15 @@
 
 All notable changes of the parameter framework (`param-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (customer wording)
+
+Release constant unchanged: no ABAP object changed.
+
+### Changed
+- `config/customer_terms.txt`: the same terms as the operations framework's list (more middleware, feeder,
+  bank, finance-system, field and status names, the consumer's object prefixes) in the shared format with
+  the flags `case`, `prefix` and `text` (check `customer_terms` of the shared tools).
+
 ## [Unreleased] - 2026-11-10 (tooling)
 
 Release constant unchanged (`GC_VERSION` 1.1.0): no ABAP object changed.

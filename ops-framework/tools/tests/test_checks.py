@@ -30,7 +30,7 @@ class FixtureTest(unittest.TestCase):
         with open(os.path.join(root, 'config', 'msg.md'), 'w', encoding='utf-8') as fh:
             fh.write('| No. | Text |\n|---|---|\n' + messages)
         with open(os.path.join(root, 'config', 'customer_terms.txt'), 'w', encoding='utf-8') as fh:
-            fh.write('# terms\nACME BANK\nFOO\n')
+            fh.write('# terms\nACME BANK\nFOO\nZIF_CD_ | prefix\nZCL_CD_ | prefix\n')
         for name, text in files.items():
             with open(os.path.join(root, 'src', name), 'w', encoding='utf-8') as fh:
                 fh.write(text)

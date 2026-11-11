@@ -2,6 +2,27 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (customer-neutral product)
+
+Goal (user, 2026-11-11): the framework and the shared tools stay generic; a customer's tables, fields,
+middleware, banks, sources and schedulers live only in the consumer and are plugged in by configuration.
+
+### Changed
+- Check `customer_terms` reads every text file of the framework (src, ddic, docs, templates, config, tools,
+  README, CHANGELOG) and of the shared tools `tools/abaptools` (test fixtures excepted); term flags `case`,
+  `prefix` and `text` in `config/customer_terms.txt` (more middleware, feeder, bank, finance-system, field and
+  status names and the consumer's object prefixes); allowlist `config/customer_terms_allowed.txt` (one entry,
+  each entry with its reason; an unused entry fails). Check `layering` takes the consumer prefixes from the
+  term list.
+- `docs/VERIFY.md`: the first consumer's items V82-V93 moved to the consumer's own list (IDs unchanged);
+  V97-V99 name the consumer's objects generically.
+- Worked examples made fictitious: `docs/ADDING_A_BUSINESS_PROCESS.md` §10 (source `PORTAL`, prefix `XX`, a card
+  payment provider), `docs/PARAMETERS.md` examples, the feeder text example of
+  `docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md`; neutral wording in `docs/auth_zca_ops.md`,
+  `config/zca_ops_messages.md`, a table comment and two source comments (definition sheet reference).
+- Shared RAP generator `tools/abaptools/rap_generate.py`: working prefix `XX`, the app's prefix (or the
+  profile's `PREFIX`) required - no consumer prefix as default. Generated files unchanged.
+
 ## [Unreleased] - 2026-11-11 (ledger and document-change model - product layer)
 
 Goal (user, 2026-11-11): from a payment down to the universal journal, the subledger batch key as a level of its
@@ -281,7 +302,7 @@ Release constant unchanged (`GC_VERSION` 1.0.0): nothing of the framework's beha
 
 ## [1.0.0] - 2026-11-10
 
-First release (`ZIF_CA_OPS_TYPES=>GC_VERSION`), extracted from the payment engine operations suite
+First release (`ZIF_CA_OPS_TYPES=>GC_VERSION`), extracted from the operations suite of its first consumer
 (`ops-suite/`), which consumes it. Needs ZCA_PARAM 1.1.0 or later (`GC_PARAM_MIN_VERSION`, checked
 once per session by `ZCL_CA_OPS_FACTORY=>CHECK_VERSION` at `start_run`, message 044).
 

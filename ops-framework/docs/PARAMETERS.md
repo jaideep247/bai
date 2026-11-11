@@ -62,13 +62,13 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 
 **Names a consumer completes and delivers** (definitions in area `CA_OPS`, in the consumer's seed files):
 
-| Name | Read by | Example (payment engine suite) |
+| Name | Read by | Example (fictitious consumer, prefix `XX`) |
 |---|---|---|
-| `ALERT_<route>` | `SEND( iv_route )` | `ALERT_MORNING` |
-| `SLA_DAYS_<area>_<B / E / W>` | store (due date of a new exception) | `SLA_DAYS_CD_EBS_E` |
-| `RETENTION_DAYS_<target>` (any name: the registry row names area and parameter) | purge (`ZCA_OPS_PURGE`) | `RETENTION_DAYS_FMON_EVENT` |
+| `ALERT_<route>` | `SEND( iv_route )` | `ALERT_DAILY` |
+| `SLA_DAYS_<area>_<B / E / W>` | store (due date of a new exception) | `SLA_DAYS_XX_BANK_E` |
+| `RETENTION_DAYS_<target>` (any name: the registry row names area and parameter) | purge (`ZCA_OPS_PURGE`) | `RETENTION_DAYS_FILE_EVENT` |
 | `SHIFT_TIMES_<team>` (kind S, value type TIME, one row per shift start `HHMMSS`, local time of `SHIFT_TIME_ZONE`) | shift handover CDS (`ZI_CA_OpsShiftDef`, read in CDS like `CONTROL_TIME_ZONE`) | `SHIFT_TIMES_ONSITE` = 060000, 140000, 220000 (2026-11-11; the team = a value of `CONTROL_TEAMS`) |
-| `CHECK_STALE_MIN_<area>` (INT ≥ 1, minutes) | area dashboard CDS (`ZI_CA_OpsChkStaleA`, read in CDS like `CONTROL_TIME_ZONE`) | `CHECK_STALE_MIN_CD_COLL` (with the example process, on activation) |
+| `CHECK_STALE_MIN_<area>` (INT ≥ 1, minutes) | area dashboard CDS (`ZI_CA_OpsChkStaleA`, read in CDS like `CONTROL_TIME_ZONE`) | `CHECK_STALE_MIN_XX_COLL` (with the example process of `ADDING_A_BUSINESS_PROCESS.md` §10, on activation) |
 
 Values (landscape-specific, e.g. recipient lists, the section class) are value rows of the framework
 app `ZUI_CA_PARAM_O4`; definitions travel only by transport.

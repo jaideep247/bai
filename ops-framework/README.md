@@ -246,7 +246,7 @@ ENDCLASS.
 |---|---|
 | `src/`, `src/ui/`, `src/demo/` | abapGit objects (`ZCA_OPS`, `ZCA_OPS_UI`, optional demo `ZCA_OPS_DEMO`) |
 | `ddic/`, `ddic/ui/` | table DDL sources (`ddic/ui`: draft tables, generated) and `dictionary.json` |
-| `config/` | repository settings, message class `zca_ops_messages.md`, authorisation object, parameter seeds, `customer_terms.txt`; `config/demo/` seed rows of the demo |
+| `config/` | repository settings, message class `zca_ops_messages.md`, authorisation object, parameter seeds, `customer_terms.txt` (words and object prefixes of consumers) and `customer_terms_allowed.txt` (the few lines that may name one, with the reason); `config/demo/` seed rows of the demo |
 | `docs/text_elements/` | text pools of programs and classes |
 | `tools/abapgit_serialize.py` | writes all abapGit XML from `ddic/`, `config/`, the sources and the text elements |
 | `tools/param_definitions.py` | the framework's profile of the parameter seed generator (seed class `ZCL_CA_OPS_PARAM_SEED`) |

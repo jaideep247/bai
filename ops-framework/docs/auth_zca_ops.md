@@ -3,7 +3,7 @@
 > **First principle:** one object guards every operations action of every consumer, so a role says in one place who may run, change or approve in which area.
 > **Analogy:** one keycard system for the whole building — the card says which floors (areas) and which doors (activities), not a different key per room.
 
-The object is part of the operations framework (`config/authorizations.json`, serialized to `src/zca_ops.suso.xml`). Its object class `ZCA` and its area field `ZCA_PARAR` belong to the parameter framework ZCA_PARAM (`param-framework/config/authorizations.json`) — install ZCA_PARAM first. Code checks it only through `ZCL_CA_OPS_AUTH` (`ZIF_CA_OPS_AUTH`, factory `ZCL_CA_OPS_FACTORY=>GET_AUTH`); CDS read access through `pfcg_auth( ZCA_OPS, … )` in a DCL. It replaces the first consumer's object `ZCD_OPS` and its field `ZCD_PE_AREA` (user decision 2026-11-10: one authorisation object).
+The object is part of the operations framework (`config/authorizations.json`, serialized to `src/zca_ops.suso.xml`). Its object class `ZCA` and its area field `ZCA_PARAR` belong to the parameter framework ZCA_PARAM (`param-framework/config/authorizations.json`) — install ZCA_PARAM first. Code checks it only through `ZCL_CA_OPS_AUTH` (`ZIF_CA_OPS_AUTH`, factory `ZCL_CA_OPS_FACTORY=>GET_AUTH`); CDS read access through `pfcg_auth( ZCA_OPS, … )` in a DCL. It replaced the first consumer's own object and area field (user decision 2026-11-10: one authorisation object).
 
 ## 1. Authorisation fields (SU20)
 
@@ -19,7 +19,7 @@ The object is part of the operations framework (`config/authorizations.json`, se
 |---|---|---|---|
 | `ZCA_OPS` | `ZCA` | `ZCA_PARAR`, `ACTVT`, `BUKRS` | Operations framework: runs, findings, alerts per area |
 
-Permitted activities (SU21 → Activities) — the same activities the first consumer used on `ZCD_OPS`:
+Permitted activities (SU21 → Activities) — the same activities the first consumer used on its former object:
 
 | ACTVT | Meaning | Framework entry points |
 |---|---|---|

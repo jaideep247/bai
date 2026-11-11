@@ -204,57 +204,58 @@ active check of the group is `CHECKS_NOT_REGISTERED` (error).
 - [ ] Job `ZCA_OPS_CHECK_RUN` per schedule group; test mode run first
 - [ ] Offline `process_onboarding` green; next morning no onboarding finding
 
-## 10. Worked example — collections request lifecycle (BASE) and the Stripe premium refund
+## 10. Worked example — a collections request lifecycle with a card refund (fictitious)
 
-The first consumer of the framework (the payment engine suite of this repository) delivers this process as the
-example. Source of the meaning: the consumer's known-tables document `docs/USAA_Known_Tables.md` (row *Collections
-payment request lifecycle (BASE)*, confirmed by the user 2026-11-10) and its control seed `config/control_seed.md`
-§2a (control `BASE_REJECTS`, proposal P2, checks R1-R4) and §2b (the delivered rows).
+The example is fictitious: a consumer with prefix `XX` receives collection requests from a source system
+`PORTAL` through a middleware. Its own documents give the meaning of every table and status (a known-tables
+document, a control seed); the framework only provides the mechanism. A real consumer writes the same kind of
+specification with its own names.
 
-**The flow.** `PENDING` = future-dated request waiting for its request date → on the request date the fund account
-validation runs → `SCHEDULED` (SAP sends it to BASE) → BASE answers `SRCPOSTED` (SAP continues: VYSPA, then FPY1
-collects) **or rejects**. For a **Stripe card premium** the money is collected before SAP gets the request, so a
-reject must end in a **premium refund** that SAP calls at Stripe.
+**The flow.** `PENDING` = future-dated request waiting for its request date → on the request date the account
+validation runs → `SCHEDULED` (SAP sends it to `PORTAL`) → `PORTAL` answers `ACCEPTED` (SAP continues: the payment
+run collects) **or rejects**. For a **card payment** the money is collected by a card payment provider before SAP
+gets the request, so a reject must end in a **refund** that SAP calls at that provider.
 
 **What is not confirmed (VERIFY-SE11).** The table and field of the request status and their values (incl. the
-reject value), the date fields, the company-code field, where BASE's answer is logged, and the table of SAP's Stripe
+reject value), the date fields, the company-code field, where the source's answer is logged, and the table of the
 refund call with its success value. Therefore **every row below is delivered inactive with placeholders**; nothing
-reads a business table until the questions of §2a are answered.
+reads a business table until these questions are answered.
 
 | Check | Rule | Kind | Row (placeholders in ‹ ›) |
 |---|---|---|---|
 | `COLL_R1_PENDING` | a `PENDING` request past its request date (validation did not move it) | aggregate R1 | AGE of ‹request date field›, `MIN_AGE_DAYS` 1, ‹status field› EQ `PENDING`, per ‹company code field›, ‹amber› / ‹red› days |
-| `COLL_R2_SCHEDULED` | `SCHEDULED` with no answer of the source | class `ZCL_CD_COLL_C_NO_ANSWER` | hours since ‹status change time stamp› of requests whose latest status is `SCHEDULED`, amber / red in hours (decision D-PO3, approved 2026-11-10: limits in hours belong to a check class) |
-| `COLL_R3_REFUND` | source-rejected request **without a successful Stripe refund** - the control's main check | class `ZCL_CD_COLL_C_REFUND` | one anti-join in its data access class: requests with ‹reject value› whose ‹refund log› has no row with ‹success value›; findings `PREMIUM_REFUND_MISSING` (E) per request, `PREMIUM_REFUND_FAILED` (E) for a failed call, company code on the finding |
-| `COLL_R4_SRCPOSTED` | `SRCPOSTED` not collected on the request date | aggregate R4 | COUNT, ‹status field› EQ `SRCPOSTED`, ‹request date field› at least 1 day old, ‹amber› / ‹red› |
+| `COLL_R2_SCHEDULED` | `SCHEDULED` with no answer of the source | class `ZCL_XX_COLL_C_NO_ANSWER` | hours since ‹status change time stamp› of requests whose latest status is `SCHEDULED`, amber / red in hours (limits in hours belong to a check class, §11) |
+| `COLL_R3_REFUND` | source-rejected card request **without a successful refund** - the control's main check | class `ZCL_XX_COLL_C_REFUND` | one anti-join in its data access class: requests with ‹reject value› whose ‹refund log› has no row with ‹success value›; findings `REFUND_MISSING` (E) per request, `REFUND_FAILED` (E) for a failed call, company code on the finding |
+| `COLL_R4_ACCEPTED` | `ACCEPTED` not collected on the request date | aggregate R4 | COUNT, ‹status field› EQ `ACCEPTED`, ‹request date field› at least 1 day old, ‹amber› / ‹red› |
 
-**Specification** (the consumer's `config/processes/CD_COLL_BASE_REQ_LIFE.json`, excerpt):
+**Specification** (the consumer's `config/processes/XX_COLL_PORTAL_REQ_LIFE.json`, excerpt):
 
 ```json
-{ "area": "CD_COLL", "process": "BASE_REQ_LIFE", "name": "Collections payment request lifecycle (BASE)",
-  "auth_role": "Z_CD_OPS_COLL", "schedule_group": "DAILY", "active": false,
-  "control": {"area": "CD_COLL", "id": "BASE_REJECTS", "create": false},
+{ "area": "XX_COLL", "process": "PORTAL_REQ_LIFE", "name": "Collections request lifecycle (portal)",
+  "auth_role": "Z_XX_OPS_COLL", "schedule_group": "DAILY", "active": false,
+  "control": {"area": "XX_COLL", "id": "PORTAL_REJECTS", "create": false},
   "alert_rule": {"id": "COLL_LIFE", "min_severity": "E", "destination": "‹SO23 list - confirm›"},
   "checks": [
     {"id": "COLL_R1_PENDING", "bukrs_aware": true,
      "aggregates": [{"id": "R1", "table": "‹status table›", "func": "AGE", "date_field": "‹request date field›",
                      "min_age_days": 1, "bukrs_field": "‹company code field›", "status_field": "‹status field›",
                      "status_op": "EQ", "status_value": "PENDING", "amber": "‹amber days›", "red": "‹red days›"}]},
-    {"id": "COLL_R3_REFUND", "bukrs_aware": true, "class": "ZCL_CD_COLL_C_REFUND", "skeleton": true,
-     "skeleton_dir": "docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton"} ] }
+    {"id": "COLL_R3_REFUND", "bukrs_aware": true, "class": "ZCL_XX_COLL_C_REFUND", "skeleton": true,
+     "skeleton_dir": "docs/processes/XX_COLL_PORTAL_REQ_LIFE_skeleton"} ] }
 ```
 
-**What the scaffold wrote** (consumer folder, all inactive): the process `CD_COLL` / `BASE_REQ_LIFE` (role
-`Z_CD_OPS_COLL`, findings only - no purge target), four registered checks (schedule group `DAILY`, company-code
+**What the scaffold writes** (consumer folder, all inactive): the process `XX_COLL` / `PORTAL_REQ_LIFE` (role
+`Z_XX_OPS_COLL`, findings only - no purge target), four registered checks (schedule group `DAILY`, company-code
 aware), three aggregate rows and the approved ‹status table›, four covered-check rows of the existing control
-`BASE_REJECTS` (`CHECK_AREA` = `CD_COLL`, `GROUP2`), the alert rule `COLL_LIFE` (`GROUP1_PATTERN` = `BASE_REQ_LIFE`),
-the process document with its VERIFY list and the R3 skeleton outside the imported sources (no confirmed table to
-read). Not delivered until activation: the area `CD_COLL` itself, the role, the SLA and freshness parameters.
+`PORTAL_REJECTS` (`CHECK_AREA` = `XX_COLL`, `GROUP2`), the alert rule `COLL_LIFE` (`GROUP1_PATTERN` =
+`PORTAL_REQ_LIFE`), the process document with its VERIFY list and the R3 skeleton outside the imported sources (no
+confirmed table to read). Not delivered until activation: the area `XX_COLL` itself, the role, the SLA and freshness
+parameters.
 
 **R3 data access, once the tables are confirmed** (sketch - every ‹ › is a VERIFY-SE11 name):
 
 ```abap
-" ZCL_CD_COLL_REFUND_DAO=>REJECTED_WITHOUT_REFUND - one anti-join on the database, read only
+" ZCL_XX_COLL_REFUND_DAO=>REJECTED_WITHOUT_REFUND - one anti-join on the database, read only
 SELECT req~‹request key›, req~‹company code field›, req~‹status change date field›
   FROM ‹status table› AS req
   WHERE req~‹status field› = @‹reject value›
@@ -268,9 +269,9 @@ SELECT req~‹request key›, req~‹company code field›, req~‹status change
 ```
 
 **Activation** (after the answers): replace the placeholders in the specification, run the scaffold again (it adds
-nothing that exists - edit the rows), write and test `ZCL_CD_COLL_C_REFUND` with its data access class, create the
-area, role and parameters, set the rows and the control active, schedule `ZCA_OPS_CHECK_RUN` (`CD_COLL`, `DAILY`),
-and confirm the next morning that the onboarding check reports nothing for `BASE_REQ_LIFE`.
+nothing that exists - edit the rows), write and test `ZCL_XX_COLL_C_REFUND` with its data access class, create the
+area, role and parameters, set the rows and the control active, schedule `ZCA_OPS_CHECK_RUN` (`XX_COLL`, `DAILY`),
+and confirm the next morning that the onboarding check reports nothing for `PORTAL_REQ_LIFE`.
 
 ## 11. Limits (by design)
 

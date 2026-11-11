@@ -27,5 +27,5 @@ define table zca_ops_run {
   jobcount      : btcjobcnt;
   sysid         : sysysid;
 }
-// Secondary index MOD: morning report / last-run lookups
+// Secondary index MOD: daily status report / last-run lookups
 // @index MOD: MANDT, AREA, STARTED_AT

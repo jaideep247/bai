@@ -167,6 +167,54 @@ class SharedChecksTest(unittest.TestCase):
             self.assertEqual(len(fails), 1)
             self.assertIn('m.md', fails[0])
 
+    def terms_root(self, root, allowlist=''):
+        """A component with a term list of every kind of term and the given allowlist."""
+        write(root, 'config/repository.json', json.dumps({'message_class': {'source': 'config/m.md'}}))
+        write(root, 'config/m.md', '| 001 | A neutral text |\n')
+        write(root, 'config/customer_terms.txt', '# terms\nAcme Pay\nBASE | case, text\nZXY | prefix\n')
+        write(root, 'config/allowed.txt', allowlist)
+
+    def test_customer_terms_in_docs_and_templates(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.terms_root(root)
+            write(root, 'docs/GUIDE.md', 'Requests come from the middleware.\nThe Acme Pay refund is checked.\n')
+            write(root, 'templates/model/zc_x.ddls.tpl', 'define view entity ZC_X as select from zxy_request\n')
+            write(root, 'tools/tests/test_x.py', "PLANTED = 'Acme Pay'  # test fixtures plant terms on purpose\n")
+            self.assertEqual(checks.check_customer_terms(root), [])  # default scope: src, texts, messages
+            fails = checks.check_customer_terms(root, scopes=('.',), allowlist='config/allowed.txt')
+            self.assertEqual(fails, ['docs/GUIDE.md:2: Acme Pay', 'templates/model/zc_x.ddls.tpl:1: zxy'])
+
+    def test_customer_terms_case_and_text_flags(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.terms_root(root)
+            write(root, 'docs/GUIDE.md', 'A database, a base value and the BASEline are fine.\nSent to BASE.\n')
+            write(root, 'src/zcl_ca_x.clas.abap', '    rs_x = VALUE #( BASE is_x id = 1 ).\n'
+                                                   '    " the status BASE sends back\n')
+            fails = checks.check_customer_terms(root, scopes=('.',))
+            self.assertEqual(fails, ['docs/GUIDE.md:2: BASE', 'src/zcl_ca_x.clas.abap:2: BASE'])
+
+    def test_customer_terms_allowlist(self):
+        allow = ('# file | text | reason\n'
+                 'CHANGELOG.md | moved from zxy_ops | history: the object the release replaced\n'
+                 'docs/GUIDE.md | no such line | stale entry\n'
+                 'docs/GUIDE.md | Acme Pay |\n')
+        with tempfile.TemporaryDirectory() as root:
+            self.terms_root(root, allow)
+            write(root, 'CHANGELOG.md', '- Object moved from zxy_ops to the framework.\n- Later zxy_job added.\n')
+            write(root, 'docs/GUIDE.md', 'The Acme Pay refund.\n')
+            fails = checks.check_customer_terms(root, scopes=('.',), allowlist='config/allowed.txt')
+            self.assertEqual(fails, [
+                'config/allowed.txt: entry without file, text or reason: docs/GUIDE.md | Acme Pay',
+                'CHANGELOG.md:2: zxy',          # the allowlisted line passes, the other line of the file not
+                'docs/GUIDE.md:1: Acme Pay',    # an entry without a reason allows nothing
+                'config/allowed.txt: entry matches no line with a customer word: docs/GUIDE.md | no such line'])
+
+    def test_customer_terms_unknown_flag_refused(self):
+        with tempfile.TemporaryDirectory() as root:
+            write(root, 'config/customer_terms.txt', 'Acme | exact\n')
+            with self.assertRaises(ValueError):
+                checks.term_rules(root)
+
     def test_final_and_test_class_rules(self):
         with tempfile.TemporaryDirectory() as root:
             write(root, 'src/zcl_ca_x.clas.abap', HEADER.format(name='zcl_ca_x.clas.abap')

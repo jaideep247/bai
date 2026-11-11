@@ -12,9 +12,10 @@
 *&            | (dynamic readers of the consumers); moved here from a consumer's DDIC helper.
 *& 2026-11-10 | Moved from ZIF_CD_OPS_AUTH to the reusable framework ZCA_OPS.
 *& 2026-11-10 | user_exists: owner and backup of a control are SAP users (control register, check on save).
+*& 2026-11-11 | Comment names the framework's definition sheet docs/auth_zca_ops.md (was a consumer's).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - authorisation (object ZCA_OPS)</p>
-"! Activities follow SU21 object ZCA_OPS (config/auth_zcd_ops.md).
+"! Activities follow SU21 object ZCA_OPS (docs/auth_zca_ops.md).
 INTERFACE zif_ca_ops_auth
   PUBLIC.
 

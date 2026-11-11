@@ -15,6 +15,7 @@ Modification log:
 2026-11-10 | The engine moved to the shared tools (tools/abaptools); this file is the suite's profile; the
            | framework's app moved to the framework's own wrapper.
 2026-11-10 | Payment lifecycle stages (ZCD_OPS_PAYSTAGE) in the core app (overview page, control center).
+2026-11-11 | The suite's prefix CD is set here (PREFIX): the shared engine has no consumer prefix as default.
 """
 import os
 import sys
@@ -213,7 +214,7 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'match_value': 'Value (exact; blank for AREA)', 'weight': 'Weight (multiplier)',
           'match_value': 'Payment status (PAYRUN) / worklist outcome or stage (REQUEST)'}
 
-_engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME=RENAME, TOKENS=TOKENS, LABELS=LABELS)
+_engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME=RENAME, TOKENS=TOKENS, LABELS=LABELS, PREFIX='cd')
 
 
 def __getattr__(name):

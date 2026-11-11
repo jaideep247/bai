@@ -11,7 +11,8 @@ import rap_generate  # noqa: E402  (import writes nothing: generation runs in ma
 class BpTestsTemplateTest(unittest.TestCase):
 
     def setUp(self):
-        self.text = rap_generate.bp_tests(rap_generate.SPEC['core'])
+        app = rap_generate.SPEC['core']
+        self.text = rap_generate.localize(rap_generate.bp_tests(app), app)  # the suite's prefix CD
 
     def test_header_names_the_include(self):
         self.assertIn('*& Artifact: zbp_r_cd_opscfgall.clas.testclasses.abap', self.text)
@@ -76,7 +77,7 @@ class ActivityPerChildTest(unittest.TestCase):
                          len(self.tables))
 
     def test_permission_tests_per_activity(self):
-        text = rap_generate.bp_tests(self.app)
+        text = rap_generate.localize(rap_generate.bp_tests(self.app), self.app)
         for name in ('change_only_no_create_delete', 'create_only_no_change', 'delete_only_may_delete',
                      'no_activity_no_edit'):
             self.assertIn(f'METHODS {name} FOR TESTING.', text)

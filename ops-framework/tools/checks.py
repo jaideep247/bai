@@ -27,11 +27,15 @@ Checks
   test_path           every class has a test include or a row in tools/test_path_register.csv
                       (covered by a test include that names it, or exempt with a reason)
   param_definitions   tools/param_definitions.py: definitions of area CA_OPS complete, seed class generated
-  layering            no reference to a consumer object (ZCD_*, ZCL_CD_*, ZIF_CD_*, ZCX_CD_*) in src/
+  layering            no reference to a consumer object (the object prefixes of config/customer_terms.txt,
+                      flag prefix) in src/
                       (the optional demo sub-package src/demo included) - only the modification log
                       line "Moved from ..." may name the former object
-  customer_terms      none of the words of config/customer_terms.txt in src/, the message texts or the
-                      text elements (whole words, case ignored)
+  customer_terms      none of the words of config/customer_terms.txt (whole words, case ignored, unless
+                      the term's flags say otherwise) in any text file of the framework - src/, ddic/,
+                      docs/, templates/, config/, tools/ (test fixtures excepted), README, CHANGELOG -
+                      or of the shared tools tools/abaptools; single lines allowed by
+                      config/customer_terms_allowed.txt (each with its reason, unused entries fail)
   packaging           self-contained: no file names a consumer's folder (Python imports, abaplint
                       dependency paths, document links); the parameter framework and the shared tools
                       are allowed; the change log may name where the framework came from
@@ -44,6 +48,9 @@ Modification log:
 2026-11-10 | Common checks from the shared tools (tools/abaptools/checks.py); method names and
            | packaging checks added.
 2026-11-10 | process_onboarding (process onboarding framework: offline completeness of registered processes).
+2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
+           | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
+           | object prefixes from config/customer_terms.txt instead of a list in this file.
 """
 import os
 import re
@@ -137,16 +144,28 @@ def check_param_definitions(root):
     return param_definitions.failures(root)
 
 
-CONSUMER = re.compile(r'\b(zcd_\w+|zcl_cd_\w+|zif_cd_\w+|zcx_cd_\w+)', re.I)
-MOVED_LINE = re.compile(r'^\*& \d{4}-\d{2}-\d{2} \| Moved from Z(CL|IF|CX)?_?CD_\w+ to the reusable framework ZCA_OPS')
+MOVED_LINE = re.compile(r'^\*& \d{4}-\d{2}-\d{2} \| Moved from Z\w+ to the reusable framework ZCA_OPS')
+
+
+def consumer_pattern(root):
+    """Objects of a consumer: a word that starts with an object prefix of config/customer_terms.txt (flag
+    prefix) - the consumers' prefixes are configuration, not code of the framework."""
+    prefixes = [term for term, flags in _shared.term_rules(root) if 'prefix' in flags]
+    return re.compile(r'\b(' + '|'.join(re.escape(p) + r'\w*' for p in prefixes) + ')', re.I) if prefixes else None
 
 
 def check_layering(root):
-    return _shared.check_references(root, CONSUMER, MOVED_LINE)
+    pattern = consumer_pattern(root)
+    return _shared.check_references(root, pattern, MOVED_LINE) if pattern else []
+
+
+# customer_terms: the whole framework and the shared tools (test fixtures excepted, see TERM_SKIP_DIRS)
+TERM_SCOPES = ('.', os.path.join('..', 'tools', 'abaptools'))
+TERM_ALLOWLIST = 'config/customer_terms_allowed.txt'
 
 
 def check_customer_terms(root):
-    return _shared.check_customer_terms(root, MOVED_LINE)
+    return _shared.check_customer_terms(root, MOVED_LINE, TERM_SCOPES, TERM_ALLOWLIST)
 
 
 def check_packaging(root):

@@ -8,13 +8,14 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (authorisation object ZCA_OPS, gap G3).
 *& 2026-11-06 | Test seams AUTH_AREA / AUTH_BUKRS around the kernel check (coverage gap closure).
-*& 2026-11-10 | Field ZCA_PARAR (SU20, auth_zcd_ops.md section 1); a wrong field name failed every check.
+*& 2026-11-10 | Field ZCA_PARAR (SU20, auth_zca_ops.md section 1); a wrong field name failed every check.
 *& 2026-11-10 | may_read_table: S_TABU_NAM 03 in test seam AUTH_TABLE (was a consumer's DDIC helper, now shared).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_AUTH to the reusable framework ZCA_OPS.
 *& 2026-11-10 | user_exists in test seam USER_EXISTS (SUSR_USER_CHECK_EXISTENCE, control register).
+*& 2026-11-11 | Comments name the framework's definition sheet docs/auth_zca_ops.md (was a consumer's).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - authorisation check ZCA_OPS</p>
-"! Object ZCA_OPS must exist (SU21, config/auth_zcd_ops.md) before activation.
+"! Object ZCA_OPS must exist (SU21, docs/auth_zca_ops.md) before activation.
 CLASS zcl_ca_ops_auth DEFINITION
   PUBLIC
   FINAL

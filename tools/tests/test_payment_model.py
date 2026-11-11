@@ -8,13 +8,13 @@ refused when it breaks the contract; --check reports a hand-edited or superfluou
 Run:  python3 -m unittest discover -s tools/tests      (from the repository root)
 """
 import copy
-import re
 import os
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from abaptools import checks  # noqa: E402
 from abaptools import payment_model  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -206,20 +206,20 @@ class PaymentModelTest(unittest.TestCase):
         self.assertEqual(payment_model.render(text, {}, {'A': True, 'B': False}), 'a\n')
 
     def test_product_layer_free_of_customer_terms(self):
-        terms_file = os.path.join(REPO, 'ops-framework', 'config', 'customer_terms.txt')
-        with open(terms_file, encoding='utf-8') as handle:
-            terms = [line.split('#')[0].strip() for line in handle if line.split('#')[0].strip()]
-        terms += ['DFKK', 'DPAYH', 'FIKEY', 'FKKSU', 'STBEL', 'Stripe', 'Bridger', 'BlackLine', 'ZCD_']
-        pattern = re.compile(r'(?<![A-Za-z0-9])(' + '|'.join(re.escape(t) for t in terms) + r')', re.I)
+        # the framework's term list (with its flags) plus the FI-CA tables and fields a template must not
+        # name: the subledger is the customer's mapping (prefixes: DFKKOP, DFKKKO, ... all refused)
+        rules = checks.term_rules(os.path.join(REPO, 'ops-framework'))
+        rules += [(t, {'prefix'}) for t in ('DFKK', 'DPAYH', 'FIKEY', 'FKKSU', 'STBEL')]
+        matchers = checks.term_matchers(rules)
         targets = [os.path.join(payment_model.TEMPLATES, name) for name in os.listdir(payment_model.TEMPLATES)]
         targets.append(payment_model.__file__)
         hits = []
         for path in targets:
             with open(path, encoding='utf-8') as handle:
                 for no, line in enumerate(handle, start=1):
-                    found = pattern.search(line)
+                    found = checks.find_term(line, matchers)
                     if found:
-                        hits.append(f'{os.path.basename(path)}:{no}: {found.group(1)}')
+                        hits.append(f'{os.path.basename(path)}:{no}: {found}')
         self.assertEqual(hits, [])
 
     def test_suite_spec_valid_and_generated_up_to_date(self):

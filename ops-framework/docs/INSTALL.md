@@ -15,7 +15,7 @@ run in an SAP system yet: the first installation is also the first activation (s
 | C3 | **No name clash on the prefix `ZCA`.** None of the object names below exists in the customer system (TADIR, SE80, SU21, SE91). The prefix is not a registered namespace: a customer object with the same name stops the pull or, worse, is overwritten. | SE16 on `TADIR` with `OBJ_NAME` patterns below (field `OBJECT` any), SU21, SE91, SLG0 |
 | C4 | **abapGit** (standalone report or developer version) is available in the development system, and ADT for the service bindings. | SE38 / ADT |
 | C5 | **ZCA_PARAM release 1.1.0 or later** is installed or installed first (step 1). `start_run` refuses every run on an older release (message 044). | `ZIF_CA_PARAM_TYPES=>GC_VERSION` |
-| C6 | **Customer wording.** The framework carries no customer, bank or system names (check `customer_terms` of `tools/checks.py`); extend `config/customer_terms.txt` with the new customer's names before the first change. | `python3 tools/checks.py` |
+| C6 | **Customer wording.** The framework carries no customer, bank, middleware, scheduler or system names - not in the code, the documents, the templates, the configuration or the shared tools (check `customer_terms` of `tools/checks.py`); extend `config/customer_terms.txt` with the new customer's names and object prefixes before the first change. Customer specifics (tables, fields, VERIFY items, worked examples) live in the consumer's own folder; a line that must name a term (change history) is an entry of `config/customer_terms_allowed.txt` with its reason. | `python3 tools/checks.py` |
 
 Names to look up in `TADIR` before the first pull (C3) - patterns, `*` = any characters:
 

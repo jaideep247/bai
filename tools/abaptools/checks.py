@@ -21,7 +21,9 @@ Offline evidence of house-rule compliance only - not SAP activation, ATC or ABAP
   test_path           every class has a test include or a row in tools/test_path_register.csv
                       (covered by a test include that names it, or exempt with a reason)
   customer_terms      none of the words of config/customer_terms.txt in src/, the message texts or the
-                      text elements (whole words, case ignored)
+                      text elements - or, with scopes, in every text file of the given folders (whole
+                      words, case ignored, unless the term's flags say otherwise: case, prefix, text);
+                      single lines allowed by an allowlist file, each entry with its reason
   packaging           the component is self-contained: no file of it names a component folder it
                       must not depend on (Python imports, abaplint dependency paths, document links)
 
@@ -29,6 +31,8 @@ Modification log:
 2026-11-10 | Operations framework: test paths, layering, customer wording.
 2026-11-10 | Moved to the shared tools (tools/abaptools): one implementation per check, per-folder lists;
            | PCRE / CP / name checks of name_checks for every component; packaging check.
+2026-11-11 | customer_terms: term flags (case, prefix, text), scopes (every text file of the given folders),
+           | allowlist file of single lines with their reason.
 """
 import csv
 import json
@@ -199,32 +203,132 @@ def check_test_path(root):
 SOURCE_SUFFIXES = ('.abap', '.asddls', '.asdcls', '.asddlxs', '.asbdef', '.srvdsrv', '.xml')
 
 
-def customer_terms(root):
-    path = os.path.join(root, 'config', 'customer_terms.txt')
-    terms = []
-    for line in read(path).splitlines():
+TERMS_FILE = os.path.join('config', 'customer_terms.txt')
+TERM_FLAGS = ('case', 'prefix', 'text')
+# Every text file a customer word could hide in (scopes of check_customer_terms): the packaging
+# suffixes plus the templates of the product layer
+TERM_SUFFIXES = ('.py', '.json', '.md', '.yml', '.yaml', '.csv', '.txt', '.abap', '.asddls', '.asdcls',
+                 '.asddlxs', '.asbdef', '.srvdsrv', '.xml', '.ddl', '.tpl')
+# Test fixtures plant customer words on purpose (to prove the checks find them)
+TERM_SKIP_DIRS = SKIP_DIRS | {'tests'}
+
+
+def term_rules(root):
+    """(term, flags) of every line of config/customer_terms.txt: 'TERM' or 'TERM | flag, flag'.
+    Default: whole word, case ignored. Flags: case = case kept (a short word that is also an ordinary
+    word in lower case); prefix = every word that starts with the term (a consumer's object prefix);
+    text = prose only - in ABAP sources only comments are read (the word is also an ABAP keyword)."""
+    rules = []
+    for no, line in enumerate(read(os.path.join(root, TERMS_FILE)).splitlines(), start=1):
         line = line.split('#')[0].strip()
-        if line:
-            terms.append(line)
-    return terms
+        if not line:
+            continue
+        term, _, flags = line.partition('|')
+        flags = {f.strip() for f in flags.split(',') if f.strip()}
+        unknown = flags - set(TERM_FLAGS)
+        if unknown or not term.strip():
+            raise ValueError(f'{TERMS_FILE}:{no}: unknown flag {sorted(unknown)} or no term')
+        rules.append((term.strip(), flags))
+    return rules
 
 
-def check_customer_terms(root, allowed_line=None):
-    """No word of config/customer_terms.txt in src/, the text elements and the message texts;
-    allowed_line = a compiled pattern of lines that may name one (e.g. a 'Moved from' log line)."""
-    pattern = re.compile(r'(?<![A-Za-z0-9])(' + '|'.join(re.escape(t) for t in customer_terms(root)) +
-                         r')(?![A-Za-z0-9])', re.I)
-    targets = list(files(os.path.join(root, 'src'), SOURCE_SUFFIXES))
-    targets += list(files(os.path.join(root, 'docs', 'text_elements'), ('.md',)))
-    targets.append(message_source(root))
-    failures = []
-    for path in targets:
+def customer_terms(root):
+    return [term for term, _ in term_rules(root)]
+
+
+def term_matchers(rules):
+    """[(compiled pattern, text only)] of term rules: whole words (no letter or digit around the
+    term; an underscore counts as a separator, so AREA_TERM finds TERM), prefixes open on the right."""
+    out = []
+    for term, flags in rules:
+        right = '' if 'prefix' in flags else r'(?![A-Za-z0-9])'
+        pattern = re.compile(r'(?<![A-Za-z0-9])(' + re.escape(term) + ')' + right,
+                             0 if 'case' in flags else re.I)
+        out.append((pattern, 'text' in flags))
+    return out
+
+
+def find_term(line, matchers, abap=False):
+    """First customer word of a line (None: none). In an ABAP source a text-only term is looked for
+    in the comment of the line only."""
+    comment = None
+    if abap:
+        stripped = line.lstrip()
+        comment = line if stripped.startswith(('*', '"')) else line[len(strip_eol_comment(line)):]
+    for pattern, text_only in matchers:
+        m = pattern.search(comment if text_only and abap else line)
+        if m:
+            return m.group(1)
+    return None
+
+
+def term_allowlist(root, path):
+    """[(file, fragment, reason)] of the allowlist (path relative to root): 'file | fragment | reason'
+    - a line of that file (relative to root) that contains the fragment may name a customer word. The
+    reason is the text after the last ' | ' (a fragment may contain ' | ')."""
+    entries = []
+    if not path or not os.path.exists(os.path.join(root, path)):
+        return entries
+    for line in read(os.path.join(root, path)).splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        parts = [part.strip() for part in line.rstrip('|').split(' | ')]
+        reason = '' if line.endswith('|') or len(parts) < 3 else parts.pop()
+        entries.append((parts[0], ' | '.join(parts[1:]), reason))
+    return entries
+
+
+def term_targets(root, scopes):
+    """Files of the scopes (folders or files relative to root); default: src/, the text elements and
+    the message texts."""
+    if scopes is None:
+        targets = list(files(os.path.join(root, 'src'), SOURCE_SUFFIXES))
+        targets += list(files(os.path.join(root, 'docs', 'text_elements'), ('.md',)))
+        targets.append(message_source(root))
+        return targets
+    targets = []
+    for scope in scopes:
+        path = os.path.normpath(os.path.join(root, scope))
+        if os.path.isfile(path):
+            targets.append(path)
+            continue
+        for d, dirs, names in os.walk(path):
+            dirs[:] = sorted(x for x in dirs if x not in TERM_SKIP_DIRS)
+            targets += [os.path.join(d, f) for f in sorted(names) if f.endswith(TERM_SUFFIXES)]
+    return list(dict.fromkeys(targets))
+
+
+def check_customer_terms(root, allowed_line=None, scopes=None, allowlist=None):
+    """No word of config/customer_terms.txt (see term_rules) in the files of scopes (term_targets;
+    default src/, the text elements and the message texts). allowed_line = a compiled pattern of lines
+    that may name one (e.g. a 'Moved from' log line); allowlist = file of single allowed lines with
+    their reason (term_allowlist) - an entry without a reason or that matches no line fails. The term
+    list and the allowlist themselves are not read."""
+    matchers = term_matchers(term_rules(root))
+    entries = term_allowlist(root, allowlist)
+    used = set()
+    own = {os.path.normpath(os.path.join(root, p)) for p in (TERMS_FILE, allowlist) if p}
+    failures = [f'{allowlist}: entry without file, text or reason: {e[0]} | {e[1]}'
+                for e in entries if not all(e)]
+    for path in term_targets(root, scopes):
+        if os.path.normpath(path) in own:
+            continue
+        rel = os.path.relpath(path, root).replace(os.sep, '/')
+        abap = path.endswith('.abap')
         for no, line in enumerate(read(path).splitlines(), start=1):
             if allowed_line and allowed_line.match(line):
                 continue
-            m = pattern.search(line)
-            if m:
-                failures.append(f'{os.path.relpath(path, root)}:{no}: {m.group(1)}')
+            word = find_term(line, matchers, abap)
+            if not word:
+                continue
+            entry = next((e for e in entries if e[0] == rel and e[1] and e[1] in line and e[2]), None)
+            if entry:
+                used.add(entry)
+                continue
+            failures.append(f'{rel}:{no}: {word}')
+    failures += [f'{allowlist}: entry matches no line with a customer word: {e[0]} | {e[1]}'
+                 for e in entries if all(e) and e not in used]
     return failures
 
 

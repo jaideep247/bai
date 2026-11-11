@@ -1,6 +1,15 @@
 # Words that belong to a consumer, never to the framework (tools/checks.py, check customer_terms).
-# One term per line, matched as a whole word, case ignored, in src/, the message texts and the text
-# elements. Extend it with the names of every new consumer, system, bank or team.
+# Checked in every text file of the framework (src/, ddic/, docs/, templates/, config/, tools/, README,
+# CHANGELOG) and of the shared tools (tools/abaptools); test fixtures excepted. Extend it with the names
+# of every new consumer, system, middleware, bank, source, scheduler, table, field and team.
+#
+# One term per line: TERM, or TERM | flag, flag. Default: whole word (no letter or digit directly before
+# or after it; an underscore separates), case ignored. Flags:
+#   case    case kept - a short word that is also an ordinary word (BASE, not "base" or "database")
+#   prefix  every word that starts with the term - an object prefix of a consumer (ZCD_OPS, ZCDJob...)
+#   text    prose only - in ABAP sources only the comments are read (BASE is also an ABAP keyword:
+#           VALUE #( BASE ... ))
+# A line that must name a term (history, the checks' own lists) is an entry of customer_terms_allowed.txt.
 payment engine
 PRISM
 IRIS
@@ -19,3 +28,32 @@ HCK
 RTB
 Control-M
 morning report
+# Middleware, feeders, screening and finance systems, banks of a consumer
+Stripe
+Bridger
+LexisNexis
+ORCI
+ALPA
+ALPL
+HAL | case
+DIS | case
+Guidewire
+ClaimCenter
+BlackLine
+Kestrel
+OFSAA
+JQ4SP
+VYSPA
+BASE | case, text
+# Customer fields, statuses and object prefixes of a consumer
+ZZ_FIN_TRANS_NUM
+SRCPOSTED
+ZCD | prefix
+ZCL_CD_ | prefix
+ZIF_CD_ | prefix
+ZCX_CD_ | prefix
+ZBP_R_CD_ | prefix
+ZI_CD_ | prefix
+ZR_CD_ | prefix
+ZC_CD_ | prefix
+ZUI_CD_ | prefix
