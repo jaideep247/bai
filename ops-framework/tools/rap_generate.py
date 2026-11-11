@@ -22,6 +22,9 @@ Modification log:
 2026-11-11 | Payment model: dimension texts (ZCA_OPS_PMDIM) and feeder systems with deep-link URL template
            | (ZCA_OPS_FEEDER, check url_invalid).
 2026-11-11 | SAP job monitor: scheduler jobs and the SAP job names they start (pattern checked on save).
+2026-11-11 | Operations response features: runbook links per check (link of an active row, 439), alert
+           | correlation rules (patterns 418, key fields 153, window 154), escalation fields of alert rules
+           | (severity floor).
 """
 import os
 import sys
@@ -46,7 +49,8 @@ SPEC = {
               ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to'),
               ('pcre', 'rule_pattern'), ('pcre', 'check_pattern'), ('pcre', 'group1_pattern'),
               ('pcre', 'group2_pattern'), ('pcre', 'bukrs_pattern'),
-              ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
+              ('dest', ('channel', 'channel'), 'destination', 'escalation_dest'),
+              ('enum', 'esc_severity', ',' + SEV)]),
             ('zca_ops_alchn', 'AlertChannel', 'zca_d_alchn', 'Channel', 'Alert channels', [],
              [('class', 'class_name', 'ZIF_CA_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination'),
               ('valid', 'template_id', 'zcl_ca_ops_cfg_checks=>template_valid', 'template_invalid')]),
@@ -92,6 +96,15 @@ SPEC = {
             # start (PCRE, complete name) - the board shows scheduler job -> SAP parent job -> failed child
             ('zca_ops_jobsch', 'SchedulerJob', 'zca_d_jobsch', 'Scheduler job', 'Scheduler jobs and SAP job names', [],
              [('pcre', 'sap_pattern'), ('enum', 'criticality', 'H,M,L')]),
+            # Operations response features (2026-11-11): runbook link per check (exact values, as covered checks;
+            # an active row needs its link) and alert correlation rules (key fields, PCRE, window)
+            ('zca_ops_runbook', 'RunbookLink', 'zca_d_runbook', 'Runbook link', 'Runbook links per check', [],
+             [('area', 'area', False), ('enum', 'match_field', 'RULE_ID,CHECK_CODE,GROUP2'),
+              ('when', 'active', 'X', [('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>link_valid', 'url_invalid')])]),
+            ('zca_ops_corr', 'CorrelationRule', 'zca_d_corr', 'Correlation rule', 'Alert correlation rules', [],
+             [('area', 'area', False), ('pcre', 'check_pattern'), ('pcre', 'key_pattern'),
+              ('valid', 'key_fields', 'zcl_ca_ops_cfg_checks=>key_fields_valid', 'corr_fields_invalid'),
+              ('valid', 'window_min', 'zcl_ca_ops_cfg_checks=>window_min_valid', 'corr_window_invalid')]),
         ]),
 }
 
@@ -129,7 +142,15 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'approved_by': 'Approved by (reviewer)',
           # SAP job monitor (2026-11-11)
           'sched_folder': 'Scheduler folder', 'sched_job': 'Scheduler job',
-          'sap_pattern': 'SAP job names (PCRE, complete name)', 'criticality': 'Criticality (H / M / L)'}
+          'sap_pattern': 'SAP job names (PCRE, complete name)', 'criticality': 'Criticality (H / M / L)',
+          # Operations response features (2026-11-11)
+          'first_action': 'First action (one line)', 'corr_rule': 'Correlation rule',
+          'key_fields': 'Key fields (finding fields, comma list)', 'key_pattern': 'Key pattern (PCRE, group 1)',
+          'window_min': 'Window (minutes from the parent)',
+          'esc_after_min': 'Escalate after (minutes open, unassigned)',
+          'esc_repeat_min': 'Repeat escalation every (minutes, 0 = once)',
+          'esc_max_count': 'Escalations at most (0 = ESC_MAX_DEFAULT)',
+          'esc_severity': 'Escalation severity floor (blank = minimum)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

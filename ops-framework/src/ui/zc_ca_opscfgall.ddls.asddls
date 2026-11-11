@@ -22,5 +22,7 @@ define root view entity ZC_CA_OpsCfgAll
       _ApprovedTable : redirected to composition child ZC_CA_ApprovedTable,
       _PaymDimText : redirected to composition child ZC_CA_PaymDimText,
       _PaymFeeder : redirected to composition child ZC_CA_PaymFeeder,
-      _SchedulerJob : redirected to composition child ZC_CA_SchedulerJob
+      _SchedulerJob : redirected to composition child ZC_CA_SchedulerJob,
+      _RunbookLink : redirected to composition child ZC_CA_RunbookLink,
+      _CorrelationRule : redirected to composition child ZC_CA_CorrelationRule
 }

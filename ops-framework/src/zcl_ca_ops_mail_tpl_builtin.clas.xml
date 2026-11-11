@@ -103,6 +103,30 @@
      <ENTRY>Exceptions app</ENTRY>
      <LENGTH>14</LENGTH>
     </item>
+    <item>
+     <ID>I</ID>
+     <KEY>L16</KEY>
+     <ENTRY>Runbook</ENTRY>
+     <LENGTH>7</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>L17</KEY>
+     <ENTRY>First action</ENTRY>
+     <LENGTH>12</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>L18</KEY>
+     <ENTRY>Correlated exceptions (not alerted)</ENTRY>
+     <LENGTH>35</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>L19</KEY>
+     <ENTRY>Escalation</ENTRY>
+     <LENGTH>10</LENGTH>
+    </item>
    </TPOOL>
   </asx:values>
  </asx:abap>

@@ -46,6 +46,14 @@ define view entity ZR_CA_AlertRule
       escalation_dest as EscalationDest,
       @EndUserText.label: 'Esc override'
       esc_override as EscOverride,
+      @EndUserText.label: 'Escalate after (minutes open, unassigned)'
+      esc_after_min as EscAfterMin,
+      @EndUserText.label: 'Repeat escalation every (minutes, 0 = once)'
+      esc_repeat_min as EscRepeatMin,
+      @EndUserText.label: 'Escalations at most (0 = ESC_MAX_DEFAULT)'
+      esc_max_count as EscMaxCount,
+      @EndUserText.label: 'Escalation severity floor (blank = minimum)'
+      esc_severity as EscSeverity,
       @EndUserText.label: 'Active'
       active as Active,
       @EndUserText.label: 'E-mail template (SMTG template ID)'

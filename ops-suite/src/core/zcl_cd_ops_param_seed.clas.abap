@@ -2301,6 +2301,38 @@ CLASS zcl_cd_ops_param_seed DEFINITION
     CONSTANTS:
       BEGIN OF gc_d138,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'SHIFT_TIMES_OFFSHORE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'S',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'TIME',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '000000',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Shift start times of team OFFSHORE (HHMMSS rows; confirm)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d138.
+    CONSTANTS:
+      BEGIN OF gc_d139,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'SHIFT_TIMES_ONSITE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'S',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'TIME',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '000000',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Shift start times of team ONSITE (HHMMSS rows; confirm)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d139.
+    CONSTANTS:
+      BEGIN OF gc_d140,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_EBS_B',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
         value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
@@ -2313,9 +2345,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of EBS blocking exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d138.
+      END OF gc_d140.
     CONSTANTS:
-      BEGIN OF gc_d139,
+      BEGIN OF gc_d141,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_EBS_E',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2329,9 +2361,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of EBS error exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d139.
+      END OF gc_d141.
     CONSTANTS:
-      BEGIN OF gc_d140,
+      BEGIN OF gc_d142,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_EBS_W',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2345,9 +2377,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of EBS warning exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d140.
+      END OF gc_d142.
     CONSTANTS:
-      BEGIN OF gc_d141,
+      BEGIN OF gc_d143,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_FMON_B',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2361,9 +2393,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of FMON blocking exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d141.
+      END OF gc_d143.
     CONSTANTS:
-      BEGIN OF gc_d142,
+      BEGIN OF gc_d144,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_FMON_E',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2377,9 +2409,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of FMON error exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d142.
+      END OF gc_d144.
     CONSTANTS:
-      BEGIN OF gc_d143,
+      BEGIN OF gc_d145,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_FMON_W',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2393,9 +2425,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of FMON warning exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d143.
+      END OF gc_d145.
     CONSTANTS:
-      BEGIN OF gc_d144,
+      BEGIN OF gc_d146,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_HCK_B',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2409,9 +2441,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of HCK blocking exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d144.
+      END OF gc_d146.
     CONSTANTS:
-      BEGIN OF gc_d145,
+      BEGIN OF gc_d147,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_HCK_E',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2425,9 +2457,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of HCK error exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d145.
+      END OF gc_d147.
     CONSTANTS:
-      BEGIN OF gc_d146,
+      BEGIN OF gc_d148,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_HCK_W',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2441,13 +2473,13 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of HCK warning exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d146.
+      END OF gc_d148.
     "! Delivered definitions 1-100 (at most 100 per method)
     CLASS-METHODS definitions_part_1
       RETURNING
         VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
 
-    "! Delivered definitions 101-146 (at most 100 per method)
+    "! Delivered definitions 101-148 (at most 100 per method)
     CLASS-METHODS definitions_part_2
       RETURNING
         VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
@@ -2628,6 +2660,8 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_d144 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d145 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d146 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d147 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d148 ) INTO TABLE rt_definitions.
   ENDMETHOD.
 
 

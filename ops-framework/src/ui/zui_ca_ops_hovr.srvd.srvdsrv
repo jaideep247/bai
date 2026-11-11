@@ -1,0 +1,7 @@
+@EndUserText.label: 'Shift handover'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSHANDOVER'
+// Binding to create in ADT: ZUI_CA_OPS_HOVR_O4 (OData V4 - UI), list report "Shift handover" (operations
+// response features, 2026-11-11; docs/OPERATIONS_FEATURES.md section 6). Read-only: no behaviour definition.
+define service ZUI_CA_OPS_HOVR {
+  expose ZC_CA_OpsHandover as ShiftHandover;
+}

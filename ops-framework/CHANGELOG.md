@@ -38,6 +38,74 @@ started ended *finished* - tracked, linked to its parent and root and traceable 
 - Board `ZUI_CA_OPS_JOBS` (read only): `ZR_CA_OpsJobFailure` / `ZC_CA_OpsJobFailure` with facet views, DCL
   `ZC_CA_OPSJOBFAILURE`, overview card counters; CDS tests `ZCL_CA_OPS_JOB_CDS_TEST`.
 - Parameters `JOB_*` (prefix `JOB_` read in area `CA_OPS`), messages 110-129, VERIFY V58-V66.
+## [Unreleased] - 2026-11-11 (operations response features)
+
+Goal: the right person learns about a problem once, at the right time, with the first step in hand, and the
+response time is measured. Reusable by any consumer: configuration of its areas only. `docs/OPERATIONS_FEATURES.md`.
+
+### Added
+- **Runbook link per check**: table `ZCA_OPS_RUNBOOK` (area, finding field `RULE_ID` / `CHECK_CODE` / `GROUP2`, exact
+  value, link, one-line first action, active) in `ZUI_CA_OPS_CFG` (an active row needs an http(s) link, 439); CDS
+  `ZI_CA_OpsFindRunbook` (CHECK_CODE before GROUP2 before RULE_ID) for the exceptions app (link column, facet
+  *Runbook*) and any app; alert e-mail keys `RUNBOOK_URL` / `FIRST_ACTION` (`ZCL_CA_OPS_ALERT_POLICY=>RUNBOOK_FOR`,
+  built-in layout, generic template, `ZI_CA_OPS_ALERTMAILCTX`).
+- **Planned downtime windows**: table `ZCA_OPS_DTWIN` (area, PCRE scope on check code / object key / interface or bank,
+  local start and end in the window's stored time zone `DOWNTIME_TIME_ZONE` and the UTC pair, reason, planner,
+  approver); app `ZUI_CA_OPS_DTW` (`ZR_CA_OpsDowntime`, no draft, status derived - a window ends by itself; four-eyes
+  approval with ZCA_OPS 85, never the planner; *End now*; checks on save: order, `DOWNTIME_MAX_HOURS`,
+  `DOWNTIME_PAST_TOL_MIN`, reason, patterns, no overlapping window of the same scope); `ZCL_CA_OPS_DOWNTIME_POLICY`;
+  API `ZIF_CA_OPS_DOWNTIME` / `ZCL_CA_OPS_DOWNTIME` (`WINDOWS`, `PLANNED` - "is this planned?" for missing-volume and
+  SLA checks -, `AREA_PLANNED`; factory `GET_DOWNTIME`, injector `INJECT_DOWNTIME`). Findings inside an approved
+  window are recorded with `ZCA_OPS_FINDING-DOWNTIME_ID`; the router holds back their alerts and logs status **D**
+  (140; run-level alerts inside an area-wide window, 157); marks on the exceptions app, the daily control review
+  (`DowntimeFindings`, `IsPlannedDowntime`, `DowntimeCount`) and the area dashboard (`IsPlannedDowntime`,
+  `ZI_CA_OpsDtwNow`, `ZI_CA_OpsDtwActive`); built-in purge target `DOWNTIME` (`DOWNTIME_RETENTION_DAYS`).
+- **Escalation until acknowledged**: rule fields `ESC_AFTER_MIN`, `ESC_REPEAT_MIN`, `ESC_MAX_COUNT`, `ESC_SEVERITY`
+  (`ZCA_OPS_ALRULE`, app regenerated), parameter `ESC_MAX_DEFAULT`; `ZIF_CA_OPS_ALERT=>ESCALATE` (DEFAULT IGNORE) and
+  report `ZCA_OPS_ESCALATE` (ZCA_OPS 16): an open, unassigned exception is escalated to the rule's escalation list
+  after X minutes, every Y minutes up to the limit, until assigned, waived or resolved; one intent per exception and
+  step (unique index INT), every attempt logged with `ZCA_OPS_ALLOG-ESC_STEP` / `-FINDING_NO` (156). Precedence: a
+  rule with `ESC_AFTER_MIN` escalates by time only; the run-based `ESCALATE_AFTER` is unchanged for the others; the
+  throttle and the run-based series ignore escalation, D and K rows.
+- **Alert correlation**: table `ZCA_OPS_CORR` (check-code pattern, key fields, key pattern with one capture group,
+  window in minutes) in `ZUI_CA_OPS_CFG` (153 / 154); `ZCL_CA_OPS_CORRELATOR` applied by the store to new open
+  exceptions - the first of a key in the window is the parent, later ones its children (`ZCA_OPS_FINDING-CORR_ID`,
+  `-CORR_ROLE`, `-CORR_KEY`, indexes `COR` / `CRI`; a correlation ID, not a pointer to the parent's row, so the
+  carry-forward keeps the link; the company code is part of every key). The router sends one alert per parent with
+  the number of open children (`CORRELATED_COUNT`) and logs held-back children with status **K** (141); exceptions
+  app facets *Correlated exceptions* / *Parent exception* (`ZI_CA_OpsCorrCount`). No separate bulk action: the
+  existing *Resolve* works on several selected children.
+- **Response-time metrics (MTTA / MTTR)**: CDS `ZI_CA_OpsExcEpisode`, `ZI_CA_OpsExcAssign1`, `ZI_CA_OpsExcReopen`,
+  `ZI_CA_OpsExcTimes`, `ZR_CA_OpsExcMetric` / `ZC_CA_OpsExcMetric` (per area, team, check, severity, company code,
+  month / week in `METRIC_TIME_ZONE`: raised, assigned, resolved, open, re-opened, average minutes to assign /
+  resolve, time buckets instead of percentiles, open by age), DCL, analytical list page service `ZUI_CA_OPS_MET`,
+  card data points; team = owner team of the controls that cover the check (`ZI_CA_OpsCheckTeam`, `ZI_CA_OpsFindTeam`).
+- **Shift handover**: shift starts per team from `SHIFT_TIMES_<team>` / `SHIFT_TIMES_DEFAULT` (kind S, TIME) in
+  `SHIFT_TIME_ZONE`; CDS `ZI_CA_OpsShiftDef` ... `ZI_CA_OpsShiftWin`, `ZI_CA_OpsHovrEvt`, `ZI_CA_OpsHovrSum`,
+  `ZR_CA_OpsHandover` / `ZC_CA_OpsHandover` (since the start of the previous shift per team, area and company code:
+  new, resolved, still open, escalated, controls awaiting sign-off, planned downtime active / next shift), DCL, list
+  report service `ZUI_CA_OPS_HOVR`, card data points. No handover note table (decision: a team note cannot be
+  protected by the area / company-code rule).
+- Types `ZIF_CA_OPS_RESP_TYPES`; name prefixes `RUNBOOK_`, `DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_`, `SHIFT_` read in
+  area `CA_OPS`; 9 parameter definitions (47 in all with the SAP job monitor); messages 140-160; domain `ZCA_OPS_DTW_STATUS`; alert DAO
+  `GET_MARKS`, `GET_CHILD_COUNTS`, `GET_RUNBOOKS`, `GET_ESCALATION_CANDIDATES`, `GET_INTENT_LOG` (DEFAULT IGNORE);
+  configuration checks `LINK_VALID`, `KEY_FIELDS_VALID`, `WINDOW_MIN_VALID`.
+- Tests: downtime policy (14) and API (4, OSQL), correlator (9), router (`ltc_response`, 9), policy (`ltc_response`,
+  9), store (3), purge DAO, configuration checks, factory; CDS tests `ZCL_CA_OPS_MET_CDS_TEST`,
+  `ZCL_CA_OPS_HOVR_CDS_TEST`. VERIFY V70-V79.
+
+### Changed
+- `ZCL_CA_OPS_PURGE` test `deletes_in_packages`: one commit per built-in target - the expectation (4) had not counted
+  REVIEW; with DOWNTIME it is 6.
+- Generic template `ZCA_OPS_ALERT_DEFAULT` (documented source): four rows for the new context keys.
+- Coding standards review of the build: new test method bodies wrapped in `TRY ... CATCH cx_root`, test rows of the
+  handover CDS test built field by field; downtime validations clear and tag their state areas (`VALIDATE_AREA`,
+  `VALIDATE_WINDOW`); an escalation step without intent key is logged failed (message 160) instead of being sent
+  without its duplicate guard; concurrency, side-effects and analytics notes in `docs/OPERATIONS_FEATURES.md` §6a.
+
+### Offline evidence (2026-11-11)
+- abaplint 0 issues, `tools/checks.py` 17/17, serializer / parameter seed / configuration app up to date, tool tests
+  green; the suite lints clean against the changed framework. Not proven offline: `docs/VERIFY.md` V70-V79.
 
 ## [Unreleased] - 2026-11-10 (process onboarding)
 

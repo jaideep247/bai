@@ -23,14 +23,23 @@ Permitted activities (SU21 → Activities) — the same activities the first con
 
 | ACTVT | Meaning | Framework entry points |
 |---|---|---|
-| 01 | Create a configuration row (DV1 only, transport) | configuration apps (create of a child row; editing the singleton) |
-| 02 | Change (configuration row; assign / resolve / classify an exception; sign off a control) | configuration apps, exceptions app `ZUI_CA_OPS_EXC`, daily control review `ZUI_CA_OPS_REV` (action *Mark reviewed*) |
-| 03 | Display | every app and DCL, ALV reports |
-| 06 | Delete a configuration row (DV1 only, transport) | configuration apps |
-| 16 | Execute | `ZCA_OPS_RETENTION` (area `CA_OPS`); `ZCA_OPS_CHECK_RUN` (the area of the run - the generic runner of the check registry, process onboarding 2026-11-10); a consumer's batch programs (its area) |
-| 85 | Approve (second person) | waiver approval in the exceptions app |
+| 01 | Create a configuration row (DV1 only, transport); plan a downtime window (2026-11-11) | configuration apps (create of a child row; editing the singleton); downtime app `ZUI_CA_OPS_DTW` (area of the window, checked on save - 152) |
+| 02 | Change (configuration row; assign / resolve / classify an exception; sign off a control; change or *End now* a downtime window) | configuration apps, exceptions app `ZUI_CA_OPS_EXC`, daily control review `ZUI_CA_OPS_REV` (action *Mark reviewed*), downtime app (change a window awaiting approval, action *End now*) |
+| 03 | Display | every app and DCL, ALV reports; the downtime app, the response-time metrics `ZUI_CA_OPS_MET` and the shift handover `ZUI_CA_OPS_HOVR` (2026-11-11) |
+| 06 | Delete a configuration row (DV1 only, transport); delete a downtime window awaiting approval | configuration apps; downtime app |
+| 16 | Execute | `ZCA_OPS_RETENTION` (area `CA_OPS`); `ZCA_OPS_CHECK_RUN` (the area of the run - the generic runner of the check registry, process onboarding 2026-11-10); `ZCA_OPS_ESCALATE` (the area escalated, escalation until acknowledged 2026-11-11); a consumer's batch programs (its area) |
+| 85 | Approve (second person) | waiver approval in the exceptions app; approval of a planned downtime window in the downtime app (2026-11-11, never by its planner) |
 
 Configuration apps (generated, `tools/rap_generate.py` - the framework's app; a consumer's apps by its own wrapper of the same shared generator): each activity is checked on its own per child entity and the area of the app — 01 create, 02 change, 06 delete; editing the singleton needs at least one of them. The framework's app `ZUI_CA_OPS_CFG` (alert rules, alert channels, purge targets) checks area `CA_OPS`.
+
+**Operations response features - activities (2026-11-11, `docs/OPERATIONS_FEATURES.md`).** No new activity and no
+new field: a downtime window is planned with 01, changed / deleted (while awaiting approval) with 02 / 06, ended early
+with 02 and approved with **85** by a second user - the same four-eyes activity as the waiver approval, because both
+are "a second person lets an exception go unalerted / unworked"; the planner is refused by the behaviour pool (147),
+whatever his roles. A landscape that wants the downtime approver separate from the waiver approver gives the two
+roles different areas or adds a customer activity (as for the sign-off below) - documented as the alternative, not
+built. The escalation job needs 16 for the area it escalates; runbook links and correlation rules are rows of
+`ZUI_CA_OPS_CFG` (01 / 02 / 06 for `CA_OPS`, DV1 only). The metrics and the handover are read-only (03, DCL).
 
 **Daily control review - activity of the sign-off (decision 2026-11-10).** The sign-off uses the existing change
 activity **02** of the control's area, not a new activity: the reviewer is the operator who already works the
@@ -47,6 +56,8 @@ no separate sign-off activity.
 | `Z_CA_OPS_DISPLAY` | * | 03 | * |
 | `Z_CA_OPS_BATCH` (job user) | `CA_OPS` + the consumer areas it runs | 16 | * |
 | `Z_CA_OPS_CONFIG` (configuration owner of the framework) | `CA_OPS` | 01, 02, 03, 06 | * |
+| `Z_CA_OPS_DOWNTIME_PLANNER` (2026-11-11: plans downtime windows of an area) | the area | 01, 02, 03, 06 | * |
+| `Z_CA_OPS_DOWNTIME_APPROVER` (2026-11-11: approves them - never the planner) | the area | 03, 85 | * |
 
 **SAP job monitor (2026-11-11).** The job user of `ZCA_OPS_CHECK_RUN` for the monitor's area also needs `S_BTCH_JOB`
 JOBACTION `PROT` (display job log), JOBGROUP `*` - read only; the monitor never releases, cancels, changes or restarts
@@ -63,8 +74,16 @@ A consumer adds its own roles with its areas (in its own authorisation sheet; th
 | `ZC_CA_OpsCtlReview` (`ZUI_CA_OPS_REV`) | `ZC_CA_OPSCTLREVIEW` | the rule of §3c on `Area` (of the control) and `CompanyCode` (of the slice) |
 | `ZC_CA_OpsCheckStatus` (`ZUI_CA_OPS_DASH`, area dashboard, 2026-11-10) | `ZC_CA_OPSCHECKSTATUS` | the rule of §3c on `Area` (of the check) and `CompanyCode` (of the slice: blank = area-level row with run and freshness, else the open exceptions of that company code) |
 | `ZC_CA_OpsJobFailure` and its facet views `ZC_CA_OpsJobStep`, `_Msg`, `_Alog`, `_Bo` (`ZUI_CA_OPS_JOBS`, SAP job failures board, 2026-11-11) | `ZC_CA_OPSJOBFAILURE` | the rule of §3c on `Area` (of the monitor run that kept the job) and `CompanyCode` (of an enricher's business object; blank = area-level) |
+| `ZC_CA_OpsDowntime` (`ZUI_CA_OPS_DTW`, planned downtime, 2026-11-11) | `ZC_CA_OPSDOWNTIME` | `Area` authorised (03) - a window is area-level, it has no company code; the findings it marks keep their own company code and rule |
+| `ZC_CA_OpsExcMetric` (`ZUI_CA_OPS_MET`, response-time metrics, 2026-11-11) | `ZC_CA_OPSEXCMETRIC` | the rule of §3c on `Area` and `CompanyCode` of the exception episode (the company code is a dimension, so a sum or average after the filter never mixes company codes) |
+| `ZC_CA_OpsHandover` (`ZUI_CA_OPS_HOVR`, shift handover, 2026-11-11) | `ZC_CA_OPSHANDOVER` | the rule of §3c on `Area` and `CompanyCode` of the row (exceptions, escalations, control slices per company code; downtime area-level) |
 
-VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36, V51.
+VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36, V51, V76, V78.
+
+**Correlated exceptions (2026-11-11).** The company code is part of every correlation key, so a parent and its
+children always share the company code: the exceptions app's facets *Correlated exceptions* / *Parent exception*
+show rows of `ZC_CA_OpsException` under its own DCL, and the open-children count (`ZI_CA_OpsCorrCount`) is a count
+of one company code (`docs/OPERATIONS_FEATURES.md` §4).
 
 **Business processes (process onboarding, 2026-11-10).** A registered process (`ZCA_OPS_PROC`) names in `AUTH_ROLE` the PFCG role that grants `ZCA_OPS` for its area (03 display, 02 operator, 16 for the job user of `ZCA_OPS_CHECK_RUN`); the onboarding check reports a process without a role or whose area is not an active parameter area (`PROC_NO_AUTH`), and the offline check `process_onboarding` requires the role in the consumer's authorisation sheet. A process gets its own area when its runs would otherwise be the latest run of another engine's area.
 

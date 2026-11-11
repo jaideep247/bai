@@ -104,6 +104,7 @@ Every `AUTHORITY-CHECK` on `ZCA_OPS` is in one class, `ZCL_CA_OPS_AUTH` (`ZIF_CA
 | `ZCD_OPS_PAYMENT_TRACE` | CD_OPS | 03, plus company code per item | At start; a step on an item of a company code without 03 is shown as not authorised |
 | `ZCD_OPS_PATTERN_CHECK` | each area | 03 | Per area read |
 | `ZCD_OPS_PATTERN_MIGRATE` | each area | 02 | Per area, before anything is written (DV1, customizing request) |
+| `ZCA_OPS_ESCALATE` (framework job per area, escalation until acknowledged, 2026-11-11) | CD_EBS, CD_FMON, CD_HCK (one job each) | 16 | At start (041); the deliveries are logged in `ZCA_OPS_ALLOG` |
 | HCK checks reading a configured table (aggregates, value queries, queue and reference sources, drift hash) | — | `S_TABU_NAM` 03 | Before every dynamic read (`ZCL_CD_HCK_DAO=>GET_TABLE_FIELDS`, `ZIF_CA_OPS_AUTH=>MAY_READ_TABLE`, 2026-11-10), in addition to the approved-table list; refused = message 813 |
 | EBS lookup rule R21 (`ZCD_EBS_LOOKUP`) | — | `S_TABU_NAM` 03 | Per lookup table at run time (`ZCL_CD_EBS_SAP_DAO=>GET_LOOKUP_ROWS`), after the field-level approval in `ZCD_OPS_TABWL` (area EBS, purpose LOOKUP; message 812); the approval is also checked when the lookup is saved |
 | FMON dynamic reader (`ZCD_FMON_SRC` / `_LOTCFG` tables) | — | `S_TABU_NAM` 03 | Per table (`ZCL_CD_FMON_DDIC=>MAY_READ`, now the shared `ZIF_CA_OPS_AUTH=>MAY_READ_TABLE`) |
@@ -185,3 +186,23 @@ Three business roles on the one payment model service `ZUI_CD_PAYM` (binding `ZU
 | `ZCD_OPS_IT_SUPPORT` (L1 / L2) | *Payments - IT support* (`ZCD_OPS_PG_PAYM_IT`, app `ZCD_PAYM_IT`) + the existing control center page | `ZCD_OPS_BC_PAYM_IT` + `ZCD_OPS_BC_OVW` | `ZUI_CD_PAYM_O4`, `ZUI_CD_OPS_OVERVIEW_O4`, the area bindings of §3a | all suite areas; own company codes |
 
 The existing `ZCD_OPS_PROD_SUPPORT` keeps the control center page (support lead persona) and gets the new entities of `ZUI_CD_OPS_OVERVIEW` without a role change (same binding). Configuration of the services (`ZCD_OPS_SVC`, `ZCD_OPS_SVCMAP`) and of the payment model texts / feeder systems (`ZCA_OPS_PMDIM`, `ZCA_OPS_FEEDER`) follows the configuration roles of the core app and the framework app (§3). Feeder references are masked to the last four characters unless the feeder row marks them visible; user names appear only where the exceptions app already shows them.
+## Operations response features (framework, 2026-11-11)
+
+The framework's runbook links, planned downtime windows, escalation until acknowledged, alert correlation,
+response-time metrics and shift handover (`ops-framework/docs/OPERATIONS_FEATURES.md`; activities:
+`ops-framework/docs/auth_zca_ops.md` §2) use the existing activities of `ZCA_OPS` - no new activity, no new field.
+
+| Role | Change | ZCA_PARAR | ACTVT | BUKRS |
+|---|---|---|---|---|
+| `Z_CD_OPS_DOWNTIME_PLANNER` (new: RTB support lead plans a bank or system maintenance window) | downtime app `ZUI_CA_OPS_DTW`: plan, change / delete while awaiting approval, *End now* | CD_EBS, CD_FMON, CD_HCK, CD_OPS | 01, 02, 03, 06 | DUMMY (a window has no company code) |
+| `Z_CD_OPS_APPROVER` (existing, team lead) | also approves downtime windows (85) - the same second-person activity as waivers; never the planner (the app refuses it, 147) | CD_EBS, CD_FMON, CD_HCK (+ CD_OPS for windows of that area) | 03, 85 | unchanged |
+| `Z_CD_OPS_BATCH` (existing job user) | runs `ZCA_OPS_ESCALATE` for CD_EBS, CD_FMON, CD_HCK (16, already in the role) | unchanged | 16 | unchanged |
+| `Z_CD_OPS_CONFIG` (existing) | rows of *Runbook links per check* and *Alert correlation rules* and the escalation fields of alert rules in `ZUI_CA_OPS_CFG` (area `CA_OPS`, DV1) | `CA_OPS` | 01, 02, 03, 06 | * |
+| `ZCD_OPS_PROD_SUPPORT` (business role) | `S_SERVICE` `ZUI_CA_OPS_DTW_O4` (display of windows), `ZUI_CA_OPS_MET_O4`, `ZUI_CA_OPS_HOVR_O4`; the overview cards *Response times* / *Shift handover* come with `ZUI_CD_OPS_OVERVIEW_O4` | as today | 03 | own company codes |
+
+Segregation: the planner and the approver of a window are two users (four-eyes enforced by the app whatever the
+roles); a user with both roles may plan or approve, never both for the same window. Read access: DCLs of the
+framework (`ZC_CA_OPSDOWNTIME` area only - a window is area-level; `ZC_CA_OPSEXCMETRIC`, `ZC_CA_OPSHANDOVER` with the
+company-code rule of §3d, so the overview cards sum only the slices of the user's company codes). Entry point in §3b: `ZCA_OPS_ESCALATE` - area of the job, 16, at start (041). VERIFY: framework V70-V79, suite V80 / V81
+(`docs/Release_Readiness.md`).
+

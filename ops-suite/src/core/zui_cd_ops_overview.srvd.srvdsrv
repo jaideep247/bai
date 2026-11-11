@@ -50,4 +50,10 @@ define service ZUI_CD_OPS_OVERVIEW {
   // SAP job failures (2026-11-11, area CD_JOBS): job failures today - cancelled, child failed while the parent
   // finished, not started, long-running - and the list of today's failures (framework projection, same DCL)
   expose ZC_CA_OpsJobFailure as JobFailure;
+  // ---- Operations response features of the framework (2026-11-11; ops-framework/docs/OPERATIONS_FEATURES.md)
+  // Cards "Response times" (MTTA / MTTR, raised, open, re-opened) and "Shift handover" (since the previous shift);
+  // framework projections with their own DCL and card annotations (as ProcessCheck); read-only here.
+  expose ZC_CA_OpsExcMetric as ExceptionMetric;
+  expose ZC_CA_OpsHandover  as ShiftHandover;
+  // ---- end of the operations response features
 }

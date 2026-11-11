@@ -170,6 +170,13 @@ control `SAP_JOB_FAILURES`, rule `JOB_FAIL`, runbook §5q, split with the mornin
 (`HCK_MORNING_REPORT.md` §9b). The process is delivered **active**; the plug-ins that need unconfirmed tables or job
 naming (mass activity resolver and enricher, payment run enricher) are delivered but kept out of `JOB_RESOLVERS` /
 `JOB_ENRICHERS`; the scheduler rows (`config/scheduler_jobs.csv`) are inactive until the Control-M export. Nothing
+## Operations response features of the framework (2026-11-11)
+
+Runbook link per check, planned downtime windows (four-eyes), escalation until acknowledged, alert correlation,
+response-time metrics and shift handover (`ops-framework/docs/OPERATIONS_FEATURES.md`). The suite delivers
+configuration only - runbook rows **inactive** with the placeholder `<Site runbook URL>` (`config/runbook_links.csv`),
+correlation rules **inactive** (`config/correlation_rules.csv`), escalation fields as a proposal
+(`config/alert_seed.md`), `SHIFT_TIMES_ONSITE` / `_OFFSHORE` definitions - and the two overview cards. Nothing
 activated, no ABAP Unit run.
 
 | Gate | Evidence |
@@ -202,6 +209,27 @@ activated, no ABAP Unit run.
   jobs `CD_JOBS` reports. The cycle steps are therefore alerted only by the morning report - if they should be alerted
   within minutes too, remove `ZCL_CD_HCK_JOB_CLAIM` from `JOB_CLAIMS` and leave the cycle checks without alert rule.
 - **D-JM5 Throttle 0** on rule `JOB_FAIL` (a digest per 5-minute run); the list `ZCD_BATCHSUP` is a proposed name.
+| Gate 1 (DV1) | `ops-framework/docs/VERIFY.md` V70-V79; suite V80 (below); ABAP Unit of the framework classes of `Test_and_Validation_Document.md` §6.17 |
+| Gate 2 (QA1) | RSP-01 ... RSP-12, OVP-17, OVP-18; suite V81 (below) |
+| Configuration | Runbook links of the site entered and activated per row; escalation proposal and correlation rules confirmed by RTB operations; shift start times of ONSITE / OFFSHORE confirmed by the support lead |
+
+**Suite VERIFY items (V80 / V81; the framework's are V70-V79, never reused).**
+- **V80 (DV1, customizing request):** the rows of `config/runbook_links.csv` saved inactive (an active one without
+  the site's link is refused, 439), the rows of `config/correlation_rules.csv` saved inactive (patterns, key fields and
+  window accepted; the `FMON_FILE` pattern is 26 characters, within CHAR 35); the escalation fields of the confirmed
+  rules entered; definitions `SHIFT_TIMES_ONSITE` / `SHIFT_TIMES_OFFSHORE` (kind S, TIME) accepted by the parameter app
+  and their value rows (`HHMMSS`) entered; jobs `ZCD_OPS_ESCALATE_*` scheduled with `Z_CD_OPS_BATCH`.
+- **V81 (QA1, overview page):** `ZUI_CD_OPS_OVERVIEW_O4` re-published with `ExceptionMetric` and `ShiftHandover`; the
+  cards *Response times* (KPI with averages - fallback: sums only, `Dashboard_Production_Support.md` §6) and *Shift
+  handover* render and sum after the DCL (OVP-17, OVP-18); the launchpad page *Shift and response* with its tiles.
+
+**Decisions for the user (2026-11-11).**
+- **D-RF1 Escalation proposal** (`config/alert_seed.md`): P1 rules escalate after 15 minutes, P2 after 30 / 60
+  minutes, to `ZCD_RTBLEAD`, at most 2-3 times; the rules' run-based `ESCALATE_AFTER` stops applying to them.
+- **D-RF2 Shift start times** of ONSITE and OFFSHORE (delivered 000000 = one shift a day until confirmed).
+- **D-RF3 Handover note**: not built (a team note cannot be protected by the area / company-code rule); if wanted,
+  one note per area, company-code slice and shift (`ops-framework/docs/OPERATIONS_FEATURES.md` §6).
+- **D-RF4 Downtime approver** = `Z_CD_OPS_APPROVER` (the waiver approver, activity 85) - or a separate role.
 
 ## Control center (2026-11-10)
 

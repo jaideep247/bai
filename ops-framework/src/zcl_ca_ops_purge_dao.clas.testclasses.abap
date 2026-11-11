@@ -19,6 +19,7 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: tests of RUN and
 *&            | ALERT_LOG (the suite's targets are tested with a consumer's class); registry test.
 *& 2026-11-10 | old_review_is_deleted (target REVIEW, daily control review).
+*& 2026-11-11 | ended_window_is_deleted (target DOWNTIME, planned downtime windows; ZCA_OPS_DTWIN doubled).
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -74,6 +75,7 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
     METHODS old_alert_log_is_deleted   FOR TESTING.
     METHODS active_targets_registered  FOR TESTING.
     METHODS old_review_is_deleted      FOR TESTING.
+    METHODS ended_window_is_deleted    FOR TESTING.
 
 
 ENDCLASS.
@@ -85,7 +87,7 @@ CLASS ltc_purge_dao IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCA_OPS_RUN' ) ( 'ZCA_OPS_FINDING' ) ( 'ZCA_OPS_ALLOG' )
                                    ( 'ZCA_OPS_EXC_HIST' ) ( 'ZCA_OPS_PURGE' )
-                                   ( 'ZCA_OPS_REVIEW' ) ) ).
+                                   ( 'ZCA_OPS_REVIEW' ) ( 'ZCA_OPS_DTWIN' ) ) ).
   ENDMETHOD.
 
 
@@ -303,6 +305,40 @@ CLASS ltc_purge_dao IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'Only the old sign-off deleted' ).
     cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_left[ 1 ]-business_date OPTIONAL ) exp = gc-new_run
                                         msg = 'The recent sign-off is kept' ).
+  ENDMETHOD.
+
+
+
+  " Rule: a planned downtime window is purged by its end - a window that ended before the cutoff goes,
+  " a recent one stays
+  METHOD ended_window_is_deleted.
+    TRY.
+        DATA lt_windows TYPE STANDARD TABLE OF zca_ops_dtwin WITH EMPTY KEY.
+        DATA ls_window TYPE zca_ops_dtwin.
+        ls_window-window_id = '000000000000000000000000000000B1'.
+        ls_window-area      = gc-area.
+        ls_window-to_utc    = gc-old.
+        INSERT ls_window INTO TABLE lt_windows.
+        ls_window-window_id = '000000000000000000000000000000B2'.
+        ls_window-to_utc    = gc-recent.
+        INSERT ls_window INTO TABLE lt_windows.
+        go_env->insert_test_data( lt_windows ).
+
+        DATA(lv_count) = mo_cut->count_purgeable( iv_target = zif_ca_ops_purge_dao=>gc_target-downtime
+                                                  iv_cutoff = gc-cutoff
+                                                  iv_today  = gc-today ).
+        DATA(lv_deleted) = mo_cut->delete_package( iv_target = zif_ca_ops_purge_dao=>gc_target-downtime
+                                                   iv_cutoff = gc-cutoff
+                                                   iv_today  = gc-today
+                                                   iv_max    = 100 ).
+        SELECT window_id FROM zca_ops_dtwin INTO TABLE @DATA(lt_left).
+
+        cl_abap_unit_assert=>assert_equals( act = lv_count exp = 1 msg = 'One window ended before the cutoff' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'Only the ended window deleted' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'The recent window is kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

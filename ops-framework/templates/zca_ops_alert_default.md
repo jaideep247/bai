@@ -41,6 +41,10 @@ section may name its own). The built-in layout uses the same subject.
   <tr><td><b>Run ended</b></td><td>{{ENDED_AT}}</td></tr>
   <tr><td><b>Amount total</b></td><td>{{AMOUNT_TOTAL}}</td></tr>
   <tr><td><b>Exceptions app</b></td><td>{{EXCEPTIONS_LINK}}</td></tr>
+  <tr><td><b>Runbook</b></td><td>{{RUNBOOK_URL}}</td></tr>
+  <tr><td><b>First action</b></td><td>{{FIRST_ACTION}}</td></tr>
+  <tr><td><b>Correlated exceptions (not alerted)</b></td><td>{{CORRELATED_COUNT}}</td></tr>
+  <tr><td><b>Escalation</b></td><td>{{ESCALATION}}</td></tr>
 </table>
 {{TABLE_SECTION}}
 {{TABLE_MAIN}}
@@ -59,11 +63,19 @@ Findings: {{FINDINGS_TOTAL}} (new {{FINDINGS_NEW}}, repeated {{FINDINGS_REPEATED
 Due date: {{DUE_DATE}} {{OWNER}}
 Run started: {{STARTED_AT}} / ended: {{ENDED_AT}}
 Exceptions app: {{EXCEPTIONS_LINK}}
+Runbook: {{RUNBOOK_URL}} - first action: {{FIRST_ACTION}}
+Correlated exceptions (not alerted): {{CORRELATED_COUNT}}
+Escalation: {{ESCALATION}}
 {{TABLE_SECTION}}
 {{TABLE_MAIN}}
 ```
 
 ## Placeholders
+
+2026-11-11 (operations response features, `docs/OPERATIONS_FEATURES.md`): `RUNBOOK_URL` / `FIRST_ACTION` (runbook
+row of the check, `ZCA_OPS_RUNBOOK`), `CORRELATED_COUNT` (open children of the parents in the message, alerted
+with them only) and `ESCALATION` (step `n / m` of an escalation until acknowledged). A template created before
+keeps working without them; add the rows above to show them (DV1, transport).
 
 Every placeholder is a standard context key (`ZIF_CA_OPS_TYPES=>TY_MAIL_HEADER`, element of
 `ZI_CA_OPS_ALERTMAILCTX`), plain text only; a key that is not known for a message is blank and the

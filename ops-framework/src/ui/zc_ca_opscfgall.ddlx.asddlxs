@@ -33,7 +33,11 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'PaymFeeder', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Feeder systems of the payment model', position: 130, targetElement: '_PaymFeeder' },
     { id: 'SchedulerJob', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Scheduler jobs and SAP job names', position: 140, targetElement: '_SchedulerJob' }
+      label: 'Scheduler jobs and SAP job names', position: 140, targetElement: '_SchedulerJob' },
+    { id: 'RunbookLink', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Runbook links per check', position: 150, targetElement: '_RunbookLink' },
+    { id: 'CorrelationRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Alert correlation rules', position: 160, targetElement: '_CorrelationRule' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

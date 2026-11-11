@@ -1,0 +1,85 @@
+// UI annotations: planned downtime windows (downtime app ZUI_CA_OPS_DTW, 2026-11-11)
+// List: status (coloured), area, from / to (local, the window's time zone), scope, reason, planner, approver;
+// actions Approve (second user, ZCA_OPS 85) and End now (02). Object page: window, scope, approval.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Planned downtime', typeNamePlural: 'Planned downtime',
+                  title: { type: #STANDARD, value: 'Reason' },
+                  description: { type: #STANDARD, value: 'Area' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'FromUtc', direction: #DESC } ], visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsDowntime with
+{
+  @UI.facet: [ { id: 'Window', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Window', position: 10 },
+               { id: 'Scope', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Scope',
+                 label: 'Scope (PCRE, blank = any)', position: 20 },
+               { id: 'Approval', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Approval',
+                 label: 'Approval', position: 30 } ]
+  @UI.lineItem: [ { position: 10, importance: #HIGH, criticality: 'StatusCriticality' },
+                  { type: #FOR_ACTION, dataAction: 'approveWindow', label: 'Approve' },
+                  { type: #FOR_ACTION, dataAction: 'endWindow', label: 'End now' } ]
+  @UI.identification: [ { position: 10, criticality: 'StatusCriticality' },
+                        { type: #FOR_ACTION, dataAction: 'approveWindow', label: 'Approve' },
+                        { type: #FOR_ACTION, dataAction: 'endWindow', label: 'End now' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  WindowStatus;
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  FromDate;
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  FromTime;
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 50 } ]
+  ToDate;
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  ToTime;
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 70 } ]
+  TimeZone;
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.identification: [ { position: 80 } ]
+  Reason;
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Scope', position: 10 } ]
+  CheckPattern;
+  @UI.lineItem: [ { position: 100, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'Scope', position: 20 } ]
+  ObjectPattern;
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Scope', position: 30 } ]
+  GroupPattern;
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Approval', position: 10 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  CreatedBy;
+  @UI.fieldGroup: [ { qualifier: 'Approval', position: 20 } ]
+  CreatedAt;
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Approval', position: 30 } ]
+  ApprovedBy;
+  @UI.fieldGroup: [ { qualifier: 'Approval', position: 40 } ]
+  ApprovedAt;
+  @UI.fieldGroup: [ { qualifier: 'Approval', position: 50 } ]
+  EndedBy;
+  @UI.fieldGroup: [ { qualifier: 'Approval', position: 60 } ]
+  FromUtc;
+  @UI.fieldGroup: [ { qualifier: 'Approval', position: 70 } ]
+  ToUtc;
+  @UI.hidden: true
+  WindowId;
+  @UI.hidden: true
+  WindowStatusText;
+  @UI.hidden: true
+  StatusCriticality;
+  @UI.hidden: true
+  LastChangedBy;
+  @UI.hidden: true
+  LastChangedAt;
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

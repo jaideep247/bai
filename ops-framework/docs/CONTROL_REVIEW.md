@@ -51,6 +51,14 @@ Service `ZUI_CA_OPS_REV`, entity `ControlReview`. Filters: current business date
 2. A role with ZCA_OPS 03 (+ 02 for reviewers) for those areas; tile *Daily control review* (`ZUI_CA_OPS_REV_O4`).
 3. Own cards: select from `ZR_CA_OpsCtlReview` (counters `ControlCount`, `ReviewedCount`, `AwaitingCount`, `OverdueCount`, `ActionRequiredCount`, `WatchCount`, `FlaggedCount`) — the same rows the review app shows.
 
+## 6a. Planned downtime mark (2026-11-11)
+
+Findings recorded inside an approved planned downtime window (`docs/OPERATIONS_FEATURES.md` §2) count in the status
+like any finding - they are real - but the slice shows how many of the date's live findings were recorded in a window
+(*Findings in planned downtime*, `DowntimeFindings`) and the flag *Planned downtime* (`IsPlannedDowntime`); counter
+`DowntimeCount` for a consumer's cards. The reviewer decides whether the finding was expected and says so in the
+observation.
+
 ## 7. VERIFY
 
 V26-V33 of `VERIFY.md`; company-code slices V35, V37, V38, V40, V41.

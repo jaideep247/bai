@@ -28,6 +28,8 @@ authorization master ( global )
   association _PaymDimText { create ( features : global ); with draft; }
   association _PaymFeeder { create ( features : global ); with draft; }
   association _SchedulerJob { create ( features : global ); with draft; }
+  association _RunbookLink { create ( features : global ); with draft; }
+  association _CorrelationRule { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -61,6 +63,10 @@ authorization master ( global )
     validation PaymFeeder ~ validateTransport;
     validation SchedulerJob ~ validateFields;
     validation SchedulerJob ~ validateTransport;
+    validation RunbookLink ~ validateFields;
+    validation RunbookLink ~ validateTransport;
+    validation CorrelationRule ~ validateFields;
+    validation CorrelationRule ~ validateTransport;
   }
 }
 
@@ -105,6 +111,10 @@ etag master LocalLastChangedAt
     EscalateAfter = escalate_after;
     EscalationDest = escalation_dest;
     EscOverride = esc_override;
+    EscAfterMin = esc_after_min;
+    EscRepeatMin = esc_repeat_min;
+    EscMaxCount = esc_max_count;
+    EscSeverity = esc_severity;
     Active = active;
     TemplateId = template_id;
     ShowAmounts = show_amounts;
@@ -527,6 +537,74 @@ etag master LocalLastChangedAt
     Description = description;
     Active = active;
     Seq = seq;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_RunbookLink alias RunbookLink
+persistent table zca_ops_runbook
+with additional save
+draft table zca_d_runbook
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, MatchField, MatchValue;
+  field ( mandatory : create ) Area, MatchField, MatchValue;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_runbook
+  {
+    Area = area;
+    MatchField = match_field;
+    MatchValue = match_value;
+    RunbookUrl = runbook_url;
+    FirstAction = first_action;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_CorrelationRule alias CorrelationRule
+persistent table zca_ops_corr
+with additional save
+draft table zca_d_corr
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, CorrRule;
+  field ( mandatory : create ) Area, CorrRule;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_corr
+  {
+    Area = area;
+    CorrRule = corr_rule;
+    Description = description;
+    CheckPattern = check_pattern;
+    KeyFields = key_fields;
+    KeyPattern = key_pattern;
+    WindowMin = window_min;
+    Active = active;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

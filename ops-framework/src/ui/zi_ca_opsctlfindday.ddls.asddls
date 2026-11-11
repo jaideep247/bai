@@ -7,6 +7,7 @@
 //                   2026-11-10 | Company-code isolation: one row per company code of the findings (blank =
 //                                area-level) - the status of a slice counts only its own findings, so a reviewer
 //                                authorised for one company code never sees a rank caused by another.
+//                   2026-11-11 | Findings of the date recorded in planned downtime (DowntimeFindings).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Control review: status per business date'
 @Metadata.ignorePropagatedAnnotations: true
@@ -20,7 +21,8 @@ define view entity ZI_CA_OpsCtlFindDay
   key CompanyCode,
       max( StatusRank )                                     as StatusRank,
       max( CreatedAt )                                      as LastFindingAt,
-      cast( count( * ) as abap.int4 )                       as FindingCount
+      cast( count( * ) as abap.int4 )                       as FindingCount,
+      cast( sum( DowntimeFlag ) as abap.int4 )              as DowntimeFindings
 }
 group by
   Area,

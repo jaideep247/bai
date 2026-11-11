@@ -16,6 +16,8 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_PaymDimText as _PaymDimText
   composition [0..*] of ZR_CA_PaymFeeder as _PaymFeeder
   composition [0..*] of ZR_CA_SchedulerJob as _SchedulerJob
+  composition [0..*] of ZR_CA_RunbookLink as _RunbookLink
+  composition [0..*] of ZR_CA_CorrelationRule as _CorrelationRule
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -33,7 +35,9 @@ define root view entity ZR_CA_OpsCfgAll
       _ApprovedTable,
       _PaymDimText,
       _PaymFeeder,
-      _SchedulerJob
+      _SchedulerJob,
+      _RunbookLink,
+      _CorrelationRule
 }
 where
   I_Language.Language = $session.system_language

@@ -21,6 +21,7 @@
 *& 2026-11-10 | GET_MAIL_TEMPLATE: renderer of alert e-mails from SAP e-mail templates (injectable).
 *& 2026-11-10 | GET_REVIEW_DAO: repository of the daily control review (injectable).
 *& 2026-11-10 | GET_CHECK_DAO: data access of the check registry (process onboarding, injectable).
+*& 2026-11-11 | GET_DOWNTIME: planned downtime API (operations response features, injectable).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven
@@ -85,6 +86,11 @@ CLASS zcl_ca_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_ca_ops_check_dao.
 
+    "! Planned downtime API: the windows of an area and "is this planned?" (2026-11-11)
+    CLASS-METHODS get_downtime
+      RETURNING
+        VALUE(ro_downtime) TYPE REF TO zif_ca_ops_downtime.
+
     "! Exception repository (closing exceptions from other apps' saves)
     CLASS-METHODS get_exc_dao
       RETURNING
@@ -133,6 +139,7 @@ CLASS zcl_ca_ops_factory DEFINITION
     CLASS-DATA go_mail_template_double TYPE REF TO zif_ca_ops_mail_template.
     CLASS-DATA go_review_dao_double TYPE REF TO zif_ca_ops_review_dao.
     CLASS-DATA go_check_dao_double TYPE REF TO zif_ca_ops_check_dao.
+    CLASS-DATA go_downtime_double TYPE REF TO zif_ca_ops_downtime.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
     "! Installed ZCA_PARAM release as seen by CHECK_VERSION (test seam: a double release)
     CLASS-DATA gv_param_version_double TYPE string.
@@ -233,6 +240,12 @@ CLASS zcl_ca_ops_factory IMPLEMENTATION.
   METHOD get_check_dao.
     ro_dao = COND #( WHEN go_check_dao_double IS BOUND THEN go_check_dao_double
                      ELSE NEW zcl_ca_ops_check_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_downtime.
+    ro_downtime = COND #( WHEN go_downtime_double IS BOUND THEN go_downtime_double
+                          ELSE NEW zcl_ca_ops_downtime( ) ).
   ENDMETHOD.
 
 

@@ -1,0 +1,17 @@
+// Artifact: zc_ca_opsexcmetric.dcls.asdcls
+// Purpose: Read access to the response-time metrics (service ZUI_CA_OPS_MET and a consumer's overview card):
+//          authorization object ZCA_OPS with ZCA_PARAR = the area of the exception and ACTVT 03 - and, for an
+//          exception of a company code, BUKRS = that company code (company-code isolation, rule of
+//          docs/auth_zca_ops.md section 3c). One row per exception episode with its own company code, so the
+//          averages and sums an analytical list or a card computes after this filter never include an exception
+//          of a company code the user may not read.
+// Modification log: 2026-11-11 | Initial version (operations response features: response-time metrics).
+// VERIFY-ADT: as ZC_CA_OPSEXCEPTION (V36).
+@EndUserText.label: 'Response-time metrics - read access'
+@MappingRole: true
+define role ZC_CA_OpsExcMetric {
+  grant select on ZC_CA_OpsExcMetric
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

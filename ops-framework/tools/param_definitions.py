@@ -13,6 +13,8 @@ Modification log:
 2026-11-10 | Moved to ops-framework/tools and made configurable (profile FRAMEWORK).
 2026-11-10 | The engine moved to the shared tools (tools/abaptools); this file is the framework's profile.
 2026-11-10 | Default of RETENTION_DAYS_REVIEW (daily control review) from ZCL_CA_OPS_PURGE.
+2026-11-11 | RETENTION_DAYS_<target> only for RUN, ALERT_LOG, REVIEW: the purge target DOWNTIME reads
+           | DOWNTIME_RETENTION_DAYS (operations response features).
 """
 import os
 import re
@@ -42,8 +44,9 @@ AREA_SOURCES = [(ADAPTER, OPS_TYPES,
 # The framework itself completes RETENTION_DAYS_<target> for its own targets; ALERT_<route> and
 # SLA_DAYS_<area>_<severity> are completed by consumers (their profiles enumerate them).
 RUNTIME = {
+    # DOWNTIME (2026-11-11) is read with its feature's own name DOWNTIME_RETENTION_DAYS (prefix DOWNTIME_)
     (OPS_TYPES, 'gc_param_prefix-retention_days'):
-        ('struct', os.path.join('src', 'zif_ca_ops_purge_dao.intf.abap'), 'gc_target', None),
+        ('struct', os.path.join('src', 'zif_ca_ops_purge_dao.intf.abap'), 'gc_target', ['run', 'alert_log', 'review']),
 }
 
 _PURGE = os.path.join('src', 'zcl_ca_ops_purge.clas.abap')

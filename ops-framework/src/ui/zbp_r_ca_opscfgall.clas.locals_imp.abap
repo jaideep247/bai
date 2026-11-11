@@ -37,8 +37,11 @@ INTERFACE lif_c.
       datefield                      TYPE string VALUE `DATEFIELD`,
       destination                    TYPE string VALUE `DESTINATION`,
       dimension                      TYPE string VALUE `DIMENSION`,
+      escseverity                    TYPE string VALUE `ESCSEVERITY`,
       group1pattern                  TYPE string VALUE `GROUP1PATTERN`,
       group2pattern                  TYPE string VALUE `GROUP2PATTERN`,
+      keyfields                      TYPE string VALUE `KEYFIELDS`,
+      keypattern                     TYPE string VALUE `KEYPATTERN`,
       matchfield                     TYPE string VALUE `MATCHFIELD`,
       minrag                         TYPE string VALUE `MINRAG`,
       minseverity                    TYPE string VALUE `MINSEVERITY`,
@@ -57,6 +60,7 @@ INTERFACE lif_c.
       team                           TYPE string VALUE `TEAM`,
       templateid                     TYPE string VALUE `TEMPLATEID`,
       urltemplate                    TYPE string VALUE `URLTEMPLATE`,
+      windowmin                      TYPE string VALUE `WINDOWMIN`,
     END OF gc_el,
     BEGIN OF gc_ent,
       aggregatecheck                 TYPE string VALUE `AggregateCheck`,
@@ -66,11 +70,13 @@ INTERFACE lif_c.
       control                        TYPE string VALUE `Control`,
       controlcheck                   TYPE string VALUE `ControlCheck`,
       controltext                    TYPE string VALUE `ControlText`,
+      correlationrule                TYPE string VALUE `CorrelationRule`,
       paymdimtext                    TYPE string VALUE `PaymDimText`,
       paymfeeder                     TYPE string VALUE `PaymFeeder`,
       process                        TYPE string VALUE `Process`,
       purgetarget                    TYPE string VALUE `PurgeTarget`,
       registeredcheck                TYPE string VALUE `RegisteredCheck`,
+      runbooklink                    TYPE string VALUE `RunbookLink`,
       schedulerjob                   TYPE string VALUE `SchedulerJob`,
     END OF gc_ent,
     BEGIN OF gc_if,
@@ -86,23 +92,30 @@ INTERFACE lif_c.
       control                        TYPE string VALUE `ZCA_OPS_CONTROL`,
       controlcheck                   TYPE string VALUE `ZCA_OPS_CTLCHK`,
       controltext                    TYPE string VALUE `ZCA_OPS_CTLT`,
+      correlationrule                TYPE string VALUE `ZCA_OPS_CORR`,
       paymdimtext                    TYPE string VALUE `ZCA_OPS_PMDIM`,
       paymfeeder                     TYPE string VALUE `ZCA_OPS_FEEDER`,
       process                        TYPE string VALUE `ZCA_OPS_PROC`,
       purgetarget                    TYPE string VALUE `ZCA_OPS_PURGE`,
       registeredcheck                TYPE string VALUE `ZCA_OPS_CHECK`,
+      runbooklink                    TYPE string VALUE `ZCA_OPS_RUNBOOK`,
       schedulerjob                   TYPE string VALUE `ZCA_OPS_JOBSCH`,
     END OF gc_tab,
     BEGIN OF gc_val,
       aggregatecheck_aggfunc         TYPE string VALUE `COUNT,AGE`,
       aggregatecheck_condop          TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
       aggregatecheck_statusop        TYPE string VALUE `,EQ,NE,IN`,
+      alertrule_escseverity          TYPE string VALUE `,B,E,W,I`,
       alertrule_minrag               TYPE string VALUE `,R,A,G`,
       alertrule_minseverity          TYPE string VALUE `,B,E,W,I`,
       controlcheck_matchfield        TYPE string VALUE `RULE_ID,CHECK_CODE,GROUP2`,
       paymdimtext_dimension          TYPE string VALUE `FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS`,
+      runbooklink_matchfield         TYPE string VALUE `RULE_ID,CHECK_CODE,GROUP2`,
       schedulerjob_criticality       TYPE string VALUE `H,M,L`,
-    END OF gc_val.
+    END OF gc_val,
+    BEGIN OF gc_when,
+      runbooklink_active_x           TYPE string VALUE `X`,
+    END OF gc_when.
 ENDINTERFACE.
 
 
@@ -205,6 +218,12 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     IF requested_authorizations-%assoc-_SchedulerJob = if_abap_behv=>mk-on.
       result-%assoc-_SchedulerJob = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
+    IF requested_authorizations-%assoc-_RunbookLink = if_abap_behv=>mk-on.
+      result-%assoc-_RunbookLink = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_CorrelationRule = if_abap_behv=>mk-on.
+      result-%assoc-_CorrelationRule = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -251,6 +270,12 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_SchedulerJob = if_abap_behv=>mk-on.
       result-%assoc-_SchedulerJob = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_RunbookLink = if_abap_behv=>mk-on.
+      result-%assoc-_RunbookLink = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_CorrelationRule = if_abap_behv=>mk-on.
+      result-%assoc-_CorrelationRule = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -359,6 +384,12 @@ CLASS lhc_alertrule IMPLEMENTATION.
       IF lv_dest_invalid IS NOT INITIAL.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-dest_invalid v1 = ls_row-Channel v2 = lv_dest_invalid
                         element = lif_c=>gc_el-destination ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-EscSeverity )
+                                        iv_list  = lif_c=>gc_val-alertrule_escseverity ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-EscSeverity
+                        v2 = lif_c=>gc_el-escseverity v3 = lif_c=>gc_val-alertrule_escseverity
+                        element = lif_c=>gc_el-escseverity ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
@@ -1899,6 +1930,261 @@ CLASS lhc_schedulerjob IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_runbooklink DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR RunbookLink RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR RunbookLink RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR RunbookLink~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR RunbookLink~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_runbooklink IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY RunbookLink
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-runbooklink.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-MatchField )
+                                        iv_list  = lif_c=>gc_val-runbooklink_matchfield ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-MatchField
+                        v2 = lif_c=>gc_el-matchfield v3 = lif_c=>gc_val-runbooklink_matchfield
+                        element = lif_c=>gc_el-matchfield ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-runbooklink_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>link_valid( ls_row-RunbookUrl ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-url_invalid v1 = ls_row-RunbookUrl
+                          element = lif_c=>gc_el-runbookurl ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-runbooklink.
+        INSERT INITIAL LINE INTO TABLE reported-runbooklink ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-runbooklink.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-runbooklink.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-runbooklink.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_correlationrule DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR CorrelationRule RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR CorrelationRule RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CorrelationRule~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CorrelationRule~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_correlationrule IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY CorrelationRule
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-correlationrule.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_util=>pcre_valid( ls_row-CheckPattern ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-CheckPattern
+                        element = lif_c=>gc_el-checkpattern ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_util=>pcre_valid( ls_row-KeyPattern ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-KeyPattern
+                        element = lif_c=>gc_el-keypattern ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>key_fields_valid( ls_row-KeyFields ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-corr_fields_invalid v1 = ls_row-KeyFields
+                        element = lif_c=>gc_el-keyfields ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>window_min_valid( ls_row-WindowMin ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-corr_window_invalid v1 = ls_row-WindowMin
+                        element = lif_c=>gc_el-windowmin ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-correlationrule.
+        INSERT INITIAL LINE INTO TABLE reported-correlationrule ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-correlationrule.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-correlationrule.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-correlationrule.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_ca_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -1929,7 +2215,9 @@ CLASS lsc_zr_ca_opscfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-approvedtable table = lif_c=>gc_tab-approvedtable )
             ( entity = lif_c=>gc_ent-paymdimtext table = lif_c=>gc_tab-paymdimtext )
             ( entity = lif_c=>gc_ent-paymfeeder table = lif_c=>gc_tab-paymfeeder )
-            ( entity = lif_c=>gc_ent-schedulerjob table = lif_c=>gc_tab-schedulerjob ) )
+            ( entity = lif_c=>gc_ent-schedulerjob table = lif_c=>gc_tab-schedulerjob )
+            ( entity = lif_c=>gc_ent-runbooklink table = lif_c=>gc_tab-runbooklink )
+            ( entity = lif_c=>gc_ent-correlationrule table = lif_c=>gc_tab-correlationrule ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

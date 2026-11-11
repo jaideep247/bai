@@ -1,0 +1,8 @@
+@EndUserText.label: 'Planned downtime windows'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSDOWNTIME'
+// Binding to create in ADT: ZUI_CA_OPS_DTW_O4 (OData V4 - UI), list report "Planned downtime"
+// (operations response features, 2026-11-11; docs/OPERATIONS_FEATURES.md section 2).
+define service ZUI_CA_OPS_DTW {
+  expose ZC_CA_OpsDowntime   as Downtime;
+  expose ZI_CA_OpsDtwStatusT as DowntimeStatusText;
+}

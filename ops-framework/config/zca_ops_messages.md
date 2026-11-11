@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -106,6 +106,27 @@ texts <= 73 characters).
 | 128 | Root job &1 (&2) still active - its scheduler has not seen the failure |
 | 129 | Job evidence of area &1 / check &2 could not be saved |
 | 130 | SM37: job &1 count &2, system &3, server &4 |
+| 140 | &1 finding(s) in planned downtime &2: recorded, not alerted |
+| 141 | &1 correlated exception(s) alerted with their parent only |
+| 142 | Escalation &1 of &2 (open and unassigned for &3 min): |
+| 143 | Downtime window: the end &1 is not after the start &2 |
+| 144 | Downtime window of &1 hour(s) is longer than &2 (DOWNTIME_MAX_HOURS) |
+| 145 | Downtime window starts &1 minute(s) in the past (allowed: &2) |
+| 146 | Downtime window overlaps window &1 of the same scope |
+| 147 | Four-eyes: &1 planned this window and cannot approve it |
+| 148 | Downtime window is approved: only End now is possible |
+| 149 | Downtime window has ended: no further change |
+| 150 | Scope pattern &1 is not valid PCRE (complete value, any case) |
+| 151 | Enter the reason of the planned downtime |
+| 152 | No authorisation for area &1, activity &2 (ZCA_OPS) |
+| 153 | Key field list &1 invalid (finding fields, comma separated) |
+| 154 | Correlation window &1 must be at least 1 minute |
+| 155 | Correlation ID could not be generated - findings not saved |
+| 156 | Escalation of area &1: &2 escalated, &3 skipped, &4 failed |
+| 157 | Run-level alert of rule &1 suppressed: planned downtime &2 |
+| 158 | Enter the start and the end of the window (date and time) |
+| 159 | Downtime window awaits approval: change or delete it instead |
+| 160 | Escalation step &1 of rule &2 not sent: no intent key (duplicate guard) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

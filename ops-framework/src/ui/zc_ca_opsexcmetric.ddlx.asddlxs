@@ -1,0 +1,79 @@
+// UI annotations: exception response-time metrics (service ZUI_CA_OPS_MET, analytical list page, 2026-11-11)
+// Charts: raised / resolved per month, MTTA / MTTR per month, open exceptions by age. Data points of a consumer's
+// overview card "Response times": Raised, Mtta, Mttr, Open, Reopened (sums / averages over the rows the user may
+// read). VERIFY-ADT: analytical list page and OVP V4 cards on a transactional_query projection (V78, V79).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exception response times',
+                  title: { type: #STANDARD, value: 'CheckCode' },
+                  description: { type: #STANDARD, value: 'Area' } }
+@UI.chart: [ { qualifier: 'ByMonth', title: 'Raised and resolved per month', chartType: #COLUMN,
+               dimensions: [ 'RaisedMonth' ], measures: [ 'RaisedCount', 'ResolvedCount' ],
+               dimensionAttributes: [ { dimension: 'RaisedMonth', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'RaisedCount', role: #AXIS_1 },
+                                    { measure: 'ResolvedCount', role: #AXIS_1 } ] },
+             { qualifier: 'TimesByMonth', title: 'Minutes to assign and to resolve (average)', chartType: #LINE,
+               dimensions: [ 'RaisedMonth' ], measures: [ 'MinutesToAssign', 'MinutesToResolve' ],
+               dimensionAttributes: [ { dimension: 'RaisedMonth', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'MinutesToAssign', role: #AXIS_1 },
+                                    { measure: 'MinutesToResolve', role: #AXIS_1 } ] },
+             { qualifier: 'OpenByAge', title: 'Open exceptions by age', chartType: #BAR,
+               dimensions: [ 'Area' ], measures: [ 'OpenUnder1Day', 'Open1To3Days', 'Open3To7Days', 'OpenOver7Days' ],
+               dimensionAttributes: [ { dimension: 'Area', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'OpenUnder1Day', role: #AXIS_1 },
+                                    { measure: 'Open1To3Days', role: #AXIS_1 },
+                                    { measure: 'Open3To7Days', role: #AXIS_1 },
+                                    { measure: 'OpenOver7Days', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { qualifier: 'Default', sortOrder: [ { by: 'RaisedMonth', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByMonth' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsExcMetric with
+{
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Team;
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CheckCode;
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Severity;
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 50 } ]
+  CompanyCode;
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 60 } ]
+  RaisedMonth;
+  @UI.selectionField: [ { position: 70 } ]
+  RaisedWeek;
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  Disposition;
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Raised', title: 'Exceptions raised' }
+  RaisedCount;
+  @UI.dataPoint: { qualifier: 'Assigned', title: 'Assigned' }
+  AssignedCount;
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'Resolved', title: 'Resolved' }
+  ResolvedCount;
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Open', title: 'Open now' }
+  OpenCount;
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'Reopened', title: 'Raised again after resolve' }
+  ReopenedCount;
+  @UI.lineItem: [ { position: 120, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Mtta', title: 'Mean minutes to assign (MTTA)' }
+  MinutesToAssign;
+  @UI.lineItem: [ { position: 130, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Mttr', title: 'Mean minutes to resolve (MTTR)' }
+  MinutesToResolve;
+  @UI.lineItem: [ { position: 140, importance: #LOW } ]
+  OpenMinutes;
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  FindingNo;
+}

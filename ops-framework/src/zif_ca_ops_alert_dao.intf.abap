@@ -10,6 +10,9 @@
 *& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS.
 *& 2026-11-10 | GET_EXCEPTION_FACTS (business context of the alert e-mail); template fields of rules,
 *&            | channels and log rows.
+*& 2026-11-11 | Operations response features (DEFAULT IGNORE, existing doubles unchanged): GET_MARKS (planned
+*&            | downtime and correlation of the stored findings of a run), GET_CHILD_COUNTS, GET_RUNBOOKS,
+*&            | GET_ESCALATION_CANDIDATES (open, unassigned exceptions), GET_INTENT_LOG (escalation steps).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert configuration and log</p>
 INTERFACE zif_ca_ops_alert_dao
@@ -75,5 +78,42 @@ INTERFACE zif_ca_ops_alert_dao
       iv_run_id       TYPE zif_ca_ops_types=>ty_run_id
     RETURNING
       VALUE(rt_facts) TYPE zif_ca_ops_types=>tt_exception_fact.
+
+  "! Planned downtime and correlation marks of the stored findings of a run (2026-11-11)
+  METHODS get_marks DEFAULT IGNORE
+    IMPORTING
+      iv_run_id       TYPE zif_ca_ops_types=>ty_run_id
+    RETURNING
+      VALUE(rt_marks) TYPE zif_ca_ops_resp_types=>tt_finding_mark.
+
+  "! Open (O / A) children of correlation groups - the number the parent's alert names
+  METHODS get_child_counts DEFAULT IGNORE
+    IMPORTING
+      it_corr_ids      TYPE zif_ca_ops_resp_types=>tt_uuid
+    RETURNING
+      VALUE(rt_counts) TYPE zif_ca_ops_resp_types=>tt_corr_count.
+
+  "! Active runbook rows of an area (ZCA_OPS_RUNBOOK)
+  METHODS get_runbooks DEFAULT IGNORE
+    IMPORTING
+      iv_area            TYPE zif_ca_ops_types=>ty_area
+    RETURNING
+      VALUE(rt_runbooks) TYPE zif_ca_ops_resp_types=>tt_runbook.
+
+  "! Open, unassigned exceptions (disposition O, severity B / E / W) of an area first seen at or before
+  "! iv_seen_before - the candidates of the escalation until acknowledged
+  METHODS get_escalation_candidates DEFAULT IGNORE
+    IMPORTING
+      iv_area              TYPE zif_ca_ops_types=>ty_area
+      iv_seen_before       TYPE timestampl
+    RETURNING
+      VALUE(rt_candidates) TYPE zif_ca_ops_resp_types=>tt_esc_candidate.
+
+  "! Log rows of these alert intents (the escalation steps claimed, sent or failed so far)
+  METHODS get_intent_log DEFAULT IGNORE
+    IMPORTING
+      it_intent_keys TYPE zif_ca_ops_resp_types=>tt_intent_key
+    RETURNING
+      VALUE(rt_log)  TYPE zif_ca_ops_types=>tt_alert_log.
 
 ENDINTERFACE.
