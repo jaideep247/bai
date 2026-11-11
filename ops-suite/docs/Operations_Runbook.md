@@ -16,6 +16,7 @@ Launchpad space **Production Support** → page *Overview* → *Production suppo
 5. **EBS card** (failed / blocked lines, lines not evaluated, POSTING_INCOMPLETE, latest problems) → EBS validation dashboard: statement → lines → findings / returns and NOCs; POSTING_INCOMPLETE → §5c.
 6. **Transactions card** (funnel posted → paid → settled, returned, open) and *errored / stuck* list → transactions dashboard → transaction → payment runs / returns and NOC lot items → payment trace (§4a) with the FIN (or clearing document). Returns are reported by DFKKRP reason, NOCs by DFKKNRP reason.
 7. **Hand off** per area as in §4a / §4b: area, as of, object keys, check code, owner. The page and the dashboards change nothing — recovery stays with the owning team under its runbook.
+8. **Shift handover (2026-11-11).** Card / app *Shift handover* (`ZUI_CA_OPS_HOVR_O4`): per team, area and company code since the start of the previous shift - new, resolved, still open, escalated exceptions, controls awaiting sign-off, planned downtime active now or starting in the next shift. Read it at the start of the shift; *Needs attention* rows first. Free-text notes stay in the team's channel (decision: no note table in SAP, `ops-framework/docs/OPERATIONS_FEATURES.md` §6). Each exception carries its **runbook link and first action** (column / facet *Runbook* of the exceptions app, and in the alert e-mail) once the site's page is entered (`config/runbook_links.csv`).
 
 **QA1 pilot (2026-11-10).** During the pilot the routine above is run as `QA1_Pilot.md` §4 (who, when, what is recorded) and the scenarios S1-S6 are provoked by the owning teams under their own procedures; the suite only reads, reports, routes and records sign-off.
 
@@ -424,6 +425,40 @@ The grace of the bank-evidence case starts at the end of the statement line's po
 
 **Test mode.** `ZCD_OPS_PAY_SNAPSHOT` with *test mode* judges and counts (ALV: documents, evaluated, rows that would be written per source) and writes nothing - no row, no watermark. **Housekeeping (2026-11-08):** `ZCA_OPS_RETENTION` (target PAY_OUTCOME, `RETENTION_DAYS_PAY_OUTCOME` = **90** days, never below 30) deletes the exception history closed before the cutoff (closed rows and the closing version of a finished exception). A current (open) row is never deleted, however old - `A_INFLIGHT` and `A_PRQ_NOT_PAID` count from it. Clean payments need no purge: the snapshot deletes their row when they finish.
 
+
+## 5p. Planned downtime windows — bank or system maintenance (2026-11-11, L2 / team lead)
+
+When a bank or a sender announces maintenance, plan the window **before** it starts so its findings are recorded but
+not alerted: app *Planned downtime* (`ZUI_CA_OPS_DTW_O4`, role `Z_CD_OPS_DOWNTIME_PLANNER`) → *Create*: area
+(`CD_FMON` for files and ACKs, `CD_EBS` for statements), optional scope - check code pattern, object key pattern,
+interface / bank pattern (PCRE, complete value; blank = the whole area), start and end in local time (CST,
+`DOWNTIME_TIME_ZONE`), reason (the bank's announcement). Rules: at most `DOWNTIME_MAX_HOURS` (24) hours, start at most
+15 minutes in the past, no second window of the same scope over the same time. **A second person approves it**
+(`Z_CD_OPS_APPROVER`, *Approve*; the planner cannot). Only approved windows act.
+
+During the window the findings appear in the exceptions app with *In planned downtime*, the daily control review and
+the area dashboard show the mark, and the alert log has a row D instead of an e-mail. The window ends by itself; if
+the bank is back early, *End now*. The next run after the window alerts what is still open - so check the exceptions
+of the window afterwards. A missing-volume / SLA check may ask the framework whether a period was planned
+(`ZIF_CA_OPS_DOWNTIME=>PLANNED`) and record information instead of an error. Not for unplanned outages: an
+unannounced bank problem is exactly what the alerts are for.
+
+## 5q. Escalation until acknowledged and correlated alerts (2026-11-11, L1 / L2)
+
+- **Acknowledge = assign.** An open exception of a rule with time-based escalation (`config/alert_seed.md`,
+  *Escalation until acknowledged*) that nobody assigns goes to `ZCD_RTBLEAD` after the rule's minutes, then again,
+  up to the limit. Assign it (or resolve / request a waiver) to stop the escalation; the e-mail says which step
+  (*Escalation 1 / 3*) and how long the exception has been open. Each step is in the alert log (`ESC_STEP`). Jobs
+  `ZCD_OPS_ESCALATE_*` every 10 minutes (`Implementation_Order.md` step 4); a stopped job means no escalation - the
+  morning report's job checks show it.
+- **Correlated alerts.** With a correlation rule (`config/correlation_rules.csv`) the first exception of a key (e.g.
+  the interface of a bank without ACKs) is the **parent**: one e-mail names how many correlated exceptions it has; the
+  others are its **children** (not e-mailed, alert log K). In the exceptions app open the parent → facet *Correlated
+  exceptions*; select the children and use *Resolve* once the cause is fixed (each child is checked on its own). A
+  child shows its parent in the facet *Parent exception*.
+- **Response times.** App *Exception response times* (`ZUI_CA_OPS_MET_O4`): minutes to assign / resolve per area,
+  team, check and month, open exceptions by age, exceptions raised again after a resolution - for the monthly
+  service review, not for the shift.
 
 ## Object names after the framework extraction (2026-11-10)
 

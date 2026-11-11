@@ -2,7 +2,7 @@
   "_artifact": {
     "name": "portable_checks.json",
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
-    "generated": "2026-11-10"
+    "generated": "2026-11-11"
   },
   "passed": 29,
   "total": 29,
@@ -79,7 +79,7 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (3926 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (3940 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
@@ -157,7 +157,7 @@
     {
       "name": "param_definitions_complete",
       "passed": true,
-      "detail": "140 delivered definitions in 5 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CA_OPS_PARAMS derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
+      "detail": "142 delivered definitions in 5 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CA_OPS_PARAMS derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
       "failures": []
     },
     {

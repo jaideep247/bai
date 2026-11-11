@@ -130,6 +130,8 @@ CA_OPS,RETENTION_DAYS_FMON_PRISM,P,INT,,,400,,,,,Retention of PRISM status event
 CA_OPS,RETENTION_DAYS_HCK_METRIC,P,INT,,,400,,,,,Retention of health check metrics (days; >= 30),PE RTB
 CA_OPS,RETENTION_DAYS_HCK_RESULT,P,INT,,,400,,,,,Retention of health check verdicts per run (days; >= 30),PE RTB
 CA_OPS,RETENTION_DAYS_PAY_OUTCOME,P,INT,,,90,,,,,Retention of closed / final outcome versions (days; >= 30),PE RTB
+CA_OPS,SHIFT_TIMES_OFFSHORE,S,TIME,,,000000,,,,,Shift start times of team OFFSHORE (HHMMSS rows; confirm),PE RTB
+CA_OPS,SHIFT_TIMES_ONSITE,S,TIME,,,000000,,,,,Shift start times of team ONSITE (HHMMSS rows; confirm),PE RTB
 CA_OPS,SLA_DAYS_CD_EBS_B,P,INT,0,,,,,,,SLA days of EBS blocking exceptions (blank = default),PE RTB
 CA_OPS,SLA_DAYS_CD_EBS_E,P,INT,0,,,,,,,SLA days of EBS error exceptions (blank = default),PE RTB
 CA_OPS,SLA_DAYS_CD_EBS_W,P,INT,0,,,,,,,SLA days of EBS warning exceptions (blank = default),PE RTB

@@ -35,4 +35,10 @@ define service ZUI_CD_OPS_OVERVIEW {
   expose ZC_CD_OpsVariance   as ReconVariance;
   // Business processes (process onboarding, 2026-11-10): registered checks, flagged, stale, needs attention
   expose ZC_CA_OpsCheckStatus as ProcessCheck;
+  // ---- Operations response features of the framework (2026-11-11; ops-framework/docs/OPERATIONS_FEATURES.md)
+  // Cards "Response times" (MTTA / MTTR, raised, open, re-opened) and "Shift handover" (since the previous shift);
+  // framework projections with their own DCL and card annotations (as ProcessCheck); read-only here.
+  expose ZC_CA_OpsExcMetric as ExceptionMetric;
+  expose ZC_CA_OpsHandover  as ShiftHandover;
+  // ---- end of the operations response features
 }

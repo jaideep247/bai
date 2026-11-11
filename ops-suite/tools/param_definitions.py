@@ -18,6 +18,8 @@ Modification log:
            | configure( )); this file holds the suite's profile. Framework names (ALERT_, SLA_,
            | PURGE_, RETENTION_) read area CA_OPS; the suite's names there are its rows in area CA_OPS.
 2026-11-10 | The generator moved to the shared tools (tools/abaptools); own instance of the engine.
+2026-11-11 | SHIFT_TIMES_<team> of the framework's shift handover for the teams of CONTROL_TEAMS (suite rows in
+           | area CA_OPS, definition = the source of the default).
 """
 import os
 import re
@@ -35,6 +37,9 @@ SEED = os.path.join('src', 'core', 'zcl_cd_ops_param_seed.clas.abap')
 ADAPTER = os.path.join('src', 'core', 'zcl_cd_ops_factory.clas.abap')
 OPS_TYPES = os.path.join('src', 'core', 'zif_cd_ops_types.intf.abap')
 _HCK_TYPES = os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap')
+# Operations response features of the framework (2026-11-11): shift start times per team of the control register
+_FW_RESP_TYPES = os.path.join(FW, 'src', 'zif_ca_ops_resp_types.intf.abap')
+_FW_CTL_TYPES = os.path.join(FW, 'src', 'zif_ca_ops_ctl_types.intf.abap')
 _EBS_TYPES = os.path.join('src', 'ebs', 'zif_cd_ebs_types.intf.abap')
 AREA_SOURCES = [
     (ADAPTER, OPS_TYPES, r'prefix\s*=\s*zif_cd_ops_types=>(gc_param_area_prefix-\w+)\s+'
@@ -60,6 +65,8 @@ RUNTIME = {
     (_EBS_TYPES, 'gc_param_prefix-parser'): ('struct', _EBS_TYPES, 'gc_format', None),
     (os.path.join('src', 'hck', 'zif_cd_hck_runtime_types.intf.abap'), 'gc_param_prefix-btc_info'):
         ('struct', _EBS_TYPES, 'gc_scheme', None),
+    # Shift handover of the framework (2026-11-11): SHIFT_TIMES_<team> for the teams of CONTROL_TEAMS (read in CDS)
+    (_FW_RESP_TYPES, 'gc_param_prefix-shift_times'): ('list', _FW_CTL_TYPES, 'gc_param_default-teams'),
 }
 
 _RULE_BASE = os.path.join('src', 'ebs', 'zcl_cd_ebs_rule_base.clas.abap')
@@ -96,6 +103,9 @@ DEFAULTS = {
     'RETENTION_DAYS_HCK_RESULT': ('definition',),
     'RETENTION_DAYS_PAY_OUTCOME': ('definition',),
     'RETENTION_DAYS_FMON_FILE': ('definition',),
+    # Shift start times of the suite's teams (framework shift handover, 2026-11-11): the definition is the source
+    'SHIFT_TIMES_ONSITE': ('definition',),
+    'SHIFT_TIMES_OFFSHORE': ('definition',),
     # Stale thresholds (minutes): the values the dashboards' CDS literals hold (cds_abap_parity) -
     # FMON 3 x its 5-minute cadence, EBS / HCK = HCK_MAX_AGE_HOURS (26 h) in minutes
     'MON_STALE_AFTER_MIN_CD_FMON': ('const', os.path.join('src', 'fmon', 'zif_cd_fmon_types.intf.abap'),
