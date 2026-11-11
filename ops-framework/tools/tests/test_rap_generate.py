@@ -3,7 +3,8 @@
 and generated, every pattern field of the alert rules is validated as PCRE on save, the control register
 (2026-11-10) checks owner / backup, team, runbook link and the finding field on save; the check registry of
 the process onboarding (2026-11-10) checks the plug-in interface, the aggregate functions and operators, and
-the table and field names of an aggregate row on save.
+the table and field names of an aggregate row on save; the scheduler jobs of the SAP job monitor (2026-11-11)
+check their SAP job name pattern and criticality on save.
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-framework/)
 """
@@ -22,7 +23,9 @@ class FrameworkAppTest(unittest.TestCase):
         expected = {('framework', 'zca_ops_alrule', 'rule_pattern'), ('framework', 'zca_ops_alrule', 'check_pattern'),
                     ('framework', 'zca_ops_alrule', 'group1_pattern'), ('framework', 'zca_ops_alrule', 'group2_pattern'),
                     # company-code pattern of a rule (company-code isolation, 2026-11-10)
-                    ('framework', 'zca_ops_alrule', 'bukrs_pattern')}
+                    ('framework', 'zca_ops_alrule', 'bukrs_pattern'),
+                    # SAP job names of a scheduler job (SAP job monitor, 2026-11-11)
+                    ('framework', 'zca_ops_jobsch', 'sap_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
                  for c in t[6] if c[0] == 'pcre'}
         self.assertEqual(found, expected)
@@ -38,7 +41,13 @@ class FrameworkAppTest(unittest.TestCase):
         tables = [t[0] for t in rap_generate.SPEC['framework']['tables']]
         self.assertEqual(tables, ['zca_ops_alrule', 'zca_ops_alchn', 'zca_ops_purge',
                                   'zca_ops_control', 'zca_ops_ctlt', 'zca_ops_ctlchk',
-                                  'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl'])
+                                  'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl',
+                                  'zca_ops_jobsch'])
+
+    def test_scheduler_jobs_checked_on_save(self):
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        self.assertIn(('pcre', 'sap_pattern'), checks['zca_ops_jobsch'])
+        self.assertIn(('enum', 'criticality', 'H,M,L'), checks['zca_ops_jobsch'])
 
     def test_check_registry_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

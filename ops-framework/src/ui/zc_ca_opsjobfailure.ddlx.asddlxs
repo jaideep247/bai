@@ -1,0 +1,225 @@
+// UI annotations: SAP job failures board (service ZUI_CA_OPS_JOBS) - list report "SAP job failures" and object page
+// Default: failures only (IsFailure = X), newest first. Object page: job, chain (parent, root, external scheduler
+// job), steps, job log errors, application logs, children (with their status), business objects, exception.
+// Overview page cards of a consumer that exposes this projection (2026-11-11): KPI "Job failures today" (data points
+// FailuresToday, AbortedToday, ChildFailedToday, NotStartedToday, LongRunningToday; sums over the rows the user may
+// read) and list "Job failures - today" (selection variant Today, presentation variant Today).
+// VERIFY-ADT V66: card rendering (OVP V4), intent navigation to the exceptions app (semantic object ZCAOpsException).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Job', typeNamePlural: 'SAP job failures',
+                  title: { type: #STANDARD, value: 'JobName' },
+                  description: { type: #STANDARD, value: 'CheckCode' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'DetectedAt', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] },
+                           { qualifier: 'Today',
+                             sortOrder: [ { by: 'SeverityCriticality', direction: #ASC },
+                                          { by: 'DetectedAt', direction: #DESC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM, qualifier: 'Today' } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Job failures today', filter: 'IsFailure EQ X AND IsToday EQ X' },
+                        { qualifier: 'Open', text: 'Failures with an open exception', filter: 'HasOpenException EQ X' } ]
+annotate entity ZC_CA_OpsJobFailure with
+{
+  @UI.facet: [ { id: 'Job', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Job', position: 10 },
+               { id: 'Chain', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Chain',
+                 label: 'Parent, root and scheduler job', position: 20 },
+               { id: 'Exception', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Exception',
+                 label: 'Exception', position: 30 },
+               { id: 'Steps', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Steps',
+                 label: 'Steps (program, variant, spool)', position: 40 },
+               { id: 'Messages', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Messages',
+                 label: 'Job log errors', position: 50 },
+               { id: 'AppLogs', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_AppLogs',
+                 label: 'Application logs', position: 60 },
+               { id: 'Children', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Children',
+                 label: 'Child jobs', position: 70 },
+               { id: 'Objects', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_BusinessObjects',
+                 label: 'Business objects', position: 80 } ]
+  @EndUserText.label: 'Job name'
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { qualifier: 'Today', position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  JobName;
+  @EndUserText.label: 'Job count'
+  @UI.lineItem: [ { position: 15, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 15 } ]
+  JobCount;
+  @EndUserText.label: 'Area'
+  @UI.selectionField: [ { position: 60 } ]
+  @UI.identification: [ { position: 100 } ]
+  Area;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 95, importance: #LOW } ]
+  @UI.selectionField: [ { position: 70 } ]
+  @UI.identification: [ { position: 105 } ]
+  CompanyCode;
+  @EndUserText.label: 'Role (F failure, A ancestor, C child)'
+  @UI.identification: [ { position: 20 } ]
+  JobRole;
+  @EndUserText.label: 'Failure'
+  @UI.selectionField: [ { position: 5 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsFailure;
+  @EndUserText.label: 'Check code'
+  @UI.lineItem: [ { position: 20, importance: #HIGH, criticality: 'SeverityCriticality' },
+                  { qualifier: 'Today', position: 20, importance: #HIGH, criticality: 'SeverityCriticality' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 25, criticality: 'SeverityCriticality' } ]
+  CheckCode;
+  @EndUserText.label: 'Severity'
+  @UI.identification: [ { position: 30, criticality: 'SeverityCriticality' } ]
+  Severity;
+  @UI.hidden: true
+  SeverityCriticality;
+  @UI.hidden: true
+  ObjectKey;
+  @EndUserText.label: 'Status at detection'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 35 } ]
+  StatusAtDetection;
+  @EndUserText.label: 'Status now (blank = reorganised)'
+  @UI.lineItem: [ { position: 35, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  LiveStatus;
+  @EndUserText.label: 'Planned start date'
+  @UI.identification: [ { position: 45 } ]
+  PlannedDate;
+  @EndUserText.label: 'Planned start time'
+  @UI.identification: [ { position: 46 } ]
+  PlannedTime;
+  @EndUserText.label: 'Created on'
+  @UI.identification: [ { position: 47 } ]
+  CreatedDate;
+  @EndUserText.label: 'Created at'
+  @UI.identification: [ { position: 48 } ]
+  CreatedTime;
+  @EndUserText.label: 'Start date'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  StartDate;
+  @EndUserText.label: 'Start time'
+  @UI.lineItem: [ { position: 61, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 51 } ]
+  StartTime;
+  @EndUserText.label: 'End date'
+  @UI.lineItem: [ { position: 62, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 52 } ]
+  EndDate;
+  @EndUserText.label: 'End time'
+  @UI.lineItem: [ { position: 63, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 53 } ]
+  EndTime;
+  @EndUserText.label: 'Scheduled by'
+  @UI.lineItem: [ { position: 70, importance: #LOW } ]
+  @UI.selectionField: [ { position: 50 } ]
+  @UI.identification: [ { position: 55 } ]
+  ScheduledBy;
+  @EndUserText.label: 'Server'
+  @UI.lineItem: [ { position: 75, importance: #LOW } ]
+  @UI.identification: [ { position: 56 } ]
+  Server;
+  @EndUserText.label: 'Start event'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 60 } ]
+  EventId;
+  @EndUserText.label: 'Event parameter'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 61 } ]
+  EventParameter;
+  @EndUserText.label: 'Parent job'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 10 } ]
+  ParentJobName;
+  @EndUserText.label: 'Parent job count'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 11 } ]
+  ParentJobCount;
+  @EndUserText.label: 'Linked by (resolver)'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 12 } ]
+  LinkResolver;
+  @EndUserText.label: 'Link quality (C confirmed, P probable)'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 13 } ]
+  LinkQuality;
+  @EndUserText.label: 'Root job'
+  @UI.lineItem: [ { position: 45, importance: #HIGH },
+                  { qualifier: 'Today', position: 30, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 20 } ]
+  RootJobName;
+  @EndUserText.label: 'Root job count'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 21 } ]
+  RootJobCount;
+  @EndUserText.label: 'Root status at detection'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 22 } ]
+  RootStatus;
+  @EndUserText.label: 'Levels below the root'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 23 } ]
+  Depth;
+  @EndUserText.label: 'Scheduler folder'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 30 } ]
+  SchedulerFolder;
+  @EndUserText.label: 'Scheduler job'
+  @UI.lineItem: [ { position: 50, importance: #HIGH },
+                  { qualifier: 'Today', position: 40, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 31 } ]
+  SchedulerJob;
+  @EndUserText.label: 'Scheduler criticality (H / M / L)'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 32 } ]
+  SchedulerCriticality;
+  @EndUserText.label: 'Job log error lines'
+  @UI.identification: [ { position: 60 } ]
+  LogErrors;
+  @EndUserText.label: 'Failed descendants (run that kept it)'
+  @UI.fieldGroup: [ { qualifier: 'Chain', position: 40 } ]
+  FailedChildren;
+  @EndUserText.label: 'Reported by another monitor'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  @UI.identification: [ { position: 65 } ]
+  ClaimedBy;
+  @EndUserText.label: 'Detected at (UTC)'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 70 } ]
+  DetectedAt;
+  @EndUserText.label: 'Detected on (server date)'
+  @UI.selectionField: [ { position: 80 } ]
+  DetectedOn;
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Exception status (O open, A assigned)'
+  @UI.lineItem: [ { position: 85, importance: #HIGH, semanticObjectAction: 'manage',
+                    type: #WITH_INTENT_BASED_NAVIGATION } ]
+  @Consumption.semanticObject: 'ZCAOpsException'
+  @UI.fieldGroup: [ { qualifier: 'Exception', position: 10 },
+                    { qualifier: 'Exception', position: 40, type: #FOR_INTENT_BASED_NAVIGATION,
+                      semanticObjectAction: 'manage', label: 'Assign / resolve in the exceptions app' } ]
+  ExceptionStatus;
+  @EndUserText.label: 'Exception owner'
+  @UI.fieldGroup: [ { qualifier: 'Exception', position: 20 } ]
+  ExceptionOwner;
+  @EndUserText.label: 'Exception due date'
+  @UI.fieldGroup: [ { qualifier: 'Exception', position: 30 } ]
+  ExceptionDueDate;
+  @EndUserText.label: 'Open exception'
+  @UI.selectionField: [ { position: 90 } ]
+  HasOpenException;
+  @EndUserText.label: 'Detected today'
+  @UI.hidden: true
+  IsToday;
+  @EndUserText.label: 'Job failures today'
+  @UI.dataPoint: { qualifier: 'FailuresToday', title: 'Job failures today' }
+  FailuresToday;
+  @EndUserText.label: 'Cancelled today'
+  @UI.dataPoint: { qualifier: 'AbortedToday', title: 'Cancelled' }
+  AbortedToday;
+  @EndUserText.label: 'Child failed, parent fine (today)'
+  @UI.dataPoint: { qualifier: 'ChildFailedToday', title: 'Child failed while the parent finished' }
+  ChildFailedToday;
+  @EndUserText.label: 'Not started today'
+  @UI.dataPoint: { qualifier: 'NotStartedToday', title: 'Not started' }
+  NotStartedToday;
+  @EndUserText.label: 'Long-running today'
+  @UI.dataPoint: { qualifier: 'LongRunningToday', title: 'Long-running' }
+  LongRunningToday;
+  @EndUserText.label: 'Job log errors today'
+  @UI.hidden: true
+  LogErrorToday;
+}

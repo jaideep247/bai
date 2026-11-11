@@ -19,6 +19,7 @@ Modification log:
 2026-11-10 | Alert rules: company-code pattern BUKRS_PATTERN (PCRE, checked on save as the other patterns).
 2026-11-10 | Process onboarding: business processes, registered checks, aggregate rows (table 082 / field 083
            | checks) and approved tables.
+2026-11-11 | SAP job monitor: scheduler jobs and the SAP job names they start (pattern checked on save).
 """
 import os
 import sys
@@ -79,6 +80,10 @@ SPEC = {
             ('zca_ops_tabwl', 'ApprovedTable', 'zca_d_tabwl', 'Approved table', 'Tables approved for aggregate checks', [],
              [('area', 'area', False), ('table', 'table_name'),
               ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid')]),
+            # SAP job monitor (2026-11-11): jobs of the external workload scheduler and the SAP job names they
+            # start (PCRE, complete name) - the board shows scheduler job -> SAP parent job -> failed child
+            ('zca_ops_jobsch', 'SchedulerJob', 'zca_d_jobsch', 'Scheduler job', 'Scheduler jobs and SAP job names', [],
+             [('pcre', 'sap_pattern'), ('enum', 'criticality', 'H,M,L')]),
         ]),
 }
 
@@ -108,7 +113,10 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'cond_field': 'Condition field', 'cond_op': 'Condition operator', 'cond_value': 'Condition value(s)',
           'amber': 'Amber limit (rows or days, 0 = none)', 'red': 'Red limit (rows or days, 0 = none)',
           'check_code': 'Check code of the findings', 'table_name': 'Table',
-          'approved_by': 'Approved by (reviewer)'}
+          'approved_by': 'Approved by (reviewer)',
+          # SAP job monitor (2026-11-11)
+          'sched_folder': 'Scheduler folder', 'sched_job': 'Scheduler job',
+          'sap_pattern': 'SAP job names (PCRE, complete name)', 'criticality': 'Criticality (H / M / L)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

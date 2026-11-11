@@ -1,0 +1,13 @@
+@EndUserText.label: 'Operations framework: SAP job failures'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSJOBFAILURE'
+// Binding to create in ADT: ZUI_CA_OPS_JOBS_O4 (OData V4 - UI). Read-only: no behaviour definition.
+// SAP job failures board of the SAP job monitor (2026-11-11): list report "SAP job failures" and object page (job,
+// steps, job log errors, application logs, parent / children, external scheduler job, business objects, open
+// exception - worked in the exceptions app ZUI_CA_OPS_EXC).
+define service ZUI_CA_OPS_JOBS {
+  expose ZC_CA_OpsJobFailure as JobFailure;
+  expose ZC_CA_OpsJobStep    as JobStep;
+  expose ZC_CA_OpsJobMsg     as JobLogError;
+  expose ZC_CA_OpsJobAlog    as JobAppLog;
+  expose ZC_CA_OpsJobBo      as JobBusinessObject;
+}

@@ -1,0 +1,47 @@
+// UI annotations: SAP job failures board - application logs linked to a job (object page table; SLG1 by log number)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Application log', typeNamePlural: 'Application logs',
+                  title: { type: #STANDARD, value: 'LogNumber' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'LogDate', direction: #ASC }, { by: 'LogTime', direction: #ASC } ] } ]
+annotate entity ZC_CA_OpsJobAlog with
+{
+  @UI.hidden: true
+  JobName;
+  @UI.hidden: true
+  JobCount;
+  @EndUserText.label: 'Log number (SLG1)'
+  @UI.lineItem: [ { position: 10 } ]
+  LogNumber;
+  @EndUserText.label: 'Object'
+  @UI.lineItem: [ { position: 20 } ]
+  LogObject;
+  @EndUserText.label: 'Subobject'
+  @UI.lineItem: [ { position: 30 } ]
+  LogSubobject;
+  @EndUserText.label: 'External number'
+  @UI.lineItem: [ { position: 40 } ]
+  ExternalNumber;
+  @EndUserText.label: 'Date'
+  @UI.lineItem: [ { position: 50 } ]
+  LogDate;
+  @EndUserText.label: 'Time'
+  @UI.lineItem: [ { position: 60 } ]
+  LogTime;
+  @EndUserText.label: 'User'
+  LogUser;
+  @EndUserText.label: 'Program'
+  LogProgram;
+  @EndUserText.label: 'Errors'
+  @UI.lineItem: [ { position: 70 } ]
+  ErrorMessages;
+  @EndUserText.label: 'Aborts'
+  @UI.lineItem: [ { position: 80 } ]
+  AbortMessages;
+  @EndUserText.label: 'Link quality (C confirmed, P probable)'
+  @UI.lineItem: [ { position: 90 } ]
+  Quality;
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  CompanyCode;
+}
