@@ -24,6 +24,9 @@ define root view entity ZR_{{P}}_PaymRequest
 #if EVENT
   association [0..*] to ZR_{{P}}_PaymEvent   as _Events   on $projection.RequestReference = _Events.RequestReference
 #endif
+#if CHANGES
+  association [0..*] to ZR_{{P}}_ReqChange   as _Changes  on $projection.RequestReference = _Changes.RequestReference
+#endif
 {
   key Req.RequestReference,
       _Payments,
@@ -32,6 +35,9 @@ define root view entity ZR_{{P}}_PaymRequest
 #endif
 #if EVENT
       _Events,
+#endif
+#if CHANGES
+      _Changes,
 #endif
       Req.BusinessDate,
       Req.ReceivedAt,

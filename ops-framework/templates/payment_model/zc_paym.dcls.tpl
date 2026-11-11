@@ -15,4 +15,10 @@ define role ZC_{{P}}_PAYM {
       and ( CompanyCode is initial
          or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
 #endfor
+#if RECON
+  grant select on ZI_{{P}}_LedgRcCube
+    where ( OpsArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+#endif
 }

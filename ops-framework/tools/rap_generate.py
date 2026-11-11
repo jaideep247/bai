@@ -84,7 +84,7 @@ SPEC = {
             # Payment model (2026-11-11): texts / order of the dimension values and the feeder systems with their
             # deep-link URL template (read by the consumers' generated payment model CDS)
             ('zca_ops_pmdim', 'PaymDimText', 'zca_d_pmdim', 'Dimension text', 'Payment model dimension texts', [],
-             [('enum', 'dimension', 'FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS')]),
+             [('enum', 'dimension', 'FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS,DOC_EVENT')]),
             ('zca_ops_feeder', 'PaymFeeder', 'zca_d_feeder', 'Feeder system', 'Feeder systems of the payment model', [],
              [('valid', 'url_template', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid')]),
         ]),

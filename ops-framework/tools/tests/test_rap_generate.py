@@ -43,7 +43,7 @@ class FrameworkAppTest(unittest.TestCase):
 
     def test_payment_model_tables_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
-        self.assertIn(('enum', 'dimension', 'FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS'),
+        self.assertIn(('enum', 'dimension', 'FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS,DOC_EVENT'),
                       checks['zca_ops_pmdim'])
         self.assertIn(('valid', 'url_template', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid'),
                       checks['zca_ops_feeder'])

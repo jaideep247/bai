@@ -87,3 +87,15 @@ V82-V93 belong to the suite (build B of 2026-11-11), V94-V99 to the framework's 
 | V97 | VERIFY-ADT | OVP V4 cards of the persona pages (two-dimension charts, HEATMAP, data point with PROGRESS, selection variants with NE) and the custom process-flow card (the suite's `ui/cards/processflow`, sap.suite.ui.commons.ProcessFlow on the UI5 release of the landscape) |
 | V98 | Runtime (DV1) | Intents of the payment object page: payment trace transaction (`ZCDPaymentTrace-display`), exceptions app, the job app of build J (`ZCDJobFailure-display`, placeholder until merged) |
 | V99 | Runtime (DV1) | Generator round trip: `tools/payment_model.py` output imported by abapGit, activated in dependency order (framework texts -> adapters -> cube / trend / payment -> DCL -> service), binding `ZUI_CD_PAYM_O4` published |
+
+### 2026-11-11 - ledger and document-change model (product layer)
+
+V100-V109 belong to the first consumer (its own documentation); V110-V114 to the product templates of the ledger and document-change model. Nothing activated; every row open.
+
+| ID | Kind | Item |
+|---|---|---|
+| V110 | VERIFY-SE11 | Standard fields the ledger templates read: ACDOCA RLDNR, RBUKRS, GJAHR, BELNR, DOCLN, BUZEI (= BSEG-BUZEI of the same document in the release - the entry-view line of a journal line), POPER, RACCT, DRCRK, WSL / RWCUR, HSL / RHCUR, KSL / RKCUR (group currency filled in the ledger), ZUONR, SGTXT, AUGBL, AUGDT, PRCTR, SEGMENT, RBUSA, RCNTR, BUDAT, AWTYP; the reversal flags XREVERSING / XREVERSED; BKPF BLART, BLDAT, BUDAT, CPUDT, CPUTM, USNAM, AWTYP, AWKEY, STBLG, STJAH, STGRD; BSEG BSCHL; T001 KTOPL; SKAT TXT50 |
+| V111 | VERIFY-ADT / business | `ZI_<P>_LedgCfg`: the ledger parameter of the model resolved from the parameter tables (value, else definition default, else the delivered default - the leading ledger `0L` by default); confirm the leading ledger of the landscape and that a non-leading ledger is never read |
+| V112 | VERIFY-ADT | Template constructs on 7.58: `division( )` and DEC products in `ZR_<P>_PaymLedger`, DEC arithmetic of CURR operands and `coalesce( curr, cast( 0 as abap.curr ) )`, `UNION` (distinct) with a `SELECT DISTINCT` first branch (`ZI_<P>_LedgRcKey`), `UNION ALL` with typed literals (`ZI_<P>_DocEvtAll`), `#CUBE` over a root view entity and the transient analytical query `ZC_<P>_LedgRcQry`, `count( distinct )`, cyclic associations item <-> batch key (mass activation) |
+| V113 | PlanViz | Navigation predicates resolve to key access: batch key -> BKPF (reference type + key index) -> ACDOCA by key; account x posting date of the reconciled accounts -> ACDOCA (RLDNR, RBUKRS, RACCT, BUDAT) aggregated; lines of one account and day paged - never a scan of the journal |
+| V114 | ABAP Unit / runtime | Generated CDS tests of the ledger model (`ltc_ledger`, `ltc_gl_total`, `ltc_batch_key`, `ltc_acct_day`, `ltc_change` in `ZCL_<P>_PAYM_CDS_TEST`); OVP / object page rendering of the facets Ledger and Changes, the reconciliation list and the change-volume charts; DCL on the reconciliation cube |

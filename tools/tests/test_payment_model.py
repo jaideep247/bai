@@ -8,6 +8,7 @@ refused when it breaks the contract; --check reports a hand-edited or superfluou
 Run:  python3 -m unittest discover -s tools/tests      (from the repository root)
 """
 import copy
+import re
 import os
 import sys
 import tempfile
@@ -41,6 +42,17 @@ def spec():
         'request_attempt': {'status': 'pending', 'reason': 'attempt table not yet named',
                             'from': '‹attempt table› as Src', 'fields': fields('request_attempt')},
     }
+
+
+def ledger_spec():
+    """The fictitious customer with the ledger and document-change sections (all active)."""
+    out = spec()
+    out['model']['ledger'] = {'area': 'ZPE_OPS', 'parameter': 'ZPE_LEDGER', 'default': '0L'}
+    out['model']['gl_reference_type'] = 'ZPEGL'
+    for section in ('ledger_item', 'ledger_batch', 'recon_account', 'recon_result', 'recon_bank_line',
+                    'document_event'):
+        out[section] = {'from': f'zpe_{section} as Src', 'fields': fields(section)}
+    return out
 
 
 class PaymentModelTest(unittest.TestCase):
@@ -118,6 +130,97 @@ class PaymentModelTest(unittest.TestCase):
             stale = payment_model.check(root, os.path.join('cfg', 'spec.json'))
             self.assertIn(os.path.join('src', 'paym', 'zr_pe_paymcube.ddls.asddls'), stale)
             self.assertIn(os.path.join('src', 'paym', 'zi_pe_old.ddls.asddls'), stale)
+
+    # ------------------------------------------------------------ ledger and document-change model (2026-11-11)
+
+    def test_ledger_sections_generate_the_ledger_views(self):
+        files = payment_model.outputs(REPO, ledger_spec())
+        names = {os.path.basename(p) for p in files if p.startswith('src/paym')}
+        for name in ('zi_pe_ledgitem.ddls.asddls', 'zi_pe_ledgbatch.ddls.asddls', 'zi_pe_ledgcfg.ddls.asddls',
+                     'zi_pe_ledgjrnl.ddls.asddls', 'zr_pe_ledgbatch.ddls.asddls', 'zr_pe_paymledger.ddls.asddls',
+                     'zc_pe_paymledger.ddlx.asddlxs', 'zr_pe_ledgrecon.ddls.asddls', 'zi_pe_ledgrccube.ddls.asddls',
+                     'zc_pe_ledgrcqry.ddls.asddls', 'zr_pe_ledgbankln.ddls.asddls', 'zr_pe_paymchange.ddls.asddls',
+                     'zr_pe_reqchange.ddls.asddls', 'zc_pe_docevtcube.ddlx.asddlxs'):
+            self.assertIn(name, names)
+        service = files[os.path.join('src/paym', 'zui_pe_paym.srvd.srvdsrv')]
+        for alias in ('PaymentLedger', 'SubledgerBatch', 'SubledgerItem', 'JournalLine', 'LedgerReconciliation',
+                      'BankStatementLine', 'PaymentChange', 'RequestChange', 'DocumentChangeCategory'):
+            self.assertIn(f' as {alias};', service)
+        dcl = files[os.path.join('src/paym', 'zc_pe_paym.dcls.asdcls')]
+        for entity in ('ZC_PE_PaymLedger', 'ZC_PE_LedgJrnl', 'ZC_PE_LedgRecon', 'ZI_PE_LedgRcCube'):
+            self.assertIn(f'grant select on {entity}\n', dcl)
+
+    def test_ledger_parameter_and_reference_type(self):
+        files = payment_model.outputs(REPO, ledger_spec())
+        cfg = files[os.path.join('src/paym', 'zi_pe_ledgcfg.ddls.asddls')]
+        self.assertIn("Def.name = 'ZPE_LEDGER'", cfg)
+        self.assertIn("where Area.area = 'ZPE_OPS'", cfg)
+        self.assertIn("'0L' ) as abap.char( 2 ) ) as Ledger", cfg)
+        gl_doc = files[os.path.join('src/paym', 'zi_pe_ledggldoc.ddls.asddls')]
+        self.assertIn("Doc.awtyp = 'ZPEGL'", gl_doc)
+        self.assertIn('Doc.awkey = Bat.GlReferenceKey', gl_doc)
+
+    def test_payment_page_has_ledger_and_changes(self):
+        files = payment_model.outputs(REPO, ledger_spec())
+        payment = files[os.path.join('src/paym', 'zr_pe_payment.ddls.asddls')]
+        self.assertIn('as _Ledger   on $projection.PaymentDocument = _Ledger.PaymentDocument', payment)
+        self.assertIn('as _Changes  on $projection.PaymentDocument = _Changes.PaymentDocument', payment)
+        ddlx = files[os.path.join('src/paym', 'zc_pe_payment.ddlx.asddlxs')]
+        self.assertIn("targetElement: '_Ledger', label: 'Ledger'", ddlx)
+        self.assertIn("targetElement: '_Changes', label: 'Changes'", ddlx)
+        # without the sections the payment page is unchanged
+        plain = payment_model.outputs(REPO, spec())[os.path.join('src/paym', 'zr_pe_payment.ddls.asddls')]
+        self.assertNotIn('as _Ledger', plain)
+        self.assertNotIn('as _Changes', plain)
+
+    def test_stored_results_and_bank_lines_optional(self):
+        lean = ledger_spec()
+        del lean['recon_result']
+        lean['recon_bank_line'] = {'status': 'pending', 'reason': 'statement fields not confirmed',
+                                   'from': '‹statement view› as Src', 'fields': fields('recon_bank_line')}
+        files = payment_model.outputs(REPO, lean)
+        recon = files[os.path.join('src/paym', 'zr_pe_ledgrecon.ddls.asddls')]
+        self.assertNotIn('ResultStatus', recon)
+        self.assertNotIn('as _BankLines', recon)
+        self.assertIn('else 2 end as abap.int1 )', recon)
+        pending = {os.path.basename(p) for p in files if p.startswith('pending')}
+        self.assertIn('zr_pe_ledgbankln.ddls.asddls', pending)
+        self.assertIn('zi_pe_ledgbankday.ddls.asddls', pending)
+
+    def test_ledger_needs_its_model_keys(self):
+        broken = ledger_spec()
+        del broken['model']['ledger']
+        broken['model']['gl_reference_type'] = 'zpe gl'
+        del broken['ledger_batch']
+        with self.assertRaises(payment_model.SpecError) as err:
+            payment_model.validate(broken)
+        text = str(err.exception)
+        self.assertIn('ledger area missing', text)
+        self.assertIn('is not a plain name', text)
+        self.assertIn('ledger_item: active only with an active ledger_batch section', text)
+        self.assertIn('recon_account: active only with an active ledger_batch section', text)
+
+    def test_else_branch_of_a_flag(self):
+        text = '#if A\na\n#else\nnot a\n#endif\n#if B\n#if A\nab\n#else\nb only\n#endif\n#endif'
+        self.assertEqual(payment_model.render(text, {}, {'A': False, 'B': True}), 'not a\nb only\n')
+        self.assertEqual(payment_model.render(text, {}, {'A': True, 'B': False}), 'a\n')
+
+    def test_product_layer_free_of_customer_terms(self):
+        terms_file = os.path.join(REPO, 'ops-framework', 'config', 'customer_terms.txt')
+        with open(terms_file, encoding='utf-8') as handle:
+            terms = [line.split('#')[0].strip() for line in handle if line.split('#')[0].strip()]
+        terms += ['DFKK', 'DPAYH', 'FIKEY', 'FKKSU', 'STBEL', 'Stripe', 'Bridger', 'BlackLine', 'ZCD_']
+        pattern = re.compile(r'(?<![A-Za-z0-9])(' + '|'.join(re.escape(t) for t in terms) + r')', re.I)
+        targets = [os.path.join(payment_model.TEMPLATES, name) for name in os.listdir(payment_model.TEMPLATES)]
+        targets.append(payment_model.__file__)
+        hits = []
+        for path in targets:
+            with open(path, encoding='utf-8') as handle:
+                for no, line in enumerate(handle, start=1):
+                    found = pattern.search(line)
+                    if found:
+                        hits.append(f'{os.path.basename(path)}:{no}: {found.group(1)}')
+        self.assertEqual(hits, [])
 
     def test_suite_spec_valid_and_generated_up_to_date(self):
         root = os.path.join(REPO, 'ops-suite')

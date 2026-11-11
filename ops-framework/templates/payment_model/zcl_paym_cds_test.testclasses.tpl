@@ -5,10 +5,15 @@
 *& the adapter views doubled): amounts are totalled per currency and flow,
 *& the trend compares with the same weekday last week, a payment links to
 *& several requests and a request to several payments, the feeder reference
-*& is masked unless the feeder row marks it visible. Generated - never edit.
+*& is masked unless the feeder row marks it visible; ledger model: a
+*& payment's share of the batch summary, totals per currency, reversed G/L
+*& documents left out, batch key transfer status, journal aggregated per
+*& reconciled account and day; the old and new clearing document linked
+*& on the change timeline. Generated - never edit.
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
-*& {{SINCE}} | Generated from the product template (payment model).
+*& {{SINCE}} | Generated from the product template (payment model, ledger and
+*&            | document-change model).
 *&---------------------------------------------------------------------*
 "! ZR_{{P}}_PAYMCUBE: two currencies are never added; collections and disbursements stay apart
 CLASS ltc_cube DEFINITION FINAL
@@ -327,6 +332,579 @@ CLASS ltc_request IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 2 ]-feederreference ) exp = `****4567`
                                             msg = 'Default: masked to the last four characters' ).
         cl_abap_unit_assert=>assert_initial( act = lt_rows[ 2 ]-feederurl msg = 'No deep link for a masked reference' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+#endif
+#if LEDGER
+
+
+"! ZR_{{P}}_PAYMLEDGER: the payment's SHARE of the batch summary per account and currency - never a G/L line of its own
+CLASS ltc_ledger DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        pay     TYPE c LENGTH 2 VALUE 'P1',
+        batch   TYPE c LENGTH 2 VALUE 'K1',
+        bukrs   TYPE c LENGTH 4 VALUE 'ZT01',
+        account TYPE c LENGTH 10 VALUE 'GLA1',
+        usd     TYPE c LENGTH 5 VALUE 'USD',
+        cad     TYPE c LENGTH 5 VALUE 'CAD',
+        gl_doc  TYPE c LENGTH 10 VALUE 'GD1',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS share_of_the_summary FOR TESTING.
+    METHODS currencies_kept_apart FOR TESTING.
+
+    METHODS pay_sum
+      IMPORTING
+        iv_currency   TYPE clike
+        iv_amount     TYPE decfloat34
+      RETURNING
+        VALUE(rs_sum) TYPE zi_{{p}}_ledgpaysum.
+    METHODS batch
+      IMPORTING
+        iv_currency     TYPE clike
+        iv_amount       TYPE decfloat34
+      RETURNING
+        VALUE(rs_batch) TYPE zi_{{p}}_ledgbatch.
+ENDCLASS.
+
+
+CLASS ltc_ledger IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZR_{{P}}_PAYMLEDGER' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD pay_sum.
+    rs_sum-paymentdocument = gc-pay.
+    rs_sum-batchkey        = gc-batch.
+    rs_sum-companycode     = gc-bukrs.
+    rs_sum-glaccount       = gc-account.
+    rs_sum-currency        = iv_currency.
+    rs_sum-paymentamount   = iv_amount.
+    rs_sum-itemcount       = 1.
+  ENDMETHOD.
+
+
+  METHOD batch.
+    rs_batch-batchkey       = gc-batch.
+    rs_batch-companycode    = gc-bukrs.
+    rs_batch-glaccount      = gc-account.
+    rs_batch-currency       = iv_currency.
+    rs_batch-glreferencekey = gc-batch.
+    rs_batch-amount         = iv_amount.
+    rs_batch-linecount      = 1.
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_sums TYPE STANDARD TABLE OF zi_{{p}}_ledgpaysum WITH EMPTY KEY.
+    DATA lt_batches TYPE STANDARD TABLE OF zi_{{p}}_ledgbatch WITH EMPTY KEY.
+    DATA lt_totals TYPE STANDARD TABLE OF zi_{{p}}_ledggltot WITH EMPTY KEY.
+    DATA lt_keys TYPE STANDARD TABLE OF zi_{{p}}_ledgglkey WITH EMPTY KEY.
+    DATA ls_total TYPE zi_{{p}}_ledggltot.
+    DATA ls_key TYPE zi_{{p}}_ledgglkey.
+    go_env->clear_doubles( ).
+    " The payment cleared USD 30 of a batch of USD 120 (transferred in full) and CAD 10 of a CAD batch of 40
+    INSERT pay_sum( iv_currency = gc-usd iv_amount = 30 ) INTO TABLE lt_sums.
+    INSERT pay_sum( iv_currency = gc-cad iv_amount = 10 ) INTO TABLE lt_sums.
+    INSERT batch( iv_currency = gc-usd iv_amount = 120 ) INTO TABLE lt_batches.
+    INSERT batch( iv_currency = gc-cad iv_amount = 40 ) INTO TABLE lt_batches.
+    ls_total-batchkey    = gc-batch.
+    ls_total-companycode = gc-bukrs.
+    ls_total-glaccount   = gc-account.
+    ls_total-currency    = gc-usd.
+    ls_total-glamount    = 120.
+    ls_total-gllinecount = 1.
+    INSERT ls_total INTO TABLE lt_totals.
+    ls_key-batchkey            = gc-batch.
+    ls_key-companycode         = gc-bukrs.
+    ls_key-activedocumentcount = 1.
+    ls_key-firstgldocument     = gc-gl_doc.
+    INSERT ls_key INTO TABLE lt_keys.
+    go_env->insert_test_data( lt_sums ).
+    go_env->insert_test_data( lt_batches ).
+    go_env->insert_test_data( lt_totals ).
+    go_env->insert_test_data( lt_keys ).
+  ENDMETHOD.
+
+
+  METHOD share_of_the_summary.
+    TRY.
+        SELECT sharepercent, prorataglamount, transferstatus, gldocument FROM zr_{{p}}_paymledger
+          WHERE paymentdocument = @gc-pay AND currency = @gc-usd
+          ORDER BY batchkey, glaccount
+          INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One row per batch, account, currency' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-sharepercent ) exp = CONV decfloat34( 25 )
+                                            msg = '30 of a batch of 120 is a 25 % share' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-prorataglamount ) exp = CONV decfloat34( 30 )
+                                            msg = 'Pro-rata G/L amount = share x consolidated G/L total' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-transferstatus ) exp = `TRANSFERRED`
+                                            msg = 'Batch total equals its G/L total' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-gldocument ) exp = CONV string( gc-gl_doc )
+                                            msg = 'The batch G/L document, labelled as the batch''s' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD currencies_kept_apart.
+    TRY.
+        SELECT currency, batchamount, sharepercent, transferstatus FROM zr_{{p}}_paymledger
+          WHERE paymentdocument = @gc-pay
+          ORDER BY currency INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'One row per currency' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-batchamount ) exp = CONV decfloat34( 40 )
+                                            msg = 'CAD batch total alone, never added to USD' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-sharepercent ) exp = CONV decfloat34( 25 )
+                                            msg = 'CAD share within the CAD batch' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-transferstatus ) exp = `DIFFERENCE`
+                                            msg = 'CAD batch without CAD journal total differs' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZI_{{P}}_LEDGGLTOT: G/L total per batch key, account and currency - reversed G/L documents left out
+CLASS ltc_gl_total DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        batch    TYPE c LENGTH 2 VALUE 'K1',
+        bukrs    TYPE c LENGTH 4 VALUE 'ZT01',
+        year     TYPE n LENGTH 4 VALUE '2026',
+        account  TYPE c LENGTH 10 VALUE 'GLA1',
+        usd      TYPE c LENGTH 5 VALUE 'USD',
+        cad      TYPE c LENGTH 5 VALUE 'CAD',
+        doc      TYPE c LENGTH 10 VALUE 'GD1',
+        reversed TYPE c LENGTH 10 VALUE 'GD2',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS reversed_doc_excluded FOR TESTING.
+
+    METHODS line
+      IMPORTING
+        iv_doc         TYPE clike
+        iv_line        TYPE clike
+        iv_currency    TYPE clike
+        iv_amount      TYPE decfloat34
+      RETURNING
+        VALUE(rs_line) TYPE zi_{{p}}_ledgjrnl.
+ENDCLASS.
+
+
+CLASS ltc_gl_total IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_{{P}}_LEDGGLTOT' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD line.
+    rs_line-companycode           = gc-bukrs.
+    rs_line-fiscalyear            = gc-year.
+    rs_line-gldocument            = iv_doc.
+    rs_line-journalline           = iv_line.
+    rs_line-glaccount             = gc-account.
+    rs_line-transactioncurrency   = iv_currency.
+    rs_line-amountintranscurrency = iv_amount.
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_docs TYPE STANDARD TABLE OF zi_{{p}}_ledggldoc WITH EMPTY KEY.
+    DATA lt_lines TYPE STANDARD TABLE OF zi_{{p}}_ledgjrnl WITH EMPTY KEY.
+    DATA ls_doc TYPE zi_{{p}}_ledggldoc.
+    go_env->clear_doubles( ).
+    ls_doc-batchkey    = gc-batch.
+    ls_doc-companycode = gc-bukrs.
+    ls_doc-fiscalyear  = gc-year.
+    ls_doc-gldocument  = gc-doc.
+    INSERT ls_doc INTO TABLE lt_docs.
+    ls_doc-gldocument  = gc-reversed.
+    ls_doc-isreversed  = abap_true.
+    INSERT ls_doc INTO TABLE lt_docs.
+    " GD1: USD 100 + 20 and CAD 5; GD2 (reversed): USD 999
+    INSERT line( iv_doc = gc-doc iv_line = '000001' iv_currency = gc-usd iv_amount = 100 ) INTO TABLE lt_lines.
+    INSERT line( iv_doc = gc-doc iv_line = '000002' iv_currency = gc-usd iv_amount = 20 ) INTO TABLE lt_lines.
+    INSERT line( iv_doc = gc-doc iv_line = '000003' iv_currency = gc-cad iv_amount = 5 ) INTO TABLE lt_lines.
+    INSERT line( iv_doc = gc-reversed iv_line = '000001' iv_currency = gc-usd iv_amount = 999 ) INTO TABLE lt_lines.
+    go_env->insert_test_data( lt_docs ).
+    go_env->insert_test_data( lt_lines ).
+  ENDMETHOD.
+
+
+  METHOD reversed_doc_excluded.
+    TRY.
+        SELECT currency, glamount, gllinecount FROM zi_{{p}}_ledggltot
+          WHERE batchkey = @gc-batch
+          ORDER BY currency INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'One total per currency' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-glamount ) exp = CONV decfloat34( 5 )
+                                            msg = 'CAD total alone' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 2 ]-glamount ) exp = CONV decfloat34( 120 )
+                                            msg = 'USD total without the reversed G/L document' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-gllinecount exp = 2 msg = 'Two USD lines of GD1' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZR_{{P}}_LEDGBATCH: the batch key level - transferred, not transferred, difference
+CLASS ltc_batch_key DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        equal   TYPE c LENGTH 2 VALUE 'K1',
+        missing TYPE c LENGTH 2 VALUE 'K2',
+        differs TYPE c LENGTH 2 VALUE 'K3',
+        bukrs   TYPE c LENGTH 4 VALUE 'ZT01',
+        account TYPE c LENGTH 10 VALUE 'GLA1',
+        usd     TYPE c LENGTH 5 VALUE 'USD',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS transfer_status_per_key FOR TESTING.
+
+    METHODS batch
+      IMPORTING
+        iv_key          TYPE clike
+        iv_amount       TYPE decfloat34
+      RETURNING
+        VALUE(rs_batch) TYPE zi_{{p}}_ledgbatch.
+    METHODS total
+      IMPORTING
+        iv_key          TYPE clike
+        iv_amount       TYPE decfloat34
+      RETURNING
+        VALUE(rs_total) TYPE zi_{{p}}_ledggltot.
+    METHODS key
+      IMPORTING
+        iv_key        TYPE clike
+      RETURNING
+        VALUE(rs_key) TYPE zi_{{p}}_ledgglkey.
+ENDCLASS.
+
+
+CLASS ltc_batch_key IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZR_{{P}}_LEDGBATCH' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD batch.
+    rs_batch-batchkey       = iv_key.
+    rs_batch-companycode    = gc-bukrs.
+    rs_batch-glaccount      = gc-account.
+    rs_batch-currency       = gc-usd.
+    rs_batch-glreferencekey = iv_key.
+    rs_batch-amount         = iv_amount.
+  ENDMETHOD.
+
+
+  METHOD total.
+    rs_total-batchkey    = iv_key.
+    rs_total-companycode = gc-bukrs.
+    rs_total-glaccount   = gc-account.
+    rs_total-currency    = gc-usd.
+    rs_total-glamount    = iv_amount.
+  ENDMETHOD.
+
+
+  METHOD key.
+    rs_key-batchkey            = iv_key.
+    rs_key-companycode         = gc-bukrs.
+    rs_key-activedocumentcount = 1.
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_batches TYPE STANDARD TABLE OF zi_{{p}}_ledgbatch WITH EMPTY KEY.
+    DATA lt_totals TYPE STANDARD TABLE OF zi_{{p}}_ledggltot WITH EMPTY KEY.
+    DATA lt_keys TYPE STANDARD TABLE OF zi_{{p}}_ledgglkey WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    " K1 transferred in full, K2 without G/L document, K3 transferred with 10 less on the account
+    INSERT batch( iv_key = gc-equal iv_amount = 100 ) INTO TABLE lt_batches.
+    INSERT batch( iv_key = gc-missing iv_amount = 50 ) INTO TABLE lt_batches.
+    INSERT batch( iv_key = gc-differs iv_amount = 70 ) INTO TABLE lt_batches.
+    INSERT total( iv_key = gc-equal iv_amount = 100 ) INTO TABLE lt_totals.
+    INSERT total( iv_key = gc-differs iv_amount = 60 ) INTO TABLE lt_totals.
+    INSERT key( gc-equal ) INTO TABLE lt_keys.
+    INSERT key( gc-differs ) INTO TABLE lt_keys.
+    go_env->insert_test_data( lt_batches ).
+    go_env->insert_test_data( lt_totals ).
+    go_env->insert_test_data( lt_keys ).
+  ENDMETHOD.
+
+
+  METHOD transfer_status_per_key.
+    TRY.
+        SELECT batchkey, transferstatus, difference, istransferred FROM zr_{{p}}_ledgbatch
+          ORDER BY batchkey INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 3 msg = 'One row per batch key' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-transferstatus ) exp = `TRANSFERRED`
+                                            msg = 'K1 subledger = G/L' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 2 ]-transferstatus ) exp = `NOT_TRANSFERRED`
+                                            msg = 'K2 has no G/L document' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-istransferred exp = abap_false msg = 'K2 not transferred' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 3 ]-transferstatus ) exp = `DIFFERENCE`
+                                            msg = 'K3 G/L total differs' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 3 ]-difference ) exp = CONV decfloat34( 10 )
+                                            msg = 'Difference = subledger - G/L' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+#endif
+#if RECON
+
+
+"! ZI_{{P}}_LEDGACCTDAY: journal aggregated per reconciled account, currency and day in the configured ledger
+CLASS ltc_acct_day DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        ledger       TYPE c LENGTH 2 VALUE 'L1',
+        other_ledger TYPE c LENGTH 2 VALUE 'L2',
+        bukrs        TYPE c LENGTH 4 VALUE 'ZT01',
+        account      TYPE c LENGTH 10 VALUE 'GLA1',
+        other_acct   TYPE c LENGTH 10 VALUE 'GLA9',
+        usd          TYPE c LENGTH 5 VALUE 'USD',
+        cad          TYPE c LENGTH 5 VALUE 'CAD',
+        day          TYPE d VALUE '20261110',
+        next_day     TYPE d VALUE '20261111',
+        transfer     TYPE c LENGTH 10 VALUE '{{GL_REFTYPE}}',
+        other_ref    TYPE c LENGTH 10 VALUE 'ZOTH',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS aggregated_per_account_day FOR TESTING.
+
+    METHODS jrnl
+      IMPORTING
+        iv_ledger      TYPE clike
+        iv_account     TYPE clike
+        iv_currency    TYPE clike
+        iv_day         TYPE d
+        iv_ref         TYPE clike
+        iv_amount      TYPE decfloat34
+        iv_docln       TYPE clike
+      RETURNING
+        VALUE(rs_line) TYPE acdoca.
+ENDCLASS.
+
+
+CLASS ltc_acct_day IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_{{P}}_LEDGACCTDAY' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD jrnl.
+    rs_line-rldnr  = iv_ledger.
+    rs_line-rbukrs = gc-bukrs.
+    rs_line-gjahr  = '2026'.
+    rs_line-belnr  = 'GD1'.
+    rs_line-docln  = iv_docln.
+    rs_line-racct  = iv_account.
+    rs_line-rwcur  = iv_currency.
+    rs_line-budat  = iv_day.
+    rs_line-awtyp  = iv_ref.
+    rs_line-wsl    = iv_amount.
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_lines TYPE STANDARD TABLE OF acdoca WITH EMPTY KEY.
+    DATA lt_cfg TYPE STANDARD TABLE OF zi_{{p}}_ledgcfg WITH EMPTY KEY.
+    DATA lt_accounts TYPE STANDARD TABLE OF zi_{{p}}_ledgacct WITH EMPTY KEY.
+    DATA ls_cfg TYPE zi_{{p}}_ledgcfg.
+    DATA ls_account TYPE zi_{{p}}_ledgacct.
+    go_env->clear_doubles( ).
+    ls_cfg-ledger = gc-ledger.
+    INSERT ls_cfg INTO TABLE lt_cfg.
+    ls_account-companycode = gc-bukrs.
+    ls_account-glaccount   = gc-account.
+    ls_account-currency    = gc-usd.
+    INSERT ls_account INTO TABLE lt_accounts.
+    " Day: batch transfer 100 + other posting 50; next day 7; CAD (account not reconciled in CAD), another
+    " ledger and an account that is not reconciled are left out
+    INSERT jrnl( iv_ledger = gc-ledger iv_account = gc-account iv_currency = gc-usd iv_day = gc-day
+                 iv_ref = gc-transfer iv_amount = 100 iv_docln = '000001' ) INTO TABLE lt_lines.
+    INSERT jrnl( iv_ledger = gc-ledger iv_account = gc-account iv_currency = gc-usd iv_day = gc-day
+                 iv_ref = gc-other_ref iv_amount = 50 iv_docln = '000002' ) INTO TABLE lt_lines.
+    INSERT jrnl( iv_ledger = gc-ledger iv_account = gc-account iv_currency = gc-usd iv_day = gc-next_day
+                 iv_ref = gc-transfer iv_amount = 7 iv_docln = '000003' ) INTO TABLE lt_lines.
+    INSERT jrnl( iv_ledger = gc-ledger iv_account = gc-account iv_currency = gc-cad iv_day = gc-day
+                 iv_ref = gc-transfer iv_amount = 9 iv_docln = '000004' ) INTO TABLE lt_lines.
+    INSERT jrnl( iv_ledger = gc-other_ledger iv_account = gc-account iv_currency = gc-usd iv_day = gc-day
+                 iv_ref = gc-transfer iv_amount = 1000 iv_docln = '000005' ) INTO TABLE lt_lines.
+    INSERT jrnl( iv_ledger = gc-ledger iv_account = gc-other_acct iv_currency = gc-usd iv_day = gc-day
+                 iv_ref = gc-transfer iv_amount = 3 iv_docln = '000006' ) INTO TABLE lt_lines.
+    go_env->insert_test_data( lt_cfg ).
+    go_env->insert_test_data( lt_accounts ).
+    go_env->insert_test_data( lt_lines ).
+  ENDMETHOD.
+
+
+  METHOD aggregated_per_account_day.
+    TRY.
+        SELECT postingdate, currency, journalamount, transferamount, journallinecount FROM zi_{{p}}_ledgacctday
+          ORDER BY postingdate INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'One row per reconciled account and day' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-journalamount ) exp = CONV decfloat34( 150 )
+                                            msg = 'Day total of the ledger, USD only' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-transferamount ) exp = CONV decfloat34( 100 )
+                                            msg = 'Batch transfers apart from other postings' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-journallinecount exp = 2 msg = 'Two lines on the day' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-postingdate exp = gc-next_day msg = 'Next day apart' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+#endif
+#if CHANGES
+
+
+"! ZR_{{P}}_PAYMCHANGE: the old and the new clearing document linked; a reset without re-clearing is critical
+CLASS ltc_change DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        old_doc TYPE c LENGTH 4 VALUE 'PAY1',
+        new_doc TYPE c LENGTH 4 VALUE 'PAY2',
+        bukrs   TYPE c LENGTH 4 VALUE 'ZT01',
+        reset   TYPE c LENGTH 16 VALUE 'CLEARING_RESET',
+        reclear TYPE c LENGTH 16 VALUE 'RECLEARING',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS old_and_new_linked FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_change IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZR_{{P}}_PAYMCHANGE' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_events TYPE STANDARD TABLE OF zi_{{p}}_docevtall WITH EMPTY KEY.
+    DATA ls_event TYPE zi_{{p}}_docevtall.
+    go_env->clear_doubles( ).
+    " PAY1 reset (no new clearing yet) and later re-cleared by PAY2
+    ls_event-paymentdocument  = gc-old_doc.
+    ls_event-eventtype        = gc-reset.
+    ls_event-eventdocument    = gc-old_doc.
+    ls_event-companycode      = gc-bukrs.
+    ls_event-originaldocument = gc-old_doc.
+    ls_event-eventdate        = '20261110'.
+    INSERT ls_event INTO TABLE lt_events.
+    ls_event-eventtype        = gc-reclear.
+    ls_event-eventdocument    = gc-new_doc.
+    ls_event-newdocument      = gc-new_doc.
+    ls_event-eventdate        = '20261111'.
+    INSERT ls_event INTO TABLE lt_events.
+    go_env->insert_test_data( lt_events ).
+  ENDMETHOD.
+
+
+  METHOD old_and_new_linked.
+    TRY.
+        SELECT eventtype, originaldocument, newdocument, eventcriticality FROM zr_{{p}}_paymchange
+          WHERE paymentdocument = @gc-old_doc
+          ORDER BY eventdate INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Reset and re-clearing on the timeline' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-eventcriticality exp = 1
+                                            msg = 'Reset without new clearing document is critical' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 2 ]-originaldocument ) exp = CONV string( gc-old_doc )
+                                            msg = 'Re-clearing names the OLD clearing document' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 2 ]-newdocument ) exp = CONV string( gc-new_doc )
+                                            msg = 'and the NEW one' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

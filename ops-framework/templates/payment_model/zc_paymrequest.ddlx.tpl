@@ -15,6 +15,9 @@ annotate entity ZC_{{P}}_PaymRequest with
 #if EVENT
                ,{ id: 'Timeline', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Events', label: 'Timeline', position: 40 }
 #endif
+#if CHANGES
+               ,{ id: 'Changes', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Changes', label: 'Changes', position: 60 }
+#endif
              ]
   @EndUserText.label: 'Request reference'
   @UI.lineItem: [ { position: 10 } ]

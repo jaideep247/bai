@@ -18,6 +18,9 @@ define root view entity ZC_{{P}}_PaymRequest
 #if EVENT
       _Events   : redirected to ZC_{{P}}_PaymEvent,
 #endif
+#if CHANGES
+      _Changes  : redirected to ZC_{{P}}_ReqChange,
+#endif
       BusinessDate,
       ReceivedAt,
       CompanyCode,

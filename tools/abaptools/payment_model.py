@@ -29,8 +29,22 @@ where [..], fields {<contract field>: {expr | null, verify}}}. A field mapped nu
 
 Usage (from a consumer wrapper): generate(root, spec_path) / check(root, spec_path) -> list of out-of-date files.
 
+Ledger and document-change sections (2026-11-11, optional): ledger_item (subledger items of a payment with the
+subledger batch key of its clearing), ledger_batch (subledger summary records per batch key / account / currency
+with the G/L reference key of the batch), recon_account (accounts of the group reconciliation), recon_result (stored
+reconciliation results per business date / account - reused, never recomputed), recon_bank_line (bank statement
+lines with the G/L account they reconcile against and the key of their G/L clearing line), document_event (reversal,
+clearing reset, re-clearing, void, reissue of a payment's documents). The product templates add the standard
+universal-journal part (the G/L documents of a batch key found by G/L reference type + key, their journal lines by
+the journal's primary key in the ledger the model names). Model keys for them: ledger {area, parameter, default}
+(the ledger parameter of the parameter framework) and gl_reference_type (reference type of the G/L documents of a
+batch key).
+
 Modification log:
 2026-11-11 | Initial version (payment model product layer + customer mapping).
+2026-11-11 | Ledger drill-down to the universal journal, batch-key level, group reconciliation, document-change events
+           | (sections ledger_item, ledger_batch, recon_account, recon_result, recon_bank_line, document_event; flags
+           | LEDGER, RECON, RESULT, BANK, CHANGES; composite conditions A+B in OUTPUTS / EXPOSE).
 """
 import json
 import os
@@ -98,13 +112,131 @@ CONTRACT = {
         ('EventStatus', 'abap.char( 20 )', False, False),
         ('EventReference', 'abap.char( 70 )', False, False),
     ],
+    # Subledger items a payment cleared, with the batch key under which the clearing reached the G/L
+    'ledger_item': [
+        ('PaymentDocument', 'abap.char( 20 )', True, True),
+        ('SubledgerDocument', 'abap.char( 20 )', True, True),
+        ('SubledgerItem', 'abap.char( 20 )', True, True),
+        ('CompanyCode', 'abap.char( 4 )', False, True),
+        ('BatchKey', 'abap.char( 20 )', False, True),
+        ('GlAccount', 'abap.char( 10 )', False, True),
+        ('Currency', 'abap.cuky', False, True),
+        ('Amount', 'abap.curr( 23, 2 )', False, True),
+        ('PostingDate', 'abap.dats', False, False),
+        ('MainTransaction', 'abap.char( 4 )', False, False),
+        ('MainTransactionText', 'abap.char( 40 )', False, False),
+        ('SubTransaction', 'abap.char( 4 )', False, False),
+        ('SubTransactionText', 'abap.char( 40 )', False, False),
+        ('ContractAccount', 'abap.char( 20 )', False, False),
+        ('BusinessPartner', 'abap.char( 20 )', False, False),
+        ('ClearingDocument', 'abap.char( 20 )', False, False),
+        ('ClearingDate', 'abap.dats', False, False),
+        ('ClearingReason', 'abap.char( 4 )', False, False),
+        ('RequestReference', 'abap.char( 40 )', False, False),
+    ],
+    # Subledger summary records: one row per batch key, company code, G/L account and currency
+    'ledger_batch': [
+        ('BatchKey', 'abap.char( 20 )', True, True),
+        ('CompanyCode', 'abap.char( 4 )', True, True),
+        ('GlAccount', 'abap.char( 10 )', True, True),
+        ('Currency', 'abap.cuky', True, True),
+        ('GlReferenceKey', 'abap.char( 20 )', False, True),
+        ('PostingDate', 'abap.dats', False, True),
+        ('BatchStatus', 'abap.char( 12 )', False, False),
+        ('Amount', 'abap.curr( 23, 2 )', False, True),
+        ('LineCount', 'abap.int4', False, False),
+    ],
+    # Accounts of the group reconciliation (clearing / transit accounts)
+    'recon_account': [
+        ('CompanyCode', 'abap.char( 4 )', True, True),
+        ('GlAccount', 'abap.char( 10 )', True, True),
+        ('Currency', 'abap.cuky', True, True),
+        ('AccountKind', 'abap.char( 10 )', False, False),
+        ('Description', 'abap.char( 60 )', False, False),
+    ],
+    # Stored results of the consumer's reconciliation check per business date and account (reused, never recomputed)
+    'recon_result': [
+        ('BusinessDate', 'abap.dats', True, True),
+        ('CompanyCode', 'abap.char( 4 )', True, True),
+        ('GlAccount', 'abap.char( 10 )', True, True),
+        ('Currency', 'abap.cuky', True, True),
+        ('BankAmount', 'abap.dec( 31, 4 )', False, False),
+        ('GlAmount', 'abap.dec( 31, 4 )', False, False),
+        ('SubledgerAmount', 'abap.dec( 31, 4 )', False, False),
+        ('BankGlDifference', 'abap.dec( 31, 4 )', False, False),
+        ('GlSubledgerDifference', 'abap.dec( 31, 4 )', False, False),
+        ('Tolerance', 'abap.dec( 31, 4 )', False, False),
+        ('ResultStatus', 'abap.char( 16 )', False, True),
+        ('Bucket', 'abap.char( 30 )', False, False),
+        ('MeasuredAt', 'abap.dec( 21, 7 )', False, False),
+    ],
+    # Bank statement lines of the reconciled accounts, the subledger clearing document a line references and the key
+    # of its G/L clearing line (how a line finds them is the consumer's rule)
+    'recon_bank_line': [
+        ('StatementKey', 'abap.char( 20 )', True, True),
+        ('StatementLine', 'abap.char( 10 )', True, True),
+        ('CompanyCode', 'abap.char( 4 )', False, True),
+        ('GlAccount', 'abap.char( 10 )', False, True),
+        ('Currency', 'abap.cuky', False, True),
+        ('BookingDate', 'abap.dats', False, True),
+        ('Amount', 'abap.curr( 23, 2 )', False, True),
+        ('DebitCredit', 'abap.char( 1 )', False, False),
+        ('HouseBank', 'abap.char( 5 )', False, False),
+        ('HouseBankAccount', 'abap.char( 5 )', False, False),
+        ('StatementNumber', 'abap.char( 10 )', False, False),
+        ('StatementDate', 'abap.dats', False, False),
+        ('TransactionCode', 'abap.char( 27 )', False, False),
+        ('BankReference', 'abap.char( 35 )', False, False),
+        ('ReferenceText', 'abap.char( 35 )', False, False),
+        ('ValueDate', 'abap.dats', False, False),
+        ('IsPostedArea1', 'abap_boolean', False, False),
+        ('IsPostedArea2', 'abap_boolean', False, False),
+        ('ClearingDocument', 'abap.char( 20 )', False, False),
+        ('ClearingChanged', 'abap_boolean', False, False),
+        ('GlFiscalYear', 'abap.numc( 4 )', False, False),
+        ('GlDocument', 'abap.char( 10 )', False, False),
+        ('GlLineItem', 'abap.numc( 3 )', False, False),
+    ],
+    # Document-change events of a payment: REVERSAL, CLEARING_RESET, RECLEARING, VOID, REISSUE (the product adds
+    # GL_REVERSAL of the G/L documents of the payment's batch keys)
+    'document_event': [
+        ('PaymentDocument', 'abap.char( 20 )', True, True),
+        ('EventType', 'abap.char( 16 )', True, True),
+        ('EventDocument', 'abap.char( 20 )', True, True),
+        ('CompanyCode', 'abap.char( 4 )', False, True),
+        ('OriginalDocument', 'abap.char( 20 )', False, False),
+        ('NewDocument', 'abap.char( 20 )', False, False),
+        ('ReversalDocument', 'abap.char( 20 )', False, False),
+        ('EventDate', 'abap.dats', False, True),
+        ('EventTime', 'abap.tims', False, False),
+        ('EventUser', 'abap.char( 12 )', False, False),
+        ('Reason', 'abap.char( 4 )', False, False),
+        ('EventSource', 'abap.char( 10 )', False, True),
+    ],
 }
 ADAPTER = {'payment': 'PaymFact', 'payment_request': 'PaymReqLink', 'request': 'PaymReqFact',
-           'request_attempt': 'PaymAttempt', 'request_event': 'PaymEvent'}
+           'request_attempt': 'PaymAttempt', 'request_event': 'PaymEvent', 'ledger_item': 'LedgItem',
+           'ledger_batch': 'LedgBatch', 'recon_account': 'LedgAcct', 'recon_result': 'LedgRcRes',
+           'recon_bank_line': 'LedgBankLn', 'document_event': 'DocEvent'}
 LABEL = {'payment': 'payment fact', 'payment_request': 'payment to request link', 'request': 'payment request',
-         'request_attempt': 'request attempt', 'request_event': 'request timeline'}
-# Flags of the templates (#if NAME): which section each one needs
-FLAGS = {'LINK': 'payment_request', 'REQUEST': 'request', 'ATTEMPT': 'request_attempt', 'EVENT': 'request_event'}
+         'request_attempt': 'request attempt', 'request_event': 'request timeline',
+         'ledger_item': 'subledger item of a payment', 'ledger_batch': 'subledger summary record',
+         'recon_account': 'reconciled account', 'recon_result': 'stored reconciliation result',
+         'recon_bank_line': 'bank statement line', 'document_event': 'document-change event'}
+# Flags of the templates (#if NAME): the sections each one needs (all of them active)
+FLAGS = {'LINK': ('payment_request',), 'REQUEST': ('request',), 'ATTEMPT': ('request_attempt',),
+         'EVENT': ('request_event',), 'LEDGER': ('ledger_item', 'ledger_batch'),
+         'RECON': ('ledger_item', 'ledger_batch', 'recon_account'),
+         'RESULT': ('ledger_item', 'ledger_batch', 'recon_account', 'recon_result'),
+         'BANK': ('ledger_item', 'ledger_batch', 'recon_account', 'recon_bank_line'),
+         'CHANGES': ('document_event',)}
+# Sections that are active only with others active: (section, needed sections)
+NEEDS = (('request_attempt', ('request',)), ('request_event', ('request',)),
+         ('ledger_item', ('ledger_batch',)), ('ledger_batch', ('ledger_item',)),
+         ('recon_account', ('ledger_item', 'ledger_batch')), ('recon_result', ('recon_account',)),
+         ('recon_bank_line', ('recon_account',)))
+# Ledger parameter names and the G/L reference type are plain names (they become CDS literals)
+PLAIN = re.compile(r'^[A-Z0-9_]{1,30}$')
 HOPS = ('FEEDER', 'MIDDLEWARE', 'REQUEST', 'PAYMENT', 'STATUS_BACK')
 STATES = ('active', 'pending', 'absent')
 # Spec text must never smuggle a statement terminator or a comment into the generated CDS
@@ -176,9 +308,20 @@ def validate(spec):
             for text in [sec.get('from', '')] + list(sec.get('joins', [])) + list(sec.get('where', [])):
                 if PLACEHOLDER.search(text):
                     problems.append(f'{section}: placeholder in an active section: {text!r}')
-    for dep, needs in (('request_attempt', 'request'), ('request_event', 'request')):
-        if state(spec, dep) == 'active' and state(spec, needs) != 'active':
-            problems.append(f'{dep}: active only with an active {needs} section')
+    for dep, needed in NEEDS:
+        for needs in needed:
+            if state(spec, dep) == 'active' and state(spec, needs) != 'active':
+                problems.append(f'{dep}: active only with an active {needs} section')
+    if state(spec, 'ledger_item') != 'absent' or state(spec, 'ledger_batch') != 'absent':
+        ledger = model.get('ledger', {})
+        for key in ('area', 'parameter', 'default'):
+            if not ledger.get(key):
+                problems.append(f'model: ledger {key} missing (the ledger parameter of the journal reads)')
+        if not model.get('gl_reference_type'):
+            problems.append('model: gl_reference_type missing (reference type of the G/L documents of a batch key)')
+        for text in [str(v) for v in ledger.values()] + [str(model.get('gl_reference_type', 'X'))]:
+            if not PLAIN.match(text):
+                problems.append(f'model: {text!r} is not a plain name (upper-case letters, digits, underscore)')
     if problems:
         raise SpecError('\n'.join(problems))
 
@@ -244,22 +387,49 @@ def adapter(spec, section):
     return name, '\n'.join(lines) + '\n'
 
 
+def _flag_state(spec, flag):
+    """active (every section active), pending (each active or pending, one pending) or absent."""
+    states = [state(spec, section) for section in FLAGS[flag]]
+    if all(st == 'active' for st in states):
+        return 'active'
+    if all(st in ('active', 'pending') for st in states):
+        return 'pending'
+    return 'absent'
+
+
 def _flags(spec):
-    return {flag: state(spec, section) == 'active' for flag, section in FLAGS.items()}
+    return {flag: _flag_state(spec, flag) == 'active' for flag in FLAGS}
+
+
+def _need_state(spec, need):
+    """State of an OUTPUTS / EXPOSE condition: None (always), a flag or flags joined by '+'."""
+    if need is None:
+        return 'active'
+    states = [_flag_state(spec, flag) for flag in need.split('+')]
+    for level in ('absent', 'pending'):
+        if level in states:
+            return level
+    return 'active'
 
 
 def render(text, values, flags, loops=None):
-    """#if FLAG ... #endif (nesting not needed), #for NAME ... #endfor, {{KEY}} values."""
+    """#if FLAG ... [#else ...] #endif (nestable), #for NAME ... #endfor, {{KEY}} values."""
     out = []
     keep = [True]
+    conds = []
     loop = None
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith('#if '):
-            keep.append(keep[-1] and flags.get(stripped[4:].strip(), False))
+            conds.append(flags.get(stripped[4:].strip(), False))
+            keep.append(keep[-1] and conds[-1])
+            continue
+        if stripped == '#else':
+            keep[-1] = keep[-2] and not conds[-1]
             continue
         if stripped == '#endif':
             keep.pop()
+            conds.pop()
             continue
         if stripped.startswith('#for '):
             loop = (stripped[5:].strip(), [])
@@ -321,6 +491,46 @@ OUTPUTS = [
     ('zi_paymexcday.ddls.tpl', 'zi_{p}_paymexcday.ddls.asddls', None),
     ('zr_paymexctrend.ddls.tpl', 'zr_{p}_paymexctrend.ddls.asddls', None),
     ('zc_paymexctrend.ddls.tpl', 'zc_{p}_paymexctrend.ddls.asddls', None),
+    ('zi_ledgcfg.ddls.tpl', 'zi_{p}_ledgcfg.ddls.asddls', 'LEDGER'),
+    ('zi_ledgjrnl.ddls.tpl', 'zi_{p}_ledgjrnl.ddls.asddls', 'LEDGER'),
+    ('zr_ledgjrnl.ddls.tpl', 'zr_{p}_ledgjrnl.ddls.asddls', 'LEDGER'),
+    ('zc_ledgjrnl.ddls.tpl', 'zc_{p}_ledgjrnl.ddls.asddls', 'LEDGER'),
+    ('zc_ledgjrnl.ddlx.tpl', 'zc_{p}_ledgjrnl.ddlx.asddlxs', 'LEDGER'),
+    ('zi_ledggldoc.ddls.tpl', 'zi_{p}_ledggldoc.ddls.asddls', 'LEDGER'),
+    ('zi_ledgglkey.ddls.tpl', 'zi_{p}_ledgglkey.ddls.asddls', 'LEDGER'),
+    ('zi_ledggltot.ddls.tpl', 'zi_{p}_ledggltot.ddls.asddls', 'LEDGER'),
+    ('zr_ledgbatch.ddls.tpl', 'zr_{p}_ledgbatch.ddls.asddls', 'LEDGER'),
+    ('zc_ledgbatch.ddls.tpl', 'zc_{p}_ledgbatch.ddls.asddls', 'LEDGER'),
+    ('zc_ledgbatch.ddlx.tpl', 'zc_{p}_ledgbatch.ddlx.asddlxs', 'LEDGER'),
+    ('zr_ledgitem.ddls.tpl', 'zr_{p}_ledgitem.ddls.asddls', 'LEDGER'),
+    ('zc_ledgitem.ddls.tpl', 'zc_{p}_ledgitem.ddls.asddls', 'LEDGER'),
+    ('zc_ledgitem.ddlx.tpl', 'zc_{p}_ledgitem.ddlx.asddlxs', 'LEDGER'),
+    ('zi_ledgpaysum.ddls.tpl', 'zi_{p}_ledgpaysum.ddls.asddls', 'LEDGER'),
+    ('zi_ledgpaybat.ddls.tpl', 'zi_{p}_ledgpaybat.ddls.asddls', 'LEDGER'),
+    ('zr_paymledger.ddls.tpl', 'zr_{p}_paymledger.ddls.asddls', 'LEDGER'),
+    ('zc_paymledger.ddls.tpl', 'zc_{p}_paymledger.ddls.asddls', 'LEDGER'),
+    ('zc_paymledger.ddlx.tpl', 'zc_{p}_paymledger.ddlx.asddlxs', 'LEDGER'),
+    ('zi_ledgacctday.ddls.tpl', 'zi_{p}_ledgacctday.ddls.asddls', 'RECON'),
+    ('zi_ledgsubday.ddls.tpl', 'zi_{p}_ledgsubday.ddls.asddls', 'RECON'),
+    ('zi_ledgbankday.ddls.tpl', 'zi_{p}_ledgbankday.ddls.asddls', 'BANK'),
+    ('zi_ledgrckey.ddls.tpl', 'zi_{p}_ledgrckey.ddls.asddls', 'RECON'),
+    ('zr_ledgrecon.ddls.tpl', 'zr_{p}_ledgrecon.ddls.asddls', 'RECON'),
+    ('zc_ledgrecon.ddls.tpl', 'zc_{p}_ledgrecon.ddls.asddls', 'RECON'),
+    ('zc_ledgrecon.ddlx.tpl', 'zc_{p}_ledgrecon.ddlx.asddlxs', 'RECON'),
+    ('zi_ledgrccube.ddls.tpl', 'zi_{p}_ledgrccube.ddls.asddls', 'RECON'),
+    ('zc_ledgrcqry.ddls.tpl', 'zc_{p}_ledgrcqry.ddls.asddls', 'RECON'),
+    ('zr_ledgbankln.ddls.tpl', 'zr_{p}_ledgbankln.ddls.asddls', 'BANK'),
+    ('zc_ledgbankln.ddls.tpl', 'zc_{p}_ledgbankln.ddls.asddls', 'BANK'),
+    ('zc_ledgbankln.ddlx.tpl', 'zc_{p}_ledgbankln.ddlx.asddlxs', 'BANK'),
+    ('zi_docevtall.ddls.tpl', 'zi_{p}_docevtall.ddls.asddls', 'CHANGES'),
+    ('zr_paymchange.ddls.tpl', 'zr_{p}_paymchange.ddls.asddls', 'CHANGES'),
+    ('zc_paymchange.ddls.tpl', 'zc_{p}_paymchange.ddls.asddls', 'CHANGES'),
+    ('zc_paymchange.ddlx.tpl', 'zc_{p}_paymchange.ddlx.asddlxs', 'CHANGES'),
+    ('zr_reqchange.ddls.tpl', 'zr_{p}_reqchange.ddls.asddls', 'REQUEST+CHANGES'),
+    ('zc_reqchange.ddls.tpl', 'zc_{p}_reqchange.ddls.asddls', 'REQUEST+CHANGES'),
+    ('zr_docevtcube.ddls.tpl', 'zr_{p}_docevtcube.ddls.asddls', 'CHANGES'),
+    ('zc_docevtcube.ddls.tpl', 'zc_{p}_docevtcube.ddls.asddls', 'CHANGES'),
+    ('zc_docevtcube.ddlx.tpl', 'zc_{p}_docevtcube.ddlx.asddlxs', 'CHANGES'),
     ('zcl_paym_cds_test.clas.tpl', 'zcl_{p}_paym_cds_test.clas.abap', None),
     ('zcl_paym_cds_test.testclasses.tpl', 'zcl_{p}_paym_cds_test.clas.testclasses.abap', None),
 ]
@@ -328,7 +538,12 @@ OUTPUTS = [
 EXPOSE = [('PaymCube', 'PaymentCategory', None), ('PaymTrend', 'PaymentTrend', None),
           ('Payment', 'Payment', None), ('PaymReqLink', 'PaymentRequestLink', 'LINK'),
           ('PaymRequest', 'PaymentRequest', 'REQUEST'), ('PaymAttempt', 'PaymentRequestAttempt', 'ATTEMPT'),
-          ('PaymEvent', 'PaymentRequestEvent', 'EVENT'), ('PaymExcTrend', 'ExceptionTrend', None)]
+          ('PaymEvent', 'PaymentRequestEvent', 'EVENT'), ('PaymExcTrend', 'ExceptionTrend', None),
+          ('PaymLedger', 'PaymentLedger', 'LEDGER'), ('LedgBatch', 'SubledgerBatch', 'LEDGER'),
+          ('LedgItem', 'SubledgerItem', 'LEDGER'), ('LedgJrnl', 'JournalLine', 'LEDGER'),
+          ('LedgRecon', 'LedgerReconciliation', 'RECON'), ('LedgBankLn', 'BankStatementLine', 'BANK'),
+          ('PaymChange', 'PaymentChange', 'CHANGES'), ('ReqChange', 'RequestChange', 'REQUEST+CHANGES'),
+          ('DocEvtCube', 'DocumentChangeCategory', 'CHANGES')]
 
 
 def values(spec):
@@ -346,6 +561,10 @@ def values(spec):
         'TRACE_SO': intents['trace'][0], 'TRACE_ACTION': intents['trace'][1],
         'EXC_SO': intents['exceptions'][0], 'EXC_ACTION': intents['exceptions'][1],
         'JOB_SO': intents['job'][0], 'JOB_ACTION': intents['job'][1],
+        'LEDGER_AREA': model.get('ledger', {}).get('area', ''),
+        'LEDGER_PARAM': model.get('ledger', {}).get('parameter', ''),
+        'LEDGER_DEFAULT': model.get('ledger', {}).get('default', ''),
+        'GL_REFTYPE': model.get('gl_reference_type', ''),
     }
 
 
@@ -365,15 +584,16 @@ def outputs(root, spec):
         name, text = adapter(spec, section)
         folder = pkg if st == 'active' else pending
         files[os.path.join(folder, name.lower() + '.ddls.asddls')] = text
-    for template, pattern, flag in OUTPUTS:
+    for template, pattern, need in OUTPUTS:
         out = pattern.format(p=vals['p'])
-        text = render(_template(template), vals, flags)
-        if flag is None or flags[flag]:
-            files[os.path.join(pkg, out)] = text
-        elif state(spec, FLAGS[flag]) == 'pending':
+        st = _need_state(spec, need)
+        if st == 'active':
+            files[os.path.join(pkg, out)] = render(_template(template), vals, flags)
+        elif st == 'pending':
             # the code of a pending section is generated as if it were active, for review
-            files[os.path.join(pending, out)] = render(_template(template), vals, {**flags, flag: True})
-    exposed = [e for e in EXPOSE if e[2] is None or flags[e[2]]]
+            forced = {**flags, **{flag: True for flag in need.split('+')}}
+            files[os.path.join(pending, out)] = render(_template(template), vals, forced)
+    exposed = [e for e in EXPOSE if _need_state(spec, e[2]) == 'active']
     loops = {'EXPOSE': [{'ENTITY': f"ZC_{vals['P']}_{e[0]}", 'ALIAS': e[1]} for e in exposed],
              'ENTITY': [{'ENTITY': f"ZC_{vals['P']}_{e[0]}"} for e in exposed]}
     files[os.path.join(pkg, f"zc_{vals['p']}_paym.dcls.asdcls")] = render(_template('zc_paym.dcls.tpl'), vals, flags, loops)

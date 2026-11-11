@@ -16,6 +16,12 @@ define root view entity ZC_{{P}}_Payment
 #if LINK
       _Requests : redirected to ZC_{{P}}_PaymReqLink,
 #endif
+#if LEDGER
+      _Ledger   : redirected to ZC_{{P}}_PaymLedger,
+#endif
+#if CHANGES
+      _Changes  : redirected to ZC_{{P}}_PaymChange,
+#endif
       CompanyCode,
       OpsArea,
       @ObjectModel.text.element: [ 'FlowText' ]

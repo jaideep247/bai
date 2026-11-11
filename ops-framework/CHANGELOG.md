@@ -2,6 +2,27 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (ledger and document-change model - product layer)
+
+Goal (user, 2026-11-11): from a payment down to the universal journal, the subledger batch key as a level of its
+own, a group reconciliation per business date / company code / account / currency, and the document changes
+(reversal, clearing reset, re-clearing, void, reissue, G/L reversal) of a payment - generic, a customer's subledger
+is a mapping.
+
+### Added
+- Contract sections `ledger_item`, `ledger_batch`, `recon_account`, `recon_result`, `recon_bank_line`,
+  `document_event` and model keys `ledger` (ledger parameter) / `gl_reference_type`
+  (`tools/abaptools/payment_model.py`; composite template conditions `A+B`, `#else`; tests in `tools/tests`).
+- Templates (`templates/payment_model`): ledger parameter view, journal lines with every accounting attribute,
+  G/L documents / totals of a batch key, batch key level, subledger item (partner masked), payment ledger with the
+  payment's share of the summary, group reconciliation (live journal / subledger legs, stored result, bank lines and
+  the reset / reversal bucket) with an analytical cube and query, bank statement line, change events with G/L
+  reversals, payment and request change timelines, change volumes; facets Ledger and Changes on the payment page,
+  Changes on the request page; DCL grants incl. the cube; CDS tests (share of the summary, currencies apart,
+  reversed G/L documents excluded, batch key status, journal per account and day, old / new document link).
+- Dimension `DOC_EVENT` of `ZCA_OPS_PMDIM` (texts of the change types). Guide section 5 of
+  `docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md`; VERIFY V110-V114.
+
 ## [Unreleased] - 2026-11-11 (payment model product layer)
 
 Goal (user, 2026-11-11): categorised, drillable payment views (business users, managers, IT support) sold to

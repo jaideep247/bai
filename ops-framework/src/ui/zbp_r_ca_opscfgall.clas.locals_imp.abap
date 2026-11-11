@@ -96,7 +96,7 @@ INTERFACE lif_c.
       alertrule_minrag               TYPE string VALUE `,R,A,G`,
       alertrule_minseverity          TYPE string VALUE `,B,E,W,I`,
       controlcheck_matchfield        TYPE string VALUE `RULE_ID,CHECK_CODE,GROUP2`,
-      paymdimtext_dimension          TYPE string VALUE `FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS`,
+      paymdimtext_dimension          TYPE string VALUE `FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS,DOC_EVENT`,
     END OF gc_val.
 ENDINTERFACE.
 

@@ -1,0 +1,51 @@
+// UI annotations: document-change model - payment changes (entity PaymentChange; generated - never edit, regenerate)
+// Timeline table of the payment (and request / bank line) pages, newest first: type, date / time, source, user,
+// reason, ORIGINAL -> NEW document and the reversal document; a reset without re-clearing is red.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Change', typeNamePlural: 'Changes',
+                  title: { type: #STANDARD, value: 'EventTypeText' },
+                  description: { type: #STANDARD, value: 'EventDocument' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'EventDate', direction: #DESC }, { by: 'EventTime', direction: #DESC } ] } ]
+annotate entity ZC_{{P}}_PaymChange with
+{
+  @EndUserText.label: 'Payment'
+  PaymentDocument;
+  @EndUserText.label: 'Change'
+  @UI.lineItem: [ { position: 10, importance: #HIGH, criticality: 'EventCriticality' } ]
+  EventType;
+  @EndUserText.label: 'Document of the change'
+  @UI.lineItem: [ { position: 20 } ]
+  EventDocument;
+  @UI.hidden: true
+  OpsArea;
+  @EndUserText.label: 'Change'
+  EventTypeText;
+  @EndUserText.label: 'Company code'
+  CompanyCode;
+  @EndUserText.label: 'Original (old) document'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  OriginalDocument;
+  @EndUserText.label: 'New document'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  NewDocument;
+  @EndUserText.label: 'Reversal document'
+  @UI.lineItem: [ { position: 50 } ]
+  ReversalDocument;
+  @EndUserText.label: 'Date'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  EventDate;
+  @EndUserText.label: 'Time'
+  @UI.lineItem: [ { position: 70 } ]
+  EventTime;
+  @EndUserText.label: 'User'
+  @UI.lineItem: [ { position: 80 } ]
+  EventUser;
+  @EndUserText.label: 'Reason'
+  @UI.lineItem: [ { position: 90 } ]
+  Reason;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 100 } ]
+  EventSource;
+  @UI.hidden: true
+  EventCriticality;
+}

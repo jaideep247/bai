@@ -2,7 +2,9 @@
 // Purpose: Payment model of the {{CONSUMER}} - one payment (drill-down list and object page): the adapter row of
 //          ZI_{{P}}_PaymFact with the dimension texts and the feeder system name, and the requests it settled
 //          (association _Requests, 1:n - a payment can settle several requests and a request can be paid by
-//          several payments). Read by key or with a business date (the list makes the date mandatory) - never
+//          several payments), its ledger (association _Ledger: share of the subledger batch summary, G/L documents and
+//          journal lines - ledger model) and its document changes (_Changes: reversal, clearing reset, re-clearing, void,
+//          reissue, G/L reversal - document-change model). Read by key or with a business date (the list makes the date mandatory) - never
 //          a scan of the payment table. Read-only.
 // Modification log: {{SINCE}} | Generated from the product template (payment model).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -24,12 +26,24 @@ define root view entity ZR_{{P}}_Payment
 #if LINK
   association [0..*] to ZR_{{P}}_PaymReqLink as _Requests on $projection.PaymentDocument = _Requests.PaymentDocument
 #endif
+#if LEDGER
+  association [0..*] to ZR_{{P}}_PaymLedger  as _Ledger   on $projection.PaymentDocument = _Ledger.PaymentDocument
+#endif
+#if CHANGES
+  association [0..*] to ZR_{{P}}_PaymChange  as _Changes  on $projection.PaymentDocument = _Changes.PaymentDocument
+#endif
 {
   key Fact.BusinessDate,
   key Fact.PaymentRun,
   key Fact.PaymentDocument,
 #if LINK
       _Requests,
+#endif
+#if LEDGER
+      _Ledger,
+#endif
+#if CHANGES
+      _Changes,
 #endif
       Fact.CompanyCode,
       cast( '{{AREA}}' as abap.char( 16 ) )                 as OpsArea,
