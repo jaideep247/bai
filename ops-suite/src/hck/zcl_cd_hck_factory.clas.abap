@@ -8,6 +8,7 @@
 *& 2026-11-07 | get_param_dao: data access of ZCA_PARAM for the configuration check PARAM_INVALID.
 *& 2026-11-07 | get_runtime_dao: reads of the checks E_NUMRANGE, E_QUEUES, A_INFLIGHT.
 *& 2026-11-07 | get_recon_dao: reads of the three-way reconciliation check A_RECON_3WAY.
+*& 2026-11-11 | get_docchg_dao: reads of the document-change risk check A_DOC_CHANGE (build C).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - factory (DAO, engine)</p>
 "! Getters never read the database.
@@ -42,12 +43,18 @@ CLASS zcl_cd_hck_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_hck_recon_dao.
 
+    "! Reads of the document-change risk check (reversed payments)
+    CLASS-METHODS get_docchg_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_cd_hck_docchg_dao.
+
   PRIVATE SECTION.
 
     CLASS-DATA go_dao_double TYPE REF TO zif_cd_hck_dao.
     CLASS-DATA go_param_dao_double TYPE REF TO zif_ca_param_dao.
     CLASS-DATA go_runtime_dao_double TYPE REF TO zif_cd_hck_runtime_dao.
     CLASS-DATA go_recon_dao_double TYPE REF TO zif_cd_hck_recon_dao.
+    CLASS-DATA go_docchg_dao_double TYPE REF TO zif_cd_hck_docchg_dao.
 
 ENDCLASS.
 
@@ -81,6 +88,12 @@ CLASS zcl_cd_hck_factory IMPLEMENTATION.
   METHOD get_recon_dao.
     ro_dao = COND #( WHEN go_recon_dao_double IS BOUND THEN go_recon_dao_double
                      ELSE NEW zcl_cd_hck_recon_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_docchg_dao.
+    ro_dao = COND #( WHEN go_docchg_dao_double IS BOUND THEN go_docchg_dao_double
+                     ELSE NEW zcl_cd_hck_docchg_dao( ) ).
   ENDMETHOD.
 
 ENDCLASS.

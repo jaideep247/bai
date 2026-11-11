@@ -56,6 +56,7 @@ configuration app refuses a pattern that does not compile (message 418); check w
 | FMON_REGEN | CD_FMON | E | | .*REGEN.*\|PRISM_DUP.* *(2026-11-10: was the three codes spelled out - 68 characters, longer than the pattern field CHAR 35)* | | | EMAIL | ZCD_PAYOPS | X | 20 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_REGEN | |
 | HCK_RED | CD_HCK | E | | | R | X | EMAIL | ZCD_RTBSUP | X | 50 | 60 | 22:00–06:00 | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_HCK | |
 | HCK_RECON | CD_HCK | E | | .*_BREAK *(2026-11-10: was the three codes spelled out - 56 characters, longer than CHAR 35)* | | | EMAIL | ZCD_RTBSUP | X | 50 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_RECON | |
+| HCK_REVERSAL *(build C, 2026-11-11; active with check `A_DOC_CHANGE`)* | CD_HCK | E | | REV_(AFTER\|GL\|BANK)_.* | | | EMAIL | ZCD_RTBSUP | X | 50 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_RECON | |
 | ALL_ABORT | * | B | | | | X | EMAIL | ZCD_RTBSUP | X | 20 | 15 | — | — | ZCD_OPS_ALERT_ABORT | |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | ZCD_RTBSUP | | 10 | 60 | — | — | ZCD_OPS_ALERT_LOCKED | |
 

@@ -33,6 +33,8 @@ Seed files (one row per table row, header = field names):
 | 11 | Returns notifications (`RETURNS_NOTIF`) | Payments | CD_FMON | `F_LOT` (returns / NOC lots not processed), `F_NOCAGE` (NOC ageing) | **partial** (reviewer) — the notification back to the source is not checked: proposal P7 | X |
 | 12 | Daily reconciliation (`DAILY_RECON`) | Reconciliation | CD_HCK | `A_RECON_3WAY` (three-way reconciliation; its variances are the *Open variances* card) | full | X |
 
+**Build C (2026-11-11).** Control 12 `DAILY_RECON` also covers `A_DOC_CHANGE` (reversed payments that had left SAP, reversal keys without G/L transfer, bank lines of reversed payments - `config/hck_seed.md` §2): covered-check row `CD_HCK` / `GROUP2` = `A_DOC_CHANGE`, transported together with the activation of the check (V108). The ledger drill-down (payment ledger, batch key level, group reconciliation - `Dashboard_Production_Support.md` §9) is the evidence a reviewer opens from the control; it adds no check.
+
 A control with no covered check would always show *Healthy* — so the three gap controls are delivered **inactive**; activate each with its check row (or, by decision, as a manual-only control: then the reviewer's result and observation are the only evidence and the derived status stays *Healthy* — say so in its guidance).
 
 **Mockup example → existing check (summary).** Payment files → FMON file checks; Clearing job → job cycle checks (configure the cycle); Base-rejected items → none (P2); ECT pending items → none (P3); Outbound interfaces → FMON gateway / interface stages; BlackLine → `A_GL_TRANSFER` (partial, P4); IDoc / interface checks → **dropped** (no IDocs in use; no proposal).

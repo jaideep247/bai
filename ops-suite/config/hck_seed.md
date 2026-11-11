@@ -76,6 +76,13 @@ separated by `,` or `;` (an item cannot contain them, so no `{m,n}` quantifier).
 A_GL_TRANSFER PARAM4 = BKPF-AWTYP of the transfer (default `FKKSU`, VERIFY-DDIC); a key counts as transferred
 per company code only with a non-reversed BKPF of that type (A43). Metric GL_MISSING_KEYS carries the
 uncapped count.
+| A_DOC_CHANGE | Reversed payments that had left SAP, G/L and bank effect | A | ZCL_CD_HCK_C_DOCCHG | | 25 | H | `7` (window days) | `1` (G/L lag days) | `500` (row cap) | 300 |
+
+A_DOC_CHANGE (build C, 2026-11-11; `HCK_MORNING_REPORT.md` §7e) PARAM4 = payment statuses that mean the payment
+left SAP (default `ISSUED,CONFIRMED,CLEARED,RETURNED,RETRIEVED`; STOPPED is a stop and reissue, not a risk).
+**Delivered inactive** (ACTIVE blank): activate by transport after V108 (DFKKKO-STBEL / CPUDT and the CPUDT index,
+DPAYH by DOC1R) in QA1. Findings REV_AFTER_LEFT_SAP, REV_GL_NOT_REVERSED, REV_BANK_LINE (E), REV_READ_CAPPED (W);
+the G/L transfer rule is the one of A_GL_TRANSFER (its read, AWTYP default `FKKSU`). Alerts through `HCK_RED`.
 | B_JOB_RUNTIME | Batch job duration vs rolling baseline | B | ZCL_CD_HCK_C_JOB_RUNTIME | X | 30 | M | `ZCD_.*` | `1` (yesterday) | | 120 |
 | B_APPLOG | Application log error rate per object | B | ZCL_CD_HCK_C_APPLOG | X | 40 | M | `FKK.*,ZCD.*` (**confirm objects**) | | `1` | 120 |
 | B_VOLUME | Payment engine volumes (yesterday) | B | ZCL_CD_HCK_C_VOLUME | X | 50 | L | `1` (offset) | `1` (days) | | 300 |
@@ -125,6 +132,9 @@ gap, here in the morning report). No threshold row (findings, no metrics); alert
 | A_RET_AGED | RET_AGED | * | 1 | 25 | X | NONE | | |
 | A_RET_AGED | RET_AGED | `<bukrs, confirm>` | 10 | 100 | X | NONE | | |
 | A_GL_TRANSFER | GL_MISSING_KEYS | * | 1 | 5 | X | NONE | | |
+| A_DOC_CHANGE | RV_LEFT_SAP | * | 1 | 1 | X | NONE | | |
+| A_DOC_CHANGE | RV_GL_NOT_REV | * | 1 | 1 | X | NONE | | |
+| A_DOC_CHANGE | RV_BANK_LINE | * | 1 | 1 | X | NONE | | |
 | C_PRQ_NO_SPE | PRQ_FAILED_NO_SPE | * | 1 | 1 | X | NONE | | |
 | C_CHQ_STATUS | CHEQUE_REGRESSION | * | 1 | 5 | X | NONE | | |
 | C_PRQ_CANCEL | PRQ_PAID_CANCELLED | * | 1 | 1 | X | NONE | | |

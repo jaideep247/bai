@@ -1,6 +1,6 @@
 # Message class ZCD_OPS
 
-Number ranges: 001–099, 700–799 and 800–849 core · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
+Number ranges: 001–099, 700–799 and 800–849 core · 860–889 ledger and document changes (build C, HCK check A_DOC_CHANGE) · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
 Every user-facing text of the suite is one of these messages (built with `ZCL_CD_OPS_UTIL=>TEXT( )`) or a text symbol (`docs/text_elements/`); numbers are referenced through the `gc_msg-*` constants of each area's types interface.
 Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the operations framework raises moved to its class ZCA_OPS with their numbers (2026-11-10, `ops-framework/config/zca_ops_messages.md`); a number listed there is not reused here.
 
@@ -530,3 +530,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 838 | Expected &1, actual &2, difference &3, tolerance &4 - source: |
 | 839 | Health check &1 (category &2, priority &3): &4 |
 | 840 | No authorisation for company code &1 (ZCA_OPS, area CD_HCK) |
+| 860 | Payment &1 reversed by &2 on &3 after it left SAP (&4) |
+| 861 | Reversal &1 of payment &2: reconciliation key &3 has no G/L transfer |
+| 862 | Bank line &1 references payment &2, reversed by &3 |
+| 863 | Document changes: read capped at &1 rows (window &2 to &3) |
