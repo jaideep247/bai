@@ -9,7 +9,7 @@
 *& payment request handled manually). No commit - caller's LUW.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
-*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
+*& 2026-11-06 | Webhook key of the area (rename regression fixed); column names in comments.
 *& 2026-11-06 | Performance fix 5: index OBJ is (MANDT, AREA, OBJECT_KEY) - the object type is not known here.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Purpose: the release approval is no longer a caller (read-only scope).

@@ -28,9 +28,9 @@ tools/abaptools/onboarding.py refuses an active row with a placeholder or a VERI
 
 Usage:
   python3 tools/abaptools/new_process.py --root <component> --spec <process.json> [--dry-run]
-  python3 tools/abaptools/new_process.py --root <component> --area ZPE_OPS --process PAY_LIFE \\
-      --name "Payment lifecycle" --role Z_PE_OPS_OPERATOR --owner-team "Payment operations" \\
-      --agg "R1:COUNT:ZPE_REQUEST:STATUS:EQ:PENDING" --class "R3:ZCL_PE_C_REFUND" [--inactive] [--dry-run]
+  python3 tools/abaptools/new_process.py --root <component> --area ZXX_OPS --process PAY_LIFE \\
+      --name "Payment lifecycle" --role Z_XX_OPS_OPERATOR --owner-team "Payment operations" \\
+      --agg "R1:COUNT:ZXX_REQUEST:STATUS:EQ:PENDING" --class "R3:ZCL_XX_C_REFUND" [--inactive] [--dry-run]
 
 Specification (JSON): area, process, name, owner_team, auth_role, schedule_group (default DAILY), active
 (default true), own_data, purge_target, purge_class, purge_param (retention parameter in area CA_OPS),
@@ -223,7 +223,7 @@ def merge(path, columns, keys, new_rows):
 
 
 def class_prefix(name):
-    """zcl_pe_c_refund -> (zcl_pe_c_refund, ZCL_PE_C_REFUND)."""
+    """zcl_xx_c_refund -> (zcl_xx_c_refund, ZCL_XX_C_REFUND)."""
     return name.lower(), name.upper()
 
 

@@ -38,7 +38,7 @@ ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
 # (morning report D_POSTAREA_INVALID). Rule groups of ZBTM are checked there against ZCD_BTC_RULE.
 SPEC = {
     'ebs': dict(
-        folder='ebs', pe_area='CD_EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
+        folder='ebs', area='CD_EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
         title='EBS rules and mapping', tables=[
             ('zcd_btc_rule', 'BtcRule', 'zcd_d_btcrule', 'Rule assignment', 'Rule assignments', [],
              [('enum', 'severity', ',' + SEV), ('enum', 'action', ',' + ACTIONS)]),
@@ -56,7 +56,7 @@ SPEC = {
               ('approved', 'key_field', 'table_name'), ('approved', 'status_field', 'table_name')]),
         ]),
     'fmon': dict(
-        folder='fmon', pe_area='CD_FMON', root='FmonCfgAll', draft='zcd_d_fmoncfg', service='ZUI_CD_FMON_CFG',
+        folder='fmon', area='CD_FMON', root='FmonCfgAll', draft='zcd_d_fmoncfg', service='ZUI_CD_FMON_CFG',
         title='File monitoring setup', tables=[
             ('zcd_fmon_iface', 'FmonIface', 'zcd_d_fmiface', 'Interface', 'Interfaces', [],
              [('enum', 'direction', 'I,O'), ('pcre', 'name_pattern')]),
@@ -89,7 +89,7 @@ SPEC = {
              [('window', 'window_from', 'window_to')]),
         ]),
     'hck': dict(
-        folder='hck', pe_area='CD_HCK', root='HckCfgAll', draft='zcd_d_hckcfg', service='ZUI_CD_HCK_CFG',
+        folder='hck', area='CD_HCK', root='HckCfgAll', draft='zcd_d_hckcfg', service='ZUI_CD_HCK_CFG',
         title='Health check setup', tables=[
             ('zcd_hck_def', 'HckCheckDef', 'zcd_d_hckdef', 'Check', 'Checks', [],
              [('class', 'class_name', 'ZIF_CD_HCK_CHECK'), ('enum', 'category', 'A,B,C,D,E'),
@@ -129,7 +129,7 @@ SPEC = {
              [('enum', 'kind', 'THREEWAY,ACH_ZUONR,STRIPE'), ('enum', 'side', 'C,D')]),
         ]),
     'core': dict(
-        folder='core', pe_area='CD_OPS', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
+        folder='core', area='CD_OPS', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
         title='Approved tables and payment stages', tables=[
             # Runtime parameters are maintained in the framework app ZUI_CA_PARAM (ZCA_PARAM), not here -
             # also the stale threshold per monitor (MON_STALE_AFTER_MIN_<area>, was ZCD_OPS_MONCFG, 2026-11-08).

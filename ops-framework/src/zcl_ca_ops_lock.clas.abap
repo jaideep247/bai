@@ -9,7 +9,7 @@
 *& engines are tested with an injected double; the lock server itself is QA1.
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
-*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
+*& 2026-11-06 | Webhook key of the area (rename regression fixed); column names in comments.
 *& 2026-11-06 | Test seams ENQUEUE / DEQUEUE around the lock function calls (coverage gap closure).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_LOCK to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*

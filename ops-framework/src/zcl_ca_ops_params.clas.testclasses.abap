@@ -33,7 +33,7 @@ CLASS ltc_params DEFINITION FINAL FOR TESTING
         bool_off     TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_FLAG_OFF',
         bool_on      TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_FLAG_ON',
         bool_default TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_FLAG_DEFAULT',
-        list         TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_WATCH_PE_AREAS',
+        list         TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_WATCH_AREAS',
         select       TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_SELECT',
         text         TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_MAIL_ROUTE',
         unknown      TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_NOT_DEFINED',

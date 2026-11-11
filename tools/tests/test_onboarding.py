@@ -22,15 +22,15 @@ AUTH = 'docs/auth.md'
 
 def spec(**changes):
     base = {
-        'area': 'ZPE_OPS', 'process': 'PAY_LIFE', 'name': 'Payment lifecycle', 'owner_team': 'Payment operations',
-        'auth_role': 'Z_PE_OPS_OPERATOR', 'schedule_group': 'DAILY', 'new_area': {'description': 'Payments'},
-        'alert_rule': {'id': 'PAY_LIFE', 'destination': 'ZPE_PAYOPS'},
+        'area': 'ZXX_OPS', 'process': 'PAY_LIFE', 'name': 'Payment lifecycle', 'owner_team': 'Payment operations',
+        'auth_role': 'Z_XX_OPS_OPERATOR', 'schedule_group': 'DAILY', 'new_area': {'description': 'Payments'},
+        'alert_rule': {'id': 'PAY_LIFE', 'destination': 'ZXX_PAYOPS'},
         'checks': [
             {'id': 'PAY_PENDING', 'description': 'Pending requests past their date', 'bukrs_aware': True,
-             'aggregates': [{'id': 'R1', 'table': 'ZPE_REQUEST', 'func': 'AGE', 'date_field': 'REQ_DATE',
+             'aggregates': [{'id': 'R1', 'table': 'ZXX_REQUEST', 'func': 'AGE', 'date_field': 'REQ_DATE',
                              'min_age_days': 1, 'bukrs_field': 'BUKRS', 'status_field': 'STATUS',
                              'status_value': 'PENDING', 'amber': 1, 'red': 3}]},
-            {'id': 'PAY_REFUND', 'description': 'Rejected without refund', 'class': 'ZCL_PE_C_REFUND',
+            {'id': 'PAY_REFUND', 'description': 'Rejected without refund', 'class': 'ZCL_XX_C_REFUND',
              'skeleton': True}],
     }
     base.update(changes)
@@ -44,7 +44,7 @@ class OnboardingTest(unittest.TestCase):
         self.root = self.tmp.name
         os.makedirs(os.path.join(self.root, 'docs'))
         with open(os.path.join(self.root, AUTH), 'w', encoding='utf-8') as fh:
-            fh.write('| `Z_PE_OPS_OPERATOR` | ZPE_OPS | 02, 03 | own company codes |\n')
+            fh.write('| `Z_XX_OPS_OPERATOR` | ZXX_OPS | 02, 03 | own company codes |\n')
         # the framework's no-code check, as a class of the component's sources
         os.makedirs(os.path.join(self.root, 'src'))
         open(os.path.join(self.root, 'src', 'zcl_ca_ops_chk_agg.clas.abap'), 'w').close()
@@ -81,17 +81,17 @@ class OnboardingTest(unittest.TestCase):
                      'param_areas.csv'):
             self.assertIn(os.path.join('config', name), changes)
         self.assertEqual(changes[os.path.join('config', 'control_checks.csv')], 2)
-        self.assertEqual(changes[os.path.join('docs', 'processes', 'ZPE_OPS_PAY_LIFE.md')], 'new')
+        self.assertEqual(changes[os.path.join('docs', 'processes', 'ZXX_OPS_PAY_LIFE.md')], 'new')
 
     def test_skeleton_class_and_test(self):
         new_process.scaffold(self.root, spec())
-        src = os.path.join(self.root, 'src', 'zcl_pe_c_refund.clas.abap')
+        src = os.path.join(self.root, 'src', 'zcl_xx_c_refund.clas.abap')
         with open(src, encoding='utf-8') as fh:
             text = fh.read()
         self.assertTrue(text.startswith('*&---'))
-        self.assertIn('*& Artifact: zcl_pe_c_refund.clas.abap', text)
+        self.assertIn('*& Artifact: zcl_xx_c_refund.clas.abap', text)
         self.assertIn('INTERFACES zif_ca_ops_check.', text)
-        self.assertTrue(os.path.isfile(os.path.join(self.root, 'src', 'zcl_pe_c_refund.clas.testclasses.abap')))
+        self.assertTrue(os.path.isfile(os.path.join(self.root, 'src', 'zcl_xx_c_refund.clas.testclasses.abap')))
 
     def test_missing_control_fails(self):
         new_process.scaffold(self.root, spec())
@@ -108,8 +108,8 @@ class OnboardingTest(unittest.TestCase):
         self.assertTrue(any('no owner' in f for f in self.failures()))
 
     def test_role_not_in_sheet_fails(self):
-        new_process.scaffold(self.root, spec(auth_role='Z_PE_UNKNOWN'))
-        self.assertTrue(any('role Z_PE_UNKNOWN' in f for f in self.failures()))
+        new_process.scaffold(self.root, spec(auth_role='Z_XX_UNKNOWN'))
+        self.assertTrue(any('role Z_XX_UNKNOWN' in f for f in self.failures()))
 
     def test_own_data_needs_purge(self):
         new_process.scaffold(self.root, spec())
@@ -137,7 +137,7 @@ class OnboardingTest(unittest.TestCase):
     def test_inactive_new_area_not_delivered(self):
         changes = dict(new_process.scaffold(self.root, spec(active=False)))
         self.assertNotIn(os.path.join('config', 'param_areas.csv'), changes)
-        with open(os.path.join(self.root, 'docs', 'processes', 'ZPE_OPS_PAY_LIFE.md'), encoding='utf-8') as fh:
+        with open(os.path.join(self.root, 'docs', 'processes', 'ZXX_OPS_PAY_LIFE.md'), encoding='utf-8') as fh:
             self.assertIn('added on activation', fh.read())
 
     def test_active_process_needs_area(self):
@@ -163,9 +163,9 @@ class OnboardingTest(unittest.TestCase):
             new_process.scaffold(self.root, broken)
 
     def test_command_line_dry_run_writes_nothing(self):
-        code = new_process.main(['--root', self.root, '--area', 'ZPE_OPS', '--process', 'PAY_LIFE',
-                                 '--name', 'Payment lifecycle', '--role', 'Z_PE_OPS_OPERATOR',
-                                 '--agg', 'PAY_COUNT:COUNT:ZPE_REQUEST:STATUS:EQ:PENDING', '--dry-run'])
+        code = new_process.main(['--root', self.root, '--area', 'ZXX_OPS', '--process', 'PAY_LIFE',
+                                 '--name', 'Payment lifecycle', '--role', 'Z_XX_OPS_OPERATOR',
+                                 '--agg', 'PAY_COUNT:COUNT:ZXX_REQUEST:STATUS:EQ:PENDING', '--dry-run'])
         self.assertEqual(code, 0)
         self.assertFalse(os.path.isdir(os.path.join(self.root, 'config')))
 
