@@ -770,7 +770,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 10. `NRIV`-OBJECT, SUBOBJECT, NRRANGENR, TOYEAR, FROMNUMBER, TONUMBER, NRLEVEL, EXTERNIND (`get_number_ranges`; character limits CHAR 20)
 11. `TRFCQOUT`-QNAME, DEST, QSTATE, QRFCDATUM, QRFCUZEIT and `TRFCQIN`-QNAME, QSTATE, QRFCDATUM, QRFCUZEIT (constants `GC_TRFCQOUT` / `GC_TRFCQIN`, validated at run time; also whether the queue state shown in SMQ1 / SMQ2 is held in these tables or in TRFCQSTATE)
 12. bgRFC unit / error table and its fields (PARAM4 of `E_QUEUES`; SBGRFCMON tables on 7.58)
-13. `DPAYH`-XVORL, BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; `TFK042Z` key LAND1 / ZLSCH via `T001`-LAND1 (`get_issued_payments`)
+13. `DPAYH`-XVORL, BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; `TFK042Z` key LAND1 / ZLSCH via the company code's country (`get_issued_payments`; released `I_CompanyCode`-Country through `ZI_CD_OpsCompanyCode` since 2026-11-11, was `T001`-LAND1 - V123)
 14. `BSEG`-XREF2 / ZUONR / AUGBL / HKONT read by BUKRS + XREF2 + GJAHR (FOR ALL ENTRIES, `get_gl_lines_by_xref2`): BSEG has no index on XREF2 - access path in a QA1 SQL trace (secondary index BUKRS / XREF2, or the clearing accounts in PARAM1); fiscal year = calendar year assumed
 15. `FEBEP`-VORGC / VGEXT (bank code of the line, as the EBS read) and the CHECT form of AUGBL / ZTNUM (with or without leading zeros - both are read); ZTNUM length and the 13-character suffix; `DFKKCR`-STATE is **confirmed** (B / V / blank)
 16. `DFKKRP`-BETRW (returned amount, shared EBS read `GET_RETURN_ITEMS`)

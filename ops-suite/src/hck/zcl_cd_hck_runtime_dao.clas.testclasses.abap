@@ -25,6 +25,8 @@
 *& 2026-11-08 | Customer posting areas: method classes from ZPMC and lifecycle roles from ZBTR with the
 *&            | in-memory posting areas (pm_classes_from_posting_area, btc_roles_lifecycle_only); the
 *&            | reference read uses ZCD_HCK_CLRRULE as stand-in table.
+*& 2026-11-11 | D-C8: the company code's country is doubled on ZI_CD_OpsCompanyCode (released
+*&            | I_CompanyCode) instead of T001; same rows and assertions.
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -108,7 +110,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'NRIV' ) ( 'DPAYH' ) ( 'T001' ) ( 'TFK042Z' ) ( 'TRFCQOUT' ) ) ).
+      i_dependency_list = VALUE #( ( 'NRIV' ) ( 'DPAYH' ) ( 'ZI_CD_OPSCOMPANYCODE' ) ( 'TFK042Z' ) ( 'TRFCQOUT' ) ) ).
   ENDMETHOD.
 
 
@@ -178,8 +180,8 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
   METHOD insert_payments.
     DATA lt_dpayh TYPE STANDARD TABLE OF dpayh WITH EMPTY KEY.
     DATA ls_dpayh TYPE dpayh.
-    DATA lt_t001 TYPE STANDARD TABLE OF t001 WITH EMPTY KEY.
-    DATA ls_t001 TYPE t001.
+    DATA lt_companies TYPE STANDARD TABLE OF zi_cd_opscompanycode WITH EMPTY KEY.
+    DATA ls_company TYPE zi_cd_opscompanycode.
     DATA lt_tfk042z TYPE STANDARD TABLE OF tfk042z WITH EMPTY KEY.
     DATA ls_tfk042z TYPE tfk042z.
     " Disbursement wire in the window (read)
@@ -219,10 +221,10 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     INSERT ls_dpayh INTO TABLE lt_dpayh.
     go_env->insert_test_data( lt_dpayh ).
 
-    ls_t001-bukrs = gc_test-bukrs.
-    ls_t001-land1 = gc_test-land1.
-    INSERT ls_t001 INTO TABLE lt_t001.
-    go_env->insert_test_data( lt_t001 ).
+    ls_company-companycode = gc_test-bukrs.
+    ls_company-country     = gc_test-land1.
+    INSERT ls_company INTO TABLE lt_companies.
+    go_env->insert_test_data( lt_companies ).
     ls_tfk042z-land1 = gc_test-land1.
     ls_tfk042z-zlsch = gc_test-wire.
     INSERT ls_tfk042z INTO TABLE lt_tfk042z.
@@ -327,7 +329,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
 
 
   " Rule: payments of the requested methods in the run-date window, proposal runs and blank
-  " DOC1R excluded, with the collection indicator of the method (TFK042Z via T001)
+  " DOC1R excluded, with the collection indicator of the method (TFK042Z via the company code's country)
   METHOD payments_window_and_flow.
     TRY.
         DATA(lt_payments) = mo_cut->get_issued_payments( it_methods  = VALUE #( ( gc_test-wire ) ( gc_test-debit ) )

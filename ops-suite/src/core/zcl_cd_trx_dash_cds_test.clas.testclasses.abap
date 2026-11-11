@@ -18,7 +18,11 @@
 *& source). Does not prove live SAP runtime behavior.
 *& VERIFY-ADT: create( i_select_base_dependencies = abap_true ) doubles the
 *& standard tables behind the view stack on 7.58; $session.system_date is not
-*& doubled (test data is built relative to today).
+*& doubled (test data is built relative to today). Since 2026-11-11 the
+*& company code is SAP's released I_CompanyCode (decision D-C8): with base
+*& dependencies its base table T001 is the double the rows go into
+*& (VERIFY_Suite.md V123: if I_CompanyCode inner-joins another table on the
+*& release, add that row too, or double I_COMPANYCODE as a dependency).
 *& Modification log:
 *& 2026-11-06 | Initial version (transactions dashboard).
 *& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
@@ -27,6 +31,8 @@
 *&            | independent MAX of the payment run, ambiguous source, company code of the KPI).
 *& 2026-11-08 | Exceptions-only worklist: rows, measures and date kinds of the worklist; the
 *&            | 400-day item driver, the POSTING date kind and the "as of" history are gone.
+*& 2026-11-11 | D-C8: ZI_CD_PayWorkItem / ZI_CD_TrxItem read the released I_CompanyCode; the T001 rows
+*&            | stay as the base-table double under it (same rows and assertions).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -89,8 +95,8 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
       RETURNING
         VALUE(rs_run) TYPE dpayh.
 
-    "! Company codes US01 / US02, payment methods (K disbursement, C cheque, D collection, and the
-    "! fixture methods E wire / G ACH)
+    "! Company codes US01 / US02 (base table T001 of the released I_CompanyCode), payment methods
+    "! (K disbursement, C cheque, D collection, and the fixture methods E wire / G ACH)
     CLASS-METHODS insert_config
       IMPORTING
         io_env TYPE REF TO if_cds_test_environment.

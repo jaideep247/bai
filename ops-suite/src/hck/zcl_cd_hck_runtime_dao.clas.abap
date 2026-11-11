@@ -6,7 +6,8 @@
 *& per queue / destination / state / day (table and field names validated
 *& against the runtime DDIC and, for a configured table, ZCD_OPS_TABWL),
 *& DPAYH payments in a run-date window with the collection indicator of
-*& their method (TFK042Z via T001), G/L lines by XREF2 (BSEG) and the
+*& their method (TFK042Z via the country of the released I_CompanyCode),
+*& G/L lines by XREF2 (BSEG, kept on the table) and the
 *& in-flight configuration: active rows of ZCD_HCK_CLRRULE / _SEQOUT and the
 *& entries of the customer posting areas ZPMC (method classes, house-bank
 *& calendars) and ZBTR usage LIFECYCLE (ZCL_CD_OPS_POSTAREA, one read per run).
@@ -29,6 +30,9 @@
 *& 2026-11-08 | Customer posting areas: get_pm_classes from ZPMC (one entry per payment method, house bank * = class,
 *&            | a house bank = calendar) and get_btc_roles from ZBTR usage LIFECYCLE through ZCL_CD_OPS_POSTAREA (were
 *&            | SELECTs on ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE).
+*& 2026-11-11 | Decision D-C8 extended: the country of a payment's company code comes from the released
+*&            | I_CompanyCode (through ZI_CD_OpsCompanyCode) instead of T001; get_gl_lines_by_xref2 stays
+*&            | on the entry view table (XREF2 search without index - Performance_Review.md section 14).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION
@@ -196,13 +200,14 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
                                                     low    = lv_method ) ).
     " Confirmed: DPAYH LAUFD / LAUFI / DOC1R (payment document = DFKKOP-AUGBL), TFK042Z-XEINZ
     " collections vs disbursements. VERIFY-DDIC: DPAYH-XVORL, BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS;
-    " TFK042Z key LAND1 / ZLSCH via T001-LAND1 (as ZCL_CD_OPS_TRACE_DAO=>GET_METHOD_KIND).
-    " Index: DPAYH by LAUFD (run date window) - performance check in QA1
+    " TFK042Z key LAND1 / ZLSCH via the company code's country (released I_CompanyCode through
+    " ZI_CD_OpsCompanyCode, decision D-C8; as ZCL_CD_OPS_TRACE_DAO=>GET_METHOD_KIND).
+    " Index: DPAYH by LAUFD (run date window) - performance check in QA1; GLV-PV6
     SELECT p~doc1r, p~laufd, p~laufi, p~bukrs, p~pymet, p~hbkid, p~valut,
            p~rwbtr AS amount, p~waers AS currency, z~xeinz
       FROM dpayh AS p
-      INNER JOIN t001 AS t ON t~bukrs = p~bukrs
-      INNER JOIN tfk042z AS z ON  z~land1 = t~land1
+      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+      INNER JOIN tfk042z AS z ON  z~land1 = t~country
                               AND z~zlsch = p~pymet
       WHERE p~laufd BETWEEN @iv_from AND @iv_to
         AND p~xvorl = @space
@@ -221,12 +226,13 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
     ENDIF.
     " The join of GET_ISSUED_PAYMENTS by payment document (DPAYH-DOC1R = DFKKOP-AUGBL, confirmed);
     " DOC1R is not unique in DPAYH (re-runs): every run is returned, the caller picks the latest.
-    " VERIFY-DDIC as GET_ISSUED_PAYMENTS; index on DPAYH-DOC1R expected (Performance_Review.md)
+    " VERIFY-DDIC as GET_ISSUED_PAYMENTS; index on DPAYH-DOC1R expected (Performance_Review.md); the
+    " company code's country from ZI_CD_OpsCompanyCode (released I_CompanyCode, decision D-C8)
     SELECT p~doc1r, p~laufd, p~laufi, p~bukrs, p~pymet, p~hbkid, p~valut,
            p~rwbtr AS amount, p~waers AS currency, z~xeinz
       FROM dpayh AS p
-      INNER JOIN t001 AS t ON t~bukrs = p~bukrs
-      INNER JOIN tfk042z AS z ON  z~land1 = t~land1
+      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+      INNER JOIN tfk042z AS z ON  z~land1 = t~country
                               AND z~zlsch = p~pymet
       FOR ALL ENTRIES IN @it_docno
       WHERE p~doc1r = @it_docno-table_line
@@ -254,7 +260,11 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
     " filled (XREF2 is the stable key: Stripe payout processing overwrites ZUONR with the statement
     " descriptor). Bounded by company code, fiscal year window and XREF2 key set (FOR ALL ENTRIES);
     " BSEG has no index on XREF2 - access path VERIFY in a QA1 SQL trace (Performance_Review.md):
-    " secondary index BUKRS / XREF2 or the G/L clearing accounts in PARAM1 of the rule
+    " secondary index BUKRS / XREF2 or the G/L clearing accounts in PARAM1 of the rule.
+    " Stays on the entry view table (D-C8): a FOR ALL ENTRIES search by XREF2 over the whole entry view
+    " (no primary-key prefix beyond the company code, no index yet - V106); through the released view
+    " I_OperationalAcctgDocItem the access path is unproven - switch only after GLV-PV7
+    " (Performance_Review.md section 14) and the index decision
     SELECT bukrs, belnr, gjahr, buzei, xref2, zuonr, augbl
       FROM bseg
       FOR ALL ENTRIES IN @it_keys

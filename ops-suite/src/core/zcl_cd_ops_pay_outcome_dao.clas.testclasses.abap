@@ -27,6 +27,9 @@
 *&            | their package; a run deletes the packages of earlier runs of its own mode only (SWEEP and FAST
 *&            | share sources); the count of failed runs survives a watermark save and a source without
 *&            | watermark gets a row without position.
+*& 2026-11-11 | D-C8: the company code's country is doubled on ZI_CD_OpsCompanyCode (released
+*&            | I_CompanyCode) instead of T001; same rows and assertions (BKPF / BSEG doubles kept - the
+*&            | GL source stays on the tables).
 *&---------------------------------------------------------------------*
 CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -173,7 +176,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'DFKKKO' ) ( 'DFKKOP' ) ( 'FEBEP' ) ( 'DFKKRP' ) ( 'BKPF' ) ( 'BSEG' )
                                    ( 'DFKKCR' ) ( 'ZCD_PAY_OUTCOME' ) ( 'ZCD_PAY_OUTWM' ) ( 'ZCD_PAY_OUTPKG' )
-                                   ( 'ZCD_PAY_OUTPKGM' ) ( 'DPAYH' ) ( 'T001' ) ( 'TFK042Z' ) ) ).
+                                   ( 'ZCD_PAY_OUTPKGM' ) ( 'DPAYH' ) ( 'ZI_CD_OPSCOMPANYCODE' ) ( 'TFK042Z' ) ) ).
   ENDMETHOD.
 
 
@@ -521,14 +524,14 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
 
 
   METHOD given_country.
-    DATA lt_t001 TYPE STANDARD TABLE OF t001 WITH EMPTY KEY.
-    DATA ls_t001 TYPE t001.
+    DATA lt_companies TYPE STANDARD TABLE OF zi_cd_opscompanycode WITH EMPTY KEY.
+    DATA ls_company TYPE zi_cd_opscompanycode.
     DATA lt_tfk042z TYPE STANDARD TABLE OF tfk042z WITH EMPTY KEY.
     DATA ls_tfk042z TYPE tfk042z.
-    ls_t001-bukrs = gc-bukrs.
-    ls_t001-land1 = gc_agg-country.
-    INSERT ls_t001 INTO TABLE lt_t001.
-    go_env->insert_test_data( lt_t001 ).
+    ls_company-companycode = gc-bukrs.
+    ls_company-country     = gc_agg-country.
+    INSERT ls_company INTO TABLE lt_companies.
+    go_env->insert_test_data( lt_companies ).
     ls_tfk042z-land1 = gc_agg-country.
     ls_tfk042z-zlsch = gc_agg-wire.
     INSERT ls_tfk042z INTO TABLE lt_tfk042z.

@@ -4,12 +4,16 @@
 //          (FIN + source of a payment request), open or exception (a finding), the payment run row of a
 //          payment (DPAYH by its key LAUFD + LAUFI + DOC1R, proposal runs excluded: method, house bank,
 //          value date, amount, currency, live status) and the direction (TFK042Z-XEINZ of the company
-//          code's country). The worklist date is the run date of a payment and the due date of a request.
+//          code's country - SAP's released view I_CompanyCode, decision D-C8). The worklist date is the
+//          run date of a payment and the due date of a request.
 //          One row per worklist row; nothing is re-derived from evidence here (the outcome is the
 //          snapshot's). Read-only.
 // Modification log: 2026-11-08 | Initial version (exceptions-only worklist replaces the 400-day item driver
 //                   and the "outcome as of" history of the transactions dashboard).
+//                   2026-11-11 | Decision D-C8 extended: the company code's country from the released
+//                   I_CompanyCode (Country = T001-LAND1) instead of T001; element names unchanged.
 // VERIFY-SE11: DPAYH key LAUFD + LAUFI + DOC1R unique without proposal runs (as ZCL_CD_OPS_PAY_OUTCOME_DAO).
+// VERIFY-ADT (VERIFY_Suite.md V123): I_CompanyCode C1 on 7.58, elements CompanyCode, Country; PlanViz GLV-PV6
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Payment worklist - current row with payment'
@@ -22,8 +26,8 @@ define view entity ZI_CD_PayWorkItem
                                             and Pay.laufi = Work.RunId
                                             and Pay.doc1r = Work.ClearingDoc
                                             and Pay.xvorl = ' '
-    left outer join t001             as Cc  on  Cc.bukrs = Work.CompanyCode
-    left outer join tfk042z          as Pm  on  Pm.land1 = Cc.land1
+    left outer join I_CompanyCode    as Cc  on  Cc.CompanyCode = Work.CompanyCode
+    left outer join tfk042z          as Pm  on  Pm.land1 = Cc.Country
                                             and Pm.zlsch = Pay.pymet
 {
   key Work.FinId,

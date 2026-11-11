@@ -3,7 +3,8 @@
 *& Purpose:
 *& SQL for the payment engine lookups of the EBS rules: returns lots, payment
 *& run, ACH retrieval log, check register, FI documents and the bank G/L
-*& balance. Uses only the confirmed join paths of the landscape; every field
+*& balance (G/L side through SAP's released views, decision D-C8). Uses only
+*& the confirmed join paths of the landscape; every field
 *& that is not confirmed is marked VERIFY-DDIC. Read-only.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -22,6 +23,9 @@
 *& 2026-11-07 | Returns lot read also returns the item amount DFKKRP-BETRW (A_INFLIGHT, VERIFY-DDIC).
 *& 2026-11-10 | R21 lookup: table and fields only when approved in ZCD_OPS_TABWL (EBS / LOOKUP, field-level,
 *&            | 812) and displayable (S_TABU_NAM 03, 813) - a DDIC check alone let any table be read.
+*& 2026-11-11 | Decision D-C8 extended: get_fi_lines reads the released entry view I_OperationalAcctgDocItem
+*&            | (through ZI_CD_OpsGlItem), get_gl_balances the released I_JournalEntryItem (through
+*&            | ZI_CD_EbsGlLine) - no DCL in a job read; same keys, filters and sums.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -214,13 +218,17 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
   METHOD zif_cd_ebs_sap_dao~get_fi_lines.
     CHECK it_keys IS NOT INITIAL.
-    " Key access only (BUKRS/BELNR/GJAHR) - never BSEG by AUGBL or XREF2 (full scan)
-    SELECT bukrs, belnr, gjahr, buzei, hkont, augbl
-      FROM bseg
+    " Key access only (company code / document / fiscal year) - never by AUGBL or XREF2 (full scan).
+    " Released entry view I_OperationalAcctgDocItem through ZI_CD_OpsGlItem (decision D-C8; the view keeps
+    " the released view's DCL out of a job read): the same lines as the entry view table by its primary
+    " key. VERIFY-ADT element names: ZI_CD_OpsGlItem; PlanViz GLV-PV1 (Performance_Review.md section 14)
+    SELECT companycode AS bukrs, accountingdocument AS belnr, fiscalyear AS gjahr,
+           accountingdocumentitem AS buzei, glaccount AS hkont, clearingaccountingdocument AS augbl
+      FROM zi_cd_opsglitem
       FOR ALL ENTRIES IN @it_keys
-      WHERE bukrs = @it_keys-bukrs
-        AND belnr = @it_keys-belnr
-        AND gjahr = @it_keys-gjahr
+      WHERE companycode        = @it_keys-bukrs
+        AND accountingdocument = @it_keys-belnr
+        AND fiscalyear         = @it_keys-gjahr
       INTO CORRESPONDING FIELDS OF TABLE @rt_lines.
   ENDMETHOD.
 
@@ -230,18 +238,20 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     DATA(lv_ledger) = zcl_cd_ops_factory=>get_params( )->get_param(
                         iv_name    = zif_cd_ebs_types=>gc_param-gl_ledger
                         iv_default = zif_cd_ebs_types=>gc_param_default-gl_ledger ).
-    " Aggregation at database level (ACDOCA) - VERIFY-DDIC: TSL/RTCUR for account-currency balance.
-    " Fix 6: the requests are an internal table joined on the database (HANA), one SUM per
+    " Aggregation at database level - balance in the balance transaction currency (ACDOCA TSL / RTCUR
+    " under the released view I_JournalEntryItem, read through ZI_CD_EbsGlLine: decision D-C8, no DCL in
+    " a job read). Fix 6: the requests are an internal table joined on the database (HANA), one SUM per
     " request (same filters as the former per-statement SUM: ledger, company code, account,
-    " currency, posting date up to the statement date)
-    SELECT r~request_no, SUM( a~tsl ) AS balance
-      FROM acdoca AS a
+    " currency, posting date up to the statement date). VERIFY-ADT element names: ZI_CD_EbsGlLine;
+    " PlanViz GLV-PV5 (Performance_Review.md section 14)
+    SELECT r~request_no, SUM( a~amountinbalancetransaccrcy ) AS balance
+      FROM zi_cd_ebsglline AS a
       INNER JOIN @it_requests AS r
-        ON  a~rbukrs = r~bukrs
-        AND a~racct  = r~gl_account
-        AND a~rtcur  = r~currency
-        AND a~budat <= r~stmt_date
-      WHERE a~rldnr = @lv_ledger
+        ON  a~companycode                = r~bukrs
+        AND a~glaccount                  = r~gl_account
+        AND a~balancetransactioncurrency = r~currency
+        AND a~postingdate               <= r~stmt_date
+      WHERE a~ledger = @lv_ledger
       GROUP BY r~request_no
       ORDER BY r~request_no
       INTO CORRESPONDING FIELDS OF TABLE @rt_balances.

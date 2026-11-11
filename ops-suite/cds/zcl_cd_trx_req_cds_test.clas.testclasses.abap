@@ -12,13 +12,17 @@
 *& them: a retrieval is RETRIEVED (never RETURNED), a FIN in two sources is
 *& AMBIGUOUS for both, a FIN paid in two company codes is two rows (the
 *& company-code authorisation applies to the row's own items).
-*& Not executed offline; created in ADT after SE11 confirmation.
+*& Not executed offline; created in ADT after SE11 confirmation. T001 is the
+*& base-table double of SAP's released I_CompanyCode (read by ZI_CD_TrxItem
+*& since 2026-11-11, decision D-C8; base dependencies doubled - V123).
 *& Modification log:
 *& 2026-11-06 | Initial version (transactions dashboard, request side).
 *& 2026-11-07 | Canonical payment outcome and review defects: window after the SUCCESS rule,
 *&            | retrieval not a return, ambiguous source, identity FIN + source + company code.
 *& 2026-11-08 | Exceptions-only worklist: a clean final payment has no worklist row - its stage
 *&            | is the evidence stage (PAID); the retrieval is shown, never RETURNED.
+*& 2026-11-11 | D-C8: ZI_CD_TrxItem reads the released I_CompanyCode; the T001 rows stay as its
+*&            | base-table double (same rows and assertions).
 *&---------------------------------------------------------------------*
 "! ZI_CD_TRXREQUEST / ZR_CD_TRXREQFLOW
 CLASS ltc_request DEFINITION FINAL

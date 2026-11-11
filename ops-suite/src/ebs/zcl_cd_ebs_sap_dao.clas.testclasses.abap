@@ -3,7 +3,9 @@
 *& Purpose:
 *& OSQL tests of the payment engine read repository: returns lot items are found
 *& by SELW1 with the lot status of their OPBEL; payments by DOC1R; an empty key
-*& list reads nothing. Does not prove live SAP runtime behavior.
+*& list reads nothing; the bank G/L balance on the released journal view
+*& (ZI_CD_EbsGlLine) and the FI lines on the released entry view
+*& (ZI_CD_OpsGlItem). Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Operating model: posting-area flag names are DDIC-validated (unknown name raises).
@@ -21,6 +23,9 @@
 *&            | (ZCD_OPS_MONCFG retired).
 *& 2026-11-10 | R21 lookup: approved fields in ZCD_OPS_TABWL (EBS / LOOKUP) and S_TABU_NAM double; tests
 *&            | lookup_field_not_approved, lookup_table_display_813 (B3).
+*& 2026-11-11 | D-C8: the G/L balance lines are doubled on ZI_CD_EbsGlLine (released I_JournalEntryItem),
+*&            | the FI lines on ZI_CD_OpsGlItem (released I_OperationalAcctgDocItem); same data and
+*&            | assertions as with the ACDOCA / BSEG doubles.
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -74,7 +79,7 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DFKKNRP' ) ( 'DPAYH' ) ( 'ACDOCA' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DFKKNRP' ) ( 'DPAYH' ) ( 'ZI_CD_EBSGLLINE' ) ) ).
   ENDMETHOD.
 
 
@@ -162,40 +167,43 @@ CLASS ltc_sap_dao IMPLEMENTATION.
   " request's date); a request without postings returns no row.
   " VERIFY-ADT: internal table as JOIN source (@itab) inside cl_osql_test_environment
   METHOD gl_balances_per_request.
-    DATA lt_acdoca TYPE STANDARD TABLE OF acdoca WITH EMPTY KEY.
-    DATA ls_acdoca TYPE acdoca.
+    DATA lt_lines TYPE STANDARD TABLE OF zi_cd_ebsglline WITH EMPTY KEY.
+    DATA ls_line TYPE zi_cd_ebsglline.
     DATA lt_requests TYPE zif_cd_ebs_sap_dao=>tt_gl_request.
     DATA ls_request TYPE zif_cd_ebs_sap_dao=>ty_gl_request.
     TRY.
-        ls_acdoca-rldnr  = '0L'.
-        ls_acdoca-rbukrs = 'US01'.
-        ls_acdoca-gjahr  = '2026'.
-        ls_acdoca-racct  = '0011001000'.
-        ls_acdoca-rtcur  = 'USD'.
-        ls_acdoca-belnr  = '0000000001'.
-        ls_acdoca-budat  = '20261101'.
-        ls_acdoca-tsl    = '100.00'.
-        INSERT ls_acdoca INTO TABLE lt_acdoca.
-        ls_acdoca-belnr  = '0000000002'.
-        ls_acdoca-budat  = '20261104'.
-        ls_acdoca-tsl    = '50.00'.
-        INSERT ls_acdoca INTO TABLE lt_acdoca.
+        ls_line-ledger                     = '0L'.
+        ls_line-sourceledger               = '0L'.
+        ls_line-companycode                = 'US01'.
+        ls_line-fiscalyear                 = '2026'.
+        ls_line-glaccount                  = '0011001000'.
+        ls_line-balancetransactioncurrency = 'USD'.
+        ls_line-accountingdocument         = '0000000001'.
+        ls_line-postingdate                = '20261101'.
+        ls_line-amountinbalancetransaccrcy = '100.00'.
+        INSERT ls_line INTO TABLE lt_lines.
+        ls_line-accountingdocument         = '0000000002'.
+        ls_line-postingdate                = '20261104'.
+        ls_line-amountinbalancetransaccrcy = '50.00'.
+        INSERT ls_line INTO TABLE lt_lines.
         " after the first request's date, before the second's
-        ls_acdoca-belnr  = '0000000003'.
-        ls_acdoca-budat  = '20261106'.
-        ls_acdoca-tsl    = '25.00'.
-        INSERT ls_acdoca INTO TABLE lt_acdoca.
+        ls_line-accountingdocument         = '0000000003'.
+        ls_line-postingdate                = '20261106'.
+        ls_line-amountinbalancetransaccrcy = '25.00'.
+        INSERT ls_line INTO TABLE lt_lines.
         " other ledger and other currency never count
-        ls_acdoca-belnr  = '0000000004'.
-        ls_acdoca-rldnr  = '2L'.
-        ls_acdoca-tsl    = '1000.00'.
-        INSERT ls_acdoca INTO TABLE lt_acdoca.
-        ls_acdoca-belnr  = '0000000005'.
-        ls_acdoca-rldnr  = '0L'.
-        ls_acdoca-rtcur  = 'EUR'.
-        ls_acdoca-tsl    = '7.00'.
-        INSERT ls_acdoca INTO TABLE lt_acdoca.
-        go_env->insert_test_data( lt_acdoca ).
+        ls_line-accountingdocument         = '0000000004'.
+        ls_line-ledger                     = '2L'.
+        ls_line-sourceledger               = '2L'.
+        ls_line-amountinbalancetransaccrcy = '1000.00'.
+        INSERT ls_line INTO TABLE lt_lines.
+        ls_line-accountingdocument         = '0000000005'.
+        ls_line-ledger                     = '0L'.
+        ls_line-sourceledger               = '0L'.
+        ls_line-balancetransactioncurrency = 'EUR'.
+        ls_line-amountinbalancetransaccrcy = '7.00'.
+        INSERT ls_line INTO TABLE lt_lines.
+        go_env->insert_test_data( lt_lines ).
         ls_request-bukrs      = 'US01'.
         ls_request-gl_account = '0011001000'.
         ls_request-currency   = 'USD'.
@@ -275,7 +283,7 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 ENDCLASS.
 
 
-"! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, BSEG and ZCD_JOB_CYCLE doubled;
+"! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, ZI_CD_OpsGlItem and ZCD_JOB_CYCLE doubled;
 "! ZCD_JOB_CYCLE serves as the configured lookup table; parameters over ZCA_PARAM). get_retrievals is tested up to
 "! its DDIC field check, which raises before the SELECT on ZCD_ACH_RTRV_LOG
 "! (osql-not-reached: ZCD_ACH_RTRV_LOG).
@@ -331,7 +339,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_OPS_TABWL' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'ZI_CD_OPSGLITEM' ) ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_OPS_TABWL' ) ) ).
   ENDMETHOD.
 
 
@@ -452,23 +460,23 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   " Rule: FI lines by document key only (BUKRS / BELNR / GJAHR), with G/L account and clearing
   METHOD fi_lines_by_document_key.
-    DATA lt_bseg TYPE STANDARD TABLE OF bseg WITH EMPTY KEY.
-    DATA ls_bseg TYPE bseg.
+    DATA lt_items TYPE STANDARD TABLE OF zi_cd_opsglitem WITH EMPTY KEY.
+    DATA ls_item TYPE zi_cd_opsglitem.
     DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_fi_key.
     DATA ls_key TYPE zif_cd_ebs_sap_dao=>ty_fi_key.
     TRY.
-        ls_bseg-bukrs = gc_test-bukrs.
-        ls_bseg-belnr = gc_test-belnr.
-        ls_bseg-gjahr = gc_test-gjahr.
-        ls_bseg-buzei = 1.
-        ls_bseg-hkont = gc_test-hkont.
-        ls_bseg-augbl = gc_test-doc1r.
-        INSERT ls_bseg INTO TABLE lt_bseg.
-        ls_bseg-buzei = 2.
-        INSERT ls_bseg INTO TABLE lt_bseg.
-        ls_bseg-gjahr = gc_test-gjahr - 1.
-        INSERT ls_bseg INTO TABLE lt_bseg.
-        go_env->insert_test_data( lt_bseg ).
+        ls_item-companycode                = gc_test-bukrs.
+        ls_item-accountingdocument         = gc_test-belnr.
+        ls_item-fiscalyear                 = gc_test-gjahr.
+        ls_item-accountingdocumentitem     = 1.
+        ls_item-glaccount                  = gc_test-hkont.
+        ls_item-clearingaccountingdocument = gc_test-doc1r.
+        INSERT ls_item INTO TABLE lt_items.
+        ls_item-accountingdocumentitem     = 2.
+        INSERT ls_item INTO TABLE lt_items.
+        ls_item-fiscalyear                 = gc_test-gjahr - 1.
+        INSERT ls_item INTO TABLE lt_items.
+        go_env->insert_test_data( lt_items ).
         ls_key-bukrs = gc_test-bukrs.
         ls_key-belnr = gc_test-belnr.
         ls_key-gjahr = gc_test-gjahr.

@@ -4,7 +4,8 @@
 //          (ZZ_FIN_TRANS_NUM, confirmed: = ZCD_PAYM_REQ_LOG FIN number) and were posted within the
 //          evidence window (BUDAT >= today - 45: bounded live read, the driver of the returns / NOC
 //          entity and of the request side in cds/; the worklist rows of the dashboard need no driver).
-//          Company code currency and country from T001; collection / disbursement from TFK042Z-XEINZ
+//          Company code currency and country from SAP's released view I_CompanyCode (decision D-C8; T001 before
+//          2026-11-11; the DCL of a source view is not inherited); collection / disbursement from TFK042Z-XEINZ
 //          (confirmed) by country and payment method (key LAND1 / ZLSCH VERIFY-SE11, as the payment
 //          trace). Fields: OPBEL, OPUPW, OPUPK, OPUPZ, BUKRS, BUDAT, BETRH, BETRW, WAERS, PYMET,
 //          AUGST, AUGBL, AUGDT, AUGRD (standard; VERIFY-SE11 as in ZCL_CD_OPS_TRACE_DAO),
@@ -15,6 +16,8 @@
 //                   posting, run or value date of the consumer; KPI / problem cards keep 31 days).
 //                   2026-11-08 | Exceptions-only worklist: the transactions are the worklist rows; this view
 //                   drives only returns / NOC and the request side - bound = the 45-day evidence window.
+//                   2026-11-11 | Decision D-C8 extended: company code currency and country from the released
+//                   I_CompanyCode (Currency, Country = T001 WAERS, LAND1) instead of T001; element names unchanged.
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Transactions - open item with FIN (basic)'
@@ -23,10 +26,11 @@
 @VDM.viewType: #BASIC
 // VERIFY-SE11: index on DFKKOP-BUDAT / ZZ_FIN_TRANS_NUM (HANA column store: column scan with the
 // date predicate pushed down); ST05 / PlanViz in QA1 at peak volume (Dashboard_Transactions.md)
+// VERIFY-ADT (VERIFY_Suite.md V123): I_CompanyCode C1 on 7.58, elements CompanyCode, Country, Currency; PlanViz GLV-PV6
 define view entity ZI_CD_TrxItem
   as select from    dfkkop  as Item
-    left outer join t001    as Cc on Cc.bukrs = Item.bukrs
-    left outer join tfk042z as Pm on  Pm.land1 = Cc.land1
+    left outer join I_CompanyCode as Cc on Cc.CompanyCode = Item.bukrs
+    left outer join tfk042z       as Pm on  Pm.land1 = Cc.Country
                                   and Pm.zlsch = Item.pymet
 {
   key Item.opbel                                            as DocumentNo,
@@ -44,7 +48,7 @@ define view entity ZI_CD_TrxItem
               when Pm.xeinz = 'X'     then 'COLLECTION'
               when Pm.zlsch is null   then 'UNKNOWN'
               else 'DISBURSEMENT' end as abap.char( 12 ) )  as Direction,
-      Cc.waers                                              as LocalCurrency,
+      Cc.Currency                                           as LocalCurrency,
       @Semantics.amount.currencyCode: 'LocalCurrency'
       Item.betrh                                            as AmountInLocalCurrency,
       Item.waers                                            as Currency,

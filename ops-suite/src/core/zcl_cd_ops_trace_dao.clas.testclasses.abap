@@ -5,7 +5,8 @@
 *& reads): open items by FIN number and row cap, bank lines by reference
 *& and posting date, cheques by payment document, monitored files by
 *& reference within the business-date window, G/L documents by AWTYP /
-*& AWKEY / company code, clearing lines by document key and XREF2, and the
+*& AWKEY / company code and clearing lines by document key and XREF2 (on the
+*& released-view helpers ZI_CD_OpsJrnlEntry / ZI_CD_OpsGlItem), and the
 *& FOR ALL ENTRIES guard. Reads delegated to the FMON reader and the EBS
 *& repository are tested there. Does not prove live SAP runtime behavior.
 *& Modification log:
@@ -15,6 +16,10 @@
 *& 2026-11-07 | Cheque by payment document carries the encashment date BANCD (check A_INFLIGHT).
 *& 2026-11-07 | Cheque status DFKKCR-STATE instead of BANCD; bank line BAI code VORGC.
 *& 2026-11-07 | Bank lines carry the statement account (FEBKO double, join by KUKEY).
+*& 2026-11-11 | D-C8: G/L documents doubled on ZI_CD_OpsJrnlEntry (released I_JournalEntry), clearing
+*&            | lines on ZI_CD_OpsGlItem (released I_OperationalAcctgDocItem), the company code's country
+*&            | on ZI_CD_OpsCompanyCode (released I_CompanyCode) - same rows and assertions as with the
+*&            | BKPF / BSEG / T001 doubles.
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -67,7 +72,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'DFKKOP' ) ( 'FEBEP' ) ( 'FEBKO' ) ( 'DFKKCR' ) ( 'ZCD_FMON_FILE' )
-                                   ( 'DFKKSUMC' ) ( 'BKPF' ) ( 'BSEG' ) ( 'DFKKNRP' ) ) ).
+                                   ( 'DFKKSUMC' ) ( 'ZI_CD_OPSJRNLENTRY' ) ( 'ZI_CD_OPSGLITEM' ) ( 'DFKKNRP' ) ) ).
   ENDMETHOD.
 
 
@@ -154,10 +159,10 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     DATA ls_file TYPE zcd_fmon_file.
     DATA lt_sumc TYPE STANDARD TABLE OF dfkksumc WITH EMPTY KEY.
     DATA ls_sumc TYPE dfkksumc.
-    DATA lt_bkpf TYPE STANDARD TABLE OF bkpf WITH EMPTY KEY.
-    DATA ls_bkpf TYPE bkpf.
-    DATA lt_bseg TYPE STANDARD TABLE OF bseg WITH EMPTY KEY.
-    DATA ls_bseg TYPE bseg.
+    DATA lt_docs TYPE STANDARD TABLE OF zi_cd_opsjrnlentry WITH EMPTY KEY.
+    DATA ls_doc TYPE zi_cd_opsjrnlentry.
+    DATA lt_items TYPE STANDARD TABLE OF zi_cd_opsglitem WITH EMPTY KEY.
+    DATA ls_item TYPE zi_cd_opsglitem.
     " Same daily reference: one instance in the window, one a month earlier
     ls_file-file_id       = '00000000000000000000000000000001'.
     ls_file-iface_id      = 'ACH_PNC_DISB_OUT'.
@@ -172,26 +177,26 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     ls_sumc-bukrs = gc_test-bukrs.
     INSERT ls_sumc INTO TABLE lt_sumc.
     go_env->insert_test_data( lt_sumc ).
-    ls_bkpf-bukrs = gc_test-bukrs.
-    ls_bkpf-belnr = gc_test-belnr.
-    ls_bkpf-gjahr = gc_test-gjahr.
-    ls_bkpf-awtyp = gc_test-awtyp.
-    ls_bkpf-awkey = gc_test-fikey.
-    INSERT ls_bkpf INTO TABLE lt_bkpf.
-    ls_bkpf-belnr = '0100000002'.
-    ls_bkpf-awtyp = gc_test-other_typ.
-    INSERT ls_bkpf INTO TABLE lt_bkpf.
-    go_env->insert_test_data( lt_bkpf ).
-    ls_bseg-bukrs = gc_test-bukrs.
-    ls_bseg-belnr = gc_test-belnr.
-    ls_bseg-gjahr = gc_test-gjahr.
-    ls_bseg-buzei = '001'.
-    ls_bseg-xref2 = gc_test-payment.
-    INSERT ls_bseg INTO TABLE lt_bseg.
-    ls_bseg-buzei = '002'.
-    ls_bseg-xref2 = gc_test-other_doc.
-    INSERT ls_bseg INTO TABLE lt_bseg.
-    go_env->insert_test_data( lt_bseg ).
+    ls_doc-companycode               = gc_test-bukrs.
+    ls_doc-accountingdocument        = gc_test-belnr.
+    ls_doc-fiscalyear                = gc_test-gjahr.
+    ls_doc-referencedocumenttype     = gc_test-awtyp.
+    ls_doc-originalreferencedocument = gc_test-fikey.
+    INSERT ls_doc INTO TABLE lt_docs.
+    ls_doc-accountingdocument        = '0100000002'.
+    ls_doc-referencedocumenttype     = gc_test-other_typ.
+    INSERT ls_doc INTO TABLE lt_docs.
+    go_env->insert_test_data( lt_docs ).
+    ls_item-companycode                   = gc_test-bukrs.
+    ls_item-accountingdocument            = gc_test-belnr.
+    ls_item-fiscalyear                    = gc_test-gjahr.
+    ls_item-accountingdocumentitem        = '001'.
+    ls_item-reference2idbybusinesspartner = gc_test-payment.
+    INSERT ls_item INTO TABLE lt_items.
+    ls_item-accountingdocumentitem        = '002'.
+    ls_item-reference2idbybusinesspartner = gc_test-other_doc.
+    INSERT ls_item INTO TABLE lt_items.
+    go_env->insert_test_data( lt_items ).
   ENDMETHOD.
 
 
@@ -289,7 +294,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " BSEG by document key only; the line whose XREF2 carries the clearing reference
+  " Entry view line by document key only; the line whose XREF2 carries the clearing reference
   METHOD gl_line_by_key_and_xref2.
     TRY.
         DATA(lt_lines) = mo_cut->get_gl_clearing_lines(
@@ -407,7 +412,7 @@ CLASS ltc_trace_dao_reads IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'BUT000' ) ( 'DFKKOP' ) ( 'DFKKKO' ) ( 'ZCD_FMON_EVENT' )
-                                   ( 'TFK042Z' ) ( 'T001' ) ) ).
+                                   ( 'TFK042Z' ) ( 'ZI_CD_OPSCOMPANYCODE' ) ) ).
   ENDMETHOD.
 
 
@@ -532,15 +537,15 @@ CLASS ltc_trace_dao_reads IMPLEMENTATION.
   " Rule (confirmed): TFK042Z-XEINZ of the company code's country separates collections from
   " disbursements; an unknown or blank method is unknown
   METHOD method_kind_from_tfk042z.
-    DATA lt_t001 TYPE STANDARD TABLE OF t001 WITH EMPTY KEY.
-    DATA ls_t001 TYPE t001.
+    DATA lt_companies TYPE STANDARD TABLE OF zi_cd_opscompanycode WITH EMPTY KEY.
+    DATA ls_company TYPE zi_cd_opscompanycode.
     DATA lt_z TYPE STANDARD TABLE OF tfk042z WITH EMPTY KEY.
     DATA ls_z TYPE tfk042z.
     TRY.
-        ls_t001-bukrs = gc_test-bukrs.
-        ls_t001-land1 = gc_test-land1.
-        INSERT ls_t001 INTO TABLE lt_t001.
-        go_env->insert_test_data( lt_t001 ).
+        ls_company-companycode = gc_test-bukrs.
+        ls_company-country     = gc_test-land1.
+        INSERT ls_company INTO TABLE lt_companies.
+        go_env->insert_test_data( lt_companies ).
         ls_z-land1 = gc_test-land1.
         ls_z-zlsch = gc_test-pymet_col.
         ls_z-xeinz = abap_true.

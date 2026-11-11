@@ -4,7 +4,9 @@
 *& SQL of the 360 degree payment trace. Standard tables are read only along
 *& the confirmed join paths (DFKKOP-ZZ_FIN_TRANS_NUM / AUGBL, DFKKCR-DOC1R,
 *& FEBEP-CHECT, DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY, BSEG by document
-*& key). Reads that already exist are reused, not copied: DPAYH, DFKKCR by
+*& key); the G/L side through SAP's released views (I_JournalEntry,
+*& I_OperationalAcctgDocItem, I_CompanyCode - decision D-C8). Reads that
+*& already exist are reused, not copied: DPAYH, DFKKCR by
 *& cheque number, DFKKRP returns and the ACH retrieval log through the EBS
 *& read repository; custom sources whose field names are not confirmed
 *& (request log, clearing-reset history, ZCDT_REGUT, ACK and cheque
@@ -27,6 +29,10 @@
 *&            | ZCD_FMON_TABWL).
 *& 2026-11-08 | READ_CONFIGURED_AFTER (keyset paging through the file monitoring reader); set reads also return the
 *&            | date, time, requested payment date and amount of the request log.
+*& 2026-11-11 | Decision D-C8 extended (SQL source of the G/L reads only): G/L documents of a FIKEY from the
+*&            | released I_JournalEntry (ZI_CD_OpsJrnlEntry), clearing lines by document key from the
+*&            | released entry view I_OperationalAcctgDocItem (ZI_CD_OpsGlItem), the company code's country
+*&            | from the released I_CompanyCode (ZI_CD_OpsCompanyCode) - no DCL in a job read.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -397,13 +403,18 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
   METHOD zif_cd_ops_trace_dao~get_gl_documents.
     CHECK it_fikey IS NOT INITIAL.
     " Confirmed: BKPF-AWKEY = FIKEY; AWTYP / BUKRS / STBLG as ZCL_CD_HCK_DAO=>GET_FIKEYS_WITHOUT_GL
-    " (A43). Reversed documents are returned and filtered by the caller. VERIFY-SE11: CPUDT, CPUTM
-    SELECT bukrs, belnr, gjahr, awkey, budat, cpudt, cputm, stblg
-      FROM bkpf
+    " (A43). Reversed documents are returned and filtered by the caller. Released header view
+    " I_JournalEntry through ZI_CD_OpsJrnlEntry (decision D-C8; no DCL in a job read): reference type /
+    " key / company code, entry date / time and reverse document = BKPF AWTYP / AWKEY / BUKRS, CPUDT /
+    " CPUTM, STBLG. VERIFY-ADT element names: ZI_CD_OpsJrnlEntry; PlanViz GLV-PV3 (Performance_Review.md)
+    SELECT companycode AS bukrs, accountingdocument AS belnr, fiscalyear AS gjahr,
+           originalreferencedocument AS awkey, postingdate AS budat,
+           accountingdocumentcreationdate AS cpudt, creationtime AS cputm, reversedocument AS stblg
+      FROM zi_cd_opsjrnlentry
       FOR ALL ENTRIES IN @it_fikey
-      WHERE awtyp = @iv_awtyp
-        AND awkey = @it_fikey-fikey
-        AND bukrs = @it_fikey-bukrs
+      WHERE referencedocumenttype     = @iv_awtyp
+        AND originalreferencedocument = @it_fikey-fikey
+        AND companycode               = @it_fikey-bukrs
       INTO CORRESPONDING FIELDS OF TABLE @rt_docs.
     SORT rt_docs BY bukrs belnr gjahr.
   ENDMETHOD.
@@ -411,15 +422,20 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_trace_dao~get_gl_clearing_lines.
     CHECK it_keys IS NOT INITIAL.
-    " Key access only (BUKRS / BELNR / GJAHR) - never BSEG by XREF2 (full scan);
-    " confirmed: BSEG-XREF2 = DFKKOP-AUGBL
-    SELECT bukrs, belnr, gjahr, buzei, hkont, xref2, augbl, augdt
-      FROM bseg
+    " Key access only (company code / document / fiscal year) - never by XREF2 alone (full scan);
+    " confirmed: BSEG-XREF2 = DFKKOP-AUGBL. Released entry view I_OperationalAcctgDocItem through
+    " ZI_CD_OpsGlItem (decision D-C8; no DCL in a job read): line, G/L account, reference key 2,
+    " clearing document / date = BSEG BUZEI, HKONT, XREF2, AUGBL, AUGDT. VERIFY-ADT element names
+    " (Reference2IDByBusinessPartner = XREF2): ZI_CD_OpsGlItem; PlanViz GLV-PV4 (Performance_Review.md)
+    SELECT companycode AS bukrs, accountingdocument AS belnr, fiscalyear AS gjahr,
+           accountingdocumentitem AS buzei, glaccount AS hkont, reference2idbybusinesspartner AS xref2,
+           clearingaccountingdocument AS augbl, clearingdate AS augdt
+      FROM zi_cd_opsglitem
       FOR ALL ENTRIES IN @it_keys
-      WHERE bukrs = @it_keys-bukrs
-        AND belnr = @it_keys-belnr
-        AND gjahr = @it_keys-gjahr
-        AND xref2 = @iv_xref2
+      WHERE companycode                   = @it_keys-bukrs
+        AND accountingdocument            = @it_keys-belnr
+        AND fiscalyear                    = @it_keys-gjahr
+        AND reference2idbybusinesspartner = @iv_xref2
       INTO CORRESPONDING FIELDS OF TABLE @rt_lines.
     SORT rt_lines BY bukrs belnr gjahr buzei.
   ENDMETHOD.
@@ -427,15 +443,16 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_trace_dao~get_method_kind.
     " Confirmed: TFK042Z-XEINZ separates collections from disbursements.
-    " VERIFY-SE11: TFK042Z key LAND1 / ZLSCH, country from T001-LAND1
+    " VERIFY-SE11: TFK042Z key LAND1 / ZLSCH; country of the company code from the released I_CompanyCode
+    " through ZI_CD_OpsCompanyCode (decision D-C8; was T001-LAND1)
     rv_kind = zif_cd_ops_trace_types=>gc_kind-unknown.
     IF iv_pymet IS INITIAL.
       RETURN.
     ENDIF.
     SELECT z~xeinz
       FROM tfk042z AS z
-      INNER JOIN t001 AS t ON t~land1 = z~land1
-      WHERE t~bukrs = @iv_bukrs
+      INNER JOIN zi_cd_opscompanycode AS t ON t~country = z~land1
+      WHERE t~companycode = @iv_bukrs
         AND z~zlsch = @iv_pymet
       ORDER BY z~land1, z~zlsch
       INTO TABLE @DATA(lt_kind)

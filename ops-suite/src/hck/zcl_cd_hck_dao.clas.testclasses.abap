@@ -28,6 +28,8 @@
 *& 2026-11-08 | Drift table example ZCD_BTC_RULE (ZCD_BTC_MAP is now the customer posting area ZBTM).
 *& 2026-11-10 | S_TABU_NAM 03 through a core authorisation double; refused_table_display_813 (B4).
 *& 2026-11-11 | jobs_monitored_by_area (SAP job monitor, area CD_JOBS: de-duplication of E_JOBS).
+*& 2026-11-11 | D-C8: gl_gap_per_company_and_type doubles the G/L document header on ZI_CD_OpsJrnlEntry
+*&            | (released I_JournalEntry) instead of BKPF; same documents and assertions.
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -120,7 +122,7 @@ CLASS ltc_dao IMPLEMENTATION.
                                                                             ( 'TBTCP' )
                                                                             ( 'DFKKSUMC' )
                                                                             ( 'DFKKKO' )
-                                                                            ( 'BKPF' )
+                                                                            ( 'ZI_CD_OPSJRNLENTRY' )
                                                                             ( 'ZCD_OPS_TABWL' )
                                                                             ( 'ZCD_HCK_SUPPRESS' ) ) ).
   ENDMETHOD.
@@ -630,8 +632,8 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA ls_sumc TYPE dfkksumc.
     DATA lt_kko TYPE STANDARD TABLE OF dfkkko WITH EMPTY KEY.
     DATA ls_kko TYPE dfkkko.
-    DATA lt_bkpf TYPE STANDARD TABLE OF bkpf WITH EMPTY KEY.
-    DATA ls_bkpf TYPE bkpf.
+    DATA lt_docs TYPE STANDARD TABLE OF zi_cd_opsjrnlentry WITH EMPTY KEY.
+    DATA ls_doc TYPE zi_cd_opsjrnlentry.
     CONSTANTS lc_awtyp TYPE awtyp VALUE 'FKKSU'.
     TRY.
         " K1 transferred for US01 only; K2 only by a document of another type; K3 reversed
@@ -654,21 +656,21 @@ CLASS ltc_dao IMPLEMENTATION.
         ls_kko-fikey = 'K3'.
         INSERT ls_kko INTO TABLE lt_kko.
         go_env->insert_test_data( lt_kko ).
-        ls_bkpf-bukrs = 'US01'.
-        ls_bkpf-belnr = '0100000001'.
-        ls_bkpf-awtyp = lc_awtyp.
-        ls_bkpf-awkey = 'K1'.
-        INSERT ls_bkpf INTO TABLE lt_bkpf.
-        ls_bkpf-belnr = '0100000002'.
-        ls_bkpf-awtyp = 'BKPF'.
-        ls_bkpf-awkey = 'K2'.
-        INSERT ls_bkpf INTO TABLE lt_bkpf.
-        ls_bkpf-belnr = '0100000003'.
-        ls_bkpf-awtyp = lc_awtyp.
-        ls_bkpf-awkey = 'K3'.
-        ls_bkpf-stblg = '0100000009'.
-        INSERT ls_bkpf INTO TABLE lt_bkpf.
-        go_env->insert_test_data( lt_bkpf ).
+        ls_doc-companycode               = 'US01'.
+        ls_doc-accountingdocument        = '0100000001'.
+        ls_doc-referencedocumenttype     = lc_awtyp.
+        ls_doc-originalreferencedocument = 'K1'.
+        INSERT ls_doc INTO TABLE lt_docs.
+        ls_doc-accountingdocument        = '0100000002'.
+        ls_doc-referencedocumenttype     = 'BKPF'.
+        ls_doc-originalreferencedocument = 'K2'.
+        INSERT ls_doc INTO TABLE lt_docs.
+        ls_doc-accountingdocument        = '0100000003'.
+        ls_doc-referencedocumenttype     = lc_awtyp.
+        ls_doc-originalreferencedocument = 'K3'.
+        ls_doc-reversedocument           = '0100000009'.
+        INSERT ls_doc INTO TABLE lt_docs.
+        go_env->insert_test_data( lt_docs ).
         DATA(lt_gaps) = mo_cut->get_fikeys_without_gl( iv_from = gc_today iv_to = gc_today
                                                        iv_max_rows = 1 iv_awtyp = lc_awtyp ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_gaps ) exp = 1 msg = 'Display is capped at one gap' ).

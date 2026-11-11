@@ -46,6 +46,9 @@
 *& 2026-11-11 | get_metric_history with a day list: the latest point of each listed day (seasonal baseline).
 *&            | get_thresholds reads SEASON.
 *& 2026-11-11 | get_jobs_monitored: jobs the SAP job monitor (area CD_JOBS) reports - E_JOBS leaves them to it.
+*& 2026-11-11 | Decision D-C8 extended: get_fikeys_without_gl / count_fikeys_without_gl test the G/L document on
+*&            | the released I_JournalEntry (through ZI_CD_OpsJrnlEntry, no DCL in a job read) - same reference
+*&            | type, key, company code and reversal rule.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -693,18 +696,22 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     " confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY. A43: the GL document must be
     " of the transfer reference type, for the same company code, and not reversed - an
     " unrelated document or the transfer of another company code no longer hides a gap.
-    "VERIFY-DDIC: DFKKSUMC-BUKRS, DFKKKO-BUDAT, BKPF-AWTYP / AWKEY / BUKRS / STBLG
+    "VERIFY-DDIC: DFKKSUMC-BUKRS, DFKKKO-BUDAT
     "VERIFY-DDIC: AWTYP of the payment engine GL transfer (PARAM4, default FKKSU)
+    " G/L document header on the released view I_JournalEntry through ZI_CD_OpsJrnlEntry (decision D-C8;
+    " no DCL in a job read - a document filtered away would be a false gap): reference type / key / company
+    " code / reverse document = BKPF AWTYP / AWKEY / BUKRS / STBLG; the predicate of the ledger model's
+    " ZI_CD_LedgGlDoc. VERIFY-ADT element names: ZI_CD_OpsJrnlEntry; PlanViz GLV-PV2 (Performance_Review.md)
     SELECT DISTINCT s~fikey, s~bukrs
       FROM dfkksumc AS s
       WHERE EXISTS ( SELECT fikey FROM dfkkko
                        WHERE fikey = s~fikey
                          AND budat BETWEEN @iv_from AND @iv_to )
-        AND NOT EXISTS ( SELECT awkey FROM bkpf
-                           WHERE awtyp = @iv_awtyp
-                             AND awkey = s~fikey
-                             AND bukrs = s~bukrs
-                             AND stblg = @space )
+        AND NOT EXISTS ( SELECT originalreferencedocument FROM zi_cd_opsjrnlentry
+                           WHERE referencedocumenttype     = @iv_awtyp
+                             AND originalreferencedocument = s~fikey
+                             AND companycode               = s~bukrs
+                             AND reversedocument           = @space )
       ORDER BY s~fikey, s~bukrs
       INTO CORRESPONDING FIELDS OF TABLE @rt_gaps
       UP TO @iv_max_rows ROWS.
@@ -718,11 +725,11 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       WHERE EXISTS ( SELECT fikey FROM dfkkko
                        WHERE fikey = s~fikey
                          AND budat BETWEEN @iv_from AND @iv_to )
-        AND NOT EXISTS ( SELECT awkey FROM bkpf
-                           WHERE awtyp = @iv_awtyp
-                             AND awkey = s~fikey
-                             AND bukrs = s~bukrs
-                             AND stblg = @space )
+        AND NOT EXISTS ( SELECT originalreferencedocument FROM zi_cd_opsjrnlentry
+                           WHERE referencedocumenttype     = @iv_awtyp
+                             AND originalreferencedocument = s~fikey
+                             AND companycode               = s~bukrs
+                             AND reversedocument           = @space )
       ORDER BY s~fikey, s~bukrs
       INTO TABLE @DATA(lt_keys).
     rv_count = lines( lt_keys ).

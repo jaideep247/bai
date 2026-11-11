@@ -46,6 +46,10 @@
 *&            | TABLE accepting duplicate keys with a count check (a duplicate raised CX_SY_OPEN_SQL_DB, the
 *&            | sy-subrc check never fired); package rows with the mode and members (ZCD_PAY_OUTPKGM), GET_PACKAGE,
 *&            | DELETE_PACKAGES per mode; SAVE_FAILURES; SAVE_WATERMARK keeps FAIL_COUNT.
+*& 2026-11-11 | Decision D-C8 extended: the country of a payment's company code (TFK042Z direction) comes from
+*&            | the released I_CompanyCode through ZI_CD_OpsCompanyCode (was T001) in GET_NEW_VERSIONS,
+*&            | GET_OUTCOME_GROUPS / _EXAMPLES / _ROWS; the GL source (BKPF by entry time, BSEG by clearing
+*&            | document) stays on the tables (watermark paging and clearing search - Performance_Review.md 14).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot SQL</p>
 CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
@@ -416,7 +420,12 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
     ls_key-belnr = is_watermark-wm_key+4(10).
     ls_key-gjahr = is_watermark-wm_key+14(4).
     " G/L clearing of the XREF2 line: clearing documents entered after the watermark (BKPF CPUDT /
-    " CPUTM, VERIFY index) whose cleared BSEG lines carry XREF2 (= AUGBL, the stable key)
+    " CPUTM, VERIFY index) whose cleared BSEG lines carry XREF2 (= AUGBL, the stable key).
+    " Both reads stay on the tables (D-C8): the header read is a keyset page (tuple order on entry date /
+    " time / key, UP TO n ROWS) that relies on the CPUDT index of the header table, the line read a FOR ALL
+    " ENTRIES search by clearing document (no primary-key prefix) over the entry view - neither is proven
+    " through I_JournalEntry / I_OperationalAcctgDocItem; switch only after GLV-PV8 / GLV-PV9
+    " (Performance_Review.md section 14)
     SELECT h~bukrs, h~belnr, h~gjahr, h~cpudt, h~cputm
       FROM bkpf AS h
       WHERE ( h~cpudt > @is_watermark-wm_date
@@ -1056,7 +1065,9 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ops_pay_outcome_dao~get_new_versions.
-    " The versions of one run carry its time as VALID_FROM (index OUT: VALID_TO, then filtered)
+    " The versions of one run carry its time as VALID_FROM (index OUT: VALID_TO, then filtered); the
+    " direction of the method from the company code's country (ZI_CD_OpsCompanyCode over the released
+    " I_CompanyCode, decision D-C8 - a lookup of a few company code rows, GLV-PV6)
     SELECT o~fin_id, o~source, o~bukrs, o~augbl, o~laufd, o~laufi, o~valid_from, o~valid_to, o~outcome,
            o~evidence_kind, o~evidence_ref, o~finding, o~severity, o~evaluated_at, o~flow_class, o~due_date,
            p~pymet, z~xeinz
@@ -1064,8 +1075,8 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       INNER JOIN dpayh AS p ON  p~laufd = o~laufd
                             AND p~laufi = o~laufi
                             AND p~doc1r = o~augbl
-      INNER JOIN t001 AS t ON t~bukrs = p~bukrs
-      INNER JOIN tfk042z AS z ON  z~land1 = t~land1
+      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+      INNER JOIN tfk042z AS z ON  z~land1 = t~country
                               AND z~zlsch = p~pymet
       WHERE o~valid_to   = @zif_cd_ops_payout_types=>gc_valid_to_open
         AND o~valid_from = @iv_valid_from
@@ -1108,8 +1119,8 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
         INNER JOIN dpayh AS p ON  p~laufd = c~laufd
                               AND p~laufi = c~laufi
                               AND p~doc1r = c~augbl
-        INNER JOIN t001 AS t ON t~bukrs = p~bukrs
-        INNER JOIN tfk042z AS z ON  z~land1 = t~land1
+        INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+        INNER JOIN tfk042z AS z ON  z~land1 = t~country
                                 AND z~zlsch = p~pymet
         WHERE p~xvorl = @space
           AND p~pymet IN @lt_methods
@@ -1151,8 +1162,8 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
                      INNER JOIN dpayh AS p ON  p~laufd = c~laufd
                                            AND p~laufi = c~laufi
                                            AND p~doc1r = c~augbl
-                     INNER JOIN t001 AS t ON t~bukrs = p~bukrs
-                     INNER JOIN tfk042z AS z ON  z~land1 = t~land1
+                     INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+                     INNER JOIN tfk042z AS z ON  z~land1 = t~country
                                              AND z~zlsch = p~pymet
                      WHERE p~xvorl = @space
                        AND p~pymet IN @lt_methods
@@ -1186,8 +1197,8 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
         INNER JOIN dpayh AS p ON  p~laufd = c~laufd
                               AND p~laufi = c~laufi
                               AND p~doc1r = c~augbl
-        INNER JOIN t001 AS t ON t~bukrs = p~bukrs
-        INNER JOIN tfk042z AS z ON  z~land1 = t~land1
+        INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+        INNER JOIN tfk042z AS z ON  z~land1 = t~country
                                 AND z~zlsch = p~pymet
         WHERE p~xvorl = @space
           AND p~pymet IN @lt_methods

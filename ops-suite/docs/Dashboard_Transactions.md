@@ -139,7 +139,7 @@ Area **CORE** with **company code**: `pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTV
 
 ## 11. Tests
 
-`ZCL_CD_TRX_DASH_CDS_TEST` (`ltc_flow`, doubles of ZCD_PAY_OUTCOME, DPAYH, T001, TFK042Z, DFKKOP, DFKKRP, DFKKNRP): `current_rows_only`, `kind_and_worklist_date`, `date_kinds_select_rows`, `proposal_run_not_joined`, `direction_from_tfk042z`, `open_and_exception_counts`, `kpi_counts_distinct_fin`, `kpi_never_mixes_company`, `problems_are_exceptions`, `reasons_from_lot_items`, `no_partner_or_member_exposed`; shared fixtures (`ZCL_CD_OPS_PAY_FIXTURE`): `fixture_retrieval_no_row`, `fixture_line_inconsistent`, `fixture_two_sources_rows`.
+`ZCL_CD_TRX_DASH_CDS_TEST` (`ltc_flow`, doubles of ZCD_PAY_OUTCOME, DPAYH, T001 - the base table of the released `I_CompanyCode` the views read since 2026-11-11 (D-C8) -, TFK042Z, DFKKOP, DFKKRP, DFKKNRP): `current_rows_only`, `kind_and_worklist_date`, `date_kinds_select_rows`, `proposal_run_not_joined`, `direction_from_tfk042z`, `open_and_exception_counts`, `kpi_counts_distinct_fin`, `kpi_never_mixes_company`, `problems_are_exceptions`, `reasons_from_lot_items`, `no_partner_or_member_exposed`; shared fixtures (`ZCL_CD_OPS_PAY_FIXTURE`): `fixture_retrieval_no_row`, `fixture_line_inconsistent`, `fixture_two_sources_rows`.
 `cds/ZCL_CD_TRX_REQ_CDS_TEST` (`ltc_request`, ADT after SE11): `success_row_wins_over_counter`, `errored_without_success_row`, `pending_without_outcome`, `member_number_not_exposed`, `success_older_than_window`, `retrieval_is_not_returned`, `fin_two_sources_ambiguous`, `one_row_per_company_code`.
 The same fixtures run through the evaluator, A_INFLIGHT (`fixture_*`), the trace (`ltc_outcome`) and the snapshot: same data, same expected outcome.
 
