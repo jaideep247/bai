@@ -124,6 +124,12 @@ CD_HCK,HCK_WEIGHT_H,P,INT,0,,3,,,,,Score weight of priority H,PE RTB
 CD_HCK,HCK_WEIGHT_L,P,INT,0,,1,,,,,Score weight of priority L,PE RTB
 CD_HCK,HCK_WEIGHT_M,P,INT,0,,2,,,,,Score weight of priority M,PE RTB
 CA_OPS,ALERT_MORNING,P,LIST,,,,,,,,SO23 shared lists of route MORNING (morning report),PE RTB
+CA_OPS,CHECK_STALE_MIN_CD_JOBS,P,INT,1,,30,,,,,Minutes after which the job monitor of CD_JOBS is stale,PE RTB
+CA_OPS,JOB_MA_PROGRAMS,P,LIST,,,RFKK_MA_SCHEDULER,,,,,Programs of the mass activity scheduler step,PE RTB
+CA_OPS,JOB_MA_RUN_PCRE,P,CHAR,,,,,,,X,"Job name PCRE: activity, run date, run ID (VERIFY)",PE RTB
+CA_OPS,JOB_MA_SCHED_PCRE,P,CHAR,,,,,,,X,"Scheduler job name PCRE, group 1 = run token (VERIFY)",PE RTB
+CA_OPS,JOB_MA_WORKER_PCRE,P,CHAR,,,,,,,X,"Worker job name PCRE, group 1 = run token (VERIFY)",PE RTB
+CA_OPS,JOB_PAYRUN_ACTIVITIES,P,LIST,,,,,,,X,Mass activity types of the payment run FPY1 (VERIFY),PE RTB
 CA_OPS,RETENTION_DAYS_FMON_EVENT,P,INT,,,400,,,,,Retention of file monitoring events (days; >= 30),PE RTB
 CA_OPS,RETENTION_DAYS_FMON_FILE,P,INT,,,400,,,,,Retention of the file registry (days; >= 30),PE RTB
 CA_OPS,RETENTION_DAYS_FMON_PRISM,P,INT,,,400,,,,,Retention of PRISM status events (days; >= 30),PE RTB

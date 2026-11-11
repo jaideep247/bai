@@ -23,6 +23,7 @@
 *&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
 *& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
 *&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
+*& 2026-11-11 | get_jobs_monitored: jobs the SAP job monitor (area CD_JOBS) reports - E_JOBS leaves them to it.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -269,6 +270,14 @@ INTERFACE zif_cd_hck_dao
       VALUE(rt_rows) TYPE zif_cd_hck_value_types=>tt_value_row
     RAISING
       zcx_ca_ops_error.
+
+  "! Jobs (object keys job name / job count) that the SAP job monitor of the suite (area CD_JOBS) reports
+  "! with an exception (severity B / E / W): the technical-jobs check leaves them to it (2026-11-11)
+  METHODS get_jobs_monitored DEFAULT IGNORE
+    IMPORTING
+      it_keys        TYPE zif_ca_ops_types=>tt_object_key
+    RETURNING
+      VALUE(rt_keys) TYPE zif_ca_ops_types=>tt_object_key.
 
   "! Active suppressions (status A, today within the period) - design 6.3
   METHODS get_suppressions DEFAULT IGNORE

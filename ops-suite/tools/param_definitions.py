@@ -18,6 +18,7 @@ Modification log:
            | configure( )); this file holds the suite's profile. Framework names (ALERT_, SLA_,
            | PURGE_, RETENTION_) read area CA_OPS; the suite's names there are its rows in area CA_OPS.
 2026-11-10 | The generator moved to the shared tools (tools/abaptools); own instance of the engine.
+2026-11-11 | CHECK_STALE_MIN_CD_JOBS (SAP job monitor, area CD_JOBS): run-time name of the framework's prefix.
 """
 import os
 import re
@@ -46,6 +47,9 @@ EXTRA_AREAS_CSV = [os.path.join(FW, 'config', 'param_areas.csv')]
 EXTRA_DEFS_CSV = [os.path.join(FW, 'config', 'param_definitions.csv')]
 
 RUNTIME = {
+    # Freshness of the SAP job monitor's area on the framework's area dashboard (2026-11-11, area CD_JOBS)
+    (os.path.join(FW, 'src', 'zif_ca_ops_chk_types.intf.abap'), 'gc_param_prefix-stale_min'):
+        ('const', os.path.join('src', 'core', 'zif_cd_job_types.intf.abap'), 'gc_area'),
     (FW_TYPES, 'gc_param_prefix-alert'): ('const', _HCK_TYPES, 'gc_param_default-mail_route'),
     (FW_TYPES, 'gc_param_prefix-retention_days'):
         ('struct', os.path.join('src', 'core', 'zcl_cd_ops_purge_target.clas.abap'), 'gc_target', None),
@@ -96,6 +100,8 @@ DEFAULTS = {
     'RETENTION_DAYS_HCK_RESULT': ('definition',),
     'RETENTION_DAYS_PAY_OUTCOME': ('definition',),
     'RETENTION_DAYS_FMON_FILE': ('definition',),
+    # SAP job monitor (2026-11-11): freshness of area CD_JOBS (FAST group every 5 minutes; read in CDS)
+    'CHECK_STALE_MIN_CD_JOBS': ('definition',),
     # Stale thresholds (minutes): the values the dashboards' CDS literals hold (cds_abap_parity) -
     # FMON 3 x its 5-minute cadence, EBS / HCK = HCK_MAX_AGE_HOURS (26 h) in minutes
     'MON_STALE_AFTER_MIN_CD_FMON': ('const', os.path.join('src', 'fmon', 'zif_cd_fmon_types.intf.abap'),

@@ -10,12 +10,15 @@
 *& 2026-11-06 | PARAM1 job names as PCRE; an invalid pattern raises message 373 (bad_pattern_raises).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-11 | monitored_job_left_to_monitor: a job the SAP job monitor (area CD_JOBS) reports is neither
+*&            | counted nor reported here (de-duplication).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_dao PARTIALLY IMPLEMENTED.
     DATA mt_runs TYPE zif_cd_hck_types=>tt_job_run.
     DATA mt_unresolved TYPE zif_cd_hck_types=>tt_job_run.
+    DATA mt_monitored TYPE zif_ca_ops_types=>tt_object_key.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -25,6 +28,14 @@ CLASS ltd_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_unresolved_jobs.
     rt_runs = mt_unresolved.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_dao~get_jobs_monitored.
+    LOOP AT mt_monitored ASSIGNING FIELD-SYMBOL(<lv_key>).
+      IF line_exists( it_keys[ table_line = <lv_key> ] ).
+        INSERT <lv_key> INTO TABLE rt_keys.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 ENDCLASS.
 
@@ -60,6 +71,7 @@ CLASS ltc_tech_jobs DEFINITION FINAL FOR TESTING
         old_stuck   TYPE abap_bool,
         duplicate   TYPE abap_bool,
         capped      TYPE abap_bool,
+        monitored   TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_dao TYPE REF TO ltd_dao.
@@ -76,6 +88,7 @@ CLASS ltc_tech_jobs DEFINITION FINAL FOR TESTING
     METHODS capped_read_is_reported FOR TESTING.
     METHODS missing_patterns_raises FOR TESTING.
     METHODS bad_pattern_raises FOR TESTING.
+    METHODS monitored_job_left_to_monitor FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -162,6 +175,9 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
       " the same running job delivered by the window read and by the unresolved read
       INSERT run( iv_count = gc_count_2 iv_status = zif_cd_hck_types=>gc_job_status-running
                   iv_date = gc_today iv_time = gc_early ) INTO TABLE mo_dao->mt_unresolved.
+    ENDIF.
+    IF is_flags-monitored = abap_true.
+      INSERT |{ gc_job }/{ gc_count_1 }| INTO TABLE mo_dao->mt_monitored.
     ENDIF.
     IF is_flags-capped = abap_true.
       DO zif_cd_hck_types=>gc_param_default-max_job_rows TIMES.
@@ -326,6 +342,21 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '373'
                                             msg = 'Message 373 names the invalid pattern' ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Rule: a cancelled job the SAP job monitor (area CD_JOBS) reports is neither counted nor reported here
+  METHOD monitored_job_left_to_monitor.
+    TRY.
+        configure_scenario( VALUE #( cancelled = abap_true monitored = abap_true ) ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'No second alert for the job' ).
+        cl_abap_unit_assert=>assert_equals( act = metric_value( is_result = ls_result
+                                                                iv_metric = zcl_cd_hck_c_tech_jobs=>gc_metric-cancelled )
+                                            exp = 0
+                                            msg = 'Not counted here' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

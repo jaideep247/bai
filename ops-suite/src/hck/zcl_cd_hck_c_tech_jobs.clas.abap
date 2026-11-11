@@ -12,6 +12,8 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | PARAM1 job names are PCRE (complete name, case ignored); an invalid pattern raises E373.
 *& 2026-11-07 | Cap reached against the effective cap ZCL_CD_HCK_PARAM=>JOB_ROWS_CAP (parameter HCK_MAX_JOB_ROWS).
+*& 2026-11-11 | De-duplication with the SAP job monitor (area CD_JOBS): a job it reports with an exception
+*&            | is neither counted nor reported here (one alert per failure); without the monitor unchanged.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cancelled / long-running / late jobs</p>
 "! PARAM1 = job name patterns, PARAM2 = long-running minutes (default 120),
@@ -84,7 +86,13 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
                                                           iv_v2    = is_def-check_id ) )
         INTO TABLE rs_result-findings.
     ENDIF.
+    " the SAP job monitor (area CD_JOBS) reports these jobs every few minutes: one alert per failure
+    DATA(lt_monitored) = lo_dao->get_jobs_monitored(
+                           VALUE #( FOR <ls_r> IN lt_runs ( |{ <ls_r>-jobname }/{ <ls_r>-jobcount }| ) ) ).
     LOOP AT lt_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+      IF line_exists( lt_monitored[ table_line = |{ <ls_run>-jobname }/{ <ls_run>-jobcount }| ] ).
+        CONTINUE.
+      ENDIF.
       DATA(ls_finding) = VALUE zif_ca_ops_types=>ty_finding( object_key = |{ <ls_run>-jobname }/{ <ls_run>-jobcount }|
                                                              reference  = <ls_run>-jobname
                                                              action     = zif_ca_ops_types=>gc_action-notify ).

@@ -3152,6 +3152,24 @@
      <MSGNR>840</MSGNR>
      <TEXT>No authorisation for company code &amp;1 (ZCA_OPS, area CD_HCK)</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>841</MSGNR>
+     <TEXT>Mass activity &amp;1 run of &amp;2, ID &amp;3 (read from the job name)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>842</MSGNR>
+     <TEXT>Payment run &amp;1 / &amp;2: &amp;3 payment(s), company code &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>843</MSGNR>
+     <TEXT>Payment worklist: &amp;1 open exception(s) of payment run &amp;2 / &amp;3</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

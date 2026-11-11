@@ -11,3 +11,4 @@ CD_HCK,MISSING_CHECK_IDS,Missing check IDs,Disbursements,,,,090000,,,90
 CD_FMON,PENDING_ACKS,Pending acknowledgements,Interfaces,,,,090000,,X,100
 CD_FMON,RETURNS_NOTIF,Returns notifications,Payments,,,,090000,,X,110
 CD_HCK,DAILY_RECON,Daily reconciliation,Reconciliation,,,,090000,,X,120
+CD_JOBS,SAP_JOB_FAILURES,SAP job failures,Batch processing,,,,083000,,X,130

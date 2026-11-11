@@ -43,6 +43,7 @@
 *& 2026-11-10 | save_metrics: company code of the metric (ZCD_HCK_METRIC-BUKRS, company-code isolation).
 *& 2026-11-10 | get_overdue_exceptions per area and company code (company-code isolation); AREA read AS PE_AREA (the
 *&            | target component - CORRESPONDING left the area blank before).
+*& 2026-11-11 | get_jobs_monitored: jobs the SAP job monitor (area CD_JOBS) reports - E_JOBS leaves them to it.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -773,6 +774,23 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
             previous = lx_digest.
     ENDTRY.
     rv_hash = lv_hash.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_dao~get_jobs_monitored.
+    IF it_keys IS INITIAL.
+      RETURN.
+    ENDIF.
+    " index OBJ of ZCA_OPS_FINDING (MANDT, AREA, OBJECT_KEY); read only - the framework's store writes it
+    SELECT object_key
+      FROM zca_ops_finding
+      FOR ALL ENTRIES IN @it_keys
+      WHERE area        = @zif_cd_job_types=>gc_area
+        AND object_key  = @it_keys-table_line
+        AND object_type = @zif_ca_ops_job_types=>gc_object_type
+        AND severity IN ( @zif_ca_ops_types=>gc_severity-block, @zif_ca_ops_types=>gc_severity-error,
+                          @zif_ca_ops_types=>gc_severity-warning )
+      INTO TABLE @rt_keys.
   ENDMETHOD.
 
 

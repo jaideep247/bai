@@ -275,7 +275,7 @@ Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` 
 | `ZCL_CD_HCK_C_CONFIG_DRIFT` | D | rows of ZCD_OPS_TABWL HCK / DRIFT | `DRIFTED_TABLES` (*) | `CONFIG_DRIFT` (E), `CONFIG_NO_BASELINE` (W) |
 | `ZCL_CD_HCK_C_PARAM` | D | — (every definition of the four suite areas in ZCA_PARAM plus every delivered one) | `PARAM_INVALID` (*) | `PARAM_INVALID` (E), object key area/name |
 | `ZCL_CD_HCK_C_POSTAREA` | D | — (entries of the posting areas `POSTAREA_RSN` / `_PMC` / `_BTM` / `_BTR`, rule groups of ZCD_BTC_RULE) | `POSTAREA_INVALID` (*) | `POSTAREA_INVALID` (E; W for an empty posting area), object key posting area / key values |
-| `ZCL_CD_HCK_C_TECH_JOBS` | E | P1 job patterns, P2 long-running min (120), P3 grace min (30) | `CANCELLED`, `LONG_RUNNING`, `LATE_START` (*) | `JOB_CANCELLED` (E), `JOB_LONG_RUNNING`, `JOB_LATE_START` (W) |
+| `ZCL_CD_HCK_C_TECH_JOBS` | E | P1 job patterns, P2 long-running min (120), P3 grace min (30) | `CANCELLED`, `LONG_RUNNING`, `LATE_START` (*) - without the jobs the SAP job monitor reports (§9b, 2026-11-11) | `JOB_CANCELLED` (E), `JOB_LONG_RUNNING`, `JOB_LATE_START` (W) |
 | `ZCL_CD_HCK_C_TECH_SYS` | E | — | `SHORT_DUMPS`, `UPDATE_ERRORS`, `LOCK_ENTRIES`, `LOCK_MAX_AGE_MIN` (*) | — |
 | `ZCL_CD_HCK_C_ALERT_HEALTH` | E | P1 window hours (24) | `ALERT_FAILED`, `ALERT_THROTTLED` (channel) | — |
 | `ZCL_CD_HCK_C_NUMRANGE` | E | P1 number range objects (exact SNRO names, comma list; required) | `NR_USED_PCT` (object/subobject/interval/year; level) | `NR_USAGE_HIGH` (W at amber, E at red), `NR_NO_INTERVAL`, `NR_NOT_NUMERIC`, `LIMITS_NOT_CONFIGURED`, `TECH_READ_CAPPED` (W) |
@@ -551,6 +551,25 @@ Findings: MISSED → E if critical, I if skippable, else W; FAILED → E if crit
 Job names of `ZCD_JOB_STEP`, the job-name lists (PARAM1 of `ZCL_CD_HCK_C_TECH_JOBS` / `_JOB_RUNTIME`), the log object / subobject lists (PARAM1 / PARAM2 of `_APPLOG`), the cycle ids (PARAM2 of `_JOB_CYCLE`) and suppression key patterns are PCRE matched to the **complete value**, case ignored: `ZCD_PAYM_WIRE_.*` captures every job starting with ZCD_PAYM_WIRE_, `ZCD_POST_GL` only that job. List items are separated by `,` or `;`. Invalid patterns are configuration errors, never an empty selection: a parameter list raises E373 (PLUGIN_ERROR of the check), a step job name gives `PATTERN_INVALID` for the step (E, counted not OK, not MISSED, message 371), a suppression key pattern is not applied and gives `SUPPRESSION_PATTERN_INVALID` (W, message 372); the job-step app and the suppression app refuse them on save (418).
 
 TBTCO / BALHDR are not read with a pattern in SQL (`Performance_Review.md` §6b): the DAO reads the distinct job names of the date window (or of the open statuses), capped at parameter `HCK_MAX_JOB_NAMES` (default 20 000, hard ceiling `GC_MAX_JOB_NAMES` = 200 000; reaching it raises message 747 — the check fails loudly, never partly), matches them in ABAP and reads the runs of the matched names (FOR ALL ENTRIES, then ordered and capped at parameter `HCK_MAX_JOB_ROWS`, default 5 000, ceiling `GC_MAX_JOB_ROWS` = 50 000; a check that reaches it reports the cap as before); BALHDR counters are grouped per object / subobject for the day and filtered in ABAP. Check a job-name pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, area HCK_JOB (job names of TBTCO in the window against step and list patterns); suppression keys: area HCK_SUPPR.
+
+### 9b. Split with the SAP job monitor (area CD_JOBS, 2026-11-11) - one alert per job failure
+
+The framework's SAP job monitor runs for the suite every 5 minutes in its own area `CD_JOBS`
+(`docs/processes/CD_JOBS_SAP_JOBS.md`, `ops-framework/docs/JOB_MONITORING.md`): every job of the client, cancelled,
+finished with job log errors, long-running or not started, and above all the **failed child under a root that finished**
+(`JOB_CHILD_FAILED`), which no check of the morning report can see. The same job must not be alerted twice:
+
+| Job | Reported by | How the other one stays silent |
+|---|---|---|
+| A step of a named job cycle (`ZCD_JOB_STEP` of an active cycle that an active `B_CYCLE_*` / `B_CLEAR_*` check reports, PARAM2 patterns): its own cancellation, long runtime or late start | **HCK** (`STEP_FAILED`, `STEP_STUCK`, `STEP_MISSED` ... - the cycle context: window, predecessor, criticality) | `CD_JOBS` claims the job (`ZCL_CD_HCK_JOB_CLAIM`, parameter `JOB_CLAIMS`): its finding there is **information** (no exception, no alert), the evidence stays on the board with *Reported by HCK cycle/step* |
+| A failed **child** (worker, successor) of a cycle step or of any job | **CD_JOBS** (`JOB_CHILD_FAILED`, `JOB_ABORTED`) | HCK does not see children; not claimed |
+| Every other job (`E_JOBS` covers `ZCD_.*`) | **CD_JOBS** (`JOB_ABORTED`, `JOB_LONG_RUNNING`, `JOB_NOT_STARTED`, `JOB_LOG_ERROR`) | `E_JOBS` (`ZCL_CD_HCK_C_TECH_JOBS`) neither counts (metrics `CANCELLED`, `LONG_RUNNING`, `LATE_START`) nor reports a job that `CD_JOBS` reports with an exception (B / E / W finding of area `CD_JOBS`, object key job name / job count - `ZIF_CD_HCK_DAO=>GET_JOBS_MONITORED`) |
+
+Fallback: without the job monitor (no `CD_JOBS` findings - not yet activated, or stopped) `E_JOBS` reports every job as
+before; the morning report's `HCK_SELF` does not watch `CD_JOBS` - its freshness is on the area dashboard
+(`CHECK_STALE_MIN_CD_JOBS`, 30 minutes) and its own failure is a runner `CHECK_FAILED` alerted by rule `JOB_FAIL`. Tests:
+`ZCL_CD_HCK_JOB_CLAIM` (3), `ZCL_CD_HCK_C_TECH_JOBS` (`monitored_job_left_to_monitor`), `ZCL_CD_HCK_DAO`
+(`jobs_monitored_by_area`); QA1 case JOB-QA-07.
 
 ## 10. Generic aggregate security
 
