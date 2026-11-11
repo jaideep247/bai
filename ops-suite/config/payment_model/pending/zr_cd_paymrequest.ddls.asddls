@@ -18,9 +18,11 @@ define root view entity ZR_CD_PaymRequest
                                                  and TxnT.Dimension = 'TRANSACTION'
                                                  and TxnT.DimValue  = Req.TransactionType
   association [0..*] to ZR_CD_PaymReqLink as _Payments on $projection.RequestReference = _Payments.RequestReference
+  association [0..*] to ZR_CD_ReqChange   as _Changes  on $projection.RequestReference = _Changes.RequestReference
 {
   key Req.RequestReference,
       _Payments,
+      _Changes,
       Req.BusinessDate,
       Req.ReceivedAt,
       Req.CompanyCode,

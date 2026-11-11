@@ -12,6 +12,8 @@
 // same DCL ZC_CA_OPSCHECKSTATUS; card annotations in its metadata extension); opens app ZUI_CA_OPS_DASH.
 // 2026-11-11: service health per business service (score, worst contributors) and the process flow of the payment
 // lifecycle (stuck per stage, drop) - build B block at the end.
+// 2026-11-11: ledger reconciliation (group-days of the clearing accounts), batch keys not transferred and document-
+// change volumes - build C block at the end.
 define service ZUI_CD_OPS_OVERVIEW {
   // Cross-area cards
   expose ZC_CD_OpsCritExc   as CriticalException;
@@ -44,4 +46,12 @@ define service ZUI_CD_OPS_OVERVIEW {
   expose ZC_CD_SvcContrib as ServiceContributor;
   expose ZC_CD_PayFlow    as PaymentFlow;
   // <<< 2026-11-11 service health and process flow (build B)
+  // >>> build C - 2026-11-11 ledger reconciliation and document changes - keep this block together at merge
+  // Group reconciliation per business date x company code x clearing account x currency (stored A_RECON_3WAY result,
+  // live journal / subledger legs, reset / reversal bucket) and document-change volumes; same projections and DCL
+  // (ZC_CD_PAYM) as the payment model service ZUI_CD_PAYM (docs/Dashboard_Production_Support.md section 9)
+  expose ZC_CD_LedgRecon   as LedgerReconciliation;
+  expose ZC_CD_LedgBatch   as SubledgerBatch;
+  expose ZC_CD_DocEvtCube  as DocumentChangeCategory;
+  // <<< build C
 }

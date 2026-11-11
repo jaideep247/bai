@@ -13,6 +13,8 @@
     "window_days": 45,
     "trend_days": 30,
     "peak_day_min": 1000000,
+    "ledger": {"area": "CD_EBS", "parameter": "EBS_GL_LEDGER", "default": "0L"},
+    "gl_reference_type": "FKKSU",
     "intents": {
       "trace": ["ZCDPaymentTrace", "display"],
       "exceptions": ["ZCDOpsException", "manage"],
@@ -124,6 +126,179 @@
       "Hop": {"expr": "Hop.Hop"},
       "EventStatus": {"expr": "Hop.EventStatus"},
       "EventReference": {"expr": "Hop.EventReference"}
+    }
+  },
+  "ledger_item": {
+    "status": "active",
+    "notes": [
+      "Items cleared by the payment document (DFKKOP-AUGBL = payment document, confirmed join) with the reconciliation",
+      "key (FIKEY) of the CLEARING document's header (DFKKKO-OPBEL = AUGBL): the clearing posts the offset of every",
+      "cleared item on the item's account under the clearing document's FIKEY, so per account and currency the payment's",
+      "FI-CA amount within the FIKEY total (DFKKSUMC) is the sum of its cleared items (VERIFY V101). The bank clearing",
+      "account side of the payment is reached through the bank line (FEBEP -> BSEG-XREF2 = AUGBL) and the batch key",
+      "level, not as an item. Transaction texts: text tables not confirmed (V103) - blank until SE11. Reads only by",
+      "payment document (index AUGBL, V88) or by FIKEY (DFKKKO index FIKEY, V102)."
+    ],
+    "from": "dfkkop as Op",
+    "joins": [
+      "inner join dfkkko as Clr on Clr.opbel = Op.augbl"
+    ],
+    "where": ["Op.augbl <> ' '"],
+    "fields": {
+      "PaymentDocument": {"expr": "cast( Op.augbl as abap.char( 20 ) )"},
+      "SubledgerDocument": {"expr": "cast( Op.opbel as abap.char( 20 ) )"},
+      "SubledgerItem": {"expr": "cast( concat( concat( Op.opupw, Op.opupk ), Op.opupz ) as abap.char( 20 ) )", "verify": "V101 VERIFY-SE11 DFKKOP-OPUPW / OPUPK / OPUPZ (item key, as the trace item read)"},
+      "CompanyCode": {"expr": "Op.bukrs", "verify": "VERIFY-DDIC DFKKOP-BUKRS (as payment_request)"},
+      "BatchKey": {"expr": "cast( Clr.fikey as abap.char( 20 ) )", "verify": "V101 FIKEY of the clearing document carries the clearing's account postings (DFKKKO-FIKEY confirmed field)"},
+      "GlAccount": {"expr": "Op.hkont", "verify": "V101 VERIFY-SE11 DFKKOP-HKONT (reconciliation account of the item)"},
+      "Currency": {"expr": "Op.waers", "verify": "V101 VERIFY-SE11 DFKKOP-WAERS"},
+      "Amount": {"expr": "Op.betrw", "verify": "V101 VERIFY-SE11 DFKKOP-BETRW (transaction currency, signed as DFKKSUMC-BETRW?)"},
+      "PostingDate": {"expr": "Op.budat"},
+      "MainTransaction": {"expr": "Op.hvorg", "verify": "VERIFY-DDIC DFKKOP-HVORG (as the HCK seeds)"},
+      "MainTransactionText": {"expr": null, "verify": "V103 main transaction text table (TFKHVOT candidate) not confirmed - blank"},
+      "SubTransaction": {"expr": "Op.tvorg", "verify": "V101 VERIFY-SE11 DFKKOP-TVORG"},
+      "SubTransactionText": {"expr": null, "verify": "V103 sub-transaction text table (TFKTVOT candidate) not confirmed - blank"},
+      "ContractAccount": {"expr": "Op.vkont", "verify": "V101 VERIFY-SE11 DFKKOP-VKONT"},
+      "BusinessPartner": {"expr": "Op.gpart", "verify": "masked to the last four by the product view (trace rule)"},
+      "ClearingDocument": {"expr": "cast( Op.augbl as abap.char( 20 ) )"},
+      "ClearingDate": {"expr": "Op.augdt"},
+      "ClearingReason": {"expr": "Op.augrd", "verify": "AUGRD 05 = reversal (confirmed 2026-11-07)"},
+      "RequestReference": {"expr": "cast( Op.zz_fin_trans_num as abap.char( 40 ) )"}
+    }
+  },
+  "ledger_batch": {
+    "status": "active",
+    "notes": [
+      "Summary records of the payment engine G/L transfer: DFKKSUMC grouped per FIKEY, company code, account and",
+      "currency (confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY; G/L reference key = FIKEY, reference type",
+      "TRACE_GL_AWTYP FKKSU = model gl_reference_type). Posting date = the latest BUDAT of the key's records. The key",
+      "status (open / closed) is a field of the reconciliation key header (DFKKSUM, candidate) - V102, blank until SE11;",
+      "transferred / not transferred is derived from the G/L document (product view), the gap finding stays A_GL_TRANSFER."
+    ],
+    "from": "dfkksumc as Sum",
+    "group_by": ["Sum.fikey", "Sum.bukrs", "Sum.hkont", "Sum.waers"],
+    "fields": {
+      "BatchKey": {"expr": "cast( Sum.fikey as abap.char( 20 ) )"},
+      "CompanyCode": {"expr": "Sum.bukrs", "verify": "VERIFY-DDIC DFKKSUMC-BUKRS (as A_GL_TRANSFER / A_RECON_3WAY)"},
+      "GlAccount": {"expr": "Sum.hkont", "verify": "VERIFY-DDIC DFKKSUMC-HKONT (as A_RECON_3WAY)"},
+      "Currency": {"expr": "Sum.waers", "verify": "VERIFY-DDIC DFKKSUMC-WAERS (as A_RECON_3WAY)"},
+      "GlReferenceKey": {"expr": "cast( Sum.fikey as abap.char( 20 ) )", "verify": "BKPF-AWKEY = FIKEY (confirmed path; V104 AWKEY form of a 12-character FIKEY)"},
+      "PostingDate": {"expr": "max( Sum.budat )", "verify": "VERIFY-DDIC DFKKSUMC-BUDAT (as A_RECON_3WAY)"},
+      "BatchStatus": {"expr": null, "verify": "V102 reconciliation key status (open / closed) - DFKKSUM field VERIFY-SE11; blank until confirmed"},
+      "Amount": {"expr": "sum( Sum.betrw )", "verify": "VERIFY-DDIC DFKKSUMC-BETRW signed (as A_RECON_3WAY; V101 same sign as ACDOCA-WSL)"},
+      "LineCount": {"expr": "cast( count( * ) as abap.int4 )"}
+    }
+  },
+  "recon_account": {
+    "status": "active",
+    "notes": [
+      "Clearing / transit accounts of the three-way reconciliation configuration (ZCD_HCK_RCSET, active sets): one row per",
+      "company code, G/L account and currency (several sets of one account - kinds - collapse to one row)."
+    ],
+    "from": "zcd_hck_rcset as RcSet",
+    "where": ["RcSet.active = 'X'"],
+    "group_by": ["RcSet.bukrs", "RcSet.hkont", "RcSet.waers"],
+    "fields": {
+      "CompanyCode": {"expr": "RcSet.bukrs"},
+      "GlAccount": {"expr": "RcSet.hkont"},
+      "Currency": {"expr": "cast( RcSet.waers as abap.cuky )"},
+      "AccountKind": {"expr": "max( RcSet.kind )"},
+      "Description": {"expr": "max( RcSet.description )"}
+    }
+  },
+  "recon_result": {
+    "status": "active",
+    "notes": [
+      "Stored results of A_RECON_3WAY (ZCD_HCK_METRIC RC_* of the latest measurement per group-day and the check's",
+      "findings of that run, helper views ZI_CD_LedgRcLast / ZI_CD_LedgRcPiv / ZI_CD_LedgRcDay) - reused, never",
+      "recomputed: the stored G/L leg is the FKKSU part of ACDOCA on the clearing account in ledger EBS_GL_LEDGER."
+    ],
+    "from": "ZI_CD_LedgRcDay as Res",
+    "fields": {
+      "BusinessDate": {"expr": "Res.BusinessDate"},
+      "CompanyCode": {"expr": "Res.CompanyCode"},
+      "GlAccount": {"expr": "Res.GlAccount"},
+      "Currency": {"expr": "Res.Currency"},
+      "BankAmount": {"expr": "Res.BankAmount"},
+      "GlAmount": {"expr": "Res.GlAmount"},
+      "SubledgerAmount": {"expr": "Res.SubledgerAmount"},
+      "BankGlDifference": {"expr": "Res.BankGlDifference"},
+      "GlSubledgerDifference": {"expr": "Res.GlSubledgerDifference"},
+      "Tolerance": {"expr": "Res.Tolerance"},
+      "ResultStatus": {"expr": "Res.ResultStatus"},
+      "Bucket": {"expr": "Res.Bucket"},
+      "MeasuredAt": {"expr": "Res.MeasuredAt"}
+    }
+  },
+  "recon_bank_line": {
+    "status": "active",
+    "notes": [
+      "Bank lines of the payment engine accounts (ZI_CD_HckRcBankLine: account of FEBEP-XBLNR as EBS) of the reconciled",
+      "sets (ZCD_EBS_ACCT house bank account -> ZCD_HCK_RCSET of the same company code, house bank, account ID and",
+      "currency). Clearing document = FEBEP-CHECT (methods E G H I J K L: CHECT = AUGBL, confirmed; for cheques CHECT is",
+      "the cheque number - V105, not resolved here). ClearingChanged = the referenced payment document was reversed",
+      "(DFKKKO-STBEL; a clearing reset needs the history, V100). The G/L clearing line (BSEG-XREF2 = AUGBL) is not joined:",
+      "BSEG has no index on XREF2 (HCK VERIFY item 14) - blank until the index or the clearing-account restriction is",
+      "confirmed (V106); the payment ledger and the batch key reach the journal instead."
+    ],
+    "from": "ZI_CD_HckRcBankLine as Line",
+    "joins": [
+      "inner join zcd_ebs_acct as Acct on  Acct.account_no = Line.PeAccount",
+      "                                and Acct.active     = 'X'",
+      "inner join zcd_hck_rcset as RcSet on  RcSet.bukrs  = Acct.bukrs",
+      "                                  and RcSet.hbkid  = Acct.hbkid",
+      "                                  and RcSet.hktid  = Acct.hktid",
+      "                                  and RcSet.waers  = Line.Currency",
+      "                                  and RcSet.active = 'X'",
+      "left outer join dfkkko as Clr on Clr.opbel = Line.BankReference"
+    ],
+    "fields": {
+      "StatementKey": {"expr": "cast( Line.Kukey as abap.char( 20 ) )"},
+      "StatementLine": {"expr": "cast( Line.Esnum as abap.char( 10 ) )"},
+      "CompanyCode": {"expr": "RcSet.bukrs"},
+      "GlAccount": {"expr": "RcSet.hkont"},
+      "Currency": {"expr": "Line.Currency"},
+      "BookingDate": {"expr": "Line.BookingDate"},
+      "Amount": {"expr": "Line.Amount", "verify": "absolute FEBEP-KWBTR; the sign is DebitCredit (EPVOZ, EBS_FEB_CREDIT_IND / _DEBIT_IND)"},
+      "DebitCredit": {"expr": "Line.DebitCreditInd"},
+      "HouseBank": {"expr": "Line.HouseBank"},
+      "HouseBankAccount": {"expr": "Line.HouseBankAccount"},
+      "StatementNumber": {"expr": "Line.StatementNumber", "verify": "V107 VERIFY-SE11 FEBKO-AZNUM"},
+      "StatementDate": {"expr": "Line.StatementDate"},
+      "TransactionCode": {"expr": "Line.BaiCode"},
+      "BankReference": {"expr": "Line.BankReference"},
+      "ReferenceText": {"expr": "Line.ReferenceText"},
+      "ValueDate": {"expr": "Line.ValueDate", "verify": "V107 VERIFY-SE11 FEBEP-VALUT"},
+      "IsPostedArea1": {"expr": "Line.IsPostedArea1"},
+      "IsPostedArea2": {"expr": "Line.IsPostedArea2"},
+      "ClearingDocument": {"expr": "cast( Line.BankReference as abap.char( 20 ) )", "verify": "CHECT = AUGBL for methods E G H I J K L (confirmed); cheques: V105"},
+      "ClearingChanged": {"expr": "cast( case when Clr.stbel is not null and Clr.stbel <> ' ' then 'X' else ' ' end as abap_boolean )", "verify": "reversal by DFKKKO-STBEL; clearing reset needs the history (V100)"},
+      "GlFiscalYear": {"expr": null, "verify": "V106 G/L clearing line by BSEG-XREF2 = AUGBL needs an index (BUKRS / XREF2) - blank until confirmed"},
+      "GlDocument": {"expr": null, "verify": "V106 as GlFiscalYear"},
+      "GlLineItem": {"expr": null, "verify": "V106 as GlFiscalYear"}
+    }
+  },
+  "document_event": {
+    "status": "active",
+    "notes": [
+      "Reversals (DFKKKO-STBEL) and stopped cheques (DPAYH status STOPPED) of the payments of the payment model window",
+      "(ZI_CD_DocEvtU). Clearing reset / re-clearing / reissue link need the clearing-reset history (TRACE_SRC_HISTORY,",
+      "DFKKRAPT candidate, V100) - not mapped until confirmed; returns (DFKKRP) are not change events."
+    ],
+    "from": "ZI_CD_DocEvtU as Evt",
+    "fields": {
+      "PaymentDocument": {"expr": "Evt.PaymentDocument"},
+      "EventType": {"expr": "Evt.EventType"},
+      "EventDocument": {"expr": "Evt.EventDocument"},
+      "CompanyCode": {"expr": "Evt.CompanyCode"},
+      "OriginalDocument": {"expr": "Evt.OriginalDocument"},
+      "NewDocument": {"expr": "Evt.NewDocument"},
+      "ReversalDocument": {"expr": "Evt.ReversalDocument"},
+      "EventDate": {"expr": "Evt.EventDate"},
+      "EventTime": {"expr": "Evt.EventTime"},
+      "EventUser": {"expr": "Evt.EventUser"},
+      "Reason": {"expr": "Evt.Reason"},
+      "EventSource": {"expr": "Evt.EventSource"}
     }
   }
 }

@@ -1,0 +1,100 @@
+// UI annotations: ledger model - bank statement line (entity BankStatementLine; generated - never edit, regenerate)
+// Lines table (reconciliation page, paged) and object page: statement, line, amount, references, posted flags, the
+// referenced clearing document (red when it was reversed or reset since), G/L clearing line, payment, change timeline.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Bank statement line', typeNamePlural: 'Bank statement lines',
+                  title: { type: #STANDARD, value: 'BankReference' },
+                  description: { type: #STANDARD, value: 'TransactionCode' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'LineCriticality', direction: #ASC }, { by: 'StatementKey', direction: #ASC },
+                                          { by: 'StatementLine', direction: #ASC } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Changed', text: 'Clearing document reversed or reset', filter: 'ClearingChanged EQ X' } ]
+annotate entity ZC_CD_LedgBankLn with
+{
+  @UI.facet: [ { id: 'Line', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Statement line', position: 10 },
+               { id: 'Clearing', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Clearing', label: 'Clearing and G/L', position: 20 },
+               { id: 'GlLine', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_GlLine', label: 'G/L clearing line', position: 30 }
+               ,{ id: 'Changes', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Changes', label: 'Changes of the clearing document', position: 40 }
+             ]
+  @EndUserText.label: 'Statement'
+  @UI.identification: [ { position: 10 } ]
+  StatementKey;
+  @EndUserText.label: 'Line'
+  @UI.lineItem: [ { position: 10 } ]
+  @UI.identification: [ { position: 20 } ]
+  StatementLine;
+  @UI.hidden: true
+  OpsArea;
+  @EndUserText.label: 'Company code'
+  @UI.identification: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'G/L account'
+  @UI.identification: [ { position: 40 } ]
+  GlAccount;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 20 } ]
+  Currency;
+  @EndUserText.label: 'Booking date'
+  @UI.lineItem: [ { position: 30 } ]
+  @UI.identification: [ { position: 50 } ]
+  BookingDate;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  Amount;
+  @EndUserText.label: 'Debit / credit'
+  @UI.lineItem: [ { position: 50 } ]
+  DebitCredit;
+  @EndUserText.label: 'House bank'
+  @UI.identification: [ { position: 70 } ]
+  HouseBank;
+  @EndUserText.label: 'House bank account ID'
+  @UI.identification: [ { position: 80 } ]
+  HouseBankAccount;
+  @EndUserText.label: 'Statement number'
+  @UI.identification: [ { position: 90 } ]
+  StatementNumber;
+  @EndUserText.label: 'Statement date'
+  @UI.identification: [ { position: 100 } ]
+  StatementDate;
+  @EndUserText.label: 'Transaction code'
+  @UI.lineItem: [ { position: 60 } ]
+  @UI.identification: [ { position: 110 } ]
+  TransactionCode;
+  @EndUserText.label: 'Bank reference'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.identification: [ { position: 120 } ]
+  BankReference;
+  @EndUserText.label: 'Reference text'
+  @UI.identification: [ { position: 130 } ]
+  ReferenceText;
+  @EndUserText.label: 'Value date'
+  @UI.identification: [ { position: 140 } ]
+  ValueDate;
+  @EndUserText.label: 'Posted (area 1)'
+  @UI.identification: [ { position: 150 } ]
+  IsPostedArea1;
+  @EndUserText.label: 'Posted (area 2)'
+  @UI.identification: [ { position: 160 } ]
+  IsPostedArea2;
+  @EndUserText.label: 'Clearing document referenced'
+  @UI.lineItem: [ { position: 80 } ]
+  @UI.fieldGroup: [ { qualifier: 'Clearing', position: 10 } ]
+  ClearingDocument;
+  @EndUserText.label: 'Clearing document reversed / reset since'
+  @UI.lineItem: [ { position: 90, criticality: 'LineCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Clearing', position: 20, criticality: 'LineCriticality' } ]
+  ClearingChanged;
+  @UI.hidden: true
+  LineCriticality;
+  @EndUserText.label: 'G/L fiscal year'
+  @UI.fieldGroup: [ { qualifier: 'Clearing', position: 30 } ]
+  GlFiscalYear;
+  @EndUserText.label: 'G/L document'
+  @UI.fieldGroup: [ { qualifier: 'Clearing', position: 40 } ]
+  GlDocument;
+  @EndUserText.label: 'G/L line item'
+  @UI.fieldGroup: [ { qualifier: 'Clearing', position: 50 } ]
+  GlLineItem;
+  @EndUserText.label: 'Lines'
+  LineCount;
+}

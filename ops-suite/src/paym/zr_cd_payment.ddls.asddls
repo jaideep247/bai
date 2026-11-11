@@ -2,7 +2,9 @@
 // Purpose: Payment model of the ops suite - one payment (drill-down list and object page): the adapter row of
 //          ZI_CD_PaymFact with the dimension texts and the feeder system name, and the requests it settled
 //          (association _Requests, 1:n - a payment can settle several requests and a request can be paid by
-//          several payments). Read by key or with a business date (the list makes the date mandatory) - never
+//          several payments), its ledger (association _Ledger: share of the subledger batch summary, G/L documents and
+//          journal lines - ledger model) and its document changes (_Changes: reversal, clearing reset, re-clearing, void,
+//          reissue, G/L reversal - document-change model). Read by key or with a business date (the list makes the date mandatory) - never
 //          a scan of the payment table. Read-only.
 // Modification log: 2026-11-11 | Generated from the product template (payment model).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -22,11 +24,15 @@ define root view entity ZR_CD_Payment
                                                 and MclT.DimValue   = Fact.MethodClass
     left outer join ZI_CA_PaymFeeder   as Fdr   on  Fdr.Feeder      = Fact.Source
   association [0..*] to ZR_CD_PaymReqLink as _Requests on $projection.PaymentDocument = _Requests.PaymentDocument
+  association [0..*] to ZR_CD_PaymLedger  as _Ledger   on $projection.PaymentDocument = _Ledger.PaymentDocument
+  association [0..*] to ZR_CD_PaymChange  as _Changes  on $projection.PaymentDocument = _Changes.PaymentDocument
 {
   key Fact.BusinessDate,
   key Fact.PaymentRun,
   key Fact.PaymentDocument,
       _Requests,
+      _Ledger,
+      _Changes,
       Fact.CompanyCode,
       cast( 'CD_OPS' as abap.char( 16 ) )                 as OpsArea,
       Fact.Flow,

@@ -14,6 +14,8 @@ define root view entity ZC_CD_Payment
   key PaymentRun,
   key PaymentDocument,
       _Requests : redirected to ZC_CD_PaymReqLink,
+      _Ledger   : redirected to ZC_CD_PaymLedger,
+      _Changes  : redirected to ZC_CD_PaymChange,
       CompanyCode,
       OpsArea,
       @ObjectModel.text.element: [ 'FlowText' ]

@@ -6,6 +6,7 @@
  *           object page shows its requests. Never run - the apps are generated in DV1 (ui/tests/README.md).
  * Modification log:
  * 2026-11-11 | Initial version (UI test pack).
+ * 2026-11-11 | Build C: ledger facet and changes timeline of the payment object page.
  */
 sap.ui.define([
   "sap/ui/test/opaQunit",
@@ -69,5 +70,17 @@ sap.ui.define([
       Then.onThePayment.onTable({ property: "_Requests" }).iCheckRows();
       Given.iTearDownMyApp();
     });
+
+    // >>> build C - ledger facet and changes timeline of the payment (LDG-01, LDG-10)
+    opaTest("The payment shows its ledger share and its changes", function (Given, When, Then) {
+      Given.iStartMyApp();
+      When.onThePaymentList.onFilterBar().iChangeFilterField("Business date", "11/10/2026").and.iExecuteSearch();
+      When.onThePaymentList.onTable().iPressRow(0);
+      Then.onThePayment.iSeeThisPage();
+      Then.onThePayment.onTable({ property: "_Ledger" }).iCheckColumns(11);
+      Then.onThePayment.onTable({ property: "_Changes" }).iCheckRows();
+      Given.iTearDownMyApp();
+    });
+    // <<< build C
   });
 });

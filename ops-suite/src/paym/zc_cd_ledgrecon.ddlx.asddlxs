@@ -1,0 +1,120 @@
+// UI annotations: ledger model - group reconciliation (entity LedgerReconciliation; generated - never edit, regenerate)
+// List (business date mandatory) per company code / account / currency: subledger vs journal transfer vs bank, other
+// journal postings, the stored result of the consumer's check (status, bucket, differences, tolerance) and the
+// "reset / reversal" bucket; object page with the next levels (batch keys of the day, journal lines, bank lines - paged).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Account day', typeNamePlural: 'Ledger reconciliation',
+                  title: { type: #STANDARD, value: 'GlAccount' },
+                  description: { type: #STANDARD, value: 'AccountDescription' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StatusCriticality', direction: #ASC }, { by: 'BusinessDate', direction: #DESC } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Open', text: 'Not balanced', filter: 'StatusCriticality LT 3' } ]
+annotate entity ZC_CD_LedgRecon with
+{
+  @UI.facet: [ { id: 'Legs', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Legs', label: 'Legs (live)', position: 10 },
+               { id: 'Stored', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Stored', label: 'Reconciliation result (as measured)', position: 20 },
+               { id: 'Batches', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Batches', label: 'Batch keys of the day', position: 30 },
+               { id: 'BankLines', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_BankLines', label: 'Bank statement lines', position: 40 },
+               { id: 'Journal', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Journal', label: 'Journal lines of the account and day', position: 50 } ]
+  @EndUserText.label: 'Business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter: { mandatory: true }
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  BusinessDate;
+  @EndUserText.label: 'Company code'
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.lineItem: [ { position: 20 } ]
+  CompanyCode;
+  @EndUserText.label: 'G/L account'
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  GlAccount;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 40 } ]
+  Currency;
+  @UI.hidden: true
+  OpsArea;
+  @EndUserText.label: 'Account kind'
+  @UI.selectionField: [ { position: 40 } ]
+  AccountKind;
+  @EndUserText.label: 'Account'
+  AccountDescription;
+  @EndUserText.label: 'Subledger (summary records)'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 10 } ]
+  SubledgerAmount;
+  @EndUserText.label: 'Batch keys'
+  @UI.lineItem: [ { position: 60 } ]
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 20 } ]
+  BatchCount;
+  @EndUserText.label: 'Journal - batch transfers'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 30 } ]
+  JournalTransferAmount;
+  @EndUserText.label: 'Journal - other postings'
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 40 } ]
+  JournalOtherAmount;
+  @EndUserText.label: 'Journal - total'
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 50 } ]
+  JournalAmount;
+  @EndUserText.label: 'Journal lines'
+  @UI.lineItem: [ { position: 80 } ]
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 60 } ]
+  JournalLineCount;
+  @EndUserText.label: 'Difference journal transfers - subledger (live)'
+  @UI.lineItem: [ { position: 90, criticality: 'StatusCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 70 } ]
+  LiveDifference;
+  @EndUserText.label: 'Bank lines amount'
+  @UI.lineItem: [ { position: 100 } ]
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 80 } ]
+  BankAmount;
+  @EndUserText.label: 'Bank lines'
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 90 } ]
+  BankLineCount;
+  @EndUserText.label: 'Bucket reset / reversal (amount)'
+  @UI.lineItem: [ { position: 110 } ]
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 100 } ]
+  ResetReversalAmount;
+  @EndUserText.label: 'Bucket reset / reversal (lines)'
+  @UI.fieldGroup: [ { qualifier: 'Legs', position: 110 } ]
+  ResetReversalLineCount;
+  @EndUserText.label: 'Bank leg (as measured)'
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 10 } ]
+  StoredBankAmount;
+  @EndUserText.label: 'G/L leg (as measured)'
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 20 } ]
+  StoredGlAmount;
+  @EndUserText.label: 'Subledger leg (as measured)'
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 30 } ]
+  StoredSubledgerAmount;
+  @EndUserText.label: 'Difference bank - G/L'
+  @UI.lineItem: [ { position: 120 } ]
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 40 } ]
+  StoredBankGlDifference;
+  @EndUserText.label: 'Difference G/L - subledger'
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 50 } ]
+  StoredGlSubDifference;
+  @EndUserText.label: 'Tolerance'
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 60 } ]
+  Tolerance;
+  @EndUserText.label: 'Result'
+  @UI.selectionField: [ { position: 50 } ]
+  @UI.lineItem: [ { position: 130, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 70, criticality: 'StatusCriticality' } ]
+  ResultStatus;
+  @EndUserText.label: 'Variance bucket'
+  @UI.lineItem: [ { position: 140 } ]
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 80 } ]
+  Bucket;
+  @EndUserText.label: 'Measured at (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 90 } ]
+  MeasuredAt;
+  @EndUserText.label: 'Changed since measured'
+  @UI.lineItem: [ { position: 150 } ]
+  @UI.fieldGroup: [ { qualifier: 'Stored', position: 100 } ]
+  IsChangedSinceMeasured;
+  @UI.hidden: true
+  StatusCriticality;
+  @EndUserText.label: 'Account days'
+  GroupDayCount;
+}

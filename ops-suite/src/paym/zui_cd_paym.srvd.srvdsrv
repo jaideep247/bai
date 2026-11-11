@@ -11,4 +11,12 @@ define service ZUI_CD_PAYM {
   expose ZC_CD_Payment as Payment;
   expose ZC_CD_PaymReqLink as PaymentRequestLink;
   expose ZC_CD_PaymExcTrend as ExceptionTrend;
+  expose ZC_CD_PaymLedger as PaymentLedger;
+  expose ZC_CD_LedgBatch as SubledgerBatch;
+  expose ZC_CD_LedgItem as SubledgerItem;
+  expose ZC_CD_LedgJrnl as JournalLine;
+  expose ZC_CD_LedgRecon as LedgerReconciliation;
+  expose ZC_CD_LedgBankLn as BankStatementLine;
+  expose ZC_CD_PaymChange as PaymentChange;
+  expose ZC_CD_DocEvtCube as DocumentChangeCategory;
 }

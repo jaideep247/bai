@@ -11,6 +11,10 @@
 //          is copied. Fields as ZCL_CD_EBS_FEB_DAO reads them (VORGC, EPVOZ, KWBTR / KWAER,
 //          BUDAT, CHECT, XBLNR, BELNR / GJAHR; VERIFY-SE11 as there). Read-only.
 // Modification log: 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+//                   2026-11-11 | Statement number (FEBKO-AZNUM), value date (FEBEP-VALUT), XBLNR as delivered and the
+//                              | posted flags VB1OK / VB2OK (confirmed) for the bank line of the ledger model (build C,
+//                              | adapter ZI_CD_LedgBankLn); the reconciliation DAO's grouped reads are unchanged.
+//                              | VERIFY-SE11: FEBKO-AZNUM, FEBEP-VALUT.
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK reconciliation bank line'
@@ -42,5 +46,10 @@ define view entity ZI_CD_HckRcBankLine
       // Payment document (methods E G H I J K L) = DFKKRP-SELW1 of a returns lot (confirmed path)
       Line.chect                                            as BankReference,
       Line.belnr                                            as PostingDocument,
-      Line.gjahr                                            as PostingYear
+      Line.gjahr                                            as PostingYear,
+      Hdr.aznum                                             as StatementNumber,
+      Line.valut                                            as ValueDate,
+      Line.xblnr                                            as ReferenceText,
+      Line.vb1ok                                            as IsPostedArea1,
+      Line.vb2ok                                            as IsPostedArea2
 }

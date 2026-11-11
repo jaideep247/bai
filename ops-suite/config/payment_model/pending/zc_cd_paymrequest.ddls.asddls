@@ -12,6 +12,7 @@ define root view entity ZC_CD_PaymRequest
 {
   key RequestReference,
       _Payments : redirected to ZC_CD_PaymReqLink,
+      _Changes  : redirected to ZC_CD_ReqChange,
       BusinessDate,
       ReceivedAt,
       CompanyCode,

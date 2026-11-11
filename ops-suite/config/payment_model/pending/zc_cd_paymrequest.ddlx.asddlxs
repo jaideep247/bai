@@ -9,6 +9,7 @@ annotate entity ZC_CD_PaymRequest with
   @UI.facet: [ { id: 'Request', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Request', position: 10 },
                { id: 'Feeder', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Feeder', label: 'Feeder system', position: 20 },
                { id: 'Payments', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Payments', label: 'Payments', position: 50 }
+               ,{ id: 'Changes', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Changes', label: 'Changes', position: 60 }
              ]
   @EndUserText.label: 'Request reference'
   @UI.lineItem: [ { position: 10 } ]

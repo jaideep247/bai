@@ -1,6 +1,7 @@
 // UI annotations: payment model - individual payment (entity Payment; generated - never edit, regenerate)
 // List (drill-down of every category card; business date mandatory) and object page: header, request(s) the payment
-// settled, statuses, amounts per currency, links (intent-based navigation) to the payment trace, the exceptions
+// settled, its ledger (share of the batch summary, G/L, journal lines) and changes timeline, statuses, amounts per
+// currency, links (intent-based navigation) to the payment trace, the exceptions
 // and the job of the payment run. VERIFY-ADT: intents exist in the launchpad of the landscape (else the link is hidden).
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Payment', typeNamePlural: 'Payments',
@@ -13,6 +14,8 @@ annotate entity ZC_CD_Payment with
                { id: 'Status', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Status', label: 'Status', position: 20 },
                { id: 'Bank', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Bank', label: 'Bank and amount', position: 30 }
                ,{ id: 'Requests', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Requests', label: 'Requests', position: 40 }
+               ,{ id: 'Ledger', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Ledger', label: 'Ledger', position: 50 }
+               ,{ id: 'Changes', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Changes', label: 'Changes', position: 60 }
              ]
   @EndUserText.label: 'Business date'
   @UI.selectionField: [ { position: 10 } ]
