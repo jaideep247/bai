@@ -14,7 +14,7 @@ Open the app *Parameter areas* (service binding `ZUI_CA_PARAM_O4`), choose *Crea
 
 | Field | Rule |
 |---|---|
-| Area | upper case, `A-Z 0-9 _`, starts with a letter, at most 16 characters, e.g. `CD_EBS`, `MM_INBOUND` |
+| Area | upper case, `A-Z 0-9 _`, starts with a letter, at most 16 characters, e.g. `XX_BANK`, `MM_INBOUND` |
 | Description, Owner team | mandatory in practice: who answers questions about this area |
 | Editable in production | X only if operations may change released values in QA / production without a transport |
 | Active | X (blank = every read raises 002) |
@@ -127,11 +127,11 @@ ENDMETHOD.
 
 ## 6. Moving an existing parameter interface onto ZCA_PARAM
 
-A consumer with its own parameter interface (first consumer: the payment engine
-operations suite, `ZIF_CD_OPS_PARAMS`) keeps its callers and adds one adapter class:
+A consumer with its own parameter interface (for example `ZIF_XX_PARAMS`) keeps its
+callers and adds one adapter class:
 
-1. One area per functional area of the consumer (e.g. `CD_OPS`, `CD_EBS`, `CD_FMON`,
-   `CD_HCK`); the adapter derives the area from the parameter name with a constant
+1. One area per functional area of the consumer (e.g. `XX_OPS`, `XX_BANK`, `XX_FILE`,
+   `XX_CHECK`); the adapter derives the area from the parameter name with a constant
    prefix table, names stay unchanged (at most 30 characters).
 2. A definition for **every** name the code reads, including names completed at run time
    (`ALERT_<route>`, `RETENTION_DAYS_<target>`, ...): enumerate them - an undefined name
@@ -169,6 +169,6 @@ on save): area and name are identifiers (16 / 30 characters), description at mos
 at most 30 characters; the section 2 rules per value type; rows sorted by area and name;
 value rows only for defined names, kind P with one row `NUMB` 1, `I` / `EQ`. Values in
 `param_values.csv` are examples to confirm per landscape - production values are maintained
-in the app, never transported from a seed. The operations suite generates its in-memory test
-data (`ZCL_CD_OPS_PARAM_SEED`) from these files and checks them against its code
-(`tools/param_definitions.py`).
+in the app, never transported from a seed. A consumer can generate its in-memory test
+data (for example a seed class `ZCL_XX_PARAM_SEED`) from these files and check them against
+its code (as the shared `param_definitions.py` tools of the components do).

@@ -10,6 +10,11 @@ Release constant unchanged: no ABAP object changed.
 - `config/customer_terms.txt`: the same terms as the operations framework's list (more middleware, feeder,
   bank, finance-system, field and status names, the consumer's object prefixes) in the shared format with
   the flags `case`, `prefix` and `text` (check `customer_terms` of the shared tools).
+- Check `customer_terms` (`tools/checks.py`) reads every text file of the component - docs, configuration,
+  tools, README and change log - not only `src/`, the text elements and the message texts; single allowed
+  lines go to `config/customer_terms_allowed.txt` with their reason (none needed today).
+- `docs/ONBOARDING.md`: examples use the neutral prefix `XX` instead of the first consumer's areas and
+  objects.
 
 ## [Unreleased] - 2026-11-10 (tooling)
 
