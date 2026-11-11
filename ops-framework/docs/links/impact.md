@@ -39,6 +39,7 @@
 | FEBEP-KUKEY | confirmed | S4_BANK_STMT_LINE | S4_STMT_HDR_TO_LINES (to, active)<br/>S4_STMT_LINE_TO_HDR (from, active)<br/>FICA_CHEQUE_TO_STMT_LINE (target key)<br/>FICA_PAYMENT_TO_STMT_LINE (target key)<br/>S4_STMT_HDR_TO_LINES (target key) | - |
 | FEBEP-VB1OK | confirmed | - | - | - |
 | FEBEP-VB2OK | confirmed | - | - | - |
+| FEBEP-VGEXT | VERIFY V138 | - | - | - |
 | FEBEP-XBLNR | confirmed | - | - | - |
 | FEBKO-BUKRS | VERIFY V117 | - | S4_STMT_HDR_TO_COMPANY (from, inactive (VERIFY)) | - |
 | FEBKO-HBKID | VERIFY V117 | - | - | - |

@@ -36,5 +36,10 @@ define root view entity ZC_CA_OpsCfgAll
       _CatalogStep : redirected to composition child ZC_CA_CatalogStep,
       _CatalogTable : redirected to composition child ZC_CA_CatalogTable,
       _CatalogDependency : redirected to composition child ZC_CA_CatalogDependency,
-      _CatalogActivation : redirected to composition child ZC_CA_CatalogActivation
+      _CatalogActivation : redirected to composition child ZC_CA_CatalogActivation,
+      _BreakAccount : redirected to composition child ZC_CA_BreakAccount,
+      _BreakBucket : redirected to composition child ZC_CA_BreakBucket,
+      _BreakRule : redirected to composition child ZC_CA_BreakRule,
+      _BreakCondition : redirected to composition child ZC_CA_BreakCondition,
+      _PilotBaseline : redirected to composition child ZC_CA_PilotBaseline
 }

@@ -45,6 +45,10 @@ Checks
   link_registry       the product layers of the link registry (config/links) and the worked example of a
                       customer overlay are valid and the generated seed rows, lineage, CDS snippets and impact
                       report are up to date (tools/link_registry.py, shared engine tools/abaptools/link_registry.py)
+  break_rules         the product buckets and bucket rules of the clearing-account break analysis (config/breaks):
+                      active buckets, prefixes S4_ / FICA_, every area (*), unique sequence, known kinds,
+                      operators, fields, defined @ parameters and registry links (shared engine
+                      tools/abaptools/break_rules.py)
   process_catalogue   the product packages of the process catalogue (config/catalogue) and the worked example of a
                       customer layer are valid and the generated seed rows, monitoring rows and catalogue document are
                       up to date (tools/process_catalogue.py, shared engine tools/abaptools/process_catalogue.py)
@@ -56,6 +60,7 @@ Modification log:
 2026-11-10 | process_onboarding (process onboarding framework: offline completeness of registered processes).
 2026-11-11 | link_registry (link registry: product layers valid, generated outputs up to date).
 2026-11-11 | process_catalogue (process catalogue: product packages valid, generated outputs up to date).
+2026-11-11 | break_rules (clearing-account break analysis: product buckets and bucket rules valid).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -197,6 +202,15 @@ def check_process_catalogue(root):
     return process_catalogue._engine.check(root, process_catalogue.PROFILE)
 
 
+def check_break_rules(root):
+    from abaptools import break_rules  # noqa: E402
+    links = break_rules.link_ids(os.path.join(root, 'config', 'links', 'seed', 'zca_ops_link.csv'))
+    return break_rules.check_folders([('config/breaks', os.path.join(root, 'config', 'breaks'))],
+                                     params=break_rules.param_names(os.path.join(root, 'config',
+                                                                                 'param_definitions.csv')),
+                                     links=links, product={'config/breaks'})
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -217,6 +231,7 @@ CHECKS = [
     ('process_onboarding', check_process_onboarding),
     ('link_registry', check_link_registry),
     ('process_catalogue', check_process_catalogue),
+    ('break_rules', check_break_rules),
 ]
 
 

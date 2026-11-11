@@ -31,6 +31,8 @@ Modification log:
            | activation per customer (reason, approver 240: a user of the client other than the user saving);
            | business processes name their catalogue process; aggregate rows: window MAX_AGE_DAYS, time field
            | (083 check), operator NI (none of a list).
+2026-11-11 | Clearing-account break analysis: accounts, buckets, bucket rules (PCRE account pattern, bucket required)
+           | and their conditions (kind, operator, LINK needs its link); pilot detection baselines per check.
 """
 import os
 import sys
@@ -157,6 +159,24 @@ SPEC = {
              [('when', 'valid_from', FILLED, [('required', 'reason'), ('required', 'pkg_id'),
                                                 ('required', 'approved_by')]),
               ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>approver_valid', 'approver_invalid')]),
+            # Clearing-account break analysis (2026-11-11): accounts, buckets, bucket rules (ordered, first match
+            # wins) and their conditions; cross-row rules (bucket of a rule, link of a LINK condition, parameter of
+            # an @ value) are the analysis's (ZCL_CA_OPS_BRK_RULES=>VALIDATE, configuration findings) and the offline
+            # validator's (tools/checks.py break_rules)
+            ('zca_ops_brkacc', 'BreakAccount', 'zca_d_brkacc', 'Account', 'Break analysis clearing accounts', [],
+             [('area', 'area', False)]),
+            ('zca_ops_brkbkt', 'BreakBucket', 'zca_d_brkbkt', 'Bucket', 'Break analysis buckets', [], []),
+            ('zca_ops_brkrul', 'BreakRule', 'zca_d_brkrul', 'Bucket rule', 'Break analysis bucket rules', [],
+             [('area', 'area', True), ('pcre', 'acct_pattern'),
+              ('when', 'active', 'X', [('required', 'bucket')])]),
+            ('zca_ops_brkcnd', 'BreakCondition', 'zca_d_brkcnd', 'Condition', 'Break analysis rule conditions', [],
+             [('area', 'area', True), ('enum', 'cond_kind', 'FIELD,GROUP,DAYS,LINK'),
+              ('enum', 'operator', 'EQ,NE,IN,NI,GE,LE,GT,LT,RX,BL,NB,EX,NX'),
+              ('when', 'cond_kind', 'LINK', [('required', 'link_id')]),
+              ('when', 'cond_kind', 'FIELD,GROUP,DAYS', [('required', 'field'), ('blank', 'link_id')])]),
+            # Pilot pack (2026-11-11): the previous detection time per check (baseline of the time to detect)
+            ('zca_ops_pilotbl', 'PilotBaseline', 'zca_d_pilotbl', 'Baseline', 'Pilot detection baselines', [],
+             [('area', 'area', False)]),
         ]),
 }
 
@@ -226,7 +246,16 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'tab_role': 'Role (H, I, L, S, C)', 'link_object': 'Link registry object',
           'pred_id': 'Depends on process', 'dep_kind': 'Dependency (H hard, S soft)',
           'valid_from': 'Effective from', 'approved_on': 'Approved on', 'cat_process': 'Catalogue process',
-          'max_age_days': 'Window (days, 0 = none)', 'time_field': 'Time field (with the date field)'}
+          'max_age_days': 'Window (days, 0 = none)', 'time_field': 'Time field (with the date field)',
+          # Clearing-account break analysis (2026-11-11)
+          'acct_id': 'Clearing account ID', 'bukrs': 'Company code', 'hkont': 'G/L clearing account',
+          'ledger': 'Ledger (blank = BRK_LEDGER)', 'lookback_days': 'Days before the key date (0 = parameter)',
+          'forward_days': 'Days after the key date (0 = parameter)', 'max_groups': 'Groups at most (0 = parameter)',
+          'bucket': 'Variance bucket', 'explained': 'Explained (counts as explained)',
+          'acct_pattern': 'Accounts (PCRE on the account ID, blank = all)',
+          'operator': 'Operator', 'min_count': 'Linked rows needed (EX, 0 = 1)',
+          # Pilot pack (2026-11-11)
+          'baseline_min': 'Previous detection time (minutes after the event)', 'source': 'Source of the baseline'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

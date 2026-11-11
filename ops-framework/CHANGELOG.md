@@ -2,6 +2,27 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (build F: clearing-account break analysis, pilot pack)
+
+Goal (user, 2026-11-11): SAP-native subledger operations and reconciliation evidence - read-only, no matching, no
+postings (`docs/BREAK_ANALYSIS.md`, `docs/PILOT_PACK.md`).
+
+### Added
+- Break analysis: configuration tables `ZCA_OPS_BRKACC`, `_BRKBKT`, `_BRKRUL`, `_BRKCND` (entities of `ZUI_CA_OPS_CFG`),
+  snapshot `ZCA_OPS_BRKRUN` / `_BRKGRP` / `_BRKITM`; `ZIF_CA_OPS_BRK_TYPES`, `ZIF_CA_OPS_BRK_DAO` / `ZCL_CA_OPS_BRK_DAO`
+  (ACDOCA grouped read with HAVING and cap, line read per package), `ZCL_CA_OPS_BRK_RULES` (pure, first match wins),
+  `ZIF_CA_OPS_BRK_LINKS` / `ZCL_CA_OPS_BRK_LINKS` (link registry, set-based), `ZCL_CA_OPS_BRK_ANALYZER`, report
+  `ZCA_OPS_BRK_RUN`, check `ZCL_CA_OPS_CHK_BREAK`, purge target `ZCL_CA_OPS_BRK_PURGE`; factory `GET_BRK_DAO`.
+- CDS `ZI_CA_OpsBrkRunMax`, `_KeyMax`, `_Snap`, `ZR_CA_OpsBrkGroup` / `_Item` / `_Bucket`, `ZC_` projections and DCLs,
+  cube `ZI_CA_OpsBrkCube`, query `ZC_CA_OpsBrkQry`, service `ZUI_CA_OPS_BRK` (list, lines, card by bucket).
+- Product buckets and rules `config/breaks`; offline engine `tools/abaptools/break_rules.py` (check `break_rules`);
+  catalogue monitoring template `FICA_GL_BREAKS`; link registry field `S4_BANK_STMT_LINE-VGEXT`.
+- Pilot pack: `ZCA_OPS_PILOTBL` (baselines), reason code `NOT_AN_ISSUE`, CDS `ZI_CA_OpsPilotCfg`, `_PilotEp`,
+  `_PilotDay`, `ZR_` / `ZC_CA_OpsPilot`, `ZR_` / `ZC_CA_OpsPilotBrk`, cube / query, service `ZUI_CA_OPS_PILOT`;
+  `ZIF_CA_OPS_PILOT_TYPES`, `ZIF_CA_OPS_PILOT_DAO` / `ZCL_CA_OPS_PILOT_DAO`, `ZCL_CA_OPS_PILOT_CSV`, report
+  `ZCA_OPS_PILOT_EXPORT`.
+- Parameters `BRK_*`, `RETENTION_DAYS_BREAK`, `PILOT_*`; messages 280-294, 300-303; VERIFY V134-V138, V142, V143.
+
 ## [Unreleased] - 2026-11-11 (build F: explainable, versioned results)
 
 Goal (user, 2026-11-11): every finding says which rule and which configuration produced it; a control sign-off is

@@ -61,7 +61,17 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'CatalogDependency', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Process catalogue dependencies', position: 270, targetElement: '_CatalogDependency' },
     { id: 'CatalogActivation', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Process catalogue activation', position: 280, targetElement: '_CatalogActivation' }
+      label: 'Process catalogue activation', position: 280, targetElement: '_CatalogActivation' },
+    { id: 'BreakAccount', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Break analysis clearing accounts', position: 290, targetElement: '_BreakAccount' },
+    { id: 'BreakBucket', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Break analysis buckets', position: 300, targetElement: '_BreakBucket' },
+    { id: 'BreakRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Break analysis bucket rules', position: 310, targetElement: '_BreakRule' },
+    { id: 'BreakCondition', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Break analysis rule conditions', position: 320, targetElement: '_BreakCondition' },
+    { id: 'PilotBaseline', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Pilot detection baselines', position: 330, targetElement: '_PilotBaseline' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

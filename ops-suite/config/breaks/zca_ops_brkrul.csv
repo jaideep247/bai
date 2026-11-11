@@ -1,0 +1,6 @@
+AREA,RULE_ID,LAYER_ID,SEQ,BUCKET,ACCT_PATTERN,REASON,DESCRIPTION,ACTIVE
+CD_HCK,CD_NEW_BTC,CD,50,NEW_BTC,,Bank line with a new or unmapped bank transaction code (BRK_BTC_NEW),New or unmapped BTC,
+CD_HCK,CD_REDEP_NO_LOT,CD,60,REDEPOSIT_NO_LOT,,Redeposit code (BRK_BTC_REDEPOSIT) on the bank line and no returns lot item,Redeposit without returns lot,
+CD_HCK,CD_RETRY_REDEP,CD,70,RETRY_REDEPOSIT,,Redeposit code on the bank line and a returns lot item - presented again,Redeposit after a return,
+CD_HCK,CD_CHEQUE_EXC,CD,80,CHEQUE_EXCEPTION,,Cheque with two or more bank lines of paid / stop codes (BRK_BTC_CHEQUE),Cheque exception,
+CD_HCK,CD_CUMULATED,CD,90,BANK_CUMULATION,,Bank line of a cumulated code (BRK_BTC_CUMULATED) - one reference for several payments,Cumulated bank amounts,

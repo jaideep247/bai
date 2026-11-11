@@ -39,6 +39,7 @@ S4_BANK_STMT_LINE,ESNUM,S4CORE,FEBEP,,,C,,Line of the statement
 S4_BANK_STMT_LINE,KUKEY,S4CORE,FEBEP,,,C,,Short key of the statement
 S4_BANK_STMT_LINE,VB1OK,S4CORE,FEBEP,,,C,,Posted in posting area 1
 S4_BANK_STMT_LINE,VB2OK,S4CORE,FEBEP,,,C,,Posted in posting area 2
+S4_BANK_STMT_LINE,VGEXT,S4CORE,FEBEP,,,V,V138,External transaction code of the line (break analysis)
 S4_BANK_STMT_LINE,XBLNR,S4CORE,FEBEP,,,C,,Reference of the line (never blank for some codes)
 S4_BUSINESS_PARTNER,BPEXT,S4CORE,BUT000,,M,C,,External partner number (masked)
 S4_BUSINESS_PARTNER,PARTNER,S4CORE,BUT000,BU_PARTNER,M,C,,Business partner number (masked)

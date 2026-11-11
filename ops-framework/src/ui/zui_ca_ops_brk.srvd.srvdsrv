@@ -1,0 +1,10 @@
+@EndUserText.label: 'Operations framework: clearing account breaks'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSBRKGROUP'
+// Binding to create in ADT: ZUI_CA_OPS_BRK_O4 (OData V4 - UI). Read-only: no behaviour definition.
+// Clearing-account break analysis (build F, 2026-11-11): the breaks with their variance bucket and lines (list
+// report), the breaks by bucket of the latest snapshots (overview card) - docs/BREAK_ANALYSIS.md.
+define service ZUI_CA_OPS_BRK {
+  expose ZC_CA_OpsBrkGroup  as BreakGroup;
+  expose ZC_CA_OpsBrkItem   as BreakLine;
+  expose ZC_CA_OpsBrkBucket as BreakBucket;
+}

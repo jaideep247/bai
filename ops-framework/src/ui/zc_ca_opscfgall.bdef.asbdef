@@ -39,6 +39,11 @@ define behavior for ZC_CA_OpsCfgAll alias OpsCfgAll
   use association _CatalogTable { create; with draft; }
   use association _CatalogDependency { create; with draft; }
   use association _CatalogActivation { create; with draft; }
+  use association _BreakAccount { create; with draft; }
+  use association _BreakBucket { create; with draft; }
+  use association _BreakRule { create; with draft; }
+  use association _BreakCondition { create; with draft; }
+  use association _PilotBaseline { create; with draft; }
 }
 
 define behavior for ZC_CA_AlertRule alias AlertRule
@@ -276,6 +281,51 @@ use etag
 }
 
 define behavior for ZC_CA_CatalogActivation alias CatalogActivation
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_BreakAccount alias BreakAccount
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_BreakBucket alias BreakBucket
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_BreakRule alias BreakRule
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_BreakCondition alias BreakCondition
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_PilotBaseline alias PilotBaseline
 use etag
 {
   use update;

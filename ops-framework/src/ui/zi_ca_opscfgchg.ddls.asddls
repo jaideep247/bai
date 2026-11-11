@@ -137,3 +137,28 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_brkacc
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_brkbkt
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_brkrul
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_brkcnd
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_pilotbl
+  {
+    last_changed_at as LastChangedAt
+  }

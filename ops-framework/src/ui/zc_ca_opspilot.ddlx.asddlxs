@@ -1,0 +1,122 @@
+// UI annotations: pilot metrics (service ZUI_CA_OPS_PILOT, analytical list page "Pilot metrics", 2026-11-11)
+// Charts: exceptions per day (raised, resolved, false positives), time to detect against the baseline per check, MTTA /
+// MTTR per month. KPIs of the pilot read off the same rows (docs/PILOT_PACK.md section 4). VERIFY-ADT: analytical list
+// page on a transactional_query projection (as ZUI_CA_OPS_MET) - V143.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Pilot metrics',
+                  title: { type: #STANDARD, value: 'CheckId' },
+                  description: { type: #STANDARD, value: 'Area' } }
+@UI.chart: [ { qualifier: 'PerDay', title: 'Exceptions per day', chartType: #COLUMN,
+               dimensions: [ 'RaisedDate' ], measures: [ 'RaisedCount', 'ResolvedCount', 'FalsePositiveCount' ],
+               dimensionAttributes: [ { dimension: 'RaisedDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'RaisedCount', role: #AXIS_1 },
+                                    { measure: 'ResolvedCount', role: #AXIS_1 },
+                                    { measure: 'FalsePositiveCount', role: #AXIS_1 } ] },
+             { qualifier: 'DetectByCheck', title: 'Minutes to detect and baseline (average)', chartType: #BAR,
+               dimensions: [ 'CheckId' ], measures: [ 'MinutesToDetect', 'BaselineMinutes' ],
+               dimensionAttributes: [ { dimension: 'CheckId', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'MinutesToDetect', role: #AXIS_1 },
+                                    { measure: 'BaselineMinutes', role: #AXIS_1 } ] },
+             { qualifier: 'ResponseByMonth', title: 'Minutes to assign and to resolve (average)', chartType: #LINE,
+               dimensions: [ 'RaisedMonth' ], measures: [ 'MinutesToAssign', 'MinutesToResolve' ],
+               dimensionAttributes: [ { dimension: 'RaisedMonth', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'MinutesToAssign', role: #AXIS_1 },
+                                    { measure: 'MinutesToResolve', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { qualifier: 'Default', sortOrder: [ { by: 'RaisedDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'PerDay' },
+                                               { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'FalsePositives', text: 'False positives (not an issue)',
+                          filter: 'IsFalsePositive EQ X' } ]
+annotate entity ZC_CA_OpsPilot with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Business process'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  ProcessId;
+  @EndUserText.label: 'Check'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CheckId;
+  @EndUserText.label: 'Check code'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  CheckCode;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 50, importance: #LOW } ]
+  @UI.selectionField: [ { position: 40 } ]
+  CompanyCode;
+  @EndUserText.label: 'Severity'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 50 } ]
+  Severity;
+  @EndUserText.label: 'Disposition'
+  @UI.lineItem: [ { position: 70, importance: #LOW } ]
+  Disposition;
+  @EndUserText.label: 'Reason code'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 60 } ]
+  ReasonCode;
+  @EndUserText.label: 'Configuration version'
+  @UI.hidden: true
+  ConfigVersion;
+  @EndUserText.label: 'Raised on'
+  @UI.lineItem: [ { position: 90, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 70 } ]
+  RaisedDate;
+  @EndUserText.label: 'Month'
+  @UI.selectionField: [ { position: 80 } ]
+  RaisedMonth;
+  @EndUserText.label: 'Week'
+  RaisedWeek;
+  @EndUserText.label: 'First seen (UTC)'
+  FirstSeenAt;
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 100, importance: #LOW } ]
+  BusinessDate;
+  @EndUserText.label: 'Event time (UTC)'
+  EventAt;
+  @EndUserText.label: 'False positive'
+  @UI.selectionField: [ { position: 90 } ]
+  IsFalsePositive;
+  @EndUserText.label: 'Source of the baseline'
+  BaselineSource;
+  @EndUserText.label: 'Raised'
+  @UI.lineItem: [ { position: 110, importance: #HIGH } ]
+  RaisedCount;
+  @EndUserText.label: 'Assigned'
+  AssignedCount;
+  @EndUserText.label: 'Resolved'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  ResolvedCount;
+  @EndUserText.label: 'False positives'
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  FalsePositiveCount;
+  @EndUserText.label: 'Detection measurable'
+  DetectKnownCount;
+  @EndUserText.label: 'Baseline known'
+  BaselineKnownCount;
+  @EndUserText.label: 'Minutes to assign (MTTA)'
+  @UI.lineItem: [ { position: 140, importance: #LOW } ]
+  MinutesToAssign;
+  @EndUserText.label: 'Minutes to resolve (MTTR)'
+  @UI.lineItem: [ { position: 150, importance: #LOW } ]
+  MinutesToResolve;
+  @EndUserText.label: 'Minutes to detect'
+  @UI.lineItem: [ { position: 160, importance: #HIGH } ]
+  MinutesToDetect;
+  @EndUserText.label: 'Previous detection (minutes)'
+  @UI.lineItem: [ { position: 170, importance: #MEDIUM } ]
+  BaselineMinutes;
+  @EndUserText.label: 'Minutes earlier than before'
+  @UI.lineItem: [ { position: 180, importance: #MEDIUM } ]
+  MinutesEarlier;
+  @EndUserText.label: 'Detected earlier'
+  EarlierCount;
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  FindingNo;
+}

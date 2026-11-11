@@ -1,0 +1,97 @@
+// UI annotations: Lines of a clearing-account break (object page table of "Clearing account breaks", 2026-11-11)
+// Lines after the key date (IsLater) are the context that clears the group; the evidence columns show what the rule
+// read through the link registry (e.g. the bank statement line and its transaction code; keys masked).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Line', typeNamePlural: 'Lines',
+                  title: { type: #STANDARD, value: 'AccountingDocument' },
+                  description: { type: #STANDARD, value: 'Bucket' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsBrkItem with
+{
+  @UI.facet: [ { id: 'Line', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Line', position: 10 } ]
+  @UI.hidden: true
+  SnapshotId;
+  @UI.hidden: true
+  GroupNo;
+  @UI.hidden: true
+  ItemNo;
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  AccountId;
+  @EndUserText.label: 'Ledger'
+  @UI.identification: [ { position: 10 } ]
+  Ledger;
+  @EndUserText.label: 'Company code'
+  @UI.identification: [ { position: 20 } ]
+  CompanyCode;
+  @EndUserText.label: 'Fiscal year'
+  @UI.lineItem: [ { position: 10, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 30 } ]
+  FiscalYear;
+  @EndUserText.label: 'Journal entry'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  AccountingDocument;
+  @EndUserText.label: 'Line'
+  @UI.lineItem: [ { position: 30, importance: #LOW } ]
+  @UI.identification: [ { position: 50 } ]
+  LedgerGLLineItem;
+  @EndUserText.label: 'Posting date'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  PostingDate;
+  @EndUserText.label: 'Document date'
+  @UI.identification: [ { position: 70 } ]
+  DocumentDate;
+  @EndUserText.label: 'Document type'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  DocumentType;
+  @EndUserText.label: 'Debit / credit'
+  @UI.lineItem: [ { position: 60, importance: #LOW } ]
+  @UI.identification: [ { position: 90 } ]
+  DebitCredit;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.identification: [ { position: 100 } ]
+  Amount;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.identification: [ { position: 110 } ]
+  Currency;
+  @EndUserText.label: 'Reference type'
+  @UI.identification: [ { position: 120 } ]
+  ReferenceType;
+  @EndUserText.label: 'Reconciliation key'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 130 } ]
+  ReconKey;
+  @EndUserText.label: 'After the key date'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 140 } ]
+  IsLater;
+  @EndUserText.label: 'Variance bucket'
+  @UI.lineItem: [ { position: 110, importance: #HIGH } ]
+  @UI.identification: [ { position: 150 } ]
+  Bucket;
+  @UI.hidden: true
+  BucketText;
+  @EndUserText.label: 'Rule'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 160 } ]
+  RuleId;
+  @EndUserText.label: 'Linked object (evidence)'
+  @UI.lineItem: [ { position: 130, importance: #LOW } ]
+  @UI.identification: [ { position: 170 } ]
+  LinkedObject;
+  @EndUserText.label: 'Linked key (masked)'
+  @UI.lineItem: [ { position: 140, importance: #LOW } ]
+  @UI.identification: [ { position: 180 } ]
+  LinkedKey;
+  @EndUserText.label: 'Value compared'
+  @UI.lineItem: [ { position: 150, importance: #LOW } ]
+  @UI.identification: [ { position: 190 } ]
+  LinkedValue;
+}

@@ -1,0 +1,26 @@
+{
+  "_comment": "Business process of the clearing-account break analysis (build F, 2026-11-11): the framework's analysis (report ZCA_OPS_BRK_RUN, check ZCL_CA_OPS_CHK_BREAK) on the reconciliation account set of this landscape, with the customer overlay of bucket rules (config/breaks). Delivered inactive: the accounts, overlay links and bank transaction code lists are VERIFY (V139-V141). Scaffold: python3 ../tools/abaptools/new_process.py --root . --spec config/processes/CD_HCK_GL_CLEAR_BRK.json. docs/Break_Analysis_Overlay.md.",
+  "area": "CD_HCK",
+  "process": "GL_CLEAR_BRK",
+  "name": "Clearing-account break analysis",
+  "owner_team": "PE RTB reconciliation",
+  "auth_role": "Z_CD_OPS_OPERATOR",
+  "schedule_group": "DAILY",
+  "active": false,
+  "own_data": true,
+  "purge_target": "BREAK",
+  "purge_class": "ZCL_CA_OPS_BRK_PURGE",
+  "purge_param": "RETENTION_DAYS_BREAK",
+  "cat_process": "FICA_GL_TRANSFER",
+  "control": {"area": "CD_HCK", "id": "DAILY_RECON", "create": false},
+  "alert_rule": {"id": "HCK_BREAKS", "min_severity": "E", "destination": "‹RTB SO23 list - confirm›"},
+  "checks": [
+    {"id": "GL_BREAKS", "description": "Clearing-account breaks not explained after n days", "bukrs_aware": true,
+     "class": "ZCL_CA_OPS_CHK_BREAK"}
+  ],
+  "verify": [
+    "V139 - assignment (ZUONR) of the clearing-account lines carries the payment document (AUGBL) for ACH, card and cheque; overlay links CD_GLITEM_TO_STMT_LINE / _RETURN / _CHEQUE switched on after it",
+    "V140 - bank transaction code lists of the overlay rules (BRK_BTC_*): new / unmapped codes, the redeposit code, cheque paid and stop codes",
+    "V141 - break analysis accounts = the active clearing / transit accounts of ZCD_HCK_RCSET; BRK_LOOKBACK_DAYS against the oldest open line of the busiest account; PlanViz BRK-PV1 / BRK-PV2 on the busiest account"
+  ]
+}

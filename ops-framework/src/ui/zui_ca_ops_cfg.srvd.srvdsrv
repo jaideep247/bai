@@ -29,4 +29,9 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_CatalogTable as CatalogTable;
   expose ZC_CA_CatalogDependency as CatalogDependency;
   expose ZC_CA_CatalogActivation as CatalogActivation;
+  expose ZC_CA_BreakAccount as BreakAccount;
+  expose ZC_CA_BreakBucket as BreakBucket;
+  expose ZC_CA_BreakRule as BreakRule;
+  expose ZC_CA_BreakCondition as BreakCondition;
+  expose ZC_CA_PilotBaseline as PilotBaseline;
 }

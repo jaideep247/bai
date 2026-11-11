@@ -1,0 +1,39 @@
+// UI annotations: share of clearing-account breaks explained (service ZUI_CA_OPS_PILOT, pilot pack, 2026-11-11)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Account', typeNamePlural: 'Breaks explained',
+                  title: { type: #STANDARD, value: 'AccountId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'KeyDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsPilotBrk with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Clearing account'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  AccountId;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30, importance: #LOW } ]
+  CompanyCode;
+  @EndUserText.label: 'Key date'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 30 } ]
+  KeyDate;
+  @EndUserText.label: 'Latest snapshot'
+  @UI.selectionField: [ { position: 40 } ]
+  IsLatest;
+  @EndUserText.label: 'Breaks'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  GroupCount;
+  @EndUserText.label: 'Explained'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  ExplainedCount;
+  @EndUserText.label: 'Not explained (OTHER)'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  UnexplainedCount;
+  @EndUserText.label: 'Share explained (%)'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  ExplainedPercent;
+}

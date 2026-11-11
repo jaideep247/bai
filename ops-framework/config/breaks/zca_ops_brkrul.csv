@@ -1,0 +1,6 @@
+AREA,RULE_ID,LAYER_ID,SEQ,BUCKET,ACCT_PATTERN,REASON,DESCRIPTION,ACTIVE
+*,S4_TIMING_EOM,S4CORE,100,TIMING,,Posted in the last days of the month and cleared within BRK_TIMING_DAYS after the key date,Month-end timing,X
+*,S4_TIMING_RECENT,S4CORE,110,TIMING,,Posted within BRK_TIMING_DAYS before the key date - may still clear,Recent line,X
+*,S4_RETRIEVAL,S4CORE,200,RETRIEVAL_CUTOFF,,Cleared after the key date by a retrieval document (BRK_DOCTYPES_RETRIEVAL),Retrieval in the next period,X
+*,FICA_RETURN_LATER,FICA,300,RETURN_NEXT_MONTH,,Cleared after the key date by a return document (BRK_DOCTYPES_RETURN),Return after the key date,X
+*,FICA_RETRY,FICA,400,RETRY_REDEPOSIT,,Three or more lines on one reference with two or more debits - presented again,Retry / redeposit pattern,X

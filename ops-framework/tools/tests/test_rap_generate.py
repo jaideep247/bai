@@ -30,7 +30,9 @@ class FrameworkAppTest(unittest.TestCase):
                     # SAP job names of a scheduler job (SAP job monitor, 2026-11-11)
                     ('framework', 'zca_ops_jobsch', 'sap_pattern'),
                     # correlation rules (operations response features, 2026-11-11)
-                    ('framework', 'zca_ops_corr', 'check_pattern'), ('framework', 'zca_ops_corr', 'key_pattern')}
+                    ('framework', 'zca_ops_corr', 'check_pattern'), ('framework', 'zca_ops_corr', 'key_pattern'),
+                    # accounts of a bucket rule (clearing-account break analysis, 2026-11-11)
+                    ('framework', 'zca_ops_brkrul', 'acct_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
                  for c in t[6] if c[0] == 'pcre'}
         self.assertEqual(found, expected)
@@ -51,7 +53,8 @@ class FrameworkAppTest(unittest.TestCase):
                                   'zca_ops_runbook', 'zca_ops_corr', 'zca_ops_lnklyr', 'zca_ops_lnkobj',
                               'zca_ops_lnkfld', 'zca_ops_link', 'zca_ops_lnkcnd', 'zca_ops_lnkact',
                               'zca_ops_catpkg', 'zca_ops_catprc', 'zca_ops_catstp', 'zca_ops_cattab',
-                              'zca_ops_catdep', 'zca_ops_catact'])
+                              'zca_ops_catdep', 'zca_ops_catact', 'zca_ops_brkacc', 'zca_ops_brkbkt',
+                              'zca_ops_brkrul', 'zca_ops_brkcnd', 'zca_ops_pilotbl'])
 
     def test_payment_model_tables_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

@@ -15,6 +15,7 @@ Modification log:
 2026-11-10 | process_onboarding (process onboarding of the operations framework: registered processes complete).
 2026-11-11 | link_registry (customer overlay of the link registry valid with the product layers, outputs up to date).
 2026-11-11 | process_catalogue (customer layer of the process catalogue valid with the product packages, outputs current).
+2026-11-11 | break_rules (overlay bucket rules of the break analysis valid with the product rules).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -206,6 +207,22 @@ check('process_catalogue', process_catalogue._engine.check(ROOT, process_catalog
       '(ids and prefixes, package ranks, steps, tables and their link registry objects, dependencies without '
       'cycles, activation rows with a reason and no person, CAT_PROCESS of config/process_register.csv) and its '
       'seed rows, catalogue and activation proposal are up to date (tools/process_catalogue.py).')
+
+# Break analysis (2026-11-11): the overlay bucket rules valid on top of the product's buckets and rules
+from abaptools import break_rules  # noqa: E402
+_FRAMEWORK = os.path.join(ROOT, '..', 'ops-framework')
+check('break_rules',
+      break_rules.check_folders(
+          [('ops-framework/config/breaks', os.path.join(_FRAMEWORK, 'config', 'breaks')),
+           ('config/breaks', os.path.join(ROOT, 'config', 'breaks'))],
+          params=break_rules.param_names(os.path.join(_FRAMEWORK, 'config', 'param_definitions.csv'),
+                                         os.path.join(ROOT, 'config', 'param_definitions.csv')),
+          links=break_rules.link_ids(os.path.join(_FRAMEWORK, 'config', 'links', 'seed', 'zca_ops_link.csv'),
+                                     os.path.join(ROOT, 'config', 'links', 'seed', 'zca_ops_link.csv')),
+          product={'ops-framework/config/breaks'}),
+      'The overlay bucket rules config/breaks are valid on top of the product buckets and rules of the framework '
+      '(active buckets, prefix CD_, unique sequence per area, known kinds, operators and fields, defined @ '
+      'parameters, links of the registry) - tools/abaptools/break_rules.py.')
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

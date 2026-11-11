@@ -168,6 +168,25 @@ texts <= 73 characters).
 | 253 | Activation of &1 from &2: reason and approver are required |
 | 254 | Planned downtime &1 - &2: &3 row(s) of rule &4 |
 | 255 | Aggregate &1: time field or window &2 not valid for &3 |
+| 280 | Break analysis &1 (&2): &3 group(s), &4 not explained |
+| 281 | Break &1 &2 (&3): no rule explains it for &4 day(s) |
+| 282 | Account &1 of area &2: no break analysis since &3 |
+| 283 | Break analysis of account &1 (&2) is partial: &3 |
+| 284 | Bucket rule &1: bucket &2 is not defined or not active |
+| 285 | Bucket rule &1 condition &2: &3 is not a field of kind &4 |
+| 286 | Bucket rule &1 condition &2: operator &3 not allowed for kind &4 |
+| 287 | Bucket rule &1 condition &2: link &3 is not effective from &4 |
+| 288 | Bucket rule &1 condition &2: parameter &3 is blank - no match |
+| 289 | Bucket rule &1: &2 is not a valid PCRE pattern |
+| 290 | Account &1 of area &2 skipped: business process &3 is not active |
+| 291 | Account &1: group cap &2 reached - the oldest groups only |
+| 292 | Account &1: line cap &2 reached after &3 group(s) |
+| 293 | Link &1 of the break analysis not read completely (&2) |
+| 294 | Account &1: &2 more unexplained group(s) not listed |
+| 300 | Pilot export of area &1 (&2 - &3): &4 line(s) written |
+| 301 | Pilot export of area &1: no metrics from &2 to &3 - no file written |
+| 302 | Pilot export: maintain the parameters &1 and &2 (logical path, file) |
+| 303 | Pilot export: file &1 could not be written - no file left |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

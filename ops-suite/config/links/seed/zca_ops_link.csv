@@ -2,6 +2,9 @@ LINK_ID,LAYER_ID,FROM_OBJECT,TO_OBJECT,CARDINALITY,QUALITY,FALLBACK_OF,REPLACES,
 CD_BANKLINE_TO_ACCOUNT,CD,CD_RC_BANK_LINE,CD_EBS_ACCOUNT,NM,C,,,X,PE RTB,,Bank line -> active house bank account of its reference
 CD_BANKLINE_TO_CLEARING,CD,CD_RC_BANK_LINE,FICA_DOC_HEADER,N1,C,,,X,PE RTB,,Bank line -> header of the payment it references
 CD_CHEQUE_TO_STATUS_HIST,CD,FICA_CHEQUE,CD_CHECK_HIST,NM,C,,,,PE RTB,V121,Cheque -> its status history
+CD_GLITEM_TO_CHEQUE,CD,S4_JOURNAL_ITEM,FICA_CHEQUE,NM,P,,,,PE RTB,V139,Clearing line -> cheque (assignment = DOC1R)
+CD_GLITEM_TO_RETURN,CD,S4_JOURNAL_ITEM,FICA_RETURN_ITEM,NM,P,,,,PE RTB,V139,Clearing line -> returns lot items (assignment = SELW1)
+CD_GLITEM_TO_STMT_LINE,CD,S4_JOURNAL_ITEM,S4_BANK_STMT_LINE,NM,P,,,,PE RTB,V139,Clearing line -> bank lines (assignment = AUGBL = CHECT)
 CD_PAYRUN_TO_CLASS_C,CD,CD_PAY_LIFE_RUN,CD_PAY_METHOD_CLS,N1,C,,,X,PE RTB,,Payment -> method class as a collection
 CD_PAYRUN_TO_CLASS_D,CD,CD_PAY_LIFE_RUN,CD_PAY_METHOD_CLS,N1,C,,,X,PE RTB,,Payment -> method class as a disbursement
 CD_PAYRUN_TO_COMPANY,CD,CD_PAY_LIFE_RUN,S4_COMPANY_CODE,N1,C,,,,PE RTB,V110,"Payment -> company code (country, currency)"

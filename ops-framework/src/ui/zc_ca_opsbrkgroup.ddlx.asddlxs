@@ -1,0 +1,128 @@
+// UI annotations: Clearing account breaks (list report, service ZUI_CA_OPS_BRK, 2026-11-11)
+// Default: the latest snapshot of each account (IsLatest = X), unexplained first (OTHER), oldest first. The variance
+// bucket is a column and a filter; amounts are shown with their currency (never summed across currencies). Object
+// page: the group, why it is in its bucket (rule and reason), the lines with the evidence the rule read.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Break', typeNamePlural: 'Clearing account breaks',
+                  title: { type: #STANDARD, value: 'Assignment' },
+                  description: { type: #STANDARD, value: 'AccountId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'IsExplained', direction: #ASC },
+                                          { by: 'AgeDays', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Unexplained', text: 'Unexplained breaks (OTHER)', filter: 'IsExplained EQ ' } ]
+annotate entity ZC_CA_OpsBrkGroup with
+{
+  @UI.facet: [ { id: 'Break', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Break', position: 10 },
+               { id: 'Explanation', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Explanation',
+                 label: 'Explanation', position: 20 },
+               { id: 'Lines', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Lines', position: 30,
+                 targetElement: '_Items' } ]
+  @UI.hidden: true
+  SnapshotId;
+  @UI.hidden: true
+  GroupNo;
+  @EndUserText.label: 'Area'
+  @UI.selectionField: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Clearing account'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 20 } ]
+  AccountId;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.identification: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'G/L account'
+  @UI.identification: [ { position: 40 } ]
+  GLAccount;
+  @EndUserText.label: 'Ledger'
+  @UI.identification: [ { position: 50 } ]
+  Ledger;
+  @EndUserText.label: 'Key date'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  @UI.identification: [ { position: 60 } ]
+  KeyDate;
+  @EndUserText.label: 'Latest snapshot'
+  @Consumption.filter.defaultValue: 'X'
+  @UI.selectionField: [ { position: 50 } ]
+  IsLatest;
+  @EndUserText.label: 'Snapshot status (S complete, P partial)'
+  @UI.identification: [ { position: 70 } ]
+  SnapshotStatus;
+  @EndUserText.label: 'Configuration version'
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 40 } ]
+  ConfigVersion;
+  @EndUserText.label: 'Assignment'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 60 } ]
+  @UI.identification: [ { position: 80 } ]
+  Assignment;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 70 } ]
+  @UI.identification: [ { position: 100 } ]
+  Currency;
+  @EndUserText.label: 'Net at the key date'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 90 } ]
+  Amount;
+  @EndUserText.label: 'Lines'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 110 } ]
+  LineCount;
+  @EndUserText.label: 'Oldest line'
+  @UI.identification: [ { position: 120 } ]
+  FirstDate;
+  @EndUserText.label: 'Latest line'
+  @UI.identification: [ { position: 130 } ]
+  LastDate;
+  @EndUserText.label: 'Age (days)'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.identification: [ { position: 140 } ]
+  AgeDays;
+  @EndUserText.label: 'Net of the lines after the key date'
+  @UI.identification: [ { position: 150 } ]
+  LaterAmount;
+  @EndUserText.label: 'Cleared after the key date'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 160 } ]
+  ClearsLater;
+  @EndUserText.label: 'First line after the key date'
+  @UI.identification: [ { position: 170 } ]
+  LaterDate;
+  @EndUserText.label: 'Variance bucket'
+  @UI.lineItem: [ { position: 100, importance: #HIGH, criticality: 'BucketCriticality' } ]
+  @UI.selectionField: [ { position: 80 } ]
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 10, criticality: 'BucketCriticality' } ]
+  Bucket;
+  @UI.hidden: true
+  BucketText;
+  @EndUserText.label: 'Explained'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 90 } ]
+  IsExplained;
+  @EndUserText.label: 'Rule'
+  @UI.lineItem: [ { position: 120, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 20 } ]
+  RuleId;
+  @EndUserText.label: 'Reason'
+  @UI.lineItem: [ { position: 130, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 30 } ]
+  Reason;
+  @EndUserText.label: 'Reconciliation key'
+  @UI.lineItem: [ { position: 140, importance: #LOW } ]
+  @UI.identification: [ { position: 180 } ]
+  ReconKey;
+  @UI.hidden: true
+  BucketCriticality;
+  @UI.hidden: true
+  GroupCount;
+  @UI.hidden: true
+  ExplainedCount;
+  @UI.hidden: true
+  UnexplainedCount;
+}

@@ -316,3 +316,16 @@ Helper views (no DCL, read only by the DAOs): `ZI_CD_OpsCompanyCode` (`I_Company
 Not G/L reads (stay table reads, no released view): DFKK*, DPAYH / DPAYP, FEBEP / FEBKO, TFK* (TFK042Z, TFK033D) - the known clean-core exception of D-C8. The framework (`ops-framework`, `param-framework`) reads no G/L or company code table outside the generated ledger model (grep 2026-11-11). The trace's evidence labels (`BKPF`, `BSEG` as the source of a trace row) are display texts, not reads - unchanged.
 
 **Pre-check rules (as §13):** record the plan (index, key or column scan) and runtime of the old and the new statement in the release pack, that no DCL of a released view is evaluated (helper views `#NOT_REQUIRED`) and that the totals / row counts are equal (V123). A full scan of ACDOCA, BKPF or BSEG - also one hidden under a released view - fails the pre-check; then the read goes back to the table (the statement before 2026-11-11) and the reason is recorded here.
+
+## 15. Clearing-account break analysis (build F, 2026-11-11)
+
+The framework's analysis (`ops-framework/docs/BREAK_ANALYSIS.md` §6) reads the clearing accounts of the reconciliation
+sets set-based: one grouped ACDOCA statement per account (`GROUP BY ZUONR, RWCUR HAVING SUM( WSL ) <> 0`, oldest first,
+`BRK_MAX_GROUPS`; the reasoning of R10 / LDG-PV7 - netting references never leave HANA), then the lines of the break
+groups per package of 500 assignments (IN list), then one linked-object read per link and chunk (bank line by `CHECT`,
+returns lot item by `SELW1`, cheque by `DOC1R`). Kept on ACDOCA (D-C8, decision D-F5) until **BRK-PV1** (grouped read of
+the busiest disbursement clearing account on a 2-million-payment day: rows scanned vs returned, runtime) and **BRK-PV2**
+(line read of one package) show the released view keeps the plan; **BRK-PV3** the to-field indexes of the overlay
+links; **BRK-PV4** the snapshot views. Caps make a snapshot partial, never silently complete; the busiest account runs
+in its own job step (`P_ACCT`). VERIFY V135, V141.
+

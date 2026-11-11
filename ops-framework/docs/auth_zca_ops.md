@@ -95,6 +95,8 @@ A consumer adds its own roles with its areas (in its own authorisation sheet; th
 | `ZC_CA_OpsDowntime` (`ZUI_CA_OPS_DTW`, planned downtime, 2026-11-11) | `ZC_CA_OPSDOWNTIME` | `Area` authorised (03) - a window is area-level, it has no company code; the findings it marks keep their own company code and rule |
 | `ZC_CA_OpsExcMetric` (`ZUI_CA_OPS_MET`, response-time metrics, 2026-11-11) | `ZC_CA_OPSEXCMETRIC` | the rule of §3c on `Area` and `CompanyCode` of the exception episode (the company code is a dimension, so a sum or average after the filter never mixes company codes) |
 | `ZC_CA_OpsHandover` (`ZUI_CA_OPS_HOVR`, shift handover, 2026-11-11) | `ZC_CA_OPSHANDOVER` | the rule of §3c on `Area` and `CompanyCode` of the row (exceptions, escalations, control slices per company code; downtime area-level) |
+| `ZC_CA_OpsBrkGroup`, `ZC_CA_OpsBrkItem`, `ZC_CA_OpsBrkBucket` (`ZUI_CA_OPS_BRK`, clearing-account breaks, build F 2026-11-11) and the cube `ZI_CA_OpsBrkCube` | `ZC_CA_OPSBRKGROUP`, `_OPSBRKITEM`, `_OPSBRKBUCKET`, `ZI_CA_OPSBRKCUBE` | the rule of §3c on `Area` and `CompanyCode` of the clearing account; report `ZCA_OPS_BRK_RUN` needs `ZCA_OPS` 16 for the area (`docs/BREAK_ANALYSIS.md`) |
+| `ZC_CA_OpsPilot`, `ZC_CA_OpsPilotBrk` (`ZUI_CA_OPS_PILOT`, pilot pack, build F 2026-11-11) and the cube `ZI_CA_OpsPilotCube` | `ZC_CA_OPSPILOT`, `_OPSPILOTBRK`, `ZI_CA_OPSPILOTCUBE` | the rule of §3c on `Area` and `CompanyCode`; the export `ZCA_OPS_PILOT_EXPORT` writes area-level figures and needs `ZCA_OPS` 03 for the area and `S_DATASET` 34 on the logical path (`docs/PILOT_PACK.md`) |
 
 VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36, V51, V76, V78.
 

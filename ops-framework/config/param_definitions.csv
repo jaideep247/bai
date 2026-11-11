@@ -6,6 +6,24 @@ CA_OPS,ALERT_MAIL_RENDERER,P,CHAR,,,SMTG,SMTG|BUILTIN,,X,,Alert e-mail renderer:
 CA_OPS,ALERT_SECTION_CLASS,P,CLASS,,,,,ZIF_CA_OPS_ALERT_SECTION,,X,Consumer section of the alert message (blank = none),OPS FRAMEWORK
 CA_OPS,ALERT_TEMPLATE_DEFAULT,P,CHAR,,,ZCA_OPS_ALERT_DEFAULT,"[A-Z/][A-Z0-9_/]{0,29}",,,X,Generic alert e-mail template (rule and channel name none),OPS FRAMEWORK
 CA_OPS,ALERT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,,,Time zone of the times in the alert e-mail (TTZZ),OPS FRAMEWORK
+CA_OPS,BRK_BTC_CHEQUE,P,LIST,,,,,,,,Bank transaction codes of a paid / stopped cheque (list),OPS FRAMEWORK
+CA_OPS,BRK_BTC_CUMULATED,P,LIST,,,,,,,,Bank transaction codes the bank sends as cumulated amounts,OPS FRAMEWORK
+CA_OPS,BRK_BTC_NEW,P,LIST,,,,,,,,New or unmapped bank transaction codes (list),OPS FRAMEWORK
+CA_OPS,BRK_BTC_REDEPOSIT,P,LIST,,,,,,,,Bank transaction codes of a redeposit (list),OPS FRAMEWORK
+CA_OPS,BRK_DOCTYPES_RETRIEVAL,P,LIST,,,,,,,,Document types of a retrieval that clears a break group,OPS FRAMEWORK
+CA_OPS,BRK_DOCTYPES_RETURN,P,LIST,,,,,,,,Document types of a return that clears a break group,OPS FRAMEWORK
+CA_OPS,BRK_FORWARD_DAYS,P,INT,0,62,10,,,,,Days after the key date whose lines may clear a break group,OPS FRAMEWORK
+CA_OPS,BRK_KEY_DATE_LAG,P,INT,0,31,1,,,,,Break analysis without key date: today minus these days,OPS FRAMEWORK
+CA_OPS,BRK_LEDGER,P,CHAR,,,0L,"[A-Z0-9]{2}",,,,Ledger of the journal lines of the break analysis,OPS FRAMEWORK
+CA_OPS,BRK_LINK_MAX_ROWS,P,INT,1,50000,5000,,,,,Rows one linked-object read of the break analysis returns,OPS FRAMEWORK
+CA_OPS,BRK_LOOKBACK_DAYS,P,INT,1,400,62,,,,,Days of journal lines before the key date (break analysis),OPS FRAMEWORK
+CA_OPS,BRK_MAX_FINDINGS,P,INT,1,5000,500,,,,,Unexplained-break findings of one account at most,OPS FRAMEWORK
+CA_OPS,BRK_MAX_GROUPS,P,INT,1,500000,20000,,,,,Break groups of one account read at most (oldest first),OPS FRAMEWORK
+CA_OPS,BRK_MAX_ITEMS,P,INT,1,2000000,200000,,,,,Journal lines of one account read at most (break analysis),OPS FRAMEWORK
+CA_OPS,BRK_PACKAGE_SIZE,P,INT,1,5000,500,,,,,Assignments per journal-line read of the break analysis,OPS FRAMEWORK
+CA_OPS,BRK_STALE_DAYS,P,INT,0,31,2,,,,,Days after which a break snapshot of an account is stale,OPS FRAMEWORK
+CA_OPS,BRK_TIMING_DAYS,P,INT,0,10,3,,,,,Last days of a month / days to clear that count as timing,OPS FRAMEWORK
+CA_OPS,BRK_UNEXPLAINED_DAYS,P,INT,0,365,5,,,,,Days after which an unexplained break is an exception,OPS FRAMEWORK
 CA_OPS,CAT_OUTAGE_DAYS,P,INT,1,31,3,,,,,Days back the outage check evaluates ended downtime windows,OPS FRAMEWORK
 CA_OPS,CAT_OUTAGE_MARGIN_DAYS,P,INT,0,7,1,,,,,Days after a downtime window rows without a time field cover,OPS FRAMEWORK
 CA_OPS,CHECK_STALE_MIN_DEFAULT,P,INT,1,,1500,,,,,Area dashboard: a run older than this is stale (minutes),OPS FRAMEWORK
@@ -16,7 +34,7 @@ CA_OPS,DOWNTIME_PAST_TOL_MIN,P,INT,0,,15,,,,,Minutes a downtime window may start
 CA_OPS,DOWNTIME_RETENTION_DAYS,P,INT,,,400,,,,,Retention of ended downtime windows (days; >= 30),OPS FRAMEWORK
 CA_OPS,DOWNTIME_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone in which downtime windows are entered (TTZZ),OPS FRAMEWORK
 CA_OPS,ESC_MAX_DEFAULT,P,INT,1,20,3,,,,,Escalations of one exception when the rule names none,OPS FRAMEWORK
-CA_OPS,EXC_REASON_CODES,P,LIST,,,"TIMING,INVESTIGATING",,,X,,Reason codes of an open exception (classification),OPS FRAMEWORK
+CA_OPS,EXC_REASON_CODES,P,LIST,,,"TIMING,INVESTIGATING,NOT_AN_ISSUE",,,X,,Reason codes of an open exception (classification),OPS FRAMEWORK
 CA_OPS,JOB_CHILD_MSG_IDS,P,LIST,,,,,,,,Job log messages naming a released job (MSGID/MSGNO list),OPS FRAMEWORK
 CA_OPS,JOB_CHILD_MSG_PCRE,P,CHAR,,,,,,,,"PCRE of such a line: group 1 job name, group 2 job count",OPS FRAMEWORK
 CA_OPS,JOB_CLAIMS,P,LIST,,,,,,,,Claim classes of other monitors (ZIF_CA_OPS_JOB_CLAIM),OPS FRAMEWORK
@@ -44,8 +62,13 @@ CA_OPS,LINK_MAX_NODES,P,INT,1,5000,500,,,,,Objects one link registry walk return
 CA_OPS,LINK_MAX_ROWS,P,INT,1,10000,100,,,,,Rows one read of a link returns at most (per level),OPS FRAMEWORK
 CA_OPS,LINK_READ_CHUNK,P,INT,1,1000,100,,,,,Source rows per database read of a link (IN list or OR),OPS FRAMEWORK
 CA_OPS,METRIC_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of month / week of the response-time metrics,OPS FRAMEWORK
+CA_OPS,PILOT_EXPORT_FILE,P,CHAR,,,,"[A-Z0-9_/]{0,60}",,,,Logical file name of the pilot export (transaction FILE),OPS FRAMEWORK
+CA_OPS,PILOT_EXPORT_PATH,P,CHAR,,,,"[A-Z0-9_/]{0,60}",,,,Logical path of the pilot export (transaction FILE),OPS FRAMEWORK
+CA_OPS,PILOT_FP_REASON,P,CHAR,,,NOT_AN_ISSUE,"[A-Z0-9_]{1,12}",,,,Reason code that marks a resolved exception a false positive,OPS FRAMEWORK
+CA_OPS,PILOT_WINDOW_DAYS,P,INT,1,400,30,,,,,Days the pilot export covers when no date is entered,OPS FRAMEWORK
 CA_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),OPS FRAMEWORK
+CA_OPS,RETENTION_DAYS_BREAK,P,INT,30,,400,,,,,Retention of the break analysis snapshots (days; >= 30),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_JOB_EVIDENCE,P,INT,,,180,,,,,Retention of SAP job evidence (days; >= 30),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_REVIEW,P,INT,,,400,,,,,Retention of daily control sign-offs (days; >= 30),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),OPS FRAMEWORK

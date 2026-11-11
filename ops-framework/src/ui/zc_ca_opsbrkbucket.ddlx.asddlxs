@@ -1,0 +1,63 @@
+// UI annotations: overview card "Clearing account breaks by bucket" (service ZUI_CA_OPS_BRK, 2026-11-11)
+// Analytical card: groups per variance bucket (bar chart; a count may be summed across currencies, an amount never);
+// the table of the card shows the amount per bucket and currency. A consumer's overview page adds the card on entity
+// BreakBucket with the chart qualifier ByBucket and the presentation variant ByBucket. VERIFY-ADT: card rendering
+// (OVP V4) - V136.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Bucket', typeNamePlural: 'Clearing account breaks by bucket',
+                  title: { type: #STANDARD, value: 'Bucket' } }
+@UI.chart: [ { qualifier: 'ByBucket', title: 'Clearing account breaks by bucket', chartType: #BAR,
+               dimensions: [ 'Bucket' ], measures: [ 'GroupCount' ],
+               dimensionAttributes: [ { dimension: 'Bucket', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'GroupCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { qualifier: 'ByBucket', sortOrder: [ { by: 'GroupCount', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByBucket' } ] },
+                           { sortOrder: [ { by: 'Bucket', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Unexplained', text: 'Unexplained (OTHER)', filter: 'IsExplained EQ ' } ]
+annotate entity ZC_CA_OpsBrkBucket with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #LOW } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Clearing account'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 20 } ]
+  AccountId;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30, importance: #LOW } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Variance bucket'
+  @UI.lineItem: [ { position: 40, importance: #HIGH, criticality: 'BucketCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Bucket;
+  @EndUserText.label: 'Bucket'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  BucketText;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  Currency;
+  @EndUserText.label: 'Explained'
+  @UI.selectionField: [ { position: 50 } ]
+  IsExplained;
+  @EndUserText.label: 'Key date'
+  @UI.lineItem: [ { position: 70, importance: #LOW } ]
+  KeyDate;
+  @EndUserText.label: 'Groups'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.dataPoint: { title: 'Groups' }
+  GroupCount;
+  @EndUserText.label: 'Lines'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  LineCount;
+  @EndUserText.label: 'Amount (per currency)'
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  Amount;
+  @EndUserText.label: 'Oldest (days)'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  OldestAgeDays;
+  @UI.hidden: true
+  BucketCriticality;
+}

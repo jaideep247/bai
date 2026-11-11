@@ -224,6 +224,17 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
    consumer's folder.
 6. VERIFY V124-V129.
 
+## 6e. Build F (2026-11-11): explainable results, break analysis, pilot pack
+
+1. Table adjustment of `ZCA_OPS_FINDING` (new fields, V132); bindings `ZUI_CA_OPS_BRK_O4` and `ZUI_CA_OPS_PILOT_O4`
+   (OData V4 - UI); republish `ZUI_CA_OPS_EXC_O4`, `ZUI_CA_OPS_REV_O4`, `ZUI_CA_OPS_CFG_O4`.
+2. Break analysis (`docs/BREAK_ANALYSIS.md`): seed rows of `config/breaks` (buckets, product rules), the consumer's
+   accounts and overlay rules; approve the tables of its LINK rules for the area (`ZCA_OPS_TABWL`); register check
+   `ZCL_CA_OPS_CHK_BREAK` and purge target `BREAK` (`ZCL_CA_OPS_BRK_PURGE`, `RETENTION_DAYS_BREAK`); job
+   `ZCA_OPS_BRK_RUN` per area after the G/L transfer; PlanViz BRK-PV1 ... BRK-PV4 first (V135, V136, V138).
+3. Pilot pack (`docs/PILOT_PACK.md`): baselines per check (`ZCA_OPS_PILOTBL`), logical path / file for the export
+   (`PILOT_EXPORT_PATH`, `PILOT_EXPORT_FILE`).
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

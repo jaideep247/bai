@@ -1,0 +1,8 @@
+@EndUserText.label: 'Operations framework: pilot metrics'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSPILOT'
+// Binding to create in ADT: ZUI_CA_OPS_PILOT_O4 (OData V4 - UI), analytical list page "Pilot metrics" (proof of value
+// in shadow mode, build F, 2026-11-11; docs/PILOT_PACK.md). Read-only: no behaviour definition.
+define service ZUI_CA_OPS_PILOT {
+  expose ZC_CA_OpsPilot    as PilotMetric;
+  expose ZC_CA_OpsPilotBrk as BreakExplained;
+}

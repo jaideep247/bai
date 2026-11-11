@@ -4,8 +4,8 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-11"
   },
-  "passed": 31,
-  "total": 31,
+  "passed": 32,
+  "total": 32,
   "abap_files": 373,
   "declared_unit_methods": 1587,
   "measured_coverage": null,
@@ -182,6 +182,12 @@
       "name": "process_catalogue",
       "passed": true,
       "detail": "The customer layer config/catalogue/overlay.json is valid on top of the product packages of the framework (ids and prefixes, package ranks, steps, tables and their link registry objects, dependencies without cycles, activation rows with a reason and no person, CAT_PROCESS of config/process_register.csv) and its seed rows, catalogue and activation proposal are up to date (tools/process_catalogue.py).",
+      "failures": []
+    },
+    {
+      "name": "break_rules",
+      "passed": true,
+      "detail": "The overlay bucket rules config/breaks are valid on top of the product buckets and rules of the framework (active buckets, prefix CD_, unique sequence per area, known kinds, operators and fields, defined @ parameters, links of the registry) - tools/abaptools/break_rules.py.",
       "failures": []
     },
     {

@@ -5,3 +5,4 @@ CD_COLL,COLL_R4_SRCPOSTED,BASE_REQ_LIFE,R4 SRCPOSTED not collected by FPY1 on th
 CD_COLL,COLL_R2_SCHEDULED,BASE_REQ_LIFE,"R2 SCHEDULED, no answer of the source (BASE) in n hours",ZCL_CD_COLL_C_NO_ANSWER,DAILY,X,,20
 CD_JOBS,JOB_FAILURES,SAP_JOBS,"Cancelled jobs, job log errors, children failed under a root",ZCL_CA_OPS_CHK_JOB_FAIL,FAST,,X,10
 CD_JOBS,JOB_STATES,SAP_JOBS,"Long-running jobs, released jobs not started",ZCL_CA_OPS_CHK_JOB_STATE,FAST,,X,20
+CD_HCK,GL_BREAKS,GL_CLEAR_BRK,Clearing-account breaks not explained after n days,ZCL_CA_OPS_CHK_BREAK,DAILY,X,,10

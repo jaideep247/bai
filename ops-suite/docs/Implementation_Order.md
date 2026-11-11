@@ -332,6 +332,13 @@ Readers: one generic reader `ZCL_CD_OPS_POSTAREA` (TFK033D, one set-based read p
    cards to the overview page if the business wants them (D-CAT5 area decision first).
 4. Nothing else changes in this step: the morning report, EBS validation, FMON and the payment trace run as before.
 
+## Build F (2026-11-11): explainable results, break analysis, pilot pack
+
+Framework first (`ops-framework/docs/INSTALL.md` §6e); then the overlay (`docs/Break_Analysis_Overlay.md`): links
+switched on after V139, code lists (V140), accounts (V141), business process `CD_HCK` / `GL_CLEAR_BRK` activated with
+its check, control coverage, alert rule and purge target; job `ZCA_OPS_BRK_RUN` before `ZCA_OPS_CHECK_RUN` of `CD_HCK`;
+pilot baselines and export path (V144).
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |

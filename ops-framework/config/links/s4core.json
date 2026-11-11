@@ -58,7 +58,9 @@
        {"name": "XBLNR", "evidence": "C", "description": "Reference of the line (never blank for some codes)"},
        {"name": "BUDAT", "evidence": "C", "description": "Posting date (always filled)"},
        {"name": "VB1OK", "evidence": "C", "description": "Posted in posting area 1"},
-       {"name": "VB2OK", "evidence": "C", "description": "Posted in posting area 2"}
+       {"name": "VB2OK", "evidence": "C", "description": "Posted in posting area 2"},
+       {"name": "VGEXT", "evidence": "V", "verify": "V138",
+        "description": "External transaction code of the line (break analysis)"}
      ]}
   ],
   "links": [

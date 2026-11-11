@@ -11,6 +11,7 @@
 *& 2026-11-10 | Moved from ZIF_CD_OPS_EXC_TYPES to the reusable framework ZCA_OPS.
 *& 2026-11-10 | Classification of an open exception: action CLASSIFY, reason codes (parameter
 *&            | EXC_REASON_CODES, delivered TIMING and INVESTIGATING), message 068.
+*& 2026-11-11 | Reason code NOT_AN_ISSUE (false positive; pilot pack metric), delivered in EXC_REASON_CODES.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception lifecycle types</p>
 INTERFACE zif_ca_ops_exc_types
@@ -42,18 +43,21 @@ INTERFACE zif_ca_ops_exc_types
       timing        TYPE ty_reason_code VALUE 'TIMING',
       "! Operations are investigating the exception
       investigating TYPE ty_reason_code VALUE 'INVESTIGATING',
+      "! Not an issue: the exception was a false positive (pilot metric false-positive rate, docs/PILOT_PACK.md;
+      "! 2026-11-11) - classify, then resolve
+      not_an_issue  TYPE ty_reason_code VALUE 'NOT_AN_ISSUE',
     END OF gc_reason_code.
 
   "! Parameters of the exception lifecycle (area CA_OPS)
   CONSTANTS:
     BEGIN OF gc_param,
-      "! Reason codes an open exception may be classified with (comma list) [TIMING,INVESTIGATING]
+      "! Reason codes an open exception may be classified with (comma list) [TIMING,INVESTIGATING,NOT_AN_ISSUE]
       reason_codes TYPE zif_ca_ops_types=>ty_param_name VALUE 'EXC_REASON_CODES',
     END OF gc_param.
 
   CONSTANTS:
     BEGIN OF gc_param_default,
-      reason_codes TYPE zif_ca_ops_types=>ty_param_value VALUE 'TIMING,INVESTIGATING',
+      reason_codes TYPE zif_ca_ops_types=>ty_param_value VALUE 'TIMING,INVESTIGATING,NOT_AN_ISSUE',
     END OF gc_param_default.
 
   "! An open exception as read: key, disposition, owner and change stamp (ZCA_OPS_FINDING-LAST_CHANGED_AT).

@@ -30,7 +30,7 @@ State as of 2026-11-11 (the activation rule of `ZCL_CA_OPS_CATALOG`: package off
 | FICA_INSTALMENT | Instalment plans | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_IP_BREACH |
 | FICA_DEFERRAL | Deferral of due dates | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_DEF_EXPIRED |
 | FICA_CORRESP | Correspondence | FI-CA | CUSTOMER | no | default | V V127 V128 | FICA_CORR_OPEN |
-| FICA_GL_TRANSFER | G/L transfer and reconciliation keys | FI-CA | ACCOUNTING | yes | activation row | V V127 V128 V129 | FICA_GL_OPENKEY, FICA_GL_OUTAGE |
+| FICA_GL_TRANSFER | G/L transfer and reconciliation keys | FI-CA | ACCOUNTING | yes | activation row | V V127 V128 V129 | FICA_GL_OPENKEY, FICA_GL_OUTAGE, FICA_GL_BREAKS |
 | FSCD_PAYPLAN | Payment plans and debit entry (insurance) | FS-CD | INSURANCE | no | default | V V127 V128 | FSCD_PP_NOT_DEBITED |
 | FSCD_PREMIUM | Premium collection | FS-CD | INSURANCE | no | default | V V128 | FSCD_PREM_OVERDUE |
 | FSCD_BROKER | Broker collections (broker reports) | FS-CD | INSURANCE | no | default | V V127 V128 | FSCD_BRO_OPEN |
@@ -343,7 +343,7 @@ Package FICA · component FI-CA · dashboard card CUSTOMER · business owner rol
 
 Package FICA · component FI-CA · dashboard card ACCOUNTING · business owner role: General ledger reconciliation lead · typical schedule: Daily, after the posting runs
 
-Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): documents entered inside an approved planned downtime window and reconciliation keys of the downtime days not transferred to the G/L.
+Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): documents entered inside an approved planned downtime window and reconciliation keys of the downtime days not transferred to the G/L; and the clearing-account break analysis (ZCA_OPS_BRK_RUN, check ZCL_CA_OPS_CHK_BREAK): groups of open clearing-account lines by assignment that do not net to zero, each in a variance bucket.
 
 | Step | Kind | SAP object | What it does | Evidence |
 |---|---|---|---|---|
@@ -361,6 +361,7 @@ Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): d
 |---|---|---|---|
 | FICA_GL_OPENKEY | Reconciliation keys not transferred after n days | R1: AGE `‹reconciliation key status table›`, date ‹key date field› (>= 1 d), ‹key status field› NE ‹transferred value›, amber 1 / red 2 | V V128 |
 | FICA_GL_OUTAGE | Risk: postings in a planned downtime, G/L transfer gaps around it | `ZCL_CA_OPS_CHK_OUTAGE` with OUT_POST: COUNT `DFKKKO`, date CPUDT CPUTM, amber 1 / red ‹red count›; OUT_GLKEY: COUNT `‹reconciliation key status table›`, date ‹key date field›, ‹key status field› NE ‹transferred value›, amber 1 / red 1 | V V128 V129 |
+| FICA_GL_BREAKS | Clearing-account breaks not explained after n days | `ZCL_CA_OPS_CHK_BREAK` | C |
 
 Monitored outside the runner: Morning report A_GL_TRANSFER, A_RECON_3WAY; ledger drill-down
 

@@ -30,6 +30,11 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_CatalogTable as _CatalogTable
   composition [0..*] of ZR_CA_CatalogDependency as _CatalogDependency
   composition [0..*] of ZR_CA_CatalogActivation as _CatalogActivation
+  composition [0..*] of ZR_CA_BreakAccount as _BreakAccount
+  composition [0..*] of ZR_CA_BreakBucket as _BreakBucket
+  composition [0..*] of ZR_CA_BreakRule as _BreakRule
+  composition [0..*] of ZR_CA_BreakCondition as _BreakCondition
+  composition [0..*] of ZR_CA_PilotBaseline as _PilotBaseline
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -61,7 +66,12 @@ define root view entity ZR_CA_OpsCfgAll
       _CatalogStep,
       _CatalogTable,
       _CatalogDependency,
-      _CatalogActivation
+      _CatalogActivation,
+      _BreakAccount,
+      _BreakBucket,
+      _BreakRule,
+      _BreakCondition,
+      _PilotBaseline
 }
 where
   I_Language.Language = $session.system_language

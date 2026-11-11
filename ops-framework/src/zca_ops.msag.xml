@@ -917,6 +917,120 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>280</MSGNR>
+     <TEXT>Break analysis &amp;1 (&amp;2): &amp;3 group(s), &amp;4 not explained</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>281</MSGNR>
+     <TEXT>Break &amp;1 &amp;2 (&amp;3): no rule explains it for &amp;4 day(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>282</MSGNR>
+     <TEXT>Account &amp;1 of area &amp;2: no break analysis since &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>283</MSGNR>
+     <TEXT>Break analysis of account &amp;1 (&amp;2) is partial: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>284</MSGNR>
+     <TEXT>Bucket rule &amp;1: bucket &amp;2 is not defined or not active</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>285</MSGNR>
+     <TEXT>Bucket rule &amp;1 condition &amp;2: &amp;3 is not a field of kind &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>286</MSGNR>
+     <TEXT>Bucket rule &amp;1 condition &amp;2: operator &amp;3 not allowed for kind &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>287</MSGNR>
+     <TEXT>Bucket rule &amp;1 condition &amp;2: link &amp;3 is not effective from &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>288</MSGNR>
+     <TEXT>Bucket rule &amp;1 condition &amp;2: parameter &amp;3 is blank - no match</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>289</MSGNR>
+     <TEXT>Bucket rule &amp;1: &amp;2 is not a valid PCRE pattern</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>290</MSGNR>
+     <TEXT>Account &amp;1 of area &amp;2 skipped: business process &amp;3 is not active</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>291</MSGNR>
+     <TEXT>Account &amp;1: group cap &amp;2 reached - the oldest groups only</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>292</MSGNR>
+     <TEXT>Account &amp;1: line cap &amp;2 reached after &amp;3 group(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>293</MSGNR>
+     <TEXT>Link &amp;1 of the break analysis not read completely (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>294</MSGNR>
+     <TEXT>Account &amp;1: &amp;2 more unexplained group(s) not listed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>300</MSGNR>
+     <TEXT>Pilot export of area &amp;1 (&amp;2 - &amp;3): &amp;4 line(s) written</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>301</MSGNR>
+     <TEXT>Pilot export of area &amp;1: no metrics from &amp;2 to &amp;3 - no file written</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>302</MSGNR>
+     <TEXT>Pilot export: maintain the parameters &amp;1 and &amp;2 (logical path, file)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>303</MSGNR>
+     <TEXT>Pilot export: file &amp;1 could not be written - no file left</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

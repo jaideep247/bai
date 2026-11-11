@@ -7,7 +7,7 @@ Area `CA_OPS` (`config/param_areas.csv`); definitions `config/param_definitions.
 `ZCL_CA_OPS_PARAM_SEED` by `tools/param_definitions.py` (check `param_definitions` of `tools/checks.py`).
 Read through `ZCL_CA_OPS_FACTORY=>GET_PARAMS( )`: a name with prefix `ALERT_`, `SLA_`, `RETENTION_` or
 `PURGE_`, `CONTROL_`, `EXC_`, `CHECK_` or `JOB_` - and, for the operations response features (2026-11-11), `RUNBOOK_`,
-`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
+`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - and, for build F (2026-11-11), `BRK_` (break analysis) and `PILOT_` (pilot pack) - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
 wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS( )`, never silent.
 
 | Name | Type | Default | Read by | Meaning |
@@ -19,6 +19,18 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 | `ALERT_TEMPLATE_DEFAULT` | CHAR (template ID) | ZCA_OPS_ALERT_DEFAULT | alert router | Generic e-mail template when neither rule, section nor channel names one |
 | `ALERT_TIME_ZONE` | CHAR (TTZZ zone) | UTC | alert policy (via router) | Time zone of the run start / end shown in the alert e-mail |
 | `ALERT_EXC_APP_LINK` | CHAR | — | alert policy (via router) | Link to the exceptions app in the alert e-mail (blank = the app's name) |
+| `BRK_LEDGER` | CHAR | 0L | break analysis (`docs/BREAK_ANALYSIS.md`) | Ledger of the journal lines when the account names none |
+| `BRK_LOOKBACK_DAYS` / `BRK_FORWARD_DAYS` | INT | 62 / 10 | break analysis | Days of lines before the key date / after it (lines that may clear a group) |
+| `BRK_MAX_GROUPS` / `BRK_MAX_ITEMS` / `BRK_PACKAGE_SIZE` / `BRK_LINK_MAX_ROWS` | INT | 20 000 / 200 000 / 500 / 5 000 | break analysis | Caps of one account (partial beyond) and the size of a line read / linked-row read |
+| `BRK_TIMING_DAYS` | INT 0-10 | 3 | product rules (@ value) | Last days of a month / days to clear that count as timing |
+| `BRK_DOCTYPES_RETRIEVAL` / `BRK_DOCTYPES_RETURN` | LIST | - | product rules (@ value) | Document types of a retrieval / a return that clear a group |
+| `BRK_BTC_NEW` / `_REDEPOSIT` / `_CHEQUE` / `_CUMULATED` | LIST | - | a customer's rules (@ value) | Bank transaction code lists (the customer maintains the codes) |
+| `BRK_UNEXPLAINED_DAYS` / `BRK_STALE_DAYS` / `BRK_MAX_FINDINGS` | INT | 5 / 2 / 500 | `ZCL_CA_OPS_CHK_BREAK` | Age of an unexplained break that is an exception; age of a stale snapshot; findings per account |
+| `BRK_KEY_DATE_LAG` | INT 0-31 | 1 | `ZCA_OPS_BRK_RUN` | Key date without one: today minus these days |
+| `RETENTION_DAYS_BREAK` | INT ≥ 30 | 400 | purge target `BREAK` | Break analysis snapshots (the latest per account is kept) |
+| `PILOT_FP_REASON` | CHAR | NOT_AN_ISSUE | pilot CDS (`ZI_CA_OpsPilotCfg`) | Reason code that marks a resolved exception a false positive (`docs/PILOT_PACK.md`) |
+| `PILOT_WINDOW_DAYS` | INT 1-400 | 30 | `ZCA_OPS_PILOT_EXPORT` | Days the export covers without a from date |
+| `PILOT_EXPORT_PATH` / `PILOT_EXPORT_FILE` | CHAR | - | `ZCA_OPS_PILOT_EXPORT` | Logical path / logical file name (FILE) of the export |
 | `CAT_OUTAGE_DAYS` | INT 1-31 | 3 | outage check `ZCL_CA_OPS_CHK_OUTAGE` (`docs/PROCESS_CATALOGUE.md` §6) | Days back the check evaluates approved planned downtime windows that ended |
 | `CAT_OUTAGE_MARGIN_DAYS` | INT 0-7 | 1 | outage check | Days after a window that an aggregate row without a time field covers (G/L transfer around the outage) |
 | `CHECK_STALE_MIN_DEFAULT` | INT ≥ 1 | 1500 | area dashboard CDS (`ZI_CA_OpsChkStaleD`) | Minutes after which the latest completed run of an area and schedule group is stale on the area dashboard `ZUI_CA_OPS_DASH` when the area has no `CHECK_STALE_MIN_<area>` (process onboarding, 2026-11-10) |

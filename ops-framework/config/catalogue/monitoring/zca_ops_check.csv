@@ -6,6 +6,7 @@ CA_FICA,FICA_DUN_NOACT,FICA_DUNNING,Dunning proposals of past days without activ
 CA_FICA,FICA_EBS_NOLOT,FICA_EBS_LOTS,Statement items of past days not transferred to FI-CA,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_GL_OPENKEY,FICA_GL_TRANSFER,Reconciliation keys not transferred after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_GL_OUTAGE,FICA_GL_TRANSFER,"Risk: postings in a planned downtime, G/L transfer gaps arou",ZCL_CA_OPS_CHK_OUTAGE,DAILY,,,20
+CA_FICA,FICA_GL_BREAKS,FICA_GL_TRANSFER,Clearing-account breaks not explained after n days,ZCL_CA_OPS_CHK_BREAK,DAILY,X,,30
 CA_FICA,FICA_IP_BREACH,FICA_INSTALMENT,Instalments overdue beyond the tolerance (plan in breach),ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_INT_MISSED,FICA_INTEREST,Interest runs that did not post (error lines),ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_INV_BACKLOG,FICA_INVOICING,Billing documents of past days not invoiced,ZCL_CA_OPS_CHK_AGG,DAILY,,,10

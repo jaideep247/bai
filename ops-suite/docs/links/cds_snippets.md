@@ -37,6 +37,39 @@ association [0..*] to zcd_check_hist as _CheckHist
   on _CheckHist.ztnum = $projection.ztnum
 ```
 
+## CD_GLITEM_TO_CHEQUE
+
+Clearing line -> cheque (assignment = DOC1R) - NM, quality P, inactive (VERIFY) V139.
+
+```
+left outer join dfkkcr as To on To.doc1r = From.AssignmentReference
+
+association [0..*] to dfkkcr as _Cheque
+  on _Cheque.doc1r = $projection.AssignmentReference
+```
+
+## CD_GLITEM_TO_RETURN
+
+Clearing line -> returns lot items (assignment = SELW1) - NM, quality P, inactive (VERIFY) V139.
+
+```
+left outer join dfkkrp as To on To.selw1 = From.AssignmentReference
+
+association [0..*] to dfkkrp as _ReturnItem
+  on _ReturnItem.selw1 = $projection.AssignmentReference
+```
+
+## CD_GLITEM_TO_STMT_LINE
+
+Clearing line -> bank lines (assignment = AUGBL = CHECT) - NM, quality P, inactive (VERIFY) V139.
+
+```
+left outer join febep as To on To.chect = From.AssignmentReference
+
+association [0..*] to febep as _BankStmtLine
+  on _BankStmtLine.chect = $projection.AssignmentReference
+```
+
 ## CD_ITEM_TO_CLEAR_HIST
 
 Item -> its earlier clearings (reset history) - 1N, quality P, pending (VERIFY) V100.

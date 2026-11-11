@@ -920,7 +920,7 @@
    "schedule": "Daily, after the posting runs",
    "default_active": false,
    "seq": 140,
-   "description": "Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): documents entered inside an approved planned downtime window and reconciliation keys of the downtime days not transferred to the G/L.",
+   "description": "Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): documents entered inside an approved planned downtime window and reconciliation keys of the downtime days not transferred to the G/L; and the clearing-account break analysis (ZCA_OPS_BRK_RUN, check ZCL_CA_OPS_CHK_BREAK): groups of open clearing-account lines by assignment that do not net to zero, each in a variance bucket.",
    "steps": [
     {
      "kind": "T",
@@ -1018,6 +1018,13 @@
        "verify": "V128"
       }
      ]
+    },
+    {
+     "check": "FICA_GL_BREAKS",
+     "description": "Clearing-account breaks not explained after n days",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_BREAK"
     }
    ]
   }

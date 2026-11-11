@@ -88,6 +88,18 @@
     {"object": "S4_BUSINESS_PARTNER", "name": "‹source field›", "evidence": "V", "verify": "V121", "description": "Custom field: source that created the partner"}
   ],
   "links": [
+    {"id": "CD_GLITEM_TO_STMT_LINE", "from": "S4_JOURNAL_ITEM", "to": "S4_BANK_STMT_LINE", "cardinality": "NM",
+     "quality": "P", "active": false, "verify": "V139", "owner": "PE RTB",
+     "description": "Clearing line -> bank lines (assignment = AUGBL = CHECT)",
+     "conditions": [{"kind": "EQ", "from": "AssignmentReference", "to": "CHECT"}]},
+    {"id": "CD_GLITEM_TO_RETURN", "from": "S4_JOURNAL_ITEM", "to": "FICA_RETURN_ITEM", "cardinality": "NM",
+     "quality": "P", "active": false, "verify": "V139", "owner": "PE RTB",
+     "description": "Clearing line -> returns lot items (assignment = SELW1)",
+     "conditions": [{"kind": "EQ", "from": "AssignmentReference", "to": "SELW1"}]},
+    {"id": "CD_GLITEM_TO_CHEQUE", "from": "S4_JOURNAL_ITEM", "to": "FICA_CHEQUE", "cardinality": "NM",
+     "quality": "P", "active": false, "verify": "V139", "owner": "PE RTB",
+     "description": "Clearing line -> cheque (assignment = DOC1R)",
+     "conditions": [{"kind": "EQ", "from": "AssignmentReference", "to": "DOC1R"}]},
     {"id": "CD_REQ_TO_OPEN_ITEMS", "from": "CD_PAYM_REQ_LOG", "to": "FICA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
      "active": false, "verify": "V82", "owner": "PE RTB", "description": "Request -> items with its FIN number",
      "conditions": [{"kind": "EQ", "from": "‹FIN number field›", "to": "ZZ_FIN_TRANS_NUM"}]},

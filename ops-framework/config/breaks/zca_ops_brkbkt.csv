@@ -1,0 +1,9 @@
+BUCKET,DESCRIPTION,EXPLAINED,LAYER_ID,SEQ,ACTIVE
+TIMING,Timing: cleared after the key date / recent line,X,S4CORE,10,X
+RETRIEVAL_CUTOFF,Retrieval cut-off in the next period,X,S4CORE,20,X
+RETURN_NEXT_MONTH,Return processed next month or after the extract,X,FICA,30,X
+REDEPOSIT_NO_LOT,Redeposit without returns lot (delayed redeposit),X,FICA,40,X
+CHEQUE_EXCEPTION,"Cheque exception (duplicate cashing, paid / stop codes)",X,FICA,50,X
+RETRY_REDEPOSIT,Retry or redeposit of the same reference,X,FICA,60,X
+NEW_BTC,New or unmapped bank transaction code,X,S4CORE,70,X
+OTHER,Not explained by any rule,,S4CORE,99,X
