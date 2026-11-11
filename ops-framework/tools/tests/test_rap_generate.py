@@ -6,7 +6,8 @@ the process onboarding (2026-11-10) checks the plug-in interface, the aggregate 
 the table and field names of an aggregate row on save; the scheduler jobs of the SAP job monitor (2026-11-11)
 check their SAP job name pattern and criticality on save; the operations response features (2026-11-11) check
 the runbook link of an active runbook row, the patterns, key fields and window of a correlation rule and the
-escalation severity of an alert rule on save.
+escalation severity of an alert rule on save; the link registry (2026-11-11) checks sources and fields against the
+runtime DDIC, the TABLE-FIELD references and the kind-dependent fields of a condition on save.
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-framework/)
 """
@@ -47,7 +48,8 @@ class FrameworkAppTest(unittest.TestCase):
                                   'zca_ops_control', 'zca_ops_ctlt', 'zca_ops_ctlchk',
                                   'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl',
                                   'zca_ops_pmdim', 'zca_ops_feeder', 'zca_ops_jobsch',
-                                  'zca_ops_runbook', 'zca_ops_corr'])
+                                  'zca_ops_runbook', 'zca_ops_corr', 'zca_ops_lnklyr', 'zca_ops_lnkobj',
+                              'zca_ops_lnkfld', 'zca_ops_link', 'zca_ops_lnkcnd', 'zca_ops_lnkact'])
 
     def test_payment_model_tables_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
@@ -92,6 +94,19 @@ class FrameworkAppTest(unittest.TestCase):
         valid = {(c[1], c[3]) for c in checks['zca_ops_corr'] if c[0] == 'valid'}
         self.assertEqual(valid, {('key_fields', 'corr_fields_invalid'), ('window_min', 'corr_window_invalid')})
         self.assertIn(('enum', 'esc_severity', ',B,E,W,I'), checks['zca_ops_alrule'])
+
+    def test_link_registry_checked_on_save(self):
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        # sources and fields against the runtime DDIC, condition references TABLE-FIELD, kind-dependent fields
+        self.assertIn(('table', 'source_name'), checks['zca_ops_lnkobj'])
+        self.assertIn(('field', 'field_name', 'source_name'), checks['zca_ops_lnkfld'])
+        self.assertIn(('when', 'evidence', 'V', [('required', 'verify_ref')]), checks['zca_ops_lnkfld'])
+        refs = {c[1] for c in checks['zca_ops_lnkcnd'] if c[0] == 'valid' and c[3] == 'link_ref_invalid'}
+        self.assertEqual(refs, {'from_ref', 'to_ref'})
+        self.assertIn(('enum', 'cardinality', '11,1N,N1,NM'), checks['zca_ops_link'])
+        bp = open(os.path.join(rap_generate.ROOT, 'src', 'ui', 'zbp_r_ca_opscfgall.clas.locals_imp.abap'),
+                  encoding='utf-8').read()
+        self.assertIn('zcl_ca_ops_cfg_checks=>field_ref_valid', bp)
 
 
 if __name__ == '__main__':

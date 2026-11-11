@@ -37,6 +37,10 @@ CA_OPS,JOB_PARENT_FIELDS,P,LIST,,,,,,,X,TBTCO fields of parent job name and coun
 CA_OPS,JOB_PARENT_PROGRAMS,P,LIST,,,,,,,,Programs of jobs that may start children (blank = any),OPS FRAMEWORK
 CA_OPS,JOB_RESOLVERS,P,LIST,,,"ZCL_CA_OPS_JOB_RES_EVENT,ZCL_CA_OPS_JOB_RES_HEUR",,,X,,Parent / child resolvers in order (ZIF_CA_OPS_JOB_RESOLVER),OPS FRAMEWORK
 CA_OPS,JOB_WAITING_STATUSES,P,LIST,,,"S,Y",,,,,Job statuses of a job waiting to start,OPS FRAMEWORK
+CA_OPS,LINK_MAX_DEPTH,P,INT,1,10,4,,,,,Levels a link registry walk follows from its start object,OPS FRAMEWORK
+CA_OPS,LINK_MAX_NODES,P,INT,1,5000,500,,,,,Objects one link registry walk returns at most,OPS FRAMEWORK
+CA_OPS,LINK_MAX_ROWS,P,INT,1,10000,100,,,,,Rows one read of a link returns at most (per level),OPS FRAMEWORK
+CA_OPS,LINK_READ_CHUNK,P,INT,1,1000,100,,,,,Source rows per database read of a link (IN list or OR),OPS FRAMEWORK
 CA_OPS,METRIC_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of month / week of the response-time metrics,OPS FRAMEWORK
 CA_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),OPS FRAMEWORK

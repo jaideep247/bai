@@ -40,12 +40,22 @@ the journal's primary key in the ledger the model names). Model keys for them: l
 (the ledger parameter of the parameter framework) and gl_reference_type (reference type of the G/L documents of a
 batch key).
 
+Joins from the link registry (2026-11-11): a join of a section is either a CDS text or a reference to a link of the
+link registry (tools/abaptools/link_registry.py) {link, join (inner join | left outer join), alias, from_alias}; the
+generator renders the ON condition of the effective link (a replacement of an active customer layer wins). Model key
+links [paths of the consumer's overlay layer specs, relative to the consumer folder]; the product layers of the
+framework are always loaded. Section key join_layout {source, alias, left} = column widths of the rendered joins
+(cosmetic; default compact).
+
 Modification log:
 2026-11-11 | Initial version (payment model product layer + customer mapping).
 2026-11-11 | Ledger drill-down to the universal journal, batch-key level, group reconciliation, document-change events
            | (sections ledger_item, ledger_batch, recon_account, recon_result, recon_bank_line, document_event; flags
            | LEDGER, RECON, RESULT, BANK, CHANGES; composite conditions A+B in OUTPUTS / EXPOSE).
+2026-11-11 | Joins read from the link registry: a join may name a registry link (rendered by link_registry.render_join),
+           | model key links, section key join_layout. Output of a spec with text joins unchanged.
 """
+import importlib.util
 import json
 import os
 import re
@@ -249,6 +259,47 @@ class SpecError(ValueError):
     """The mapping spec breaks the contract (message names the section and field)."""
 
 
+def _link_engine():
+    """The shared link registry engine (loaded by path: this module is also loaded outside its package)."""
+    spec = importlib.util.spec_from_file_location('abaptools_link_registry_pm', os.path.join(HERE, 'link_registry.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def registry(root, spec):
+    """Link registry of a spec: the product layers plus the consumer's overlay layers (model key links); None when
+    no join names a link."""
+    if not any(isinstance(j, dict) for sec in spec.values() if isinstance(sec, dict) for j in sec.get('joins', [])):
+        return None
+    engine = _link_engine()
+    paths = engine.PRODUCT_LAYERS + [os.path.join(root, p) for p in spec['model'].get('links', [])]
+    reg = engine.load(paths)
+    problems = engine.validate(reg)
+    if problems:
+        raise SpecError('link registry invalid:\n' + '\n'.join(problems))
+    return reg
+
+
+def join_lines(spec, section, reg):
+    """CDS lines of a section's joins: text joins as written, registry links rendered from the registry."""
+    sec = spec[section]
+    lines = []
+    for join in sec.get('joins', []):
+        if not isinstance(join, dict):
+            lines.append(join)
+            continue
+        if reg is None:
+            raise SpecError(f'{section}: join names link {join.get("link")} but no registry is loaded')
+        engine = _link_engine()
+        try:
+            lines += engine.render_join(reg, join['link'], join['join'], join['alias'], join['from_alias'],
+                                        sec.get('join_layout'))
+        except engine.RegistryError as error:
+            raise SpecError(f'{section}: {error}') from error
+    return lines
+
+
 def load(path):
     with open(path, encoding='utf-8') as handle:
         return json.load(handle)
@@ -298,16 +349,20 @@ def validate(spec):
                 problems.append(f'{section}: {name} is required and cannot be null')
             if expr is None and not mapping[name].get('verify'):
                 problems.append(f'{section}: {name} is null without a verify note')
-            texts = [expr or '', sec.get('from', '')] + list(sec.get('joins', [])) + list(sec.get('where', []))
+            texts = [expr or '', sec.get('from', '')] + _join_texts(sec) + list(sec.get('where', []))
             for text in texts:
                 if UNSAFE.search(text):
                     problems.append(f'{section}: {text!r} contains ; // /* */ or braces')
             if st == 'active' and PLACEHOLDER.search(expr or ''):
                 problems.append(f'{section}: {name} has a placeholder - the section must be pending')
         if st == 'active':
-            for text in [sec.get('from', '')] + list(sec.get('joins', [])) + list(sec.get('where', [])):
+            for text in [sec.get('from', '')] + _join_texts(sec) + list(sec.get('where', [])):
                 if PLACEHOLDER.search(text):
                     problems.append(f'{section}: placeholder in an active section: {text!r}')
+        for join in sec.get('joins', []):
+            if isinstance(join, dict) and not (set(join) == {'link', 'join', 'alias', 'from_alias'}
+                                               and all(isinstance(v, str) and v for v in join.values())):
+                problems.append(f'{section}: a registry join names exactly link, join, alias and from_alias')
     for dep, needed in NEEDS:
         for needs in needed:
             if state(spec, dep) == 'active' and state(spec, needs) != 'active':
@@ -326,6 +381,11 @@ def validate(spec):
         raise SpecError('\n'.join(problems))
 
 
+def _join_texts(sec):
+    """Texts of a section's joins for the safety checks (a registry reference by its values)."""
+    return [j if isinstance(j, str) else ' '.join(str(v) for v in j.values()) for j in sec.get('joins', [])]
+
+
 def _blank(cds_type):
     if cds_type == 'abap_boolean':
         return "cast( ' ' as abap_boolean )"
@@ -336,8 +396,8 @@ def _blank(cds_type):
     return f"cast( '' as {cds_type} )"
 
 
-def adapter(spec, section):
-    """Source of the adapter view of a section."""
+def adapter(spec, section, reg=None):
+    """Source of the adapter view of a section (reg: the link registry of the spec's registry joins)."""
     model = spec['model']
     sec = spec[section]
     p = model['prefix']
@@ -363,7 +423,7 @@ def adapter(spec, section):
               '@ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #XL, dataClass: #TRANSACTIONAL }',
               f'define view entity {name}',
               f"  as select from {sec['from']}"]
-    lines += [f'    {j}' for j in sec.get('joins', [])]
+    lines += [f'    {j}' for j in join_lines(spec, section, reg)]
     lines.append('{')
     elements = []
     for fname, cds_type, key, _ in CONTRACT[section]:
@@ -571,6 +631,7 @@ def values(spec):
 def outputs(root, spec):
     """{relative path: content} of every generated file (package and pending folder)."""
     validate(spec)
+    reg = registry(root, spec)
     model = spec['model']
     vals = values(spec)
     flags = _flags(spec)
@@ -581,7 +642,7 @@ def outputs(root, spec):
         st = state(spec, section)
         if st == 'absent':
             continue
-        name, text = adapter(spec, section)
+        name, text = adapter(spec, section, reg)
         folder = pkg if st == 'active' else pending
         files[os.path.join(folder, name.lower() + '.ddls.asddls')] = text
     for template, pattern, need in OUTPUTS:

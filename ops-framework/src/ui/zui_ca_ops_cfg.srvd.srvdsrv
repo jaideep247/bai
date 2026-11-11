@@ -17,4 +17,10 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_SchedulerJob as SchedulerJob;
   expose ZC_CA_RunbookLink as RunbookLink;
   expose ZC_CA_CorrelationRule as CorrelationRule;
+  expose ZC_CA_LinkLayer as LinkLayer;
+  expose ZC_CA_LinkObject as LinkObject;
+  expose ZC_CA_LinkField as LinkField;
+  expose ZC_CA_Link as Link;
+  expose ZC_CA_LinkCondition as LinkCondition;
+  expose ZC_CA_LinkActivation as LinkActivation;
 }

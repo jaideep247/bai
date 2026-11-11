@@ -22,6 +22,9 @@ works unchanged.
   payment_model       a consumer's payment model from the product templates of the operations framework
                       (ops-framework/templates/payment_model) and the consumer's mapping spec: adapter views,
                       cube, trend, payment / request object pages, DCL, service, CDS test holder (--check)
+  link_registry       the layered link registry (product baseline, industry package, customer overlay): validation,
+                      seed rows of the registry tables, lineage, CDS snippets, field impact; the payment model
+                      renders its joins from it (--check)
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).
@@ -30,6 +33,7 @@ Modification log:
 2026-11-10 | Initial version (shared tools: one serializer, generator and check set for the
            | parameter framework, the operations framework and its consumers).
 2026-11-10 | onboarding, new_process (process onboarding framework).
+2026-11-11 | link_registry (link registry of the operations framework).
 """
 import importlib.util
 import os

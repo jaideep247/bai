@@ -671,6 +671,168 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>210</MSGNR>
+     <TEXT>Link registry: object &amp;1 is not defined or not active</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>211</MSGNR>
+     <TEXT>Walk from &amp;1: key field &amp;2 has no value</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>212</MSGNR>
+     <TEXT>Link registry: &amp;1 (&amp;2) is not approved for area &amp;3 (ZCA_OPS_TABWL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>213</MSGNR>
+     <TEXT>Link registry &amp;1: &amp;2 is not a field of &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>214</MSGNR>
+     <TEXT>Link &amp;1 condition &amp;2: kind &amp;3 is not supported or incomplete</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>215</MSGNR>
+     <TEXT>Link &amp;1: transform &amp;2 &amp;3 is not valid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>216</MSGNR>
+     <TEXT>Link &amp;1: fallback chain is cyclic (fallback of &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>217</MSGNR>
+     <TEXT>Link &amp;1: cardinality &amp;2 needs the keys of &amp;3 or a PREFER condition</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>218</MSGNR>
+     <TEXT>Link &amp;1 is active, but field &amp;2 is VERIFY (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>219</MSGNR>
+     <TEXT>Walk from &amp;1 stopped at depth &amp;2 (LINK_MAX_DEPTH)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>220</MSGNR>
+     <TEXT>Walk from &amp;1 stopped after &amp;2 objects (LINK_MAX_NODES)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>221</MSGNR>
+     <TEXT>Link &amp;1: read capped at &amp;2 rows (LINK_MAX_ROWS)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>222</MSGNR>
+     <TEXT>Link &amp;1: read of &amp;2 failed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>223</MSGNR>
+     <TEXT>Link &amp;1: sensitive field &amp;2 as a constant or preferred value</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>224</MSGNR>
+     <TEXT>Link &amp;1 replaces &amp;2, which is not a link of a lower layer</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>225</MSGNR>
+     <TEXT>&amp;1 is not TABLE-FIELD of a field of the ABAP dictionary</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>226</MSGNR>
+     <TEXT>Link &amp;1: &amp;2 belongs to the higher layer &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>227</MSGNR>
+     <TEXT>Link &amp;1 condition &amp;2: &amp;3 is not a number (field &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>228</MSGNR>
+     <TEXT>Link registry: &amp;1 effective link(s), &amp;2 problem(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>229</MSGNR>
+     <TEXT>Link &amp;1: &amp;2 is not a link</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>230</MSGNR>
+     <TEXT>Link &amp;1: &amp;2 links other objects</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>231</MSGNR>
+     <TEXT>&amp;1 does not start with the prefix &amp;2 of layer &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>232</MSGNR>
+     <TEXT>Object &amp;1: key field &amp;2 is missing, hidden or of another layer</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>233</MSGNR>
+     <TEXT>&amp;1: layer &amp;2 is not defined</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>234</MSGNR>
+     <TEXT>Link &amp;1: &amp;2 is not a field of &amp;3 (source &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>235</MSGNR>
+     <TEXT>&amp;1 is required when &amp;2 is '&amp;3'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>236</MSGNR>
+     <TEXT>&amp;1 must be blank when &amp;2 is '&amp;3'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

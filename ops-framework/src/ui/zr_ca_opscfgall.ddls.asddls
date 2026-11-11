@@ -18,6 +18,12 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_SchedulerJob as _SchedulerJob
   composition [0..*] of ZR_CA_RunbookLink as _RunbookLink
   composition [0..*] of ZR_CA_CorrelationRule as _CorrelationRule
+  composition [0..*] of ZR_CA_LinkLayer as _LinkLayer
+  composition [0..*] of ZR_CA_LinkObject as _LinkObject
+  composition [0..*] of ZR_CA_LinkField as _LinkField
+  composition [0..*] of ZR_CA_Link as _Link
+  composition [0..*] of ZR_CA_LinkCondition as _LinkCondition
+  composition [0..*] of ZR_CA_LinkActivation as _LinkActivation
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -37,7 +43,13 @@ define root view entity ZR_CA_OpsCfgAll
       _PaymFeeder,
       _SchedulerJob,
       _RunbookLink,
-      _CorrelationRule
+      _CorrelationRule,
+      _LinkLayer,
+      _LinkObject,
+      _LinkField,
+      _Link,
+      _LinkCondition,
+      _LinkActivation
 }
 where
   I_Language.Language = $session.system_language

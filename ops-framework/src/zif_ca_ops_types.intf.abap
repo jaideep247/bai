@@ -43,6 +43,7 @@
 *&            | K (correlated children); rule fields of the escalation until acknowledged (ESC_AFTER_MIN,
 *&            | ESC_REPEAT_MIN, ESC_MAX_COUNT, ESC_SEVERITY); log fields ESC_STEP / FINDING_NO; context keys
 *&            | RUNBOOK_URL, FIRST_ACTION, CORRELATED_COUNT, ESCALATION of the alert e-mail.
+*& 2026-11-11 | Name prefix LINK_ read in area CA_OPS (link registry walker).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -153,6 +154,8 @@ INTERFACE zif_ca_ops_types
       correlation TYPE ty_param_name VALUE 'CORR_',
       metric      TYPE ty_param_name VALUE 'METRIC_',
       shift       TYPE ty_param_name VALUE 'SHIFT_',
+      "! Link registry walker (ZIF_CA_OPS_LINK_TYPES=>GC_PARAM, 2026-11-11)
+      link        TYPE ty_param_name VALUE 'LINK_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters

@@ -1,0 +1,63 @@
+// UI annotations: Processes, checks, alerting, purge targets and controls - Link registry links
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Link',
+                     typeNamePlural: 'Link registry links',
+                     title: { type: #STANDARD, value: 'LinkId' } } }
+annotate entity ZC_CA_Link with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  LinkId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  LayerId;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  FromObject;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  ToObject;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Cardinality;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  Quality;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  FallbackOf;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  Replaces;
+
+  @UI.identification: [{ position: 90 }]
+  Active;
+
+  @UI.identification: [{ position: 100 }]
+  Owner;
+
+  @UI.identification: [{ position: 110 }]
+  VerifyRef;
+
+  @UI.identification: [{ position: 120 }]
+  Description;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

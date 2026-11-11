@@ -24,5 +24,11 @@ define root view entity ZC_CA_OpsCfgAll
       _PaymFeeder : redirected to composition child ZC_CA_PaymFeeder,
       _SchedulerJob : redirected to composition child ZC_CA_SchedulerJob,
       _RunbookLink : redirected to composition child ZC_CA_RunbookLink,
-      _CorrelationRule : redirected to composition child ZC_CA_CorrelationRule
+      _CorrelationRule : redirected to composition child ZC_CA_CorrelationRule,
+      _LinkLayer : redirected to composition child ZC_CA_LinkLayer,
+      _LinkObject : redirected to composition child ZC_CA_LinkObject,
+      _LinkField : redirected to composition child ZC_CA_LinkField,
+      _Link : redirected to composition child ZC_CA_Link,
+      _LinkCondition : redirected to composition child ZC_CA_LinkCondition,
+      _LinkActivation : redirected to composition child ZC_CA_LinkActivation
 }

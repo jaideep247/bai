@@ -19,6 +19,7 @@
 *&            | and approved tables of the check registry (process onboarding).
 *& 2026-11-11 | CORR_FIELDS_INVALID / CORR_WINDOW_INVALID (153 / 154): correlation rules (operations response
 *&            | features).
+*& 2026-11-11 | LINK_REF_INVALID (225), REQUIRED / MUST_BE_BLANK (235 / 236): link registry rows.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configuration apps: types</p>
 INTERFACE zif_ca_ops_cfg_types
@@ -158,6 +159,11 @@ INTERFACE zif_ca_ops_cfg_types
       corr_fields_invalid TYPE ty_msg_number VALUE '153',
       "! Correlation rule: the window is shorter than one minute (2026-11-11)
       corr_window_invalid TYPE ty_msg_number VALUE '154',
+      "! Link registry: a condition's field reference is not TABLE-FIELD of the runtime DDIC (2026-11-11)
+      link_ref_invalid    TYPE ty_msg_number VALUE '225',
+      "! A field required / not allowed for the kind of the row (link conditions, activation overrides; 2026-11-11)
+      required            TYPE ty_msg_number VALUE '235',
+      must_be_blank       TYPE ty_msg_number VALUE '236',
     END OF gc_msg.
 
 ENDINTERFACE.

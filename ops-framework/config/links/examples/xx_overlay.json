@@ -1,0 +1,44 @@
+{
+  "_comment": "Worked example of a customer overlay (fictitious customer, prefix XX; docs/LINK_REGISTRY.md section 7). Validated with the product layers by tools/link_registry.py --check, never seeded. A custom table ZXX_PAY_REQ (payment requests of the customer's feeder), a custom field ZZXX_REQ_ID appended to the standard items table, the flow request -> items -> payment -> bank line, a fallback chain (partner by external number with the feeder, then without), a standard link switched off (no notification-of-change lots) and one replaced (the customer's bank returns the payment reference without leading zeros).",
+  "layer": {"id": "XX", "kind": "C", "rank": 30, "prefix": "XX_", "description": "Customer overlay of the example customer XX",
+            "owner": "XX PAYMENT TEAM", "active": true},
+  "objects": [
+    {"id": "XX_PAY_REQUEST", "source": "ZXX_PAY_REQ", "kind": "T", "keys": ["REQ_ID", "ATTEMPT"],
+     "description": "Payment requests of the feeder (one row per attempt)",
+     "fields": [
+       {"name": "REQ_ID", "evidence": "C", "description": "Request number of the feeder"},
+       {"name": "ATTEMPT", "evidence": "C", "description": "Attempt counter"},
+       {"name": "FEEDER", "evidence": "C", "description": "Feeder system"},
+       {"name": "STATUS", "evidence": "C", "description": "Processing status (OK = accepted attempt)"},
+       {"name": "MEMBER_ID", "sensitivity": "M", "evidence": "C", "description": "Member number (masked)"}
+     ]}
+  ],
+  "fields": [
+    {"object": "CA_OPEN_ITEM", "name": "ZZXX_REQ_ID", "evidence": "C", "description": "Custom field: request number on the item"},
+    {"object": "S4_BUSINESS_PARTNER", "name": "ZZXX_FEEDER", "evidence": "C", "description": "Custom field: feeder that created the partner"}
+  ],
+  "links": [
+    {"id": "XX_REQ_TO_ITEMS", "from": "XX_PAY_REQUEST", "to": "CA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
+     "owner": "XX PAYMENT TEAM", "description": "Request -> items posted for it",
+     "conditions": [{"kind": "EQ", "from": "REQ_ID", "to": "ZZXX_REQ_ID"}]},
+    {"id": "XX_ITEM_TO_REQ", "from": "CA_OPEN_ITEM", "to": "XX_PAY_REQUEST", "cardinality": "N1", "quality": "C",
+     "owner": "XX PAYMENT TEAM", "description": "Item -> its request (the accepted attempt)",
+     "conditions": [{"kind": "EQ", "from": "ZZXX_REQ_ID", "to": "REQ_ID"},
+                    {"kind": "PREFER", "to": "STATUS", "value": "OK"}]},
+    {"id": "XX_REQ_TO_PARTNER_FDR", "from": "XX_PAY_REQUEST", "to": "S4_BUSINESS_PARTNER", "cardinality": "NM", "quality": "C",
+     "owner": "XX PAYMENT TEAM", "description": "Request -> partner by member number and feeder",
+     "conditions": [{"kind": "EQ", "from": "MEMBER_ID", "to": "BPEXT"},
+                    {"kind": "EQ", "from": "FEEDER", "to": "ZZXX_FEEDER"}]},
+    {"id": "XX_REQ_TO_PARTNER", "from": "XX_PAY_REQUEST", "to": "S4_BUSINESS_PARTNER", "cardinality": "NM", "quality": "P",
+     "fallback_of": "XX_REQ_TO_PARTNER_FDR", "owner": "XX PAYMENT TEAM",
+     "description": "Fallback: partner by member number only (old partners)",
+     "conditions": [{"kind": "EQ", "from": "MEMBER_ID", "to": "BPEXT"}]},
+    {"id": "XX_PAYMENT_TO_STMT_LINE", "from": "CA_OPEN_ITEM", "to": "S4_BANK_STMT_LINE", "cardinality": "NM", "quality": "C",
+     "replaces": "CA_PAYMENT_TO_STMT_LINE", "owner": "XX PAYMENT TEAM",
+     "description": "Payment -> bank lines (bank drops leading zeros)",
+     "conditions": [{"kind": "EQ", "from": "AUGBL", "to": "CHECT", "transform": "NOZERO"}]}
+  ],
+  "activation": [
+    {"kind": "K", "id": "CA_PAYMENT_TO_NOC", "active": false, "reason": "No notification-of-change lots at XX", "owner": "XX PAYMENT TEAM"}
+  ]
+}

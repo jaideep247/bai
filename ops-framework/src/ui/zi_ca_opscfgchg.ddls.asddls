@@ -77,3 +77,33 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_lnklyr
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_lnkobj
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_lnkfld
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_link
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_lnkcnd
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_lnkact
+  {
+    last_changed_at as LastChangedAt
+  }
