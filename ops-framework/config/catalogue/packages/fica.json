@@ -1,0 +1,1025 @@
+{
+ "_comment": "Process catalogue, industry package FICA: SAP standard processes of contract accounts receivable and payable (SAP FI-CA). Definitions and monitoring templates only; the activation is the customer's (docs/PROCESS_CATALOGUE.md). Names marked \"verify\" are VERIFY items (V127 programs / transactions / mass activity types, V128 tables / fields, V129 monitoring conditions and limits); every monitoring row is delivered inactive.",
+ "package": {
+  "id": "FICA",
+  "kind": "I",
+  "rank": 20,
+  "prefix": "FICA_",
+  "mon_area": "CA_FICA",
+  "description": "Industry package: SAP FI-CA standard processes",
+  "owner": "OPS FRAMEWORK",
+  "active": true,
+  "auth_role": "‹PFCG role of the area›"
+ },
+ "processes": [
+  {
+   "id": "FICA_PAYRUN",
+   "name": "Payment run (disbursements and collections)",
+   "component": "FI-CA",
+   "card": "PAYMENTS",
+   "owner_role": "Payment operations lead",
+   "schedule": "Daily or intraday per pay cycle (scheduler)",
+   "default_active": false,
+   "seq": 10,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FPY1",
+     "description": "Schedule the payment run (mass activity)"
+    },
+    {
+     "kind": "P",
+     "name": "RFKK_MA_SCHEDULER",
+     "description": "Mass activity scheduler of the run (job)"
+    },
+    {
+     "kind": "M",
+     "name": "‹payment run mass activity type›",
+     "description": "Mass activity type of the payment run",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DPAYH",
+     "role": "H",
+     "description": "Payments of a run (run date, run ID, payment document)",
+     "link_object": "FICA_PAYMENT_RUN"
+    },
+    {
+     "name": "DPAYP",
+     "role": "I",
+     "description": "Items paid by a payment of a run"
+    },
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Items cleared by the payment",
+     "link_object": "FICA_OPEN_ITEM"
+    },
+    {
+     "name": "DFKKKO",
+     "role": "H",
+     "description": "Payment documents",
+     "link_object": "FICA_DOC_HEADER"
+    },
+    {
+     "name": "DFKKCR",
+     "role": "L",
+     "description": "Cheque register (cheque method)",
+     "link_object": "FICA_CHEQUE"
+    },
+    {
+     "name": "TFK042Z",
+     "role": "C",
+     "description": "Payment methods (collection or disbursement)",
+     "link_object": "FICA_PAY_METHOD_CFG"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FICA_GL_TRANSFER",
+     "kind": "S",
+     "description": "Payment documents reach the G/L with their keys"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_PAYRUN_NOPAY",
+     "description": "Payments of past runs without a payment document",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DPAYH",
+       "description": "Payments of past runs without a payment document",
+       "func": "COUNT",
+       "date_field": "LAUFD",
+       "min_age_days": 1,
+       "bukrs_field": "BUKRS",
+       "status_field": "DOC1R",
+       "status_op": "EQ",
+       "status_value": "",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "PAYRUN_NO_DOCUMENT",
+       "verify": "V129"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_PAY_LOTS",
+   "name": "Incoming payment lots and cash journal",
+   "component": "FI-CA",
+   "card": "RECEIVABLES",
+   "owner_role": "Cash application lead",
+   "schedule": "Daily, per lot of incoming payments",
+   "default_active": false,
+   "seq": 20,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FP05",
+     "description": "Create, post and close a payment lot"
+    },
+    {
+     "kind": "T",
+     "name": "FPCJ",
+     "description": "Cash journal (counter payments)"
+    },
+    {
+     "kind": "M",
+     "name": "‹payment lot mass posting›",
+     "description": "Mass posting of payment lots",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKZK",
+     "role": "H",
+     "description": "Payment lot header"
+    },
+    {
+     "name": "DFKKZP",
+     "role": "I",
+     "description": "Payment lot items"
+    },
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Items cleared by the lot",
+     "link_object": "FICA_OPEN_ITEM"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_LOT_OPEN",
+     "description": "Payment lots not posted and closed after n days",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKZK",
+       "description": "Oldest payment lot not closed",
+       "func": "AGE",
+       "date_field": "‹lot creation date field›",
+       "min_age_days": 1,
+       "status_field": "‹lot status field›",
+       "status_op": "NE",
+       "status_value": "‹closed value›",
+       "amber": 1,
+       "red": 3,
+       "check_code": "LOT_NOT_CLOSED",
+       "verify": "V128"
+      }
+     ]
+    },
+    {
+     "check": "FICA_LOT_CLARIF",
+     "description": "Payment lot items waiting in clarification",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKZP",
+       "description": "Lot items in clarification",
+       "func": "COUNT",
+       "date_field": "‹lot item date field›",
+       "min_age_days": 1,
+       "status_field": "‹clarification flag›",
+       "status_op": "EQ",
+       "status_value": "X",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "LOT_ITEM_CLARIFICATION",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_RETURNS",
+   "name": "Returns lots (returned payments)",
+   "component": "FI-CA",
+   "card": "RECEIVABLES",
+   "owner_role": "Returns processing lead",
+   "schedule": "Daily, per returns file of the bank",
+   "default_active": false,
+   "seq": 30,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FP09",
+     "description": "Create, post and close a returns lot"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKRH",
+     "role": "H",
+     "description": "Returns lot header"
+    },
+    {
+     "name": "DFKKRP",
+     "role": "I",
+     "description": "Returns lot items (returned payment, reason)",
+     "link_object": "FICA_RETURN_ITEM"
+    },
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Items of the returned payment",
+     "link_object": "FICA_OPEN_ITEM"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FICA_PAYRUN",
+     "kind": "S",
+     "description": "Returns of payments of the payment run"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_RET_OPEN",
+     "description": "Returns lots not posted and closed after n days",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKRH",
+       "description": "Oldest returns lot not closed",
+       "func": "AGE",
+       "date_field": "‹lot creation date field›",
+       "min_age_days": 1,
+       "status_field": "‹lot status field›",
+       "status_op": "NE",
+       "status_value": "‹closed value›",
+       "amber": 1,
+       "red": 3,
+       "check_code": "RETURNS_LOT_NOT_CLOSED",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_EBS_LOTS",
+   "name": "Bank statement items to payment lots and clearing",
+   "component": "FI-CA",
+   "card": "BANK",
+   "owner_role": "Bank reconciliation lead",
+   "schedule": "Daily, after the bank statement import",
+   "default_active": false,
+   "seq": 40,
+   "steps": [
+    {
+     "kind": "P",
+     "name": "‹transfer of bank statement items to FI-CA›",
+     "description": "Bank statement items into payment lots",
+     "verify": "V127"
+    },
+    {
+     "kind": "T",
+     "name": "FEBAN",
+     "description": "Post-process items the transfer could not clear"
+    }
+   ],
+   "tables": [
+    {
+     "name": "FEBEP",
+     "role": "I",
+     "description": "Bank statement items",
+     "link_object": "S4_BANK_STMT_LINE"
+    },
+    {
+     "name": "DFKKZK",
+     "role": "H",
+     "description": "Payment lot header"
+    },
+    {
+     "name": "DFKKZP",
+     "role": "I",
+     "description": "Payment lot items"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "S4_BANK_STMT",
+     "kind": "H",
+     "description": "Needs the imported bank statement"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_EBS_NOLOT",
+     "description": "Statement items of past days not transferred to FI-CA",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "FEBEP",
+       "description": "Items of past days without FI-CA transfer",
+       "func": "COUNT",
+       "date_field": "BUDAT",
+       "min_age_days": 1,
+       "status_field": "‹FI-CA transfer flag›",
+       "status_op": "NE",
+       "status_value": "X",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "EBS_ITEM_NOT_IN_FICA",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_CLEARING",
+   "name": "Clearing and reset of clearing",
+   "component": "FI-CA",
+   "card": "RECEIVABLES",
+   "owner_role": "Receivables accounting lead",
+   "schedule": "Continuous; mass clearing nightly",
+   "default_active": false,
+   "seq": 50,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FP06",
+     "description": "Clear open items of an account",
+     "verify": "V127"
+    },
+    {
+     "kind": "T",
+     "name": "FP07",
+     "description": "Reset clearing"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Open and cleared items",
+     "link_object": "FICA_OPEN_ITEM"
+    },
+    {
+     "name": "DFKKRAPT",
+     "role": "L",
+     "description": "Clearing history (reset clearings)",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_CLR_RESET",
+     "description": "Clearings reset in the last day above a limit",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKRAPT",
+       "description": "Clearing resets of the last day",
+       "func": "COUNT",
+       "date_field": "‹reset date field›",
+       "max_age_days": 1,
+       "amber": "‹amber count›",
+       "red": "‹red count›",
+       "check_code": "CLEARING_RESET_VOLUME",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_REVERSAL",
+   "name": "Document reversal",
+   "component": "FI-CA",
+   "card": "ACCOUNTING",
+   "owner_role": "Receivables accounting lead",
+   "schedule": "On demand; mass reversal periodic",
+   "default_active": false,
+   "seq": 60,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FP08",
+     "description": "Reverse a document"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKKO",
+     "role": "H",
+     "description": "Document header (reversal document STBEL)",
+     "link_object": "FICA_DOC_HEADER"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_REV_DAY",
+     "description": "Documents reversed in the last day above a limit",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKKO",
+       "description": "Reversed documents of the last day",
+       "func": "COUNT",
+       "date_field": "‹entry date field›",
+       "max_age_days": 1,
+       "status_field": "STBEL",
+       "status_op": "NE",
+       "status_value": "",
+       "amber": "‹amber count›",
+       "red": "‹red count›",
+       "check_code": "REVERSAL_VOLUME",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_DUNNING",
+   "name": "Dunning",
+   "component": "FI-CA",
+   "card": "DUNNING",
+   "owner_role": "Collections and dunning lead",
+   "schedule": "Daily dunning proposal and activity run",
+   "default_active": false,
+   "seq": 70,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FPVA",
+     "description": "Dunning proposal (mass activity)"
+    },
+    {
+     "kind": "T",
+     "name": "FPVB",
+     "description": "Dunning activity run (mass activity)"
+    },
+    {
+     "kind": "M",
+     "name": "‹dunning mass activity types›",
+     "description": "Mass activity types of proposal and activity run",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "FKKMAKO",
+     "role": "H",
+     "description": "Dunning header (dunning history)"
+    },
+    {
+     "name": "FKKMAZE",
+     "role": "I",
+     "description": "Dunning items"
+    },
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Dunned items",
+     "link_object": "FICA_OPEN_ITEM"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_DUN_NOACT",
+     "description": "Dunning proposals of past days without activity run",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "FKKMAKO",
+       "description": "Proposals without activity run",
+       "func": "COUNT",
+       "date_field": "‹dunning date field›",
+       "min_age_days": 1,
+       "status_field": "‹activity run status field›",
+       "status_op": "EQ",
+       "status_value": "‹proposal only value›",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "DUNNING_NO_ACTIVITY",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_INVOICING",
+   "name": "Invoicing (FI-CA invoicing)",
+   "component": "FI-CA",
+   "card": "INVOICING",
+   "owner_role": "Billing and invoicing lead",
+   "schedule": "Daily invoicing run (mass activity)",
+   "default_active": false,
+   "seq": 80,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "‹invoicing mass run transaction›",
+     "description": "Invoicing run (mass activity)",
+     "verify": "V127"
+    },
+    {
+     "kind": "M",
+     "name": "‹invoicing mass activity type›",
+     "description": "Mass activity type of the invoicing run",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹invoicing document header›",
+     "role": "H",
+     "description": "Invoicing documents",
+     "verify": "V128"
+    },
+    {
+     "name": "‹billing document header›",
+     "role": "H",
+     "description": "Billing documents to invoice",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_INV_BACKLOG",
+     "description": "Billing documents of past days not invoiced",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹billing document header›",
+       "description": "Billing documents not invoiced",
+       "func": "AGE",
+       "date_field": "‹billing date field›",
+       "min_age_days": 1,
+       "status_field": "‹invoicing status field›",
+       "status_op": "NE",
+       "status_value": "‹invoiced value›",
+       "amber": 1,
+       "red": 3,
+       "check_code": "INVOICING_BACKLOG",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_INTEREST",
+   "name": "Interest calculation",
+   "component": "FI-CA",
+   "card": "RECEIVABLES",
+   "owner_role": "Receivables accounting lead",
+   "schedule": "Periodic (monthly or with dunning)",
+   "default_active": false,
+   "seq": 90,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "‹interest calculation mass run›",
+     "description": "Interest calculation run (mass activity)",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹interest history table›",
+     "role": "L",
+     "description": "Interest calculated per item",
+     "verify": "V128"
+    },
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Items interest is calculated on",
+     "link_object": "FICA_OPEN_ITEM"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_INT_MISSED",
+     "description": "Interest runs that did not post (error lines)",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹interest history table›",
+       "description": "Interest lines in error",
+       "func": "COUNT",
+       "date_field": "‹run date field›",
+       "max_age_days": 1,
+       "status_field": "‹error flag›",
+       "status_op": "EQ",
+       "status_value": "X",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "INTEREST_ERROR",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_WRITEOFF",
+   "name": "Write-off",
+   "component": "FI-CA",
+   "card": "RISK",
+   "owner_role": "Receivables risk lead",
+   "schedule": "On demand; mass write-off periodic",
+   "default_active": false,
+   "seq": 100,
+   "description": "Carries the generic write-off risk checks: write-offs above an amount limit and write-offs with a reason outside the approved list, per company code, of the last day.",
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FP04",
+     "description": "Write off items"
+    },
+    {
+     "kind": "T",
+     "name": "‹mass write-off transaction›",
+     "description": "Mass write-off (mass activity)",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Written-off items (clearing and write-off reason, amount)",
+     "link_object": "FICA_OPEN_ITEM"
+    },
+    {
+     "name": "‹write-off history table›",
+     "role": "L",
+     "description": "Write-off history",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_WO_LIMIT",
+     "description": "Risk: write-offs of the last day above the limit",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKOP",
+       "description": "Write-offs above the limit",
+       "func": "COUNT",
+       "date_field": "AUGDT",
+       "max_age_days": 1,
+       "bukrs_field": "BUKRS",
+       "status_field": "AUGRD",
+       "status_op": "EQ",
+       "status_value": "‹write-off clearing reason›",
+       "cond_field": "BETRH",
+       "cond_op": "GT",
+       "cond_value": "‹write-off limit›",
+       "amber": 1,
+       "red": 1,
+       "check_code": "WRITEOFF_ABOVE_LIMIT",
+       "verify": "V129"
+      }
+     ]
+    },
+    {
+     "check": "FICA_WO_REASON",
+     "description": "Risk: write-offs of the last day outside the reason list",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKOP",
+       "description": "Write-offs with an unlisted reason",
+       "func": "COUNT",
+       "date_field": "AUGDT",
+       "max_age_days": 1,
+       "bukrs_field": "BUKRS",
+       "status_field": "AUGRD",
+       "status_op": "EQ",
+       "status_value": "‹write-off clearing reason›",
+       "cond_field": "ABGRD",
+       "cond_op": "NI",
+       "cond_value": "‹approved write-off reasons›",
+       "amber": 1,
+       "red": 1,
+       "check_code": "WRITEOFF_REASON_UNLISTED",
+       "verify": "V129"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_INSTALMENT",
+   "name": "Instalment plans",
+   "component": "FI-CA",
+   "card": "RECEIVABLES",
+   "owner_role": "Collections lead",
+   "schedule": "On demand; breach check periodic",
+   "default_active": false,
+   "seq": 110,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FPR1",
+     "description": "Create an instalment plan"
+    },
+    {
+     "kind": "T",
+     "name": "‹instalment plan breach run›",
+     "description": "Deactivate instalment plans in breach",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹instalment plan header›",
+     "role": "H",
+     "description": "Instalment plans",
+     "verify": "V128"
+    },
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Instalments (items of the plan)",
+     "link_object": "FICA_OPEN_ITEM"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_IP_BREACH",
+     "description": "Instalments overdue beyond the tolerance (plan in breach)",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKOP",
+       "description": "Overdue instalments",
+       "func": "COUNT",
+       "date_field": "‹due date field›",
+       "min_age_days": "‹tolerance days›",
+       "status_field": "‹instalment item flag›",
+       "status_op": "EQ",
+       "status_value": "X",
+       "cond_field": "‹clearing status field›",
+       "cond_op": "NE",
+       "cond_value": "‹cleared value›",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "INSTALMENT_BREACH",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_DEFERRAL",
+   "name": "Deferral of due dates",
+   "component": "FI-CA",
+   "card": "RECEIVABLES",
+   "owner_role": "Collections lead",
+   "schedule": "On demand",
+   "default_active": false,
+   "seq": 120,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "‹deferral transaction›",
+     "description": "Defer the due date of items",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Deferred items (deferral date)",
+     "link_object": "FICA_OPEN_ITEM"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_DEF_EXPIRED",
+     "description": "Deferrals expired and still open",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKOP",
+       "description": "Open items past their deferral date",
+       "func": "COUNT",
+       "date_field": "‹deferral date field›",
+       "min_age_days": 1,
+       "status_field": "‹clearing status field›",
+       "status_op": "NE",
+       "status_value": "‹cleared value›",
+       "amber": "‹amber count›",
+       "red": "‹red count›",
+       "check_code": "DEFERRAL_EXPIRED",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_CORRESP",
+   "name": "Correspondence",
+   "component": "FI-CA",
+   "card": "CUSTOMER",
+   "owner_role": "Customer communication lead",
+   "schedule": "Daily correspondence print run",
+   "default_active": false,
+   "seq": 130,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FPCOPARA",
+     "description": "Print correspondence (mass activity)"
+    },
+    {
+     "kind": "M",
+     "name": "‹correspondence mass activity type›",
+     "description": "Mass activity type of the print run",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹correspondence history header›",
+     "role": "H",
+     "description": "Correspondence requests and their print state",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_CORR_OPEN",
+     "description": "Correspondence requests not printed after n days",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹correspondence history header›",
+       "description": "Oldest correspondence not printed",
+       "func": "AGE",
+       "date_field": "‹request date field›",
+       "min_age_days": 1,
+       "status_field": "‹print status field›",
+       "status_op": "NE",
+       "status_value": "‹printed value›",
+       "amber": 1,
+       "red": 3,
+       "check_code": "CORRESPONDENCE_NOT_PRINTED",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FICA_GL_TRANSFER",
+   "name": "G/L transfer and reconciliation keys",
+   "component": "FI-CA",
+   "card": "ACCOUNTING",
+   "owner_role": "General ledger reconciliation lead",
+   "schedule": "Daily, after the posting runs",
+   "default_active": false,
+   "seq": 140,
+   "description": "Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): documents entered inside an approved planned downtime window and reconciliation keys of the downtime days not transferred to the G/L.",
+   "steps": [
+    {
+     "kind": "T",
+     "name": "‹close reconciliation keys›",
+     "description": "Close the reconciliation keys of the day",
+     "verify": "V127"
+    },
+    {
+     "kind": "T",
+     "name": "FPG1",
+     "description": "Transfer the summary records to the general ledger"
+    },
+    {
+     "kind": "P",
+     "name": "‹G/L transfer program›",
+     "description": "G/L transfer program (job)",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKSUMC",
+     "role": "S",
+     "description": "Summary records of a reconciliation key",
+     "link_object": "FICA_SUMMARY_RECORD"
+    },
+    {
+     "name": "DFKKKO",
+     "role": "H",
+     "description": "Documents of a reconciliation key",
+     "link_object": "FICA_DOC_HEADER"
+    },
+    {
+     "name": "‹reconciliation key status table›",
+     "role": "S",
+     "description": "Reconciliation keys: closed, transferred",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_GL_OPENKEY",
+     "description": "Reconciliation keys not transferred after n days",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹reconciliation key status table›",
+       "description": "Oldest key not transferred",
+       "func": "AGE",
+       "date_field": "‹key date field›",
+       "min_age_days": 1,
+       "status_field": "‹key status field›",
+       "status_op": "NE",
+       "status_value": "‹transferred value›",
+       "amber": 1,
+       "red": 2,
+       "check_code": "GL_KEY_NOT_TRANSFERRED",
+       "verify": "V128"
+      }
+     ]
+    },
+    {
+     "check": "FICA_GL_OUTAGE",
+     "description": "Risk: postings in a planned downtime, G/L transfer gaps around it",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_OUTAGE",
+     "aggregates": [
+      {
+       "id": "OUT_POST",
+       "table": "DFKKKO",
+       "description": "Documents entered inside a planned downtime window",
+       "func": "COUNT",
+       "date_field": "CPUDT",
+       "time_field": "CPUTM",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "POSTED_IN_DOWNTIME",
+       "verify": "V129"
+      },
+      {
+       "id": "OUT_GLKEY",
+       "table": "‹reconciliation key status table›",
+       "description": "Keys of the downtime days not transferred",
+       "func": "COUNT",
+       "date_field": "‹key date field›",
+       "status_field": "‹key status field›",
+       "status_op": "NE",
+       "status_value": "‹transferred value›",
+       "amber": 1,
+       "red": 1,
+       "check_code": "GL_GAP_AROUND_DOWNTIME",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

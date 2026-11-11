@@ -100,10 +100,12 @@ CLASS zcl_ca_ops_chk_onboard IMPLEMENTATION.
 
     LOOP AT lt_processes ASSIGNING FIELD-SYMBOL(<ls_process>).
       " A business process whose catalogue process is switched off is not expected (no gaps of it)
-      IF <ls_process>-cat_process IS NOT INITIAL
-         AND lo_catalog->state( iv_process_id = <ls_process>-cat_process
-                                iv_date       = lv_today )-active = abap_false.
-        CONTINUE.
+      IF <ls_process>-cat_process IS NOT INITIAL.
+        DATA(ls_state) = lo_catalog->state( iv_process_id = <ls_process>-cat_process
+                                            iv_date       = lv_today ).
+        IF ls_state-active = abap_false AND ls_state-source <> zif_ca_ops_cat_types=>gc_source-unknown.
+          CONTINUE.
+        ENDIF.
       ENDIF.
       INSERT LINES OF gaps( is_process = <ls_process>
                             io_dao     = lo_dao ) INTO TABLE rs_result-findings.
@@ -120,11 +122,11 @@ CLASS zcl_ca_ops_chk_onboard IMPLEMENTATION.
 
     " Business processes in effect today or not (row inactive, or its catalogue process off / unknown)
     LOOP AT io_catalog->onboarded( ) ASSIGNING FIELD-SYMBOL(<ls_onb>).
-      DATA(ls_state) = COND zif_ca_ops_cat_types=>ty_state(
+      DATA(ls_cat_state) = COND zif_ca_ops_cat_types=>ty_state(
                          WHEN <ls_onb>-cat_process IS NOT INITIAL
                          THEN io_catalog->state( iv_process_id = <ls_onb>-cat_process
                                                  iv_date       = iv_today ) ).
-      IF <ls_onb>-active = abap_true AND ls_state-source = zif_ca_ops_cat_types=>gc_source-unknown.
+      IF <ls_onb>-active = abap_true AND ls_cat_state-source = zif_ca_ops_cat_types=>gc_source-unknown.
         INSERT cat_finding( iv_key      = |{ <ls_onb>-area }/{ <ls_onb>-process_id }|
                             iv_code     = zif_ca_ops_cat_types=>gc_code-cat_ref_unknown
                             iv_msgno    = zif_ca_ops_cat_types=>gc_msg-cat_ref_unknown
@@ -133,7 +135,9 @@ CLASS zcl_ca_ops_chk_onboard IMPLEMENTATION.
                             iv_v2       = <ls_onb>-area
                             iv_v3       = <ls_onb>-cat_process ) INTO TABLE rt_findings.
       ENDIF.
-      IF <ls_onb>-active = abap_true AND ( <ls_onb>-cat_process IS INITIAL OR ls_state-active = abap_true ).
+      IF <ls_onb>-active = abap_true
+         AND ( <ls_onb>-cat_process IS INITIAL OR ls_cat_state-active = abap_true
+               OR ls_cat_state-source = zif_ca_ops_cat_types=>gc_source-unknown ).
         INSERT <ls_onb> INTO TABLE lt_on.
       ELSE.
         INSERT <ls_onb> INTO TABLE lt_off.

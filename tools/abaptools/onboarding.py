@@ -38,12 +38,15 @@ Offline evidence of configuration completeness only - not SAP activation or DDIC
 
 Modification log:
 2026-11-10 | Initial version (process onboarding framework).
+2026-11-11 | Process catalogue: aggregate rows may belong to a check of a class that reads them
+           | (new_process.AGG_READERS, e.g. the outage check).
 """
 import csv
 import os
 import re
 
 AGG_CLASS = 'ZCL_CA_OPS_CHK_AGG'
+AGG_READERS = (AGG_CLASS, 'ZCL_CA_OPS_CHK_OUTAGE')
 PLACEHOLDER = re.compile('‹[^›]*›|VERIFY-')
 OWNER_LINE = re.compile(r'^Owner team:[ \t]*(\S.*)$', re.M)
 YES = 'X'
@@ -148,8 +151,8 @@ def failures(root, auth_docs, source_roots, extra_roots=()):
         check = checks.get((agg['AREA'], agg['CHECK_ID']))
         if check is None:
             out.append(f'aggregate {label}: check not registered')
-        elif check.get('CLASS_NAME', '').upper() != AGG_CLASS:
-            out.append(f'aggregate {label}: check class is not {AGG_CLASS}')
+        elif check.get('CLASS_NAME', '').upper() not in AGG_READERS:
+            out.append(f'aggregate {label}: check class is not {AGG_CLASS} (or a class that reads its rows)')
         if (agg['AREA'], agg.get('TABNAME', '')) not in approved:
             out.append(f'aggregate {label}: table {agg.get("TABNAME", "")} not approved for the area')
 

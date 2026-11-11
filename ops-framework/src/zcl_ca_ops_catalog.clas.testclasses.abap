@@ -190,6 +190,11 @@ CLASS ltc_catalog IMPLEMENTATION.
     ls_onb-process_id  = gc-mon_off.
     ls_onb-active      = abap_false.
     INSERT ls_onb INTO TABLE mo_dao->mt_onboarded.
+    " a reference to a process that is not in the catalogue: monitoring goes on (fail-open)
+    ls_onb-process_id  = 'ZT_TYPO'.
+    ls_onb-cat_process = 'FICA_NO_SUCH'.
+    ls_onb-active      = abap_true.
+    INSERT ls_onb INTO TABLE mo_dao->mt_onboarded.
   ENDMETHOD.
 
 
@@ -273,14 +278,15 @@ CLASS ltc_catalog IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: not in effect = the row is inactive or its catalogue process is off; no catalogue process = the row
+  " Rule: not in effect = the row is inactive or its catalogue process is off; no catalogue process = the row;
+  " an unknown catalogue process does not stop monitoring (fail-open)
   METHOD inactive_onboarded_of_area.
     TRY.
         DATA(lt_off) = mo_cut->inactive_onboarded( iv_area = gc-area iv_date = gc-between ).
         cl_abap_unit_assert=>assert_equals(
           act = lt_off
           exp = VALUE zif_ca_ops_cat_types=>tt_process_ids( ( gc-mon_dun ) ( gc-mon_off ) )
-          msg = 'Dunning (catalogue off) and the inactive row; payment run and own process run' ).
+          msg = 'Dunning (catalogue off) and the inactive row; payment run, own process and unknown reference run' ).
         DATA(lt_later) = mo_cut->inactive_onboarded( iv_area = gc-area iv_date = gc-after ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_later[ table_line = gc-mon_pay ] ) )
                                           msg = 'Payment run monitoring off after the switch date' ).

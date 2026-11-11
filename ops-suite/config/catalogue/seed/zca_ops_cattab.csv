@@ -1,0 +1,2 @@
+PROCESS_ID,TABNAME,TAB_ROLE,LINK_OBJECT,DESCRIPTION,EVIDENCE,VERIFY_REF
+CD_COLL_REQ_LIFE,‹request status table›,S,,Collection requests and status,V,V130

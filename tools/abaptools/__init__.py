@@ -25,6 +25,9 @@ works unchanged.
   link_registry       the layered link registry (product baseline, industry package, customer overlay): validation,
                       seed rows of the registry tables, lineage, CDS snippets, field impact; the payment model
                       renders its joins from it (--check)
+  process_catalogue   the layered process catalogue (product baseline, industry packages, customer layer with its
+                      activation): validation, seed rows of the catalogue tables, monitoring rows of the standard
+                      processes (inactive), catalogue document and activation proposal (--check)
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).
@@ -34,6 +37,7 @@ Modification log:
            | parameter framework, the operations framework and its consumers).
 2026-11-10 | onboarding, new_process (process onboarding framework).
 2026-11-11 | link_registry (link registry of the operations framework).
+2026-11-11 | process_catalogue (process catalogue of the operations framework).
 """
 import importlib.util
 import os

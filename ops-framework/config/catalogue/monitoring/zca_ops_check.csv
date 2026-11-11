@@ -1,0 +1,28 @@
+AREA,CHECK_ID,PROCESS_ID,DESCRIPTION,CLASS_NAME,SCHED_GROUP,BUKRS_AWARE,ACTIVE,SEQ
+CA_FICA,FICA_CLR_RESET,FICA_CLEARING,Clearings reset in the last day above a limit,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_CORR_OPEN,FICA_CORRESP,Correspondence requests not printed after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_DEF_EXPIRED,FICA_DEFERRAL,Deferrals expired and still open,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_DUN_NOACT,FICA_DUNNING,Dunning proposals of past days without activity run,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_EBS_NOLOT,FICA_EBS_LOTS,Statement items of past days not transferred to FI-CA,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_GL_OPENKEY,FICA_GL_TRANSFER,Reconciliation keys not transferred after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_GL_OUTAGE,FICA_GL_TRANSFER,"Risk: postings in a planned downtime, G/L transfer gaps arou",ZCL_CA_OPS_CHK_OUTAGE,DAILY,,,20
+CA_FICA,FICA_IP_BREACH,FICA_INSTALMENT,Instalments overdue beyond the tolerance (plan in breach),ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_INT_MISSED,FICA_INTEREST,Interest runs that did not post (error lines),ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_INV_BACKLOG,FICA_INVOICING,Billing documents of past days not invoiced,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_PAYRUN_NOPAY,FICA_PAYRUN,Payments of past runs without a payment document,ZCL_CA_OPS_CHK_AGG,DAILY,X,,10
+CA_FICA,FICA_LOT_OPEN,FICA_PAY_LOTS,Payment lots not posted and closed after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_LOT_CLARIF,FICA_PAY_LOTS,Payment lot items waiting in clarification,ZCL_CA_OPS_CHK_AGG,DAILY,,,20
+CA_FICA,FICA_RET_OPEN,FICA_RETURNS,Returns lots not posted and closed after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_REV_DAY,FICA_REVERSAL,Documents reversed in the last day above a limit,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_WO_LIMIT,FICA_WRITEOFF,Risk: write-offs of the last day above the limit,ZCL_CA_OPS_CHK_AGG,DAILY,X,,10
+CA_FICA,FICA_WO_REASON,FICA_WRITEOFF,Risk: write-offs of the last day outside the reason list,ZCL_CA_OPS_CHK_AGG,DAILY,X,,20
+CA_FSCD,FSCD_BRO_OPEN,FSCD_BROKER,Broker reports not posted after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FSCD,FSCD_CLM_STUCK,FSCD_CLAIMS,Claim payment requests not paid after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FSCD,FSCD_COINS_OPEN,FSCD_COINSURANCE,Coinsurance shares not settled in the period,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FSCD,FSCD_COMM_ERR,FSCD_COMMISSION,Commission transfers in error,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FSCD,FSCD_RI_ERR,FSCD_FSRI,Reinsurance transfers in error,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FSCD,FSCD_PP_NOT_DEBITED,FSCD_PAYPLAN,Payment plan items due but not debited,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FSCD,FSCD_PREM_OVERDUE,FSCD_PREMIUM,Premium receivables overdue beyond the tolerance,ZCL_CA_OPS_CHK_AGG,DAILY,X,,10
+CA_S4CORE,S4_EBS_UNPOSTED,S4_BANK_STMT,Statement items of past days not posted in posting area 1,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_S4CORE,S4_JOB_FAILURES,S4_BATCH_JOBS,"Cancelled jobs, job log errors, failed children of a root",ZCL_CA_OPS_CHK_JOB_FAIL,FAST,,,10
+CA_S4CORE,S4_JOB_STATES,S4_BATCH_JOBS,"Long-running jobs, released jobs not started",ZCL_CA_OPS_CHK_JOB_STATE,FAST,,,20

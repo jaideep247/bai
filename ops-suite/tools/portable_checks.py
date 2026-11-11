@@ -14,6 +14,7 @@ Modification log:
 2026-11-10 | Common checks from the shared tools (tools/abaptools); the suite's list unchanged.
 2026-11-10 | process_onboarding (process onboarding of the operations framework: registered processes complete).
 2026-11-11 | link_registry (customer overlay of the link registry valid with the product layers, outputs up to date).
+2026-11-11 | process_catalogue (customer layer of the process catalogue valid with the product packages, outputs current).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -197,6 +198,14 @@ check('link_registry', link_registry._engine.check(ROOT, link_registry.PROFILE),
       '(ids and prefixes, declared fields, repository DDIC / CDS metadata, conditions, active links on confirmed '
       'fields only, cardinality, fallback chains, replacements, sensitivity) and its generated seed rows, lineage, '
       'CDS snippets and impact report are up to date (tools/link_registry.py).')
+
+# Process catalogue (2026-11-11): the customer layer with the product packages valid, seed rows / documents current
+import process_catalogue  # noqa: E402
+check('process_catalogue', process_catalogue._engine.check(ROOT, process_catalogue.PROFILE),
+      'The customer layer config/catalogue/overlay.json is valid on top of the product packages of the framework '
+      '(ids and prefixes, package ranks, steps, tables and their link registry objects, dependencies without '
+      'cycles, activation rows with a reason and no person, CAT_PROCESS of config/process_register.csv) and its '
+      'seed rows, catalogue and activation proposal are up to date (tools/process_catalogue.py).')
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

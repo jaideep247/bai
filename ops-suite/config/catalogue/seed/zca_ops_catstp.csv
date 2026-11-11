@@ -1,0 +1,4 @@
+PROCESS_ID,STEP_NO,STEP_KIND,OBJ_NAME,DESCRIPTION,EVIDENCE,VERIFY_REF
+CD_COLL_REQ_LIFE,010,P,‹BASE request intake›,Requests of BASE via PRISM,V,V130
+CD_COLL_REQ_LIFE,020,T,FPY1,Collection by the payment run on the request date,C,
+CD_COLL_REQ_LIFE,030,P,‹Stripe refund call›,Refund of a rejected card payment,V,V130

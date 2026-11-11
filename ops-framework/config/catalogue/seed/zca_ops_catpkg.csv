@@ -1,0 +1,4 @@
+PKG_ID,PKG_KIND,PKG_RANK,ID_PREFIX,MON_AREA,DESCRIPTION,OWNER,ACTIVE
+FICA,I,20,FICA_,CA_FICA,Industry package: SAP FI-CA standard processes,OPS FRAMEWORK,X
+FSCD,I,30,FSCD_,CA_FSCD,Industry package: SAP FS-CD standard processes,OPS FRAMEWORK,X
+S4CORE,S,10,S4_,CA_S4CORE,Product baseline: S/4HANA core standard processes,OPS FRAMEWORK,X

@@ -1,0 +1,8 @@
+PROCESS_ID,PRED_ID,DEP_KIND,DESCRIPTION
+FICA_EBS_LOTS,S4_BANK_STMT,H,Needs the imported bank statement
+FICA_PAYRUN,FICA_GL_TRANSFER,S,Payment documents reach the G/L with their keys
+FICA_RETURNS,FICA_PAYRUN,S,Returns of payments of the payment run
+FSCD_BROKER,FSCD_PAYPLAN,S,Broker items reference the receivables
+FSCD_CLAIMS,FICA_PAYRUN,H,Claims are paid by the payment run
+FSCD_PREMIUM,FICA_PAYRUN,S,Collection by the payment run
+FSCD_PREMIUM,FSCD_PAYPLAN,H,Receivables come from the debit entry

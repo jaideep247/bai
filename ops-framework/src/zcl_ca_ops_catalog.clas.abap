@@ -155,10 +155,18 @@ CLASS zcl_ca_ops_catalog IMPLEMENTATION.
   METHOD zif_ca_ops_catalog~inactive_onboarded.
     load( ).
     LOOP AT mt_onboarded ASSIGNING FIELD-SYMBOL(<ls_onb>) WHERE area = iv_area.
-      IF <ls_onb>-active = abap_false
-         OR ( <ls_onb>-cat_process IS NOT INITIAL
-              AND zif_ca_ops_catalog~state( iv_process_id = <ls_onb>-cat_process
-                                            iv_date       = iv_date )-active = abap_false ).
+      IF <ls_onb>-active = abap_false.
+        INSERT <ls_onb>-process_id INTO TABLE rt_processes.
+        CONTINUE.
+      ENDIF.
+      IF <ls_onb>-cat_process IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      " fail-open: a reference to a process that is not in the catalogue does not stop monitoring (the
+      " onboarding check reports it as an error)
+      DATA(ls_state) = zif_ca_ops_catalog~state( iv_process_id = <ls_onb>-cat_process
+                                                 iv_date       = iv_date ).
+      IF ls_state-active = abap_false AND ls_state-source <> zif_ca_ops_cat_types=>gc_source-unknown.
         INSERT <ls_onb>-process_id INTO TABLE rt_processes.
       ENDIF.
     ENDLOOP.

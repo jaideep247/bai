@@ -1,0 +1,128 @@
+{
+ "_comment": "Process catalogue, product baseline S4CORE: SAP standard processes of the S/4HANA core every system runs (background jobs, electronic bank statement). Definitions and monitoring templates only; the activation is the customer's (docs/PROCESS_CATALOGUE.md). Names marked \"verify\" are VERIFY items (docs/VERIFY.md); monitoring rows are delivered inactive.",
+ "package": {
+  "id": "S4CORE",
+  "kind": "S",
+  "rank": 10,
+  "prefix": "S4_",
+  "mon_area": "CA_S4CORE",
+  "description": "Product baseline: S/4HANA core standard processes",
+  "owner": "OPS FRAMEWORK",
+  "active": true,
+  "auth_role": "‹PFCG role of the area›"
+ },
+ "processes": [
+  {
+   "id": "S4_BATCH_JOBS",
+   "name": "Background job processing",
+   "component": "BC",
+   "card": "PLATFORM",
+   "owner_role": "Batch operations lead",
+   "schedule": "Continuous (job scheduler)",
+   "default_active": true,
+   "seq": 10,
+   "description": "Every system runs background jobs: the one baseline process active by default. Monitored by the framework's SAP job monitor (docs/JOB_MONITORING.md); a consumer usually runs it in its own job area and maps that business process here (CAT_PROCESS).",
+   "steps": [
+    {
+     "kind": "T",
+     "name": "SM37",
+     "description": "Job overview: released, active, finished and cancelled jobs"
+    }
+   ],
+   "tables": [
+    {
+     "name": "TBTCO",
+     "role": "S",
+     "description": "Job header: status, start, end"
+    },
+    {
+     "name": "TBTCP",
+     "role": "I",
+     "description": "Job steps: program and variant"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "S4_JOB_FAILURES",
+     "description": "Cancelled jobs, job log errors, failed children of a root",
+     "bukrs_aware": false,
+     "schedule_group": "FAST",
+     "class": "ZCL_CA_OPS_CHK_JOB_FAIL"
+    },
+    {
+     "check": "S4_JOB_STATES",
+     "description": "Long-running jobs, released jobs not started",
+     "bukrs_aware": false,
+     "schedule_group": "FAST",
+     "class": "ZCL_CA_OPS_CHK_JOB_STATE"
+    }
+   ]
+  },
+  {
+   "id": "S4_BANK_STMT",
+   "name": "Electronic bank statement import and posting",
+   "component": "FI-BL",
+   "card": "BANK",
+   "owner_role": "Bank reconciliation lead",
+   "schedule": "Daily, after the bank files arrive",
+   "default_active": false,
+   "seq": 20,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FF_5",
+     "description": "Import the electronic bank statement"
+    },
+    {
+     "kind": "P",
+     "name": "RFEBKA00",
+     "description": "Bank statement import and posting program"
+    },
+    {
+     "kind": "T",
+     "name": "FEBAN",
+     "description": "Post-process bank statement items"
+    }
+   ],
+   "tables": [
+    {
+     "name": "FEBKO",
+     "role": "H",
+     "description": "Bank statement header",
+     "link_object": "S4_BANK_STMT_HDR"
+    },
+    {
+     "name": "FEBEP",
+     "role": "I",
+     "description": "Bank statement items",
+     "link_object": "S4_BANK_STMT_LINE"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "S4_EBS_UNPOSTED",
+     "description": "Statement items of past days not posted in posting area 1",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "FEBEP",
+       "description": "Items of past days with posting area 1 not done",
+       "func": "COUNT",
+       "date_field": "BUDAT",
+       "min_age_days": 1,
+       "status_field": "VB1OK",
+       "status_op": "NE",
+       "status_value": "X",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "EBS_ITEM_UNPOSTED",
+       "verify": "V129"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

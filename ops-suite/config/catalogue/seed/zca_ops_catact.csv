@@ -1,0 +1,5 @@
+PROCESS_ID,VALID_FROM,ACTIVE,PKG_ID,REASON,APPROVED_BY,APPROVED_ON
+FICA_GL_TRANSFER,20261111,X,CD,In use; monitored by the suite since go-live (proposal - confirm with business),,
+FICA_PAYRUN,20261111,X,CD,In use; monitored by the suite since go-live (proposal - confirm with business),,
+FICA_RETURNS,20261111,X,CD,In use; monitored by the suite since go-live (proposal - confirm with business),,
+S4_BANK_STMT,20261111,X,CD,In use; monitored by the suite since go-live (proposal - confirm with business),,

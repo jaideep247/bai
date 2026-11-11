@@ -24,7 +24,8 @@ define table zca_ops_proc {
   // their runs (built-in target RUN)
   purge_target  : abap.char(12);
   // Process of the process catalogue this business process monitors (ZCA_OPS_CATPRC, 2026-11-11); blank = not
-  // in the catalogue. The process and its checks are in effect only while that catalogue process is active
+  // in the catalogue. The process and its checks are in effect only while that catalogue process is active (a
+  // name that is not in the catalogue does not stop them; the onboarding check reports it)
   cat_process   : abap.char(20);
   active        : abap_boolean;
   seq           : abap.int4;

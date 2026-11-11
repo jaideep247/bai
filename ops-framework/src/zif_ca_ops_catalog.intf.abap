@@ -50,7 +50,8 @@ INTERFACE zif_ca_ops_catalog
       VALUE(rt_processes) TYPE zif_ca_ops_cat_types=>tt_process.
 
   "! Business processes of the area (ZCA_OPS_PROC) that are not in effect on a day: the row is inactive, or its
-  "! catalogue process is not active. A check of one of them does not run (runner)
+  "! catalogue process is not active. A check of one of them does not run (runner). A catalogue process that is
+  "! not defined does not stop monitoring (fail-open; the onboarding check reports CAT_REF_UNKNOWN)
   METHODS inactive_onboarded
     IMPORTING
       iv_area             TYPE zif_ca_ops_types=>ty_area

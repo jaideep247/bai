@@ -1,0 +1,224 @@
+{
+ "_comment": "Process catalogue, customer layer of the ops suite (package CD, prefix CD_) on top of the product packages of the operations framework (ops-framework/config/catalogue: S4CORE, FICA, FSCD). Holds what is this landscape's own: the activation proposal (ACTIVE only for the processes the suite already monitors - payment run, bank statement, returns, G/L transfer / reconciliation keys; background jobs active by the product default), the customer process collections request lifecycle (BASE) and the decision list for the business. Approvers are entered in DV1 (four-eyes), never in the repository. docs/Process_Catalogue_Overlay.md.",
+ "package": {
+  "id": "CD",
+  "kind": "C",
+  "rank": 100,
+  "prefix": "CD_",
+  "mon_area": "",
+  "description": "Customer layer of the payment engine (ops suite)",
+  "owner": "PE RTB",
+  "active": true
+ },
+ "processes": [
+  {
+   "id": "CD_COLL_REQ_LIFE",
+   "name": "Collections request lifecycle (BASE)",
+   "component": "FI-CA",
+   "card": "COLLECTIONS",
+   "owner_role": "Collections operations lead",
+   "schedule": "Daily, per request date (BASE requests via PRISM)",
+   "default_active": true,
+   "seq": 10,
+   "description": "Customer process: collection requests of the source BASE through the middleware PRISM - PENDING, account validation, SCHEDULED, answer of the source, collection by the payment run; a card payment rejected by the source ends in a Stripe refund. Monitored by the business process CD_COLL / BASE_REQ_LIFE (checks R1-R4, inactive until V130).",
+   "steps": [
+    {
+     "kind": "P",
+     "name": "‹BASE request intake›",
+     "description": "Requests of BASE via PRISM",
+     "verify": "V130"
+    },
+    {
+     "kind": "T",
+     "name": "FPY1",
+     "description": "Collection by the payment run on the request date"
+    },
+    {
+     "kind": "P",
+     "name": "‹Stripe refund call›",
+     "description": "Refund of a rejected card payment",
+     "verify": "V130"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹request status table›",
+     "role": "S",
+     "description": "Collection requests and status",
+     "verify": "V130"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FICA_PAYRUN",
+     "kind": "H",
+     "description": "Collected by the payment run"
+    }
+   ],
+   "onboarded": [
+    {
+     "area": "CD_COLL",
+     "process": "BASE_REQ_LIFE"
+    }
+   ]
+  }
+ ],
+ "monitoring": [
+  {
+   "process": "S4_BATCH_JOBS",
+   "onboarded": {
+    "area": "CD_JOBS",
+    "process": "SAP_JOBS"
+   }
+  }
+ ],
+ "external": [
+  {
+   "process": "S4_BATCH_JOBS",
+   "text": "Morning report E_JOBS"
+  },
+  {
+   "process": "FICA_PAYRUN",
+   "text": "Morning report A_INFLIGHT, A_PRQ_NOT_PAID, B_VOL_PAYRUN, C_CHQ_STATUS; payment trace; FMON payment files"
+  },
+  {
+   "process": "S4_BANK_STMT",
+   "text": "EBS validation (CD_EBS, BAI2 / CAMT); morning report B_VOL_STMT, A_RECON_3WAY"
+  },
+  {
+   "process": "FICA_RETURNS",
+   "text": "Morning report A_RET_AGED; ACH return files (FMON)"
+  },
+  {
+   "process": "FICA_GL_TRANSFER",
+   "text": "Morning report A_GL_TRANSFER, A_RECON_3WAY; ledger drill-down"
+  },
+  {
+   "process": "FICA_REVERSAL",
+   "text": "Morning report A_DOC_CHANGE (reversals of payment documents only)"
+  }
+ ],
+ "activation": [
+  {
+   "process": "FICA_PAYRUN",
+   "valid_from": "20261111",
+   "active": true,
+   "reason": "In use; monitored by the suite since go-live (proposal - confirm with business)"
+  },
+  {
+   "process": "S4_BANK_STMT",
+   "valid_from": "20261111",
+   "active": true,
+   "reason": "In use; monitored by the suite since go-live (proposal - confirm with business)"
+  },
+  {
+   "process": "FICA_RETURNS",
+   "valid_from": "20261111",
+   "active": true,
+   "reason": "In use; monitored by the suite since go-live (proposal - confirm with business)"
+  },
+  {
+   "process": "FICA_GL_TRANSFER",
+   "valid_from": "20261111",
+   "active": true,
+   "reason": "In use; monitored by the suite since go-live (proposal - confirm with business)"
+  }
+ ],
+ "decisions": [
+  {
+   "process": "FICA_EBS_LOTS",
+   "question": "Do bank statement items reach FI-CA as payment lots, or only through FI posting rules and clearing accounts?",
+   "proposal": "Inactive until confirmed (the suite watches the statement itself: S4_BANK_STMT)"
+  },
+  {
+   "process": "FICA_PAY_LOTS",
+   "question": "Are incoming payments (lockbox, counter, cash journal) posted through FI-CA payment lots?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_CLEARING",
+   "question": "Should reset clearings be watched (volume per day)?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_REVERSAL",
+   "question": "A_DOC_CHANGE watches reversals of payment documents; activate the standard reversal process for every document?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_DUNNING",
+   "question": "Is dunning (FPVA / FPVB) used?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_INVOICING",
+   "question": "Is FI-CA invoicing used?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_INTEREST",
+   "question": "Is interest calculated in FI-CA?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_WRITEOFF",
+   "question": "Are write-offs posted (FP04 / mass write-off)? Write-off limit and approved reasons for the risk checks?",
+   "proposal": "Inactive - to confirm with business (risk checks need the limit and the reason list)"
+  },
+  {
+   "process": "FICA_INSTALMENT",
+   "question": "Are instalment plans used?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_DEFERRAL",
+   "question": "Are due dates deferred?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_CORRESP",
+   "question": "Is FI-CA correspondence printed (FPCOPARA)?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FSCD_PAYPLAN",
+   "question": "Are FS-CD payment plans and the debit entry used (premiums)?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FSCD_PREMIUM",
+   "question": "Is premium collection run as the standard FS-CD process, or only through BASE collection requests (CD_COLL_REQ_LIFE)?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FSCD_BROKER",
+   "question": "Are broker reports used?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FSCD_COINSURANCE",
+   "question": "Is coinsurance settled in FS-CD?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FSCD_COMMISSION",
+   "question": "Is the commission interface used?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FSCD_CLAIMS",
+   "question": "Claims are paid through payment requests of PCLM via PRISM (custom request log): is the standard claims interface also used?",
+   "proposal": "Inactive - the customer path is monitored with the payment run"
+  },
+  {
+   "process": "FSCD_FSRI",
+   "question": "Is FS-RI integrated?",
+   "proposal": "Inactive - to confirm with business"
+  },
+  {
+   "process": "FICA_PAYRUN",
+   "question": "Effective-from date and business approver of the four active rows (payment run, bank statement, returns, G/L transfer)?",
+   "proposal": "From 2026-11-11 (the suite monitors them); approver entered in DV1"
+  }
+ ]
+}

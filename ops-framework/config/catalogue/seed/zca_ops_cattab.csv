@@ -1,0 +1,49 @@
+PROCESS_ID,TABNAME,TAB_ROLE,LINK_OBJECT,DESCRIPTION,EVIDENCE,VERIFY_REF
+FICA_CLEARING,DFKKOP,I,FICA_OPEN_ITEM,Open and cleared items,C,
+FICA_CLEARING,DFKKRAPT,L,,Clearing history (reset clearings),V,V128
+FICA_CORRESP,‹correspondence history header›,H,,Correspondence requests and their print state,V,V128
+FICA_DEFERRAL,DFKKOP,I,FICA_OPEN_ITEM,Deferred items (deferral date),C,
+FICA_DUNNING,DFKKOP,I,FICA_OPEN_ITEM,Dunned items,C,
+FICA_DUNNING,FKKMAKO,H,,Dunning header (dunning history),C,
+FICA_DUNNING,FKKMAZE,I,,Dunning items,C,
+FICA_EBS_LOTS,DFKKZK,H,,Payment lot header,C,
+FICA_EBS_LOTS,DFKKZP,I,,Payment lot items,C,
+FICA_EBS_LOTS,FEBEP,I,S4_BANK_STMT_LINE,Bank statement items,C,
+FICA_GL_TRANSFER,DFKKKO,H,FICA_DOC_HEADER,Documents of a reconciliation key,C,
+FICA_GL_TRANSFER,DFKKSUMC,S,FICA_SUMMARY_RECORD,Summary records of a reconciliation key,C,
+FICA_GL_TRANSFER,‹reconciliation key status table›,S,,"Reconciliation keys: closed, transferred",V,V128
+FICA_INSTALMENT,DFKKOP,I,FICA_OPEN_ITEM,Instalments (items of the plan),C,
+FICA_INSTALMENT,‹instalment plan header›,H,,Instalment plans,V,V128
+FICA_INTEREST,DFKKOP,I,FICA_OPEN_ITEM,Items interest is calculated on,C,
+FICA_INTEREST,‹interest history table›,L,,Interest calculated per item,V,V128
+FICA_INVOICING,‹billing document header›,H,,Billing documents to invoice,V,V128
+FICA_INVOICING,‹invoicing document header›,H,,Invoicing documents,V,V128
+FICA_PAYRUN,DFKKCR,L,FICA_CHEQUE,Cheque register (cheque method),C,
+FICA_PAYRUN,DFKKKO,H,FICA_DOC_HEADER,Payment documents,C,
+FICA_PAYRUN,DFKKOP,I,FICA_OPEN_ITEM,Items cleared by the payment,C,
+FICA_PAYRUN,DPAYH,H,FICA_PAYMENT_RUN,"Payments of a run (run date, run ID, payment document)",C,
+FICA_PAYRUN,DPAYP,I,,Items paid by a payment of a run,C,
+FICA_PAYRUN,TFK042Z,C,FICA_PAY_METHOD_CFG,Payment methods (collection or disbursement),C,
+FICA_PAY_LOTS,DFKKOP,I,FICA_OPEN_ITEM,Items cleared by the lot,C,
+FICA_PAY_LOTS,DFKKZK,H,,Payment lot header,C,
+FICA_PAY_LOTS,DFKKZP,I,,Payment lot items,C,
+FICA_RETURNS,DFKKOP,I,FICA_OPEN_ITEM,Items of the returned payment,C,
+FICA_RETURNS,DFKKRH,H,,Returns lot header,C,
+FICA_RETURNS,DFKKRP,I,FICA_RETURN_ITEM,"Returns lot items (returned payment, reason)",C,
+FICA_REVERSAL,DFKKKO,H,FICA_DOC_HEADER,Document header (reversal document STBEL),C,
+FICA_WRITEOFF,DFKKOP,I,FICA_OPEN_ITEM,"Written-off items (clearing and write-off reason, amount)",C,
+FICA_WRITEOFF,‹write-off history table›,L,,Write-off history,V,V128
+FSCD_BROKER,‹broker report header›,H,,Broker reports and their status,V,V128
+FSCD_CLAIMS,DPAYH,H,FICA_PAYMENT_RUN,Disbursements of the payment run,C,
+FSCD_CLAIMS,‹claims payment request table›,S,,Claim payment requests and their status,V,V128
+FSCD_COINSURANCE,‹coinsurance share items›,I,,Coinsurance shares to settle,V,V128
+FSCD_COMMISSION,‹commission transfer table›,L,,Commission documents transferred and their status,V,V128
+FSCD_FSRI,‹FS-RI transfer table›,L,,Reinsurance settlements transferred and their status,V,V128
+FSCD_PAYPLAN,DFKKOP,I,FICA_OPEN_ITEM,Receivables created by the debit entry,C,
+FSCD_PAYPLAN,‹payment plan items›,I,,Payment plan items of the insurance objects,V,V128
+FSCD_PREMIUM,DFKKOP,I,FICA_OPEN_ITEM,Premium receivables,C,
+FSCD_PREMIUM,DPAYH,H,FICA_PAYMENT_RUN,Collections of the payment run,C,
+S4_BANK_STMT,FEBEP,I,S4_BANK_STMT_LINE,Bank statement items,C,
+S4_BANK_STMT,FEBKO,H,S4_BANK_STMT_HDR,Bank statement header,C,
+S4_BATCH_JOBS,TBTCO,S,,"Job header: status, start, end",C,
+S4_BATCH_JOBS,TBTCP,I,,Job steps: program and variant,C,

@@ -1,0 +1,433 @@
+{
+ "_comment": "Process catalogue, industry package FSCD: SAP standard processes of the insurance extension of contract accounts (SAP FS-CD) on top of FICA. Definitions and monitoring templates only; the activation is the customer's (docs/PROCESS_CATALOGUE.md). The FS-CD object names are VERIFY items (V127 / V128 / V129); every monitoring row is delivered inactive.",
+ "package": {
+  "id": "FSCD",
+  "kind": "I",
+  "rank": 30,
+  "prefix": "FSCD_",
+  "mon_area": "CA_FSCD",
+  "description": "Industry package: SAP FS-CD standard processes",
+  "owner": "OPS FRAMEWORK",
+  "active": true,
+  "auth_role": "‹PFCG role of the area›"
+ },
+ "processes": [
+  {
+   "id": "FSCD_PAYPLAN",
+   "name": "Payment plans and debit entry (insurance)",
+   "component": "FS-CD",
+   "card": "INSURANCE",
+   "owner_role": "Premium accounting lead",
+   "schedule": "Daily debit entry run (mass activity)",
+   "default_active": false,
+   "seq": 10,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "‹payment plan of the insurance object›",
+     "description": "Maintain the payment plan of a policy",
+     "verify": "V127"
+    },
+    {
+     "kind": "M",
+     "name": "‹debit entry mass activity type›",
+     "description": "Debit entry: payment plan items to receivables",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹payment plan items›",
+     "role": "I",
+     "description": "Payment plan items of the insurance objects",
+     "verify": "V128"
+    },
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Receivables created by the debit entry",
+     "link_object": "FICA_OPEN_ITEM"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FSCD_PP_NOT_DEBITED",
+     "description": "Payment plan items due but not debited",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹payment plan items›",
+       "description": "Due payment plan items not debited",
+       "func": "COUNT",
+       "date_field": "‹due date field›",
+       "min_age_days": 1,
+       "status_field": "‹debit entry status›",
+       "status_op": "NE",
+       "status_value": "‹debited value›",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "PAYPLAN_NOT_DEBITED",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FSCD_PREMIUM",
+   "name": "Premium collection",
+   "component": "FS-CD",
+   "card": "INSURANCE",
+   "owner_role": "Premium collections lead",
+   "schedule": "Daily collection runs",
+   "default_active": false,
+   "seq": 20,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FPY1",
+     "description": "Payment run (collection of premiums)"
+    },
+    {
+     "kind": "T",
+     "name": "FP05",
+     "description": "Incoming premium payments (payment lots)"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DFKKOP",
+     "role": "I",
+     "description": "Premium receivables",
+     "link_object": "FICA_OPEN_ITEM"
+    },
+    {
+     "name": "DPAYH",
+     "role": "H",
+     "description": "Collections of the payment run",
+     "link_object": "FICA_PAYMENT_RUN"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FSCD_PAYPLAN",
+     "kind": "H",
+     "description": "Receivables come from the debit entry"
+    },
+    {
+     "id": "FICA_PAYRUN",
+     "kind": "S",
+     "description": "Collection by the payment run"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FSCD_PREM_OVERDUE",
+     "description": "Premium receivables overdue beyond the tolerance",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "DFKKOP",
+       "description": "Overdue premium receivables",
+       "func": "COUNT",
+       "date_field": "‹net due date field›",
+       "min_age_days": "‹tolerance days›",
+       "bukrs_field": "BUKRS",
+       "status_field": "‹clearing status field›",
+       "status_op": "NE",
+       "status_value": "‹cleared value›",
+       "amber": "‹amber count›",
+       "red": "‹red count›",
+       "check_code": "PREMIUM_OVERDUE",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FSCD_BROKER",
+   "name": "Broker collections (broker reports)",
+   "component": "FS-CD",
+   "card": "INSURANCE",
+   "owner_role": "Broker accounting lead",
+   "schedule": "Per broker statement",
+   "default_active": false,
+   "seq": 30,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "‹broker report processing›",
+     "description": "Create, check and post a broker report",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹broker report header›",
+     "role": "H",
+     "description": "Broker reports and their status",
+     "verify": "V128"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FSCD_PAYPLAN",
+     "kind": "S",
+     "description": "Broker items reference the receivables"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FSCD_BRO_OPEN",
+     "description": "Broker reports not posted after n days",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹broker report header›",
+       "description": "Oldest broker report not posted",
+       "func": "AGE",
+       "date_field": "‹report date field›",
+       "min_age_days": 1,
+       "status_field": "‹report status field›",
+       "status_op": "NE",
+       "status_value": "‹posted value›",
+       "amber": 2,
+       "red": 5,
+       "check_code": "BROKER_REPORT_OPEN",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FSCD_COINSURANCE",
+   "name": "Coinsurance settlement",
+   "component": "FS-CD",
+   "card": "INSURANCE",
+   "owner_role": "Coinsurance accounting lead",
+   "schedule": "Per settlement period",
+   "default_active": false,
+   "seq": 40,
+   "steps": [
+    {
+     "kind": "T",
+     "name": "‹coinsurance settlement run›",
+     "description": "Settle the coinsurers' shares",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹coinsurance share items›",
+     "role": "I",
+     "description": "Coinsurance shares to settle",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FSCD_COINS_OPEN",
+     "description": "Coinsurance shares not settled in the period",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹coinsurance share items›",
+       "description": "Shares not settled",
+       "func": "COUNT",
+       "date_field": "‹period end date field›",
+       "min_age_days": 1,
+       "status_field": "‹settlement status field›",
+       "status_op": "NE",
+       "status_value": "‹settled value›",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "COINSURANCE_NOT_SETTLED",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FSCD_COMMISSION",
+   "name": "Commission interface",
+   "component": "FS-CD",
+   "card": "INSURANCE",
+   "owner_role": "Commission accounting lead",
+   "schedule": "Per commission run",
+   "default_active": false,
+   "seq": 50,
+   "steps": [
+    {
+     "kind": "P",
+     "name": "‹commission interface transfer›",
+     "description": "Commission documents into contract accounts",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹commission transfer table›",
+     "role": "L",
+     "description": "Commission documents transferred and their status",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FSCD_COMM_ERR",
+     "description": "Commission transfers in error",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹commission transfer table›",
+       "description": "Commission documents in error",
+       "func": "COUNT",
+       "date_field": "‹transfer date field›",
+       "max_age_days": 7,
+       "status_field": "‹error status field›",
+       "status_op": "EQ",
+       "status_value": "‹error value›",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "COMMISSION_TRANSFER_ERROR",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FSCD_CLAIMS",
+   "name": "Claims disbursement (standard claims interface)",
+   "component": "FS-CD",
+   "card": "INSURANCE",
+   "owner_role": "Claims payments lead",
+   "schedule": "Continuous; payment runs intraday",
+   "default_active": false,
+   "seq": 60,
+   "steps": [
+    {
+     "kind": "P",
+     "name": "‹claims interface posting›",
+     "description": "Claim payments into contract accounts",
+     "verify": "V127"
+    },
+    {
+     "kind": "T",
+     "name": "FPY1",
+     "description": "Payment run (disbursement of the claims)"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹claims payment request table›",
+     "role": "S",
+     "description": "Claim payment requests and their status",
+     "verify": "V128"
+    },
+    {
+     "name": "DPAYH",
+     "role": "H",
+     "description": "Disbursements of the payment run",
+     "link_object": "FICA_PAYMENT_RUN"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FICA_PAYRUN",
+     "kind": "H",
+     "description": "Claims are paid by the payment run"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FSCD_CLM_STUCK",
+     "description": "Claim payment requests not paid after n days",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹claims payment request table›",
+       "description": "Oldest claim payment request not paid",
+       "func": "AGE",
+       "date_field": "‹request date field›",
+       "min_age_days": 1,
+       "status_field": "‹request status field›",
+       "status_op": "NE",
+       "status_value": "‹paid value›",
+       "amber": 1,
+       "red": 3,
+       "check_code": "CLAIM_PAYMENT_STUCK",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FSCD_FSRI",
+   "name": "Reinsurance integration (FS-RI)",
+   "component": "FS-CD",
+   "card": "INSURANCE",
+   "owner_role": "Reinsurance accounting lead",
+   "schedule": "Per settlement period",
+   "default_active": false,
+   "seq": 70,
+   "steps": [
+    {
+     "kind": "P",
+     "name": "‹FS-RI transfer to contract accounts›",
+     "description": "Reinsurance settlements into contract accounts",
+     "verify": "V127"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹FS-RI transfer table›",
+     "role": "L",
+     "description": "Reinsurance settlements transferred and their status",
+     "verify": "V128"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FSCD_RI_ERR",
+     "description": "Reinsurance transfers in error",
+     "bukrs_aware": false,
+     "schedule_group": "DAILY",
+     "aggregates": [
+      {
+       "id": "R1",
+       "table": "‹FS-RI transfer table›",
+       "description": "Reinsurance transfers in error",
+       "func": "COUNT",
+       "date_field": "‹transfer date field›",
+       "max_age_days": 7,
+       "status_field": "‹error status field›",
+       "status_op": "EQ",
+       "status_value": "‹error value›",
+       "amber": 1,
+       "red": "‹red count›",
+       "check_code": "REINSURANCE_TRANSFER_ERROR",
+       "verify": "V128"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

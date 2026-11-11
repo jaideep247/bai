@@ -37,11 +37,15 @@ Specification (JSON): area, process, name, owner_team, auth_role, schedule_group
 new_area {description, owner_team}, control {area, id, create, description, category, guidance},
 alert_rule {id, min_severity, destination, template_id}, checks [ {id, description, bukrs_aware,
 class, skeleton, skeleton_dir} | {id, description, bukrs_aware, aggregates [ {id, description, table,
-func, date_field, min_age_days, bukrs_field, status_field, status_op, status_value, cond_field, cond_op,
-cond_value, amber, red, check_code} ]} ], verify [text].
+func, date_field, min_age_days, max_age_days, time_field, bukrs_field, status_field, status_op, status_value,
+cond_field, cond_op, cond_value, amber, red, check_code} ]} ], cat_process (the process of the process
+catalogue the business process monitors), verify [text]. A check may name a class and aggregate rows when the
+class reads the check's rows (e.g. ZCL_CA_OPS_CHK_OUTAGE).
 
 Modification log:
 2026-11-10 | Initial version (process onboarding framework).
+2026-11-11 | Process catalogue: CAT_PROCESS of the process row; aggregate rows with MAX_AGE_DAYS (window) and
+           | TIME_FIELD, operator NI; a class that reads its aggregate rows (AGG_READERS) may have rows too.
 """
 import argparse
 import csv
@@ -52,13 +56,17 @@ import re
 import sys
 
 AGG_CLASS = 'ZCL_CA_OPS_CHK_AGG'
+# Check classes of the framework that read the aggregate rows of their check (besides the aggregate check)
+AGG_READERS = (AGG_CLASS, 'ZCL_CA_OPS_CHK_OUTAGE')
+STATUS_OPS = ('EQ', 'NE', 'IN', 'NI')
+COND_OPS = ('EQ', 'NE', 'GT', 'LT', 'GE', 'LE', 'IN', 'NI')
 COLUMNS = {
     'process_register.csv': ['AREA', 'PROCESS_ID', 'DESCRIPTION', 'OWNER', 'BACKUP', 'RUNBOOK_URL', 'AUTH_ROLE',
-                             'OWN_DATA', 'PURGE_TARGET', 'ACTIVE', 'SEQ'],
+                             'OWN_DATA', 'PURGE_TARGET', 'CAT_PROCESS', 'ACTIVE', 'SEQ'],
     'check_registry.csv': ['AREA', 'CHECK_ID', 'PROCESS_ID', 'DESCRIPTION', 'CLASS_NAME', 'SCHED_GROUP',
                            'BUKRS_AWARE', 'ACTIVE', 'SEQ'],
     'check_aggregates.csv': ['AREA', 'CHECK_ID', 'AGG_ID', 'DESCRIPTION', 'TABNAME', 'AGG_FUNC', 'DATE_FIELD',
-                             'MIN_AGE_DAYS', 'BUKRS_FIELD', 'STATUS_FIELD', 'STATUS_OP', 'STATUS_VALUE',
+                             'MIN_AGE_DAYS', 'MAX_AGE_DAYS', 'TIME_FIELD', 'BUKRS_FIELD', 'STATUS_FIELD', 'STATUS_OP', 'STATUS_VALUE',
                              'COND_FIELD', 'COND_OP', 'COND_VALUE', 'AMBER', 'RED', 'CHECK_CODE', 'ACTIVE'],
     'approved_tables.csv': ['AREA', 'TABLE_NAME', 'ACTIVE', 'APPROVED_BY', 'DESCRIPTION'],
     'control_register.csv': ['AREA', 'CONTROL_ID', 'DESCRIPTION', 'CATEGORY', 'OWNER', 'BACKUP', 'TEAM',
@@ -126,7 +134,8 @@ def rows_of(spec):
     out['process_register.csv'].append({
         'AREA': area, 'PROCESS_ID': process, 'DESCRIPTION': spec['name'], 'OWNER': '', 'BACKUP': '',
         'RUNBOOK_URL': spec.get('runbook_url', ''), 'AUTH_ROLE': spec['auth_role'],
-        'OWN_DATA': flag(spec.get('own_data')), 'PURGE_TARGET': spec.get('purge_target', ''), 'ACTIVE': on,
+        'OWN_DATA': flag(spec.get('own_data')), 'PURGE_TARGET': spec.get('purge_target', ''),
+        'CAT_PROCESS': spec.get('cat_process', ''), 'ACTIVE': on,
         'SEQ': str(spec.get('seq', 10))})
     if not spec.get('checks'):
         raise SpecError('specification: at least one check')
@@ -135,11 +144,15 @@ def rows_of(spec):
     control_id = control.get('id', process)
     for seq, check in enumerate(spec['checks'], start=1):
         aggs = check.get('aggregates', [])
-        if bool(aggs) == bool(check.get('class')):
-            raise SpecError(f'check {check.get("id")}: either aggregates or a class')
+        if not aggs and not check.get('class'):
+            raise SpecError(f'check {check.get("id")}: aggregates or a class')
+        if aggs and check.get('class') and check['class'].upper() not in AGG_READERS:
+            raise SpecError(f'check {check.get("id")}: either aggregates or a class (a class with aggregate rows: '
+                            f'{", ".join(AGG_READERS[1:])})')
         out['check_registry.csv'].append({
             'AREA': area, 'CHECK_ID': check['id'], 'PROCESS_ID': process,
-            'DESCRIPTION': check.get('description', ''), 'CLASS_NAME': AGG_CLASS if aggs else check['class'],
+            'DESCRIPTION': check.get('description', ''),
+            'CLASS_NAME': check['class'] if check.get('class') else AGG_CLASS,
             'SCHED_GROUP': check.get('schedule_group', group), 'BUKRS_AWARE': flag(check.get('bukrs_aware')),
             'ACTIVE': on, 'SEQ': str(seq * 10)})
         out['control_checks.csv'].append({'AREA': control_area, 'CONTROL_ID': control_id, 'CHECK_AREA': area,
@@ -152,10 +165,17 @@ def rows_of(spec):
                 raise SpecError(f'aggregate {agg.get("id")}: AGE needs date_field')
             if check.get('bukrs_aware') and not agg.get('bukrs_field'):
                 raise SpecError(f'aggregate {agg.get("id")}: a company-code aware check needs bukrs_field')
+            if agg.get('status_op') and agg['status_op'] not in STATUS_OPS:
+                raise SpecError(f'aggregate {agg.get("id")}: status_op one of {", ".join(STATUS_OPS)}')
+            if agg.get('cond_op') and agg['cond_op'] not in COND_OPS:
+                raise SpecError(f'aggregate {agg.get("id")}: cond_op one of {", ".join(COND_OPS)}')
+            if agg.get('time_field') and not agg.get('date_field'):
+                raise SpecError(f'aggregate {agg.get("id")}: time_field needs date_field')
             out['check_aggregates.csv'].append({
                 'AREA': area, 'CHECK_ID': check['id'], 'AGG_ID': agg['id'],
                 'DESCRIPTION': agg.get('description', ''), 'TABNAME': agg['table'], 'AGG_FUNC': func,
                 'DATE_FIELD': agg.get('date_field', ''), 'MIN_AGE_DAYS': str(agg.get('min_age_days', 0)),
+                'MAX_AGE_DAYS': str(agg.get('max_age_days', 0)), 'TIME_FIELD': agg.get('time_field', ''),
                 'BUKRS_FIELD': agg.get('bukrs_field', ''), 'STATUS_FIELD': agg.get('status_field', ''),
                 'STATUS_OP': agg.get('status_op', 'EQ' if agg.get('status_field') else ''),
                 'STATUS_VALUE': agg.get('status_value', ''), 'COND_FIELD': agg.get('cond_field', ''),

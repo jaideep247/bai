@@ -1,0 +1,43 @@
+PROCESS_ID,STEP_NO,STEP_KIND,OBJ_NAME,DESCRIPTION,EVIDENCE,VERIFY_REF
+FICA_CLEARING,010,T,FP06,Clear open items of an account,V,V127
+FICA_CLEARING,020,T,FP07,Reset clearing,C,
+FICA_CORRESP,010,T,FPCOPARA,Print correspondence (mass activity),C,
+FICA_CORRESP,020,M,‹correspondence mass activity type›,Mass activity type of the print run,V,V127
+FICA_DEFERRAL,010,T,‹deferral transaction›,Defer the due date of items,V,V127
+FICA_DUNNING,010,T,FPVA,Dunning proposal (mass activity),C,
+FICA_DUNNING,020,T,FPVB,Dunning activity run (mass activity),C,
+FICA_DUNNING,030,M,‹dunning mass activity types›,Mass activity types of proposal and activity run,V,V127
+FICA_EBS_LOTS,010,P,‹transfer of bank statement items to FI-CA›,Bank statement items into payment lots,V,V127
+FICA_EBS_LOTS,020,T,FEBAN,Post-process items the transfer could not clear,C,
+FICA_GL_TRANSFER,010,T,‹close reconciliation keys›,Close the reconciliation keys of the day,V,V127
+FICA_GL_TRANSFER,020,T,FPG1,Transfer the summary records to the general ledger,C,
+FICA_GL_TRANSFER,030,P,‹G/L transfer program›,G/L transfer program (job),V,V127
+FICA_INSTALMENT,010,T,FPR1,Create an instalment plan,C,
+FICA_INSTALMENT,020,T,‹instalment plan breach run›,Deactivate instalment plans in breach,V,V127
+FICA_INTEREST,010,T,‹interest calculation mass run›,Interest calculation run (mass activity),V,V127
+FICA_INVOICING,010,T,‹invoicing mass run transaction›,Invoicing run (mass activity),V,V127
+FICA_INVOICING,020,M,‹invoicing mass activity type›,Mass activity type of the invoicing run,V,V127
+FICA_PAYRUN,010,T,FPY1,Schedule the payment run (mass activity),C,
+FICA_PAYRUN,020,P,RFKK_MA_SCHEDULER,Mass activity scheduler of the run (job),C,
+FICA_PAYRUN,030,M,‹payment run mass activity type›,Mass activity type of the payment run,V,V127
+FICA_PAY_LOTS,010,T,FP05,"Create, post and close a payment lot",C,
+FICA_PAY_LOTS,020,T,FPCJ,Cash journal (counter payments),C,
+FICA_PAY_LOTS,030,M,‹payment lot mass posting›,Mass posting of payment lots,V,V127
+FICA_RETURNS,010,T,FP09,"Create, post and close a returns lot",C,
+FICA_REVERSAL,010,T,FP08,Reverse a document,C,
+FICA_WRITEOFF,010,T,FP04,Write off items,C,
+FICA_WRITEOFF,020,T,‹mass write-off transaction›,Mass write-off (mass activity),V,V127
+FSCD_BROKER,010,T,‹broker report processing›,"Create, check and post a broker report",V,V127
+FSCD_CLAIMS,010,P,‹claims interface posting›,Claim payments into contract accounts,V,V127
+FSCD_CLAIMS,020,T,FPY1,Payment run (disbursement of the claims),C,
+FSCD_COINSURANCE,010,T,‹coinsurance settlement run›,Settle the coinsurers' shares,V,V127
+FSCD_COMMISSION,010,P,‹commission interface transfer›,Commission documents into contract accounts,V,V127
+FSCD_FSRI,010,P,‹FS-RI transfer to contract accounts›,Reinsurance settlements into contract accounts,V,V127
+FSCD_PAYPLAN,010,T,‹payment plan of the insurance object›,Maintain the payment plan of a policy,V,V127
+FSCD_PAYPLAN,020,M,‹debit entry mass activity type›,Debit entry: payment plan items to receivables,V,V127
+FSCD_PREMIUM,010,T,FPY1,Payment run (collection of premiums),C,
+FSCD_PREMIUM,020,T,FP05,Incoming premium payments (payment lots),C,
+S4_BANK_STMT,010,T,FF_5,Import the electronic bank statement,C,
+S4_BANK_STMT,020,P,RFEBKA00,Bank statement import and posting program,C,
+S4_BANK_STMT,030,T,FEBAN,Post-process bank statement items,C,
+S4_BATCH_JOBS,010,T,SM37,"Job overview: released, active, finished and cancelled jobs",C,

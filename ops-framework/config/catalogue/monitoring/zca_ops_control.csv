@@ -1,0 +1,24 @@
+AREA,CONTROL_ID,DESCRIPTION,CATEGORY,OWNER,BACKUP,TEAM,CUTOFF_TIME,RUNBOOK_URL,ACTIVE,SEQ
+CA_FICA,FICA_CLEARING,Clearing and reset of clearing,RECEIVABLES,,,,,,,100
+CA_FICA,FICA_CORRESP,Correspondence,CUSTOMER,,,,,,,100
+CA_FICA,FICA_DEFERRAL,Deferral of due dates,RECEIVABLES,,,,,,,100
+CA_FICA,FICA_DUNNING,Dunning,DUNNING,,,,,,,100
+CA_FICA,FICA_EBS_LOTS,Bank statement items to payment lots and clearing,BANK,,,,,,,100
+CA_FICA,FICA_GL_TRANSFER,G/L transfer and reconciliation keys,ACCOUNTING,,,,,,,100
+CA_FICA,FICA_INSTALMENT,Instalment plans,RECEIVABLES,,,,,,,100
+CA_FICA,FICA_INTEREST,Interest calculation,RECEIVABLES,,,,,,,100
+CA_FICA,FICA_INVOICING,Invoicing (FI-CA invoicing),INVOICING,,,,,,,100
+CA_FICA,FICA_PAYRUN,Payment run (disbursements and collections),PAYMENTS,,,,,,,100
+CA_FICA,FICA_PAY_LOTS,Incoming payment lots and cash journal,RECEIVABLES,,,,,,,100
+CA_FICA,FICA_RETURNS,Returns lots (returned payments),RECEIVABLES,,,,,,,100
+CA_FICA,FICA_REVERSAL,Document reversal,ACCOUNTING,,,,,,,100
+CA_FICA,FICA_WRITEOFF,Write-off,RISK,,,,,,,100
+CA_FSCD,FSCD_BROKER,Broker collections (broker reports),INSURANCE,,,,,,,100
+CA_FSCD,FSCD_CLAIMS,Claims disbursement (standard claims interface),INSURANCE,,,,,,,100
+CA_FSCD,FSCD_COINSURANCE,Coinsurance settlement,INSURANCE,,,,,,,100
+CA_FSCD,FSCD_COMMISSION,Commission interface,INSURANCE,,,,,,,100
+CA_FSCD,FSCD_FSRI,Reinsurance integration (FS-RI),INSURANCE,,,,,,,100
+CA_FSCD,FSCD_PAYPLAN,Payment plans and debit entry (insurance),INSURANCE,,,,,,,100
+CA_FSCD,FSCD_PREMIUM,Premium collection,INSURANCE,,,,,,,100
+CA_S4CORE,S4_BANK_STMT,Electronic bank statement import and posting,BANK,,,,,,,100
+CA_S4CORE,S4_BATCH_JOBS,Background job processing,PLATFORM,,,,,,,100

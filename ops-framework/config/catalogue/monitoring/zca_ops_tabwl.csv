@@ -1,0 +1,25 @@
+AREA,TABLE_NAME,ACTIVE,APPROVED_BY,DESCRIPTION
+CA_FICA,DFKKRAPT,,,Clearing and reset of clearing
+CA_FICA,‹correspondence history header›,,,Correspondence
+CA_FICA,DFKKOP,,,Deferral of due dates
+CA_FICA,FKKMAKO,,,Dunning
+CA_FICA,FEBEP,,,Bank statement items to payment lots and clearing
+CA_FICA,‹reconciliation key status table›,,,G/L transfer and reconciliation keys
+CA_FICA,DFKKKO,,,G/L transfer and reconciliation keys
+CA_FICA,DFKKOP,,,Instalment plans
+CA_FICA,‹interest history table›,,,Interest calculation
+CA_FICA,‹billing document header›,,,Invoicing (FI-CA invoicing)
+CA_FICA,DPAYH,,,Payment run (disbursements and collections)
+CA_FICA,DFKKZK,,,Incoming payment lots and cash journal
+CA_FICA,DFKKZP,,,Incoming payment lots and cash journal
+CA_FICA,DFKKRH,,,Returns lots (returned payments)
+CA_FICA,DFKKKO,,,Document reversal
+CA_FICA,DFKKOP,,,Write-off
+CA_FSCD,‹broker report header›,,,Broker collections (broker reports)
+CA_FSCD,‹claims payment request table›,,,Claims disbursement (standard claims interface)
+CA_FSCD,‹coinsurance share items›,,,Coinsurance settlement
+CA_FSCD,‹commission transfer table›,,,Commission interface
+CA_FSCD,‹FS-RI transfer table›,,,Reinsurance integration (FS-RI)
+CA_FSCD,‹payment plan items›,,,Payment plans and debit entry (insurance)
+CA_FSCD,DFKKOP,,,Premium collection
+CA_S4CORE,FEBEP,,,Electronic bank statement import and posting

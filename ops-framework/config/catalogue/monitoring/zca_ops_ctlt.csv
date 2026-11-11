@@ -1,0 +1,24 @@
+LANGU,AREA,CONTROL_ID,GUIDANCE
+E,CA_FICA,FICA_CLEARING,Review the open exceptions of Clearing and reset of clearing and record the next action.
+E,CA_FICA,FICA_CORRESP,Review the open exceptions of Correspondence and record the next action.
+E,CA_FICA,FICA_DEFERRAL,Review the open exceptions of Deferral of due dates and record the next action.
+E,CA_FICA,FICA_DUNNING,Review the open exceptions of Dunning and record the next action.
+E,CA_FICA,FICA_EBS_LOTS,Review the open exceptions of Bank statement items to payment lots and clearing and record the next action.
+E,CA_FICA,FICA_GL_TRANSFER,Review the open exceptions of G/L transfer and reconciliation keys and record the next action.
+E,CA_FICA,FICA_INSTALMENT,Review the open exceptions of Instalment plans and record the next action.
+E,CA_FICA,FICA_INTEREST,Review the open exceptions of Interest calculation and record the next action.
+E,CA_FICA,FICA_INVOICING,Review the open exceptions of Invoicing (FI-CA invoicing) and record the next action.
+E,CA_FICA,FICA_PAYRUN,Review the open exceptions of Payment run (disbursements and collections) and record the next action.
+E,CA_FICA,FICA_PAY_LOTS,Review the open exceptions of Incoming payment lots and cash journal and record the next action.
+E,CA_FICA,FICA_RETURNS,Review the open exceptions of Returns lots (returned payments) and record the next action.
+E,CA_FICA,FICA_REVERSAL,Review the open exceptions of Document reversal and record the next action.
+E,CA_FICA,FICA_WRITEOFF,Review the open exceptions of Write-off and record the next action.
+E,CA_FSCD,FSCD_BROKER,Review the open exceptions of Broker collections (broker reports) and record the next action.
+E,CA_FSCD,FSCD_CLAIMS,Review the open exceptions of Claims disbursement (standard claims interface) and record the next action.
+E,CA_FSCD,FSCD_COINSURANCE,Review the open exceptions of Coinsurance settlement and record the next action.
+E,CA_FSCD,FSCD_COMMISSION,Review the open exceptions of Commission interface and record the next action.
+E,CA_FSCD,FSCD_FSRI,Review the open exceptions of Reinsurance integration (FS-RI) and record the next action.
+E,CA_FSCD,FSCD_PAYPLAN,Review the open exceptions of Payment plans and debit entry (insurance) and record the next action.
+E,CA_FSCD,FSCD_PREMIUM,Review the open exceptions of Premium collection and record the next action.
+E,CA_S4CORE,S4_BANK_STMT,Review the open exceptions of Electronic bank statement import and posting and record the next action.
+E,CA_S4CORE,S4_BATCH_JOBS,Review the open exceptions of Background job processing and record the next action.

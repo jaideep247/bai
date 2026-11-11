@@ -1,0 +1,24 @@
+AREA,PROCESS_ID,DESCRIPTION,OWNER,BACKUP,RUNBOOK_URL,AUTH_ROLE,OWN_DATA,PURGE_TARGET,CAT_PROCESS,ACTIVE,SEQ
+CA_FICA,FICA_CLEARING,Clearing and reset of clearing,,,,‹PFCG role of the area›,,,FICA_CLEARING,,50
+CA_FICA,FICA_CORRESP,Correspondence,,,,‹PFCG role of the area›,,,FICA_CORRESP,,130
+CA_FICA,FICA_DEFERRAL,Deferral of due dates,,,,‹PFCG role of the area›,,,FICA_DEFERRAL,,120
+CA_FICA,FICA_DUNNING,Dunning,,,,‹PFCG role of the area›,,,FICA_DUNNING,,70
+CA_FICA,FICA_EBS_LOTS,Bank statement items to payment lots and clearing,,,,‹PFCG role of the area›,,,FICA_EBS_LOTS,,40
+CA_FICA,FICA_GL_TRANSFER,G/L transfer and reconciliation keys,,,,‹PFCG role of the area›,,,FICA_GL_TRANSFER,,140
+CA_FICA,FICA_INSTALMENT,Instalment plans,,,,‹PFCG role of the area›,,,FICA_INSTALMENT,,110
+CA_FICA,FICA_INTEREST,Interest calculation,,,,‹PFCG role of the area›,,,FICA_INTEREST,,90
+CA_FICA,FICA_INVOICING,Invoicing (FI-CA invoicing),,,,‹PFCG role of the area›,,,FICA_INVOICING,,80
+CA_FICA,FICA_PAYRUN,Payment run (disbursements and collections),,,,‹PFCG role of the area›,,,FICA_PAYRUN,,10
+CA_FICA,FICA_PAY_LOTS,Incoming payment lots and cash journal,,,,‹PFCG role of the area›,,,FICA_PAY_LOTS,,20
+CA_FICA,FICA_RETURNS,Returns lots (returned payments),,,,‹PFCG role of the area›,,,FICA_RETURNS,,30
+CA_FICA,FICA_REVERSAL,Document reversal,,,,‹PFCG role of the area›,,,FICA_REVERSAL,,60
+CA_FICA,FICA_WRITEOFF,Write-off,,,,‹PFCG role of the area›,,,FICA_WRITEOFF,,100
+CA_FSCD,FSCD_BROKER,Broker collections (broker reports),,,,‹PFCG role of the area›,,,FSCD_BROKER,,30
+CA_FSCD,FSCD_CLAIMS,Claims disbursement (standard claims interface),,,,‹PFCG role of the area›,,,FSCD_CLAIMS,,60
+CA_FSCD,FSCD_COINSURANCE,Coinsurance settlement,,,,‹PFCG role of the area›,,,FSCD_COINSURANCE,,40
+CA_FSCD,FSCD_COMMISSION,Commission interface,,,,‹PFCG role of the area›,,,FSCD_COMMISSION,,50
+CA_FSCD,FSCD_FSRI,Reinsurance integration (FS-RI),,,,‹PFCG role of the area›,,,FSCD_FSRI,,70
+CA_FSCD,FSCD_PAYPLAN,Payment plans and debit entry (insurance),,,,‹PFCG role of the area›,,,FSCD_PAYPLAN,,10
+CA_FSCD,FSCD_PREMIUM,Premium collection,,,,‹PFCG role of the area›,,,FSCD_PREMIUM,,20
+CA_S4CORE,S4_BANK_STMT,Electronic bank statement import and posting,,,,‹PFCG role of the area›,,,S4_BANK_STMT,,20
+CA_S4CORE,S4_BATCH_JOBS,Background job processing,,,,‹PFCG role of the area›,,,S4_BATCH_JOBS,,10

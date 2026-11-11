@@ -16,7 +16,8 @@ define table zca_ops_catprc {
   // Business owner role (a role name, never a person) and the typical schedule (text)
   owner_role     : abap.char(40);
   schedule       : abap.char(60);
-  // Delivered default when no activation row of ZCA_OPS_CATACT decides (product rows: blank)
+  // Delivered default when no activation row of ZCA_OPS_CATACT decides (product rows: blank, except a baseline
+  // process every system runs - background jobs)
   dflt_active    : abap_boolean;
   // C confirmed, V a name of the definition is still a VERIFY item (VERIFY_REF)
   evidence       : abap.char(1);

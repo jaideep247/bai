@@ -1,0 +1,73 @@
+{
+ "_comment": "Worked example of a customer layer (fictitious customer XX, prefix XX_): validated with the product packages, never seeded. docs/PROCESS_CATALOGUE.md section 9.",
+ "package": {
+  "id": "XX",
+  "kind": "C",
+  "rank": 100,
+  "prefix": "XX_",
+  "mon_area": "",
+  "description": "Customer layer of the fictitious customer XX",
+  "owner": "XX OPERATIONS",
+  "active": true
+ },
+ "processes": [
+  {
+   "id": "XX_REQ_LIFE",
+   "name": "Payment request lifecycle (portal)",
+   "component": "FI-CA",
+   "card": "PAYMENTS",
+   "owner_role": "XX payment operations lead",
+   "schedule": "Continuous (portal requests)",
+   "default_active": true,
+   "seq": 10,
+   "steps": [
+    {
+     "kind": "P",
+     "name": "‹request intake program›",
+     "description": "Requests of the portal",
+     "verify": "V999"
+    },
+    {
+     "kind": "T",
+     "name": "FPY1",
+     "description": "Paid by the payment run"
+    }
+   ],
+   "tables": [
+    {
+     "name": "‹request table›",
+     "role": "S",
+     "description": "Requests and their status",
+     "verify": "V999"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FICA_PAYRUN",
+     "kind": "H",
+     "description": "Paid by the payment run"
+    }
+   ]
+  }
+ ],
+ "activation": [
+  {
+   "process": "FICA_PAYRUN",
+   "valid_from": "20270101",
+   "active": true,
+   "reason": "Go-live of the payment run"
+  },
+  {
+   "process": "FICA_DUNNING",
+   "valid_from": "20270101",
+   "active": false,
+   "reason": "XX does not dun"
+  },
+  {
+   "process": "FICA_INVOICING",
+   "valid_from": "20270701",
+   "active": true,
+   "reason": "Invoicing from the second release"
+  }
+ ]
+}
