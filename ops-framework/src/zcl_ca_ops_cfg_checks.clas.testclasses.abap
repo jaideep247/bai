@@ -17,6 +17,7 @@
 *& 2026-11-10 | LTC_CONTROL_CHECK: owner / backup user (double LTD_USERS), team (parameter CONTROL_TEAMS of the
 *&            | in-memory parameter store), runbook link (control register of the daily review).
 *& 2026-11-11 | LTC_RESPONSE_CHECK: runbook link of an active row, correlation key fields and window.
+*& 2026-11-11 | LTC_LINK_REF: TABLE-FIELD references of the link registry conditions (T000 metadata).
 *&---------------------------------------------------------------------*
 "! Alert configuration from memory: only the channels are read by the checks
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
@@ -613,6 +614,83 @@ CLASS ltc_response_check IMPLEMENTATION.
     TRY.
         cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>window_min_valid( 1 ) msg = 'One minute is accepted' ).
         cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>window_min_valid( 0 ) msg = 'Zero is refused (154)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltc_link_ref DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_ref,
+        valid         TYPE string VALUE `T000-MANDT`,
+        lower_case    TYPE string VALUE `t000-mtext`,
+        unknown_field TYPE string VALUE `T000-ZZ_NOT_THERE`,
+        no_table      TYPE string VALUE `MANDT`,
+      END OF gc_ref.
+
+    METHODS existing_ref_accepted   FOR TESTING.
+    METHODS lower_case_ref_accepted FOR TESTING.
+    METHODS unknown_field_rejected  FOR TESTING.
+    METHODS ref_without_table_fails FOR TESTING.
+    METHODS blank_ref_accepted      FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_link_ref IMPLEMENTATION.
+
+  " Rule: a reference names a table of the dictionary and one of its fields
+  METHOD existing_ref_accepted.
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>field_ref_valid( gc_ref-valid )
+                                          msg = 'T000-MANDT is a field of the dictionary' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD lower_case_ref_accepted.
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>field_ref_valid( gc_ref-lower_case )
+                                          msg = 'Names are compared in upper case' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD unknown_field_rejected.
+    TRY.
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>field_ref_valid( gc_ref-unknown_field )
+                                           msg = 'A field the table does not have is refused' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD ref_without_table_fails.
+    TRY.
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>field_ref_valid( gc_ref-no_table )
+                                           msg = 'A field without its table is refused' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a condition kind without that side leaves it blank
+  METHOD blank_ref_accepted.
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>field_ref_valid( space )
+                                          msg = 'Blank is valid' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

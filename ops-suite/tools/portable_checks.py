@@ -13,6 +13,7 @@ risk / duration, name lengths, method names, PCRE only, no CP / NP) are the shar
 Modification log:
 2026-11-10 | Common checks from the shared tools (tools/abaptools); the suite's list unchanged.
 2026-11-10 | process_onboarding (process onboarding of the operations framework: registered processes complete).
+2026-11-11 | link_registry (customer overlay of the link registry valid with the product layers, outputs up to date).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -188,6 +189,14 @@ check('process_onboarding',
       'check (GROUP2), an alert rule of its area, an owner (or an owner team in its document), purge coverage '
       'and a role of config/auth_zcd_ops.md; no active row carries a placeholder or VERIFY marker; aggregate '
       'rows read approved tables (tools/abaptools/onboarding.py).')
+
+# Link registry (2026-11-11): the overlay with the product layers valid, seed rows / lineage / snippets / impact current
+import link_registry  # noqa: E402
+check('link_registry', link_registry._engine.check(ROOT, link_registry.PROFILE),
+      'The customer overlay config/links/overlay.json is valid on top of the product layers of the framework '
+      '(ids and prefixes, declared fields, repository DDIC / CDS metadata, conditions, active links on confirmed '
+      'fields only, cardinality, fallback chains, replacements, sensitivity) and its generated seed rows, lineage, '
+      'CDS snippets and impact report are up to date (tools/link_registry.py).')
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

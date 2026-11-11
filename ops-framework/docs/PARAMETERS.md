@@ -7,7 +7,7 @@ Area `CA_OPS` (`config/param_areas.csv`); definitions `config/param_definitions.
 `ZCL_CA_OPS_PARAM_SEED` by `tools/param_definitions.py` (check `param_definitions` of `tools/checks.py`).
 Read through `ZCL_CA_OPS_FACTORY=>GET_PARAMS( )`: a name with prefix `ALERT_`, `SLA_`, `RETENTION_` or
 `PURGE_`, `CONTROL_`, `EXC_`, `CHECK_` or `JOB_` - and, for the operations response features (2026-11-11), `RUNBOOK_`,
-`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
+`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
 wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS( )`, never silent.
 
 | Name | Type | Default | Read by | Meaning |
@@ -28,6 +28,10 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 | `DOWNTIME_TIME_ZONE` | CHAR (TTZZ zone) | UTC | downtime app (stored with a new window) | Time zone in which start and end of a window are entered |
 | `ESC_MAX_DEFAULT` | INT 1-20 | 3 | alert router (`ESCALATE`) | Escalations of one exception when the rule's `ESC_MAX_COUNT` is 0 |
 | `EXC_REASON_CODES` | LIST | TIMING,INVESTIGATING | exceptions app (action *Classify*) | Reason codes an open exception may be classified with |
+| `LINK_MAX_DEPTH` | INT 1-10 | 4 | link registry walker (`docs/LINK_REGISTRY.md` §5) | Levels a walk follows from its start object; a request may ask for fewer, never more (219 when links were left) |
+| `LINK_MAX_ROWS` | INT 1-10 000 | 100 | link registry walker | Rows one read of a link returns at most (per level and chunk; 221 when reached) |
+| `LINK_MAX_NODES` | INT 1-5 000 | 500 | link registry walker | Objects one walk returns at most (220: the walk stops) |
+| `LINK_READ_CHUNK` | INT 1-1 000 | 100 | link registry walker | Source rows per database read of a link (IN list or OR groups) |
 | `JOB_LOOKBACK_MIN` | INT ≥ 1 | 60 | SAP job monitor (`docs/JOB_MONITORING.md` §3) | Minutes read back by the first run of an area and check (no watermark yet) |
 | `JOB_OVERLAP_MIN` | INT ≥ 0 | 10 | SAP job monitor | Minutes re-read before the watermark (jobs already kept are not reported again) |
 | `JOB_MAX_JOBS` | INT ≥ 1 | 2000 (ceiling 50 000) | SAP job monitor | Jobs read per run and kind (cancelled, finished of watched programs, active, waiting; resolver candidates) |

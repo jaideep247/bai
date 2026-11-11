@@ -1,0 +1,93 @@
+{
+  "_comment": "Link registry, product baseline (layer S4CORE): SAP standard objects of the S/4HANA core and how they link. Released CDS views where SAP delivers one (journal entry, journal entry item, company code; element names VERIFY V110), tables where none is used yet (bank statement, business partner). Field evidence C = confirmed in a reference landscape, V = VERIFY (the item named); an active link uses confirmed fields only. Edit here, then run tools/link_registry.py (seed rows, lineage, CDS snippets, impact). docs/LINK_REGISTRY.md.",
+  "layer": {"id": "S4CORE", "kind": "S", "rank": 10, "prefix": "S4_", "description": "Product baseline: S/4HANA core standard objects",
+            "owner": "OPS FRAMEWORK", "active": true},
+  "objects": [
+    {"id": "S4_JOURNAL_ENTRY", "source": "I_JournalEntry", "kind": "V", "keys": ["CompanyCode", "FiscalYear", "AccountingDocument"],
+     "description": "Journal entry header (released view)",
+     "fields": [
+       {"name": "CompanyCode", "data_element": "BUKRS", "evidence": "V", "verify": "V110", "description": "Company code"},
+       {"name": "FiscalYear", "data_element": "GJAHR", "evidence": "V", "verify": "V110", "description": "Fiscal year"},
+       {"name": "AccountingDocument", "data_element": "BELNR_D", "evidence": "V", "verify": "V110", "description": "Journal entry number"},
+       {"name": "ReferenceDocumentType", "data_element": "AWTYP", "evidence": "V", "verify": "V110", "description": "Reference procedure of the sender"},
+       {"name": "OriginalReferenceDocument", "data_element": "AWKEY", "evidence": "V", "verify": "V110", "description": "Reference key of the sender (full key)"},
+       {"name": "ReverseDocument", "evidence": "V", "verify": "V110", "description": "Reversal journal entry"},
+       {"name": "ReverseDocumentFiscalYear", "evidence": "V", "verify": "V110", "description": "Fiscal year of the reversal"}
+     ]},
+    {"id": "S4_JOURNAL_ITEM", "source": "I_JournalEntryItem", "kind": "V",
+     "keys": ["Ledger", "CompanyCode", "FiscalYear", "AccountingDocument", "LedgerGLLineItem"],
+     "description": "Journal entry line in a ledger (released view)",
+     "fields": [
+       {"name": "Ledger", "evidence": "V", "verify": "V110", "description": "Ledger"},
+       {"name": "CompanyCode", "data_element": "BUKRS", "evidence": "V", "verify": "V110", "description": "Company code"},
+       {"name": "FiscalYear", "data_element": "GJAHR", "evidence": "V", "verify": "V110", "description": "Fiscal year"},
+       {"name": "AccountingDocument", "data_element": "BELNR_D", "evidence": "V", "verify": "V110", "description": "Journal entry number"},
+       {"name": "LedgerGLLineItem", "evidence": "V", "verify": "V110", "description": "Line of the ledger"},
+       {"name": "GLAccount", "evidence": "V", "verify": "V110", "description": "G/L account"},
+       {"name": "AssignmentReference", "evidence": "V", "verify": "V110", "description": "Assignment"},
+       {"name": "ClearingJournalEntry", "evidence": "V", "verify": "V110", "description": "Clearing journal entry"}
+     ]},
+    {"id": "S4_COMPANY_CODE", "source": "I_CompanyCode", "kind": "V", "keys": ["CompanyCode"],
+     "description": "Company code (released view)",
+     "fields": [
+       {"name": "CompanyCode", "data_element": "BUKRS", "evidence": "V", "verify": "V110", "description": "Company code"},
+       {"name": "Country", "evidence": "V", "verify": "V110", "description": "Country of the company code"},
+       {"name": "Currency", "evidence": "V", "verify": "V110", "description": "Company code currency"},
+       {"name": "ChartOfAccounts", "evidence": "V", "verify": "V110", "description": "Chart of accounts"}
+     ]},
+    {"id": "S4_BUSINESS_PARTNER", "source": "BUT000", "kind": "T", "keys": ["PARTNER"],
+     "description": "Business partner (table; released view: V117)",
+     "fields": [
+       {"name": "PARTNER", "data_element": "BU_PARTNER", "sensitivity": "M", "evidence": "C", "description": "Business partner number (masked)"},
+       {"name": "BPEXT", "sensitivity": "M", "evidence": "C", "description": "External partner number (masked)"}
+     ]},
+    {"id": "S4_BANK_STMT_HDR", "source": "FEBKO", "kind": "T", "keys": ["KUKEY"],
+     "description": "Electronic bank statement header",
+     "fields": [
+       {"name": "KUKEY", "evidence": "C", "description": "Short key of the statement"},
+       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "V", "verify": "V117", "description": "Company code"},
+       {"name": "HBKID", "evidence": "V", "verify": "V117", "description": "House bank"},
+       {"name": "HKTID", "evidence": "V", "verify": "V117", "description": "Account ID of the house bank"}
+     ]},
+    {"id": "S4_BANK_STMT_LINE", "source": "FEBEP", "kind": "T", "keys": ["KUKEY", "ESNUM"],
+     "description": "Electronic bank statement line",
+     "fields": [
+       {"name": "KUKEY", "evidence": "C", "description": "Short key of the statement"},
+       {"name": "ESNUM", "evidence": "C", "description": "Line of the statement"},
+       {"name": "CHECT", "evidence": "C", "description": "Payment reference / cheque number of the line"},
+       {"name": "XBLNR", "evidence": "C", "description": "Reference of the line (never blank for some codes)"},
+       {"name": "BUDAT", "evidence": "C", "description": "Posting date (always filled)"},
+       {"name": "VB1OK", "evidence": "C", "description": "Posted in posting area 1"},
+       {"name": "VB2OK", "evidence": "C", "description": "Posted in posting area 2"}
+     ]}
+  ],
+  "links": [
+    {"id": "S4_STMT_LINE_TO_HDR", "from": "S4_BANK_STMT_LINE", "to": "S4_BANK_STMT_HDR", "cardinality": "N1", "quality": "C",
+     "owner": "OPS FRAMEWORK", "description": "Statement line -> its statement",
+     "conditions": [{"kind": "EQ", "from": "KUKEY", "to": "KUKEY"}]},
+    {"id": "S4_STMT_HDR_TO_LINES", "from": "S4_BANK_STMT_HDR", "to": "S4_BANK_STMT_LINE", "cardinality": "1N", "quality": "C",
+     "owner": "OPS FRAMEWORK", "description": "Statement -> its lines",
+     "conditions": [{"kind": "EQ", "from": "KUKEY", "to": "KUKEY"}]},
+    {"id": "S4_STMT_HDR_TO_COMPANY", "from": "S4_BANK_STMT_HDR", "to": "S4_COMPANY_CODE", "cardinality": "N1", "quality": "C",
+     "active": false, "verify": "V110 V117", "owner": "OPS FRAMEWORK", "description": "Statement -> company code of the house bank",
+     "conditions": [{"kind": "EQ", "from": "BUKRS", "to": "CompanyCode"}]},
+    {"id": "S4_JOURNAL_TO_ITEMS", "from": "S4_JOURNAL_ENTRY", "to": "S4_JOURNAL_ITEM", "cardinality": "1N", "quality": "C",
+     "active": false, "verify": "V110", "owner": "OPS FRAMEWORK", "description": "Journal entry -> its lines (every ledger)",
+     "conditions": [{"kind": "EQ", "from": "CompanyCode", "to": "CompanyCode"},
+                    {"kind": "EQ", "from": "FiscalYear", "to": "FiscalYear"},
+                    {"kind": "EQ", "from": "AccountingDocument", "to": "AccountingDocument"}]},
+    {"id": "S4_ITEM_TO_JOURNAL", "from": "S4_JOURNAL_ITEM", "to": "S4_JOURNAL_ENTRY", "cardinality": "N1", "quality": "C",
+     "active": false, "verify": "V110", "owner": "OPS FRAMEWORK", "description": "Journal entry line -> its journal entry",
+     "conditions": [{"kind": "EQ", "from": "CompanyCode", "to": "CompanyCode"},
+                    {"kind": "EQ", "from": "FiscalYear", "to": "FiscalYear"},
+                    {"kind": "EQ", "from": "AccountingDocument", "to": "AccountingDocument"}]},
+    {"id": "S4_JOURNAL_TO_COMPANY", "from": "S4_JOURNAL_ENTRY", "to": "S4_COMPANY_CODE", "cardinality": "N1", "quality": "C",
+     "active": false, "verify": "V110", "owner": "OPS FRAMEWORK", "description": "Journal entry -> company code",
+     "conditions": [{"kind": "EQ", "from": "CompanyCode", "to": "CompanyCode"}]},
+    {"id": "S4_JOURNAL_REVERSAL", "from": "S4_JOURNAL_ENTRY", "to": "S4_JOURNAL_ENTRY", "cardinality": "N1", "quality": "C",
+     "active": false, "verify": "V110", "owner": "OPS FRAMEWORK", "description": "Journal entry -> the entry that reversed it",
+     "conditions": [{"kind": "EQ", "from": "CompanyCode", "to": "CompanyCode"},
+                    {"kind": "EQ", "from": "ReverseDocumentFiscalYear", "to": "FiscalYear"},
+                    {"kind": "EQ", "from": "ReverseDocument", "to": "AccountingDocument"}]}
+  ]
+}

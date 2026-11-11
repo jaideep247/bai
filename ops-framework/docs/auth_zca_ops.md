@@ -41,6 +41,15 @@ roles different areas or adds a customer activity (as for the sign-off below) - 
 built. The escalation job needs 16 for the area it escalates; runbook links and correlation rules are rows of
 `ZUI_CA_OPS_CFG` (01 / 02 / 06 for `CA_OPS`, DV1 only). The metrics and the handover are read-only (03, DCL).
 
+**Link registry - activities (2026-11-11, `docs/LINK_REGISTRY.md`).** No new activity and no new field: the six
+entities of the registry (layers, objects, fields, links, conditions, activation overrides) are rows of
+`ZUI_CA_OPS_CFG` - create 01, change 02, delete 06 of area `CA_OPS`, in DV1 only (the client policy of the app refuses
+new rows elsewhere; rows travel by customizing request), held by the configuration role `Z_CA_OPS_CONFIG`. A customer
+switches a standard link off with a row of its own (activation override), never by changing the delivered row. The
+walker (`ZCL_CA_OPS_LINK_WALKER`) needs display 03 of the area the caller names, and `S_TABU_NAM` 03 of every table it
+reads; it reads only tables approved for that area in `ZCA_OPS_TABWL` (security sign-off per table). The registry
+check `ZCL_CA_OPS_CHK_LINKS` runs under the job user of its area (16) and reads only the registry and DDIC metadata.
+
 **Daily control review - activity of the sign-off (decision 2026-11-10).** The sign-off uses the existing change
 activity **02** of the control's area, not a new activity: the reviewer is the operator who already works the
 area's exceptions with 02, so no SU21 change and no new role field are needed; a display role (03) sees the
@@ -55,7 +64,7 @@ no separate sign-off activity.
 |---|---|---|---|
 | `Z_CA_OPS_DISPLAY` | * | 03 | * |
 | `Z_CA_OPS_BATCH` (job user) | `CA_OPS` + the consumer areas it runs | 16 | * |
-| `Z_CA_OPS_CONFIG` (configuration owner of the framework) | `CA_OPS` | 01, 02, 03, 06 | * |
+| `Z_CA_OPS_CONFIG` (configuration owner of the framework; also the link registry, 2026-11-11 - DV1 only) | `CA_OPS` | 01, 02, 03, 06 | * |
 | `Z_CA_OPS_DOWNTIME_PLANNER` (2026-11-11: plans downtime windows of an area) | the area | 01, 02, 03, 06 | * |
 | `Z_CA_OPS_DOWNTIME_APPROVER` (2026-11-11: approves them - never the planner) | the area | 03, 85 | * |
 

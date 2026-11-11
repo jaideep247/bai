@@ -25,6 +25,8 @@ Modification log:
 2026-11-11 | Operations response features: runbook links per check (link of an active row, 439), alert
            | correlation rules (patterns 418, key fields 153, window 154), escalation fields of alert rules
            | (severity floor).
+2026-11-11 | Link registry: layers, objects, fields (table 082 / field 083 checks), links, conditions (field
+           | references TABLE-FIELD 225, kind-dependent fields 235 / 236) and activation overrides.
 """
 import os
 import sys
@@ -105,6 +107,31 @@ SPEC = {
              [('area', 'area', False), ('pcre', 'check_pattern'), ('pcre', 'key_pattern'),
               ('valid', 'key_fields', 'zcl_ca_ops_cfg_checks=>key_fields_valid', 'corr_fields_invalid'),
               ('valid', 'window_min', 'zcl_ca_ops_cfg_checks=>window_min_valid', 'corr_window_invalid')]),
+            # Link registry (2026-11-11): layers, business objects and their fields (checked against the runtime
+            # DDIC), links with their conditions (TABLE-FIELD references) and activation overrides of a customer
+            # layer; cross-row rules (prefixes, cycles, cardinality, evidence) are the registry check's
+            # (ZCL_CA_OPS_CHK_LINKS) and the offline validator's (tools/link_registry.py)
+            ('zca_ops_lnklyr', 'LinkLayer', 'zca_d_lnklyr', 'Link layer', 'Link registry layers', [],
+             [('enum', 'layer_kind', 'S,I,C')]),
+            ('zca_ops_lnkobj', 'LinkObject', 'zca_d_lnkobj', 'Object', 'Link registry business objects', [],
+             [('table', 'source_name'), ('enum', 'source_kind', 'T,V')]),
+            ('zca_ops_lnkfld', 'LinkField', 'zca_d_lnkfld', 'Field', 'Link registry object fields', [],
+             [('table', 'source_name'), ('field', 'field_name', 'source_name'), ('enum', 'sensitivity', ',M,H'),
+              ('enum', 'evidence', 'C,V'), ('when', 'evidence', 'V', [('required', 'verify_ref')])]),
+            ('zca_ops_link', 'Link', 'zca_d_link', 'Link', 'Link registry links', [],
+             [('enum', 'cardinality', '11,1N,N1,NM'), ('enum', 'quality', 'C,P')]),
+            ('zca_ops_lnkcnd', 'LinkCondition', 'zca_d_lnkcnd', 'Condition', 'Link registry link conditions', [],
+             [('enum', 'cond_kind', 'EQ,CONST,NOTINIT,PREFER'),
+              ('enum', 'transform', ',ALPHA,NOZERO,UPPER,LEFT,RIGHT,PREFIX,SUFFIX'),
+              ('valid', 'to_ref', 'zcl_ca_ops_cfg_checks=>field_ref_valid', 'link_ref_invalid'),
+              ('valid', 'from_ref', 'zcl_ca_ops_cfg_checks=>field_ref_valid', 'link_ref_invalid'),
+              ('when', 'cond_kind', 'EQ', [('required', 'from_ref'), ('required', 'to_ref')]),
+              ('when', 'cond_kind', 'CONST,PREFER', [('required', 'cond_value'), ('blank', 'from_ref'),
+                                                     ('blank', 'transform')]),
+              ('when', 'cond_kind', 'NOTINIT', [('blank', 'cond_value'), ('blank', 'from_ref'),
+                                                ('blank', 'transform')])]),
+            ('zca_ops_lnkact', 'LinkActivation', 'zca_d_lnkact', 'Activation', 'Link registry activation overrides', [],
+             [('enum', 'target_kind', 'L,K'), ('when', 'target_kind', 'L,K', [('required', 'reason')])]),
         ]),
 }
 
@@ -150,7 +177,21 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'esc_after_min': 'Escalate after (minutes open, unassigned)',
           'esc_repeat_min': 'Repeat escalation every (minutes, 0 = once)',
           'esc_max_count': 'Escalations at most (0 = ESC_MAX_DEFAULT)',
-          'esc_severity': 'Escalation severity floor (blank = minimum)'}
+          'esc_severity': 'Escalation severity floor (blank = minimum)',
+          # Link registry (2026-11-11)
+          'layer_id': 'Layer', 'layer_kind': 'Kind (S baseline, I industry, C customer)',
+          'layer_rank': 'Rank (higher extends lower)', 'id_prefix': 'ID prefix of objects and links',
+          'object_id': 'Business object', 'source_name': 'Table or CDS view',
+          'source_kind': 'Source kind (T table, V view)',
+          'field_name': 'Field', 'data_element': 'Data element',
+          'sensitivity': 'Sensitivity (M masked, H hidden)', 'evidence': 'Evidence (C confirmed, V VERIFY)',
+          'verify_ref': 'VERIFY item', 'link_id': 'Link', 'from_object': 'From object', 'to_object': 'To object',
+          'cardinality': 'Cardinality (11, 1N, N1, NM)', 'quality': 'Evidence quality (C, P)',
+          'fallback_of': 'Fallback of link', 'replaces': 'Replaces link', 'cond_no': 'Condition',
+          'cond_kind': 'Kind (EQ, CONST, NOTINIT, PREFER)', 'from_ref': 'From TABLE-FIELD',
+          'to_ref': 'To TABLE-FIELD', 'transform': 'Transform (EQ)',
+          'transform_arg': 'Transform argument', 'target_kind': 'Target (L layer, K link)',
+          'target_id': 'Layer or link switched', 'reason': 'Reason'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

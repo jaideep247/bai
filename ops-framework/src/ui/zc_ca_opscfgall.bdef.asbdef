@@ -27,6 +27,12 @@ define behavior for ZC_CA_OpsCfgAll alias OpsCfgAll
   use association _SchedulerJob { create; with draft; }
   use association _RunbookLink { create; with draft; }
   use association _CorrelationRule { create; with draft; }
+  use association _LinkLayer { create; with draft; }
+  use association _LinkObject { create; with draft; }
+  use association _LinkField { create; with draft; }
+  use association _Link { create; with draft; }
+  use association _LinkCondition { create; with draft; }
+  use association _LinkActivation { create; with draft; }
 }
 
 define behavior for ZC_CA_AlertRule alias AlertRule
@@ -156,6 +162,60 @@ use etag
 }
 
 define behavior for ZC_CA_CorrelationRule alias CorrelationRule
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_LinkLayer alias LinkLayer
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_LinkObject alias LinkObject
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_LinkField alias LinkField
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_Link alias Link
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_LinkCondition alias LinkCondition
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_LinkActivation alias LinkActivation
 use etag
 {
   use update;

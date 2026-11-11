@@ -21,6 +21,11 @@ The areas are parameter areas of ZCA_PARAM (`config/param_areas.csv`, one area r
 
 The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: record a PRISM status event), 02 change, 03 display, 06 delete, 16 execute, 85 approve - see `ops-framework/docs/auth_zca_ops.md` §2. `BUKRS` keeps restricting objects with a company code (statement, open item, threshold row); area-wide checks pass it as `DUMMY`.
 
+**Link registry (2026-11-11).** The overlay rows (layer `CD`) are maintained in the framework's configuration app with
+`ZCA_OPS` area `CA_OPS` 01 / 02 / 06 in DV1 only and transported. A user who walks the registry (`ZCL_CA_OPS_LINK_WALKER`)
+for the suite needs `ZCA_OPS` 03 of area `CD_OPS` and `S_TABU_NAM` 03 of every table approved for `CD_OPS` in
+`ZCA_OPS_TABWL`; the walker reads nothing else. No new role.
+
 ## 3. Roles (PFCG) — proposal
 
 | Role | ZCA_PARAR | ACTVT | BUKRS |
@@ -29,7 +34,7 @@ The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: 
 | `Z_CD_OPS_BATCH` (Control-M job user) | CD_EBS, CD_FMON, CD_HCK, CD_OPS, CA_OPS, CD_COLL (check run `ZCA_OPS_CHECK_RUN` of the collections request lifecycle, 2026-11-10), **CD_JOBS** (check run of the SAP job monitor, group `FAST` every 5 minutes, 2026-11-11 - plus `S_BTCH_JOB`, see *SAP job failures* below) | 16 | * |
 | `Z_CD_OPS_OPERATOR` (RTB operations) | CD_EBS, CD_FMON, CD_HCK, **CD_JOBS** (assign / resolve SAP job failures, 2026-11-11) | 02, 03 | own company codes |
 | `Z_CD_OPS_APPROVER` (team lead, not the operator) | CD_EBS, CD_FMON, CD_HCK, CD_COLL (waivers of the collections request lifecycle, 2026-11-10), **CD_JOBS** (waivers of SAP job failures, 2026-11-11) | 03, 85 | own company codes |
-| `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 (create, change, display, delete of configuration rows; each checked on its own) | * |
+| `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area; **CA_OPS** for the link registry overlay rows in the framework's app `ZUI_CA_OPS_CFG` (2026-11-11, DV1 only, `docs/Link_Registry_Overlay.md`) | 01, 02, 03, 06 (create, change, display, delete of configuration rows; each checked on its own) | * |
 | `Z_CD_OPS_PRISM` (PRISM technical user `PRISM_FMON`, type B) | CD_FMON | 01 | DUMMY — plus `S_ICF` ICF_FIELD `SERVICE`, ICF_VALUE `ZCD_PRISM` (the SICF node's authorisation value) |
 | `Z_CD_OPS_COLL` (collections operations - operator of process `BASE_REQ_LIFE`, 2026-11-10; details below) | CD_COLL | 02, 03 | own company codes |
 

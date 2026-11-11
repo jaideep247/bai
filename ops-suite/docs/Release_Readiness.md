@@ -271,6 +271,21 @@ Built offline (abaplint 0 issues, portable checks, generator tests); **nothing a
 
 **Open (build C):** clearing reset / re-clearing / reissue link and the rule "reset without re-clearing after N days" wait for the clearing-reset history (V100); G/L clearing line of a bank line waits for the BSEG-XREF2 index (V106); reconciliation key status field (V102); transaction texts (V103).
 
+## Link registry overlay and migration (2026-11-11)
+
+`docs/Link_Registry_Overlay.md`; product: `ops-framework/docs/LINK_REGISTRY.md` (VERIFY V116-V120).
+
+| Gate | Evidence |
+|---|---|
+| Offline (done) | `tools/link_registry.py --check` valid and current (portable check `link_registry`); payment model regenerated from the registry **byte-identical** (`tools/payment_model.py --check`, 0 generated files changed); parity test of the rendered joins (`tools/tests/test_link_registry.py`); abaplint clean |
+| Gate 1 (DV1) | Framework tables and app activated (V116); product and overlay seed rows created and transported; registry check `ZCL_CA_OPS_CHK_LINKS` without `LINK_REGISTRY` / `LINK_DDIC` findings; ABAP Unit of the framework classes (V119) |
+| Gate 2 (QA1) | V122 walker vs payment trace / file monitor for one ACH, one cheque, one reissued payment; PlanViz of each active link read (V118) |
+| Configuration | `ZCA_OPS_TABWL` rows of area `CD_OPS` for every source walked; overlay fields of V121 confirmed in SE11 before their links are activated |
+
+**Not migrated (old path active until V122):** `TRACE_SRC_*` / `TRACE_BP_SOURCE_FIELD` of the payment trace and the link
+columns of `ZCD_FMON_SRC`; their registry rows are pending or inactive. `ZCD_FMON_SRCMAP` and `ZCD_HCK_AGG` encode no
+table-to-table link. Decisions for the user: `Link_Registry_Overlay.md` §6.
+
 ## Released views for every G/L / company code read of the suite (D-C8 extended, 2026-11-11)
 
 Built offline (abaplint 0 issues, portable checks); **nothing activated, no ABAP Unit run, no plan measured**. Moved: EBS R19 FI lines and R18 bank G/L balance, the A_GL_TRANSFER / A_DOC_CHANGE gap read, the payment trace's G/L documents / clearing lines / method kind, every T001 lookup of the morning report and payment worklist DAOs, `ZI_CD_PayWorkItem`, `ZI_CD_TrxItem` - through the helper views `ZI_CD_EbsGlLine`, `ZI_CD_OpsJrnlEntry`, `ZI_CD_OpsGlItem`, `ZI_CD_OpsCompanyCode` (no DCL) or, in CDS, `I_CompanyCode` directly. Kept on tables with reason: XREF2 search (A_INFLIGHT), the snapshot's G/L watermark and clearing-document search, the three reconciliation assignment reads (`Performance_Review.md` §14, `Dashboard_Production_Support.md` §9b).

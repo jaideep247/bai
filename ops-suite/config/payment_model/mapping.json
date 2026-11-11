@@ -15,6 +15,7 @@
     "peak_day_min": 1000000,
     "ledger": {"area": "CD_EBS", "parameter": "EBS_GL_LEDGER", "default": "0L"},
     "gl_reference_type": "FKKSU",
+    "links": ["config/links/overlay.json"],
     "intents": {
       "trace": ["ZCDPaymentTrace", "display"],
       "exceptions": ["ZCDOpsException", "manage"],
@@ -31,15 +32,14 @@
     ],
     "from": "ZI_CD_PayLifeRun as Pay",
     "joins": [
-      "left outer join I_CompanyCode      as Cc  on  Cc.CompanyCode  = Pay.CompanyCode",
+      {"link": "CD_PAYRUN_TO_COMPANY", "join": "left outer join", "alias": "Cc", "from_alias": "Pay"},
       "left outer join tfk042z            as Pm  on  Pm.land1        = Cc.Country",
       "                                          and Pm.zlsch        = Pay.PaymentMethod",
-      "left outer join ZI_CD_PayMethodCls as McC on  McC.Flow        = 'C'",
-      "                                          and McC.PaymentMethod = Pay.PaymentMethod",
-      "left outer join ZI_CD_PayMethodCls as McD on  McD.Flow        = 'D'",
-      "                                          and McD.PaymentMethod = Pay.PaymentMethod",
-      "left outer join ZI_CD_PayWorkState as Ws  on  Ws.ClearingDoc  = Pay.PaymentDocument"
+      {"link": "CD_PAYRUN_TO_CLASS_C", "join": "left outer join", "alias": "McC", "from_alias": "Pay"},
+      {"link": "CD_PAYRUN_TO_CLASS_D", "join": "left outer join", "alias": "McD", "from_alias": "Pay"},
+      {"link": "CD_PAYRUN_TO_WORK_STATE", "join": "left outer join", "alias": "Ws", "from_alias": "Pay"}
     ],
+    "join_layout": {"source": 18, "alias": 3, "left": 15},
     "fields": {
       "BusinessDate": {"expr": "Pay.BusinessDate"},
       "PaymentRun": {"expr": "Pay.RunId"},
@@ -141,7 +141,7 @@
     ],
     "from": "dfkkop as Op",
     "joins": [
-      "inner join dfkkko as Clr on Clr.opbel = Op.augbl"
+      {"link": "CA_ITEM_TO_CLEARING_HDR", "join": "inner join", "alias": "Clr", "from_alias": "Op"}
     ],
     "where": ["Op.augbl <> ' '"],
     "fields": {
@@ -243,14 +243,13 @@
     ],
     "from": "ZI_CD_HckRcBankLine as Line",
     "joins": [
-      "inner join zcd_ebs_acct as Acct on  Acct.account_no = Line.PeAccount",
-      "                                and Acct.active     = 'X'",
+      {"link": "CD_BANKLINE_TO_ACCOUNT", "join": "inner join", "alias": "Acct", "from_alias": "Line"},
       "inner join zcd_hck_rcset as RcSet on  RcSet.bukrs  = Acct.bukrs",
       "                                  and RcSet.hbkid  = Acct.hbkid",
       "                                  and RcSet.hktid  = Acct.hktid",
       "                                  and RcSet.waers  = Line.Currency",
       "                                  and RcSet.active = 'X'",
-      "left outer join dfkkko as Clr on Clr.opbel = Line.BankReference"
+      {"link": "CD_BANKLINE_TO_CLEARING", "join": "left outer join", "alias": "Clr", "from_alias": "Line"}
     ],
     "fields": {
       "StatementKey": {"expr": "cast( Line.Kukey as abap.char( 20 ) )"},

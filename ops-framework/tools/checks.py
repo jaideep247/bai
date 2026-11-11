@@ -42,12 +42,16 @@ Checks
   process_onboarding  every registered business process of config/ (process_register.csv) is integrated
                       end to end: checks, control, alert rule, ownership, purge, authorisation; no active
                       row with a placeholder (shared engine tools/abaptools/onboarding.py)
+  link_registry       the product layers of the link registry (config/links) and the worked example of a
+                      customer overlay are valid and the generated seed rows, lineage, CDS snippets and impact
+                      report are up to date (tools/link_registry.py, shared engine tools/abaptools/link_registry.py)
 
 Modification log:
 2026-11-10 | Copied from the parameter framework's checks and extended for the framework.
 2026-11-10 | Common checks from the shared tools (tools/abaptools/checks.py); method names and
            | packaging checks added.
 2026-11-10 | process_onboarding (process onboarding framework: offline completeness of registered processes).
+2026-11-11 | link_registry (link registry: product layers valid, generated outputs up to date).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -176,6 +180,12 @@ def check_process_onboarding(root):
     return _onboarding.failures(root, auth_docs=('docs/auth_zca_ops.md',), source_roots=('src',))
 
 
+def check_link_registry(root):
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import link_registry  # noqa: E402
+    return link_registry._engine.check(root, link_registry.PROFILE)
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -194,6 +204,7 @@ CHECKS = [
     ('customer_terms', check_customer_terms),
     ('packaging', check_packaging),
     ('process_onboarding', check_process_onboarding),
+    ('link_registry', check_link_registry),
 ]
 
 

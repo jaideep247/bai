@@ -30,6 +30,12 @@ authorization master ( global )
   association _SchedulerJob { create ( features : global ); with draft; }
   association _RunbookLink { create ( features : global ); with draft; }
   association _CorrelationRule { create ( features : global ); with draft; }
+  association _LinkLayer { create ( features : global ); with draft; }
+  association _LinkObject { create ( features : global ); with draft; }
+  association _LinkField { create ( features : global ); with draft; }
+  association _Link { create ( features : global ); with draft; }
+  association _LinkCondition { create ( features : global ); with draft; }
+  association _LinkActivation { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -67,6 +73,18 @@ authorization master ( global )
     validation RunbookLink ~ validateTransport;
     validation CorrelationRule ~ validateFields;
     validation CorrelationRule ~ validateTransport;
+    validation LinkLayer ~ validateFields;
+    validation LinkLayer ~ validateTransport;
+    validation LinkObject ~ validateFields;
+    validation LinkObject ~ validateTransport;
+    validation LinkField ~ validateFields;
+    validation LinkField ~ validateTransport;
+    validation Link ~ validateFields;
+    validation Link ~ validateTransport;
+    validation LinkCondition ~ validateFields;
+    validation LinkCondition ~ validateTransport;
+    validation LinkActivation ~ validateFields;
+    validation LinkActivation ~ validateTransport;
   }
 }
 
@@ -605,6 +623,217 @@ etag master LocalLastChangedAt
     KeyPattern = key_pattern;
     WindowMin = window_min;
     Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_LinkLayer alias LinkLayer
+persistent table zca_ops_lnklyr
+with additional save
+draft table zca_d_lnklyr
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) LayerId;
+  field ( mandatory : create ) LayerId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_lnklyr
+  {
+    LayerId = layer_id;
+    LayerKind = layer_kind;
+    LayerRank = layer_rank;
+    IdPrefix = id_prefix;
+    Description = description;
+    Owner = owner;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_LinkObject alias LinkObject
+persistent table zca_ops_lnkobj
+with additional save
+draft table zca_d_lnkobj
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ObjectId;
+  field ( mandatory : create ) ObjectId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_lnkobj
+  {
+    ObjectId = object_id;
+    LayerId = layer_id;
+    SourceName = source_name;
+    SourceKind = source_kind;
+    KeyFields = key_fields;
+    Description = description;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_LinkField alias LinkField
+persistent table zca_ops_lnkfld
+with additional save
+draft table zca_d_lnkfld
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ObjectId, FieldName;
+  field ( mandatory : create ) ObjectId, FieldName;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_lnkfld
+  {
+    ObjectId = object_id;
+    FieldName = field_name;
+    LayerId = layer_id;
+    SourceName = source_name;
+    DataElement = data_element;
+    Sensitivity = sensitivity;
+    Evidence = evidence;
+    VerifyRef = verify_ref;
+    Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_Link alias Link
+persistent table zca_ops_link
+with additional save
+draft table zca_d_link
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) LinkId;
+  field ( mandatory : create ) LinkId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_link
+  {
+    LinkId = link_id;
+    LayerId = layer_id;
+    FromObject = from_object;
+    ToObject = to_object;
+    Cardinality = cardinality;
+    Quality = quality;
+    FallbackOf = fallback_of;
+    Replaces = replaces;
+    Active = active;
+    Owner = owner;
+    VerifyRef = verify_ref;
+    Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_LinkCondition alias LinkCondition
+persistent table zca_ops_lnkcnd
+with additional save
+draft table zca_d_lnkcnd
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) LinkId, CondNo;
+  field ( mandatory : create ) LinkId, CondNo;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_lnkcnd
+  {
+    LinkId = link_id;
+    CondNo = cond_no;
+    CondKind = cond_kind;
+    FromRef = from_ref;
+    ToRef = to_ref;
+    CondValue = cond_value;
+    Transform = transform;
+    TransformArg = transform_arg;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_LinkActivation alias LinkActivation
+persistent table zca_ops_lnkact
+with additional save
+draft table zca_d_lnkact
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) TargetKind, TargetId;
+  field ( mandatory : create ) TargetKind, TargetId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_lnkact
+  {
+    TargetKind = target_kind;
+    TargetId = target_id;
+    LayerId = layer_id;
+    Active = active;
+    Reason = reason;
+    Owner = owner;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

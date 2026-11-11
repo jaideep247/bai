@@ -37,7 +37,19 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'RunbookLink', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Runbook links per check', position: 150, targetElement: '_RunbookLink' },
     { id: 'CorrelationRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Alert correlation rules', position: 160, targetElement: '_CorrelationRule' }
+      label: 'Alert correlation rules', position: 160, targetElement: '_CorrelationRule' },
+    { id: 'LinkLayer', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Link registry layers', position: 170, targetElement: '_LinkLayer' },
+    { id: 'LinkObject', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Link registry business objects', position: 180, targetElement: '_LinkObject' },
+    { id: 'LinkField', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Link registry object fields', position: 190, targetElement: '_LinkField' },
+    { id: 'Link', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Link registry links', position: 200, targetElement: '_Link' },
+    { id: 'LinkCondition', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Link registry link conditions', position: 210, targetElement: '_LinkCondition' },
+    { id: 'LinkActivation', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Link registry activation overrides', position: 220, targetElement: '_LinkActivation' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

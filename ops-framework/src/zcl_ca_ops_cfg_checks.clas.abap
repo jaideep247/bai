@@ -20,6 +20,7 @@
 *& 2026-11-10 | USER_VALID, TEAM_VALID, URL_VALID: control register of the daily review (messages 437-439).
 *& 2026-11-11 | LINK_VALID (runbook link of an active runbook row, required), KEY_FIELDS_VALID and
 *&            | WINDOW_MIN_VALID (alert correlation rules; messages 153 / 154) - operations response features.
+*& 2026-11-11 | FIELD_REF_VALID: TABLE-FIELD reference of a link condition of the link registry (message 225).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - config apps: field checks</p>
 CLASS zcl_ca_ops_cfg_checks DEFINITION
@@ -163,6 +164,14 @@ CLASS zcl_ca_ops_cfg_checks DEFINITION
     CLASS-METHODS window_min_valid
       IMPORTING
         iv_minutes      TYPE i
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Field reference of a link condition (link registry): TABLE-FIELD, the field a field of the runtime DDIC
+    "! of the table or CDS view entity; blank is valid (a condition kind without that side)
+    CLASS-METHODS field_ref_valid
+      IMPORTING
+        iv_ref          TYPE clike
       RETURNING
         VALUE(rv_valid) TYPE abap_bool.
 
@@ -365,6 +374,18 @@ CLASS zcl_ca_ops_cfg_checks IMPLEMENTATION.
 
   METHOD link_valid.
     rv_valid = xsdbool( iv_url IS NOT INITIAL AND url_valid( iv_url ) = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD field_ref_valid.
+    IF iv_ref IS INITIAL.
+      rv_valid = abap_true.
+      RETURN.
+    ENDIF.
+    DATA(ls_ref) = zcl_ca_ops_link_query=>split_ref( CONV #( iv_ref ) ).
+    rv_valid = xsdbool( ls_ref-source IS NOT INITIAL
+                        AND field_exists( iv_table = CONV #( ls_ref-source )
+                                          iv_field = CONV #( ls_ref-field ) ) = abap_true ).
   ENDMETHOD.
 
 

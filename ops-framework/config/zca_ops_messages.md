@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -127,6 +127,33 @@ texts <= 73 characters).
 | 158 | Enter the start and the end of the window (date and time) |
 | 159 | Downtime window awaits approval: change or delete it instead |
 | 160 | Escalation step &1 of rule &2 not sent: no intent key (duplicate guard) |
+| 210 | Link registry: object &1 is not defined or not active |
+| 211 | Walk from &1: key field &2 has no value |
+| 212 | Link registry: &1 (&2) is not approved for area &3 (ZCA_OPS_TABWL) |
+| 213 | Link registry &1: &2 is not a field of &3 |
+| 214 | Link &1 condition &2: kind &3 is not supported or incomplete |
+| 215 | Link &1: transform &2 &3 is not valid |
+| 216 | Link &1: fallback chain is cyclic (fallback of &2) |
+| 217 | Link &1: cardinality &2 needs the keys of &3 or a PREFER condition |
+| 218 | Link &1 is active, but field &2 is VERIFY (&3) |
+| 219 | Walk from &1 stopped at depth &2 (LINK_MAX_DEPTH) |
+| 220 | Walk from &1 stopped after &2 objects (LINK_MAX_NODES) |
+| 221 | Link &1: read capped at &2 rows (LINK_MAX_ROWS) |
+| 222 | Link &1: read of &2 failed |
+| 223 | Link &1: sensitive field &2 as a constant or preferred value |
+| 224 | Link &1 replaces &2, which is not a link of a lower layer |
+| 225 | &1 is not TABLE-FIELD of a field of the ABAP dictionary |
+| 226 | Link &1: &2 belongs to the higher layer &3 |
+| 227 | Link &1 condition &2: &3 is not a number (field &4) |
+| 228 | Link registry: &1 effective link(s), &2 problem(s) |
+| 229 | Link &1: &2 is not a link |
+| 230 | Link &1: &2 links other objects |
+| 231 | &1 does not start with the prefix &2 of layer &3 |
+| 232 | Object &1: key field &2 is missing, hidden or of another layer |
+| 233 | &1: layer &2 is not defined |
+| 234 | Link &1: &2 is not a field of &3 (source &4) |
+| 235 | &1 is required when &2 is '&3' |
+| 236 | &1 must be blank when &2 is '&3' |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

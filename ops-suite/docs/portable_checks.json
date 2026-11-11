@@ -4,8 +4,8 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-11"
   },
-  "passed": 29,
-  "total": 29,
+  "passed": 30,
+  "total": 30,
   "abap_files": 373,
   "declared_unit_methods": 1587,
   "measured_coverage": null,
@@ -170,6 +170,12 @@
       "name": "process_onboarding",
       "passed": true,
       "detail": "Every registered business process (config/process_register.csv) has checks, a control covering each check (GROUP2), an alert rule of its area, an owner (or an owner team in its document), purge coverage and a role of config/auth_zcd_ops.md; no active row carries a placeholder or VERIFY marker; aggregate rows read approved tables (tools/abaptools/onboarding.py).",
+      "failures": []
+    },
+    {
+      "name": "link_registry",
+      "passed": true,
+      "detail": "The customer overlay config/links/overlay.json is valid on top of the product layers of the framework (ids and prefixes, declared fields, repository DDIC / CDS metadata, conditions, active links on confirmed fields only, cardinality, fallback chains, replacements, sensitivity) and its generated seed rows, lineage, CDS snippets and impact report are up to date (tools/link_registry.py).",
       "failures": []
     },
     {

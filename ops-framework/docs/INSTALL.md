@@ -187,6 +187,23 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
 7. Retention: `ZCA_OPS_RETENTION` test mode lists the new built-in target DOWNTIME (`DOWNTIME_RETENTION_DAYS`).
 8. VERIFY V70-V79.
 
+## 6c. Link registry (2026-11-11, `docs/LINK_REGISTRY.md`)
+
+1. After the pull: the configuration app `ZUI_CA_OPS_CFG` comes regenerated with *Link registry layers*, *objects*,
+   *object fields*, *links*, *link conditions* and *activation overrides*.
+2. DV1, customizing request: create the product rows of `config/links/seed/*.csv` (layers S4CORE and CONTRACT -
+   layers, objects, fields, links, conditions in this order), then the consumer's own seed rows (its
+   `config/links/seed`). Rows whose fields are still VERIFY come inactive; leave them so until the item is closed.
+3. `ZCA_OPS_TABWL`: approve, for the consumer's area, every source its walks read (security sign-off per table);
+   users of the walker need `ZCA_OPS` 03 of the area and `S_TABU_NAM` 03 of those tables.
+4. Optional: register the registry check `ZCL_CA_OPS_CHK_LINKS` in `ZCA_OPS_CHECK` of the consumer's area (findings
+   `LINK_REGISTRY`, `LINK_DDIC`, `LINK_SUMMARY`).
+5. Parameters `LINK_MAX_DEPTH`, `LINK_MAX_ROWS`, `LINK_MAX_NODES`, `LINK_READ_CHUNK` - value rows only where the
+   defaults do not fit.
+6. Before every transport of registry rows: `python3 tools/link_registry.py --check` in the framework and in the
+   consumer's folder (offline validation and generated outputs current).
+7. VERIFY V116-V120.
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

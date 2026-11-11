@@ -2,6 +2,40 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (link registry)
+
+Goal (user, 2026-11-11): custom fields and their links against different tables - how a custom field flows from one
+table to another for each customer - as configuration on top of a generic framework and the SAP standard tables
+(`docs/LINK_REGISTRY.md`).
+
+### Added
+- Tables `ZCA_OPS_LNKLYR` (layers), `ZCA_OPS_LNKOBJ` (business objects), `ZCA_OPS_LNKFLD` (object fields with
+  sensitivity and evidence), `ZCA_OPS_LINK` (links: cardinality, evidence quality, fallback chain, replacement,
+  activation), `ZCA_OPS_LNKCND` (conditions EQ / CONST / NOTINIT / PREFER with transforms), `ZCA_OPS_LNKACT`
+  (activation overrides of a customer layer); entities of the configuration app `ZUI_CA_OPS_CFG` (generated) with
+  checks on save: source and field against the runtime DDIC (082 / 083), condition references TABLE-FIELD (225,
+  `ZCL_CA_OPS_CFG_CHECKS=>FIELD_REF_VALID`), allowed values (413), kind-dependent fields (235 / 236).
+- `ZIF_CA_OPS_LINK_TYPES`, `ZIF_CA_OPS_LINK_DAO` / `ZCL_CA_OPS_LINK_DAO` (registry read; one validated read per link
+  for a set of source rows through the approved tables `ZCA_OPS_TABWL` and `S_TABU_NAM`), `ZCL_CA_OPS_LINK_QUERY`
+  (pure: WHERE from DDIC-checked names and quoted literals, transforms, attribution, PREFER, masking),
+  `ZCL_CA_OPS_LINK_REGISTRY` (pure: validation, effective registry, fallback chains), `ZIF_CA_OPS_LINK_WALKER` /
+  `ZCL_CA_OPS_LINK_WALKER` (bounded, set-based drill-down with path and evidence quality), registered check
+  `ZCL_CA_OPS_CHK_LINKS`; ABAP Unit for each (doubles; OSQL doubles for the data access).
+- Parameters `LINK_MAX_DEPTH`, `LINK_MAX_ROWS`, `LINK_MAX_NODES`, `LINK_READ_CHUNK` (prefix `LINK_` read in area
+  `CA_OPS`); messages 210-236 of `ZCA_OPS`.
+- Product layers `config/links/s4core.json` (S/4HANA core standard: released journal entry / item and company code
+  views, bank statement, business partner) and `config/links/packages/contract_accounting.json` (contract accounting
+  standard tables); worked example of a customer overlay `config/links/examples/xx_overlay.json` (prefix XX).
+- Shared engine `tools/abaptools/link_registry.py` and the framework's wrapper `tools/link_registry.py`: validation,
+  seed rows (`config/links/seed`), lineage (`docs/links/lineage.md`), CDS snippets, field impact; house check
+  `link_registry`; tests `tools/tests/test_link_registry.py` of the repository.
+- Payment model generator: a section's join may name a registry link (`{link, join, alias, from_alias}`, model key
+  `links`, section key `join_layout`); text joins render unchanged.
+
+### Changed
+- `docs/VERIFY.md` V116-V120; `docs/auth_zca_ops.md`, `docs/INSTALL.md` §6c, `docs/PARAMETERS.md`,
+  `docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md` §2a.
+
 ## [Unreleased] - 2026-11-11 (ledger model on released CDS views)
 
 Goal (user, 2026-11-11): the G/L side of the ledger and document-change model reads SAP's released CDS views

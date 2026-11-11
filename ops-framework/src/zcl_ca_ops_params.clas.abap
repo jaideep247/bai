@@ -23,6 +23,7 @@
 *& 2026-11-11 | Prefix JOB_ read in area CA_OPS (SAP job monitor).
 *& 2026-11-11 | Prefixes RUNBOOK_, DOWNTIME_, ESC_, CORR_, METRIC_, SHIFT_ read in area CA_OPS (operations
 *&            | response features).
+*& 2026-11-11 | Prefix LINK_ read in area CA_OPS (link registry walker).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CA_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
@@ -88,7 +89,8 @@ CLASS zcl_ca_ops_params IMPLEMENTATION.
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-escalation  area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-correlation area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-metric      area = zif_ca_ops_types=>gc_param_area )
-      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-shift       area = zif_ca_ops_types=>gc_param_area ) ).
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-shift       area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-link        area = zif_ca_ops_types=>gc_param_area ) ).
   ENDMETHOD.
 
 
