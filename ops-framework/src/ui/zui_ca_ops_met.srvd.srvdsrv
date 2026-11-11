@@ -1,0 +1,8 @@
+@EndUserText.label: 'Exception response-time metrics'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSEXCMETRIC'
+// Binding to create in ADT: ZUI_CA_OPS_MET_O4 (OData V4 - UI), analytical list page "Exception response
+// times" (MTTA / MTTR; operations response features, 2026-11-11; docs/OPERATIONS_FEATURES.md section 5).
+// Read-only: no behaviour definition.
+define service ZUI_CA_OPS_MET {
+  expose ZC_CA_OpsExcMetric as ExceptionMetric;
+}

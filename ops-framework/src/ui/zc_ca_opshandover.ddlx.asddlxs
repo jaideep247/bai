@@ -1,0 +1,61 @@
+// UI annotations: shift handover (service ZUI_CA_OPS_HOVR, list report, 2026-11-11)
+// Per team, area and company code since the start of the previous shift: new, resolved, still open, escalated,
+// controls awaiting sign-off, planned downtime active / next shift. Data points of a consumer's overview card
+// "Shift handover": New, Resolved, Open, Escalated, AwaitingSignOff, DowntimeNext. VERIFY-ADT: OVP V4 card (V81).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Handover', typeNamePlural: 'Shift handover',
+                  title: { type: #STANDARD, value: 'Team' },
+                  description: { type: #STANDARD, value: 'Area' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'AttentionCriticality', direction: #ASC },
+                                          { by: 'Team', direction: #ASC }, { by: 'Area', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Attention', text: 'Needs attention', filter: 'IsAttention EQ X' } ]
+annotate entity ZC_CA_OpsHandover with
+{
+  @UI.lineItem: [ { position: 10, importance: #HIGH, criticality: 'AttentionCriticality' } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Team;
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Area;
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  SinceDate;
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  SinceTime;
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'New', title: 'New exceptions since the previous shift' }
+  NewExceptions;
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Resolved', title: 'Resolved' }
+  ResolvedExceptions;
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Open', title: 'Still open' }
+  OpenExceptions;
+  @UI.lineItem: [ { position: 90, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Escalated', title: 'Escalated' }
+  Escalations;
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'AwaitingSignOff', title: 'Controls awaiting sign-off' }
+  ControlsAwaitingSignOff;
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'DowntimeActive', title: 'Planned downtime active' }
+  DowntimeActive;
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'DowntimeNext', title: 'Planned downtime next shift' }
+  DowntimeNextShift;
+  @UI.lineItem: [ { position: 130, importance: #LOW } ]
+  ShiftStartTime;
+  @UI.lineItem: [ { position: 140, importance: #LOW } ]
+  NextShiftTime;
+  @UI.selectionField: [ { position: 40 } ]
+  IsAttention;
+  @UI.hidden: true
+  AttentionCriticality;
+  @UI.hidden: true
+  SinceUtc;
+  @UI.hidden: true
+  TimeZone;
+}
