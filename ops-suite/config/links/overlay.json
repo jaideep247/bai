@@ -28,7 +28,8 @@
      "fields": [
        {"name": "‹file key field›", "evidence": "V", "verify": "V121", "description": "File key"},
        {"name": "‹run date field›", "evidence": "V", "verify": "V121", "description": "Run date of the file"},
-       {"name": "‹run ID field›", "evidence": "V", "verify": "V121", "description": "Run identification of the file"}
+       {"name": "‹run ID field›", "evidence": "V", "verify": "V121", "description": "Run identification of the file"},
+       {"name": "‹house bank field›", "evidence": "V", "verify": "V121", "description": "House bank of the file"}
      ]},
     {"id": "CD_CLEAR_HISTORY", "source": "DFKKRAPT", "kind": "T", "keys": ["‹item document field›"],
      "description": "Clearing reset history (candidate table, V100)",
@@ -111,7 +112,8 @@
     {"id": "CD_RUN_TO_FILE", "from": "CA_PAYMENT_RUN", "to": "CD_FILE_REGISTER", "cardinality": "NM", "quality": "C",
      "active": false, "verify": "V121", "owner": "PE RTB", "description": "Payment run -> its payment files",
      "conditions": [{"kind": "EQ", "from": "LAUFD", "to": "‹run date field›"},
-                    {"kind": "EQ", "from": "LAUFI", "to": "‹run ID field›"}]},
+                    {"kind": "EQ", "from": "LAUFI", "to": "‹run ID field›"},
+                    {"kind": "EQ", "from": "HBKID", "to": "‹house bank field›"}]},
     {"id": "CD_ITEM_TO_CLEAR_HIST", "from": "CA_OPEN_ITEM", "to": "CD_CLEAR_HISTORY", "cardinality": "1N", "quality": "P",
      "active": false, "verify": "V100", "owner": "PE RTB", "description": "Item -> its earlier clearings (reset history)",
      "conditions": [{"kind": "EQ", "from": "OPBEL", "to": "‹item document field›"}]},

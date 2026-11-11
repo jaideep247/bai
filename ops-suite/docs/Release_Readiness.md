@@ -270,3 +270,18 @@ Built offline (abaplint 0 issues, portable checks, generator tests); **nothing a
 **Decisions for the user (build C):** D-C1 ledger = `EBS_GL_LEDGER` (no separate `LEDG_` parameter); D-C2 share basis = cleared items (DFKKOPK G/L items as the alternative); D-C3 group reconciliation shows the stored A_RECON_3WAY result and adds only the live journal leg for drill-down and "changed since measured"; D-C4 per-day bucket from the finding (a stored per-day bucket metric would change A_RECON_3WAY); D-C6 user IDs on the payment's change timeline only; D-C8 (changed by the user 2026-11-11) G/L side on released views `I_JournalEntryItem` / `I_JournalEntry` / `I_CompanyCode` / `I_GLAccountText`, subledger tables kept (no released view - clean-core exception), three A_RECON_3WAY journal reads on ACDOCA until PlanViz (`Dashboard_Production_Support.md` §9b); `A_DOC_CHANGE` delivered inactive until V108; STOPPED payments not counted as "left SAP" when reversed (stop and reissue).
 
 **Open (build C):** clearing reset / re-clearing / reissue link and the rule "reset without re-clearing after N days" wait for the clearing-reset history (V100); G/L clearing line of a bank line waits for the BSEG-XREF2 index (V106); reconciliation key status field (V102); transaction texts (V103).
+
+## Link registry overlay and migration (2026-11-11)
+
+`docs/Link_Registry_Overlay.md`; product: `ops-framework/docs/LINK_REGISTRY.md` (VERIFY V116-V120).
+
+| Gate | Evidence |
+|---|---|
+| Offline (done) | `tools/link_registry.py --check` valid and current (portable check `link_registry`); payment model regenerated from the registry **byte-identical** (`tools/payment_model.py --check`, 0 generated files changed); parity test of the rendered joins (`tools/tests/test_link_registry.py`); abaplint clean |
+| Gate 1 (DV1) | Framework tables and app activated (V116); product and overlay seed rows created and transported; registry check `ZCL_CA_OPS_CHK_LINKS` without `LINK_REGISTRY` / `LINK_DDIC` findings; ABAP Unit of the framework classes (V119) |
+| Gate 2 (QA1) | V122 walker vs payment trace / file monitor for one ACH, one cheque, one reissued payment; PlanViz of each active link read (V118) |
+| Configuration | `ZCA_OPS_TABWL` rows of area `CD_OPS` for every source walked; overlay fields of V121 confirmed in SE11 before their links are activated |
+
+**Not migrated (old path active until V122):** `TRACE_SRC_*` / `TRACE_BP_SOURCE_FIELD` of the payment trace and the link
+columns of `ZCD_FMON_SRC`; their registry rows are pending or inactive. `ZCD_FMON_SRCMAP` and `ZCD_HCK_AGG` encode no
+table-to-table link. Decisions for the user: `Link_Registry_Overlay.md` §6.

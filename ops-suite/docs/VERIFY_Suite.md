@@ -3,7 +3,7 @@
 > **First principle:** an item that names a customer's table, field, middleware, bank or scheduler belongs to that customer's delivery, not to the reusable product; the product's list keeps only what every customer must confirm.
 > **Analogy:** the car maker's inspection sheet covers the car; the fleet owner's sheet covers its own fittings - the company logo, the radio, the toll tag.
 
-The rows below were moved on 2026-11-11 from the framework's list `ops-framework/docs/VERIFY.md` (customer-neutral product: the framework names no customer object). **IDs are unchanged and never reused**; the framework keeps V01-V43, V46-V54, V57-V66, V70-V79, V94-V99 and V110-V114. Nothing activated; every row is open. Confirm each item in DV1 / QA1 and record the evidence in the release pack (`Release_Readiness.md`).
+The rows below were moved on 2026-11-11 from the framework's list `ops-framework/docs/VERIFY.md` (customer-neutral product: the framework names no customer object). **IDs are unchanged and never reused**; the framework keeps V01-V43, V46-V54, V57-V66, V70-V79, V94-V99, V110-V114 and V116-V120 (link registry, 2026-11-11). Nothing activated; every row is open. Confirm each item in DV1 / QA1 and record the evidence in the release pack (`Release_Readiness.md`).
 
 ## 1. Where the suite's VERIFY items are
 
@@ -15,6 +15,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | V80, V81 | Operations response features: runbook rows, overview page cards | `Release_Readiness.md` |
 | **V82-V93** | **Service health, process flow, missing-volume checks, payment model mapping (build B)** | **this document, §2** |
 | V100-V109, V115 | Ledger drill-down, group reconciliation, document changes (build C); V115 released views of the G/L side (D-C8 changed 2026-11-11) | `USAA_Known_Tables.md` §4 |
+| V121, V122 | Link registry overlay: the overlay's VERIFY / placeholder fields, parity of the trace and file monitor link definitions with the registry (2026-11-11) | `Link_Registry_Overlay.md` §5 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping
 

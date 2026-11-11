@@ -113,6 +113,12 @@ Shared with the morning report (2026-11-07): the in-flight check `A_INFLIGHT` (`
 | `TRACE_BANK_LOOKBACK_DAYS` | 5 | Bank lines from clearing date minus n days; FMON file window ± n days around LAUFD |
 | `EBS_RTRV_STATUS_FIELD` | (EBS) | Shared with EBS: status field of ZCD_ACH_RTRV_LOG |
 
+**Link registry (2026-11-11).** The link parts of these source specs (KEY / KEY2 joins, the SUCCESS-row rule, the
+partner with and without the source) and of the trace's fixed joins are also rows of the link registry: overlay
+`config/links/overlay.json` (pending / inactive until their fields are confirmed) and the framework's contract
+accounting package. The trace keeps reading these parameters until the parity item V122 is closed
+(`Link_Registry_Overlay.md` §3).
+
 Every configured table also needs a `ZCD_OPS_TABWL` row FMON / SOURCE (table + fields, or blank field = whole table) and `S_TABU_NAM` 03 for the users; otherwise the stage is UNAVAILABLE (`SOURCE_NOT_READABLE`), never VERIFIED.
 
 ## 6. Access and masking

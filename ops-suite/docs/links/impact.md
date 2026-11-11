@@ -34,7 +34,7 @@
 | DFKKSUMC-WAERS | VERIFY V117 | - | - | payment model ledger_batch (active) |
 | DPAYH-BUKRS | VERIFY V117 | - | - | - |
 | DPAYH-DOC1R | confirmed | CA_PAYMENT_RUN | CA_CLEARING_TO_RUN (to, active)<br/>CA_RUN_TO_CLEARED_ITEMS (from, active)<br/>CA_CLEARING_TO_RUN (target key) | - |
-| DPAYH-HBKID | VERIFY V117 | - | - | - |
+| DPAYH-HBKID | VERIFY V117 | - | CD_RUN_TO_FILE (from, pending (VERIFY)) | - |
 | DPAYH-LAUFD | confirmed | CA_PAYMENT_RUN | CD_RUN_TO_FILE (from, pending (VERIFY))<br/>CA_CLEARING_TO_RUN (target key) | - |
 | DPAYH-LAUFI | confirmed | CA_PAYMENT_RUN | CD_RUN_TO_FILE (from, pending (VERIFY))<br/>CA_CLEARING_TO_RUN (target key) | - |
 | DPAYH-PYMET | VERIFY V117 | - | - | - |
@@ -73,6 +73,7 @@
 | TFK042Z-XEINZ | confirmed | - | - | payment model payment (active) |
 | TFK042Z-ZLSCH | VERIFY V117 | CA_PAY_METHOD_CFG | CA_COUNTRY_METHODS (target key) | payment model payment (active) |
 | ZCDT_REGUT-‹file key field› | VERIFY V121 | CD_FILE_REGISTER | CD_RUN_TO_FILE (target key) | - |
+| ZCDT_REGUT-‹house bank field› | VERIFY V121 | - | CD_RUN_TO_FILE (to, pending (VERIFY)) | - |
 | ZCDT_REGUT-‹run ID field› | VERIFY V121 | - | CD_RUN_TO_FILE (to, pending (VERIFY)) | - |
 | ZCDT_REGUT-‹run date field› | VERIFY V121 | - | CD_RUN_TO_FILE (to, pending (VERIFY)) | - |
 | ZCD_CHECK_HIST-STATE | confirmed | - | - | - |

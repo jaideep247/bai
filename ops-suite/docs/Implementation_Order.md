@@ -308,6 +308,17 @@ Readers: one generic reader `ZCL_CD_OPS_POSTAREA` (TFK033D, one set-based read p
 | 6. Customizing (transport) | `config/service_register.csv`, `config/service_map.csv`, `STUCK_DAYS` of `config/pay_stages.csv`, `config/hck_seed.md` §4b (`B_VOL_*` definitions, aggregates, thresholds with SEASON, approved tables DPAYH / FEBEP / ZCD_FMON_FILE), `config/alert_rules.csv` `HCK_VOLUME` (inactive until the SO23 list is named), covered-check rows of `config/control_checks.csv`; framework rows of `ZCA_OPS_PMDIM` / `ZCA_OPS_FEEDER` | Take the drift baseline after the transport (`ZCD_HCK_THRESH`, `ZCD_HCK_AGG`) |
 | 7. Apps and launchpad | Three OVP app descriptors (`ZCD_PAYM_BIZ`, `_MGR`, `_IT`) and the payment list / object page; pages, catalogs, roles of `config/auth_zcd_ops.md` (persona section); custom card `ui/cards/processflow` (optional) | `ui/tests` journeys after generation |
 
+## Link registry overlay (2026-11-11, `docs/Link_Registry_Overlay.md`)
+
+1. After the framework's link registry is installed (`ops-framework/docs/INSTALL.md` §6c, product seed rows first):
+   create the overlay rows of `config/links/seed/*.csv` in `ZUI_CA_OPS_CFG` (DV1, customizing request; layers, objects,
+   fields, links, conditions). Pending links (placeholders) are not in the seed; inactive rows stay inactive.
+2. `ZCA_OPS_TABWL` rows of area `CD_OPS` for the sources walked (security sign-off), the walker's users with `ZCA_OPS`
+   03 of `CD_OPS` and `S_TABU_NAM` 03.
+3. Optional: `ZCL_CA_OPS_CHK_LINKS` registered in area `CD_OPS` (decision §6 of the overlay document).
+4. Nothing else changes in this step: the payment model views are byte-identical, the trace and the file monitor keep
+   their own definitions until V122.
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |

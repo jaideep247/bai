@@ -118,7 +118,7 @@ flowchart LR
 | CD_REQ_TO_PARTNER | CD | CD_PAYM_REQ_LOG | S4_BUSINESS_PARTNER | NM | C | BUT000-BPEXT = ZCD_PAYM_REQ_LOG-ZZ_MEMBER_NO | CD_REQ_TO_PARTNER_SRC | pending (VERIFY) V121 |
 | CD_REQ_TO_PARTNER_SRC | CD | CD_PAYM_REQ_LOG | S4_BUSINESS_PARTNER | NM | C | BUT000-BPEXT = ZCD_PAYM_REQ_LOG-ZZ_MEMBER_NO; BUT000-‹source field› = ZCD_PAYM_REQ_LOG-SOURCE | - | pending (VERIFY) V121 |
 | CD_REQ_TO_STATUS_UPD | CD | CD_PAYM_REQ_LOG | CD_SPE_EXCP_LOG | NM | P | ZCD_SPE_EXCP_LOG-‹request key field› = ZCD_PAYM_REQ_LOG-‹FIN number field› | - | pending (VERIFY) V121 |
-| CD_RUN_TO_FILE | CD | CA_PAYMENT_RUN | CD_FILE_REGISTER | NM | C | ZCDT_REGUT-‹run date field› = DPAYH-LAUFD; ZCDT_REGUT-‹run ID field› = DPAYH-LAUFI | - | pending (VERIFY) V121 |
+| CD_RUN_TO_FILE | CD | CA_PAYMENT_RUN | CD_FILE_REGISTER | NM | C | ZCDT_REGUT-‹run date field› = DPAYH-LAUFD; ZCDT_REGUT-‹run ID field› = DPAYH-LAUFI; ZCDT_REGUT-‹house bank field› = DPAYH-HBKID | - | pending (VERIFY) V121 |
 
 ## Custom field flows
 
@@ -132,6 +132,7 @@ Fields a customer layer added (to its own or a standard object) and the links th
 | ZCD_CHECK_HIST-ZTNUM | CD | CD_CHEQUE_TO_STATUS_HIST (inactive (VERIFY)) | from DFKKCR-ZTNUM |
 | DFKKRAPT-‹item document field› | CD | CD_ITEM_TO_CLEAR_HIST (pending (VERIFY)) | from DFKKOP-OPBEL |
 | ZCD_EBS_ACCT-ACCOUNT_NO | CD | CD_BANKLINE_TO_ACCOUNT (active) | from ZI_CD_HckRcBankLine-PeAccount |
+| ZCDT_REGUT-‹house bank field› | CD | CD_RUN_TO_FILE (pending (VERIFY)) | from DPAYH-HBKID |
 | ZCDT_REGUT-‹run ID field› | CD | CD_RUN_TO_FILE (pending (VERIFY)) | from DPAYH-LAUFI |
 | ZCDT_REGUT-‹run date field› | CD | CD_RUN_TO_FILE (pending (VERIFY)) | from DPAYH-LAUFD |
 | ZCD_PAYM_REQ_LOG-SOURCE | CD | CD_REQ_TO_PARTNER_SRC (pending (VERIFY)) | BUT000-‹source field› |

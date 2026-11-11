@@ -208,6 +208,10 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
     zif_ca_ops_link_walker~registry( ).
     CLEAR: ms_result, mt_work, mt_visited, mt_chains, mv_stop.
     ms_request = is_request.
+    " Field names as the DDIC holds them (the caller may write them in lower case)
+    LOOP AT ms_request-keys ASSIGNING FIELD-SYMBOL(<ls_key>).
+      <ls_key>-fieldname = to_upper( condense( <ls_key>-fieldname ) ).
+    ENDLOOP.
     DATA(lo_params) = zcl_ca_ops_factory=>get_params( ).
     DATA(lv_max_depth) = zcl_ca_ops_util=>param_int( io_params  = lo_params
                                                      iv_name    = zif_ca_ops_link_types=>gc_param-max_depth
