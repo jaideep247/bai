@@ -867,8 +867,9 @@ CLASS ltc_journal IMPLEMENTATION.
 
   METHOD header_and_account_text.
     TRY.
-        SELECT documenttype, entrydate, glaccounttext, referencetype, referencekey FROM zi_{{p}}_ledgjrnl
-          WHERE gldocument = @gc-doc INTO TABLE @DATA(lt_rows).
+        SELECT gldocument, documenttype, entrydate, glaccounttext, referencetype, referencekey FROM zi_{{p}}_ledgjrnl
+          WHERE gldocument = @gc-doc
+          ORDER BY gldocument INTO TABLE @DATA(lt_rows).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One line of GD1' ).
         cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-documenttype ) exp = CONV string( gc-doc_type )
                                             msg = 'Document type from the header' ).

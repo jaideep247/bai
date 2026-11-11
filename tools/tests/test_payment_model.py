@@ -9,6 +9,7 @@ Run:  python3 -m unittest discover -s tools/tests      (from the repository root
 """
 import copy
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -157,8 +158,27 @@ class PaymentModelTest(unittest.TestCase):
         self.assertIn("where Area.area = 'ZXX_OPS'", cfg)
         self.assertIn("'0L' ) as abap.char( 2 ) ) as Ledger", cfg)
         gl_doc = files[os.path.join('src/paym', 'zi_xx_ledggldoc.ddls.asddls')]
-        self.assertIn("Doc.awtyp = 'ZXXGL'", gl_doc)
-        self.assertIn('Doc.awkey = Bat.GlReferenceKey', gl_doc)
+        self.assertRegex(gl_doc, r"Doc\.ReferenceDocumentType\s+= 'ZXXGL'")
+        self.assertRegex(gl_doc, r'Doc\.OriginalReferenceDocument\s+= Bat\.GlReferenceKey')
+
+    def test_ledger_g_l_side_reads_released_views_only(self):
+        # Decision of the product (2026-11-11): the G/L side reads SAP's released CDS views, never the journal,
+        # document header, entry view, company code or account text tables
+        files = payment_model.outputs(REPO, ledger_spec())
+        tables = re.compile(r'\b(?:from|join)\s+(acdoca|bkpf|bseg|skat|t001)\b', re.IGNORECASE)
+        for name, text in files.items():
+            if name.endswith(('.asddls', '.abap')):
+                self.assertIsNone(tables.search(text), name)
+        jrnl = files[os.path.join('src/paym', 'zi_xx_ledgjrnl.ddls.asddls')]
+        for view in ('I_JournalEntryItem', 'I_JournalEntry', 'I_CompanyCode', 'I_GLAccountText'):
+            self.assertRegex(jrnl, rf'\b(?:from|join)\s+{view}\s+as\b')
+        day = files[os.path.join('src/paym', 'zi_xx_ledgacctday.ddls.asddls')]
+        self.assertIn('as select from I_JournalEntryItem as Jrn', day)
+        events = files[os.path.join('src/paym', 'zi_xx_docevtall.ddls.asddls')]
+        self.assertIn('inner join          I_JournalEntry      as Rev', events)
+        tests = files[os.path.join('src/paym', 'zcl_xx_paym_cds_test.clas.testclasses.abap')]
+        self.assertIn('TYPE STANDARD TABLE OF i_journalentryitem WITH EMPTY KEY', tests)
+        self.assertNotIn('acdoca', tests)
 
     def test_payment_page_has_ledger_and_changes(self):
         files = payment_model.outputs(REPO, ledger_spec())
