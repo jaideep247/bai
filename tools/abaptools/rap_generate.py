@@ -38,6 +38,8 @@ Modification log:
            | its apps (the framework's own app is generated from ops-framework). Output unchanged.
 2026-11-11 | Customer-neutral engine: working prefix XX in the templates, the app's prefix (or the
            | profile's PREFIX) required - no consumer prefix as default. Output unchanged.
+2026-11-11 | Spec key of the app's parameter / authorisation area is now 'area' (the old key named a
+           | consumer-specific abbreviation). Output unchanged.
 """
 import os, re
 
@@ -58,7 +60,7 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
                   '\n*&            | messages of class ZCA_OPS; area and parameter checks (messages 435 / 434).')
 
 # ---------------------------------------------------------------------------
-# Spec: pe_area -> app; per table: alias, draft table, labels, keys that may be
+# Spec: area -> app (the parameter / authorisation area of the app); per table: alias, draft table, labels, keys that may be
 # blank (not mandatory on create), checks.
 # Checks: ('enum', field, 'A,B' | ',A,B' blank allowed) ('class', field, interface)
 #         ('table', field) ('field', field, table_field) ('window', from, to)
@@ -623,7 +625,7 @@ def bp_locals(app, tables):
          '"! ZCA_OPS answers of this app (area of the app) for the RAP handlers',
          'CLASS lcl_auth DEFINITION FINAL.',
          '  PUBLIC SECTION.',
-         f"    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE '{app['pe_area']}'.",
+         f"    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE '{app['area']}'.",
          '',
          '    "! Allowed when the user has the activity for the area (create 01, change 02, delete 06)',
          '    CLASS-METHODS answer',
@@ -886,7 +888,7 @@ def bp_tests(app):
          '  RISK LEVEL HARMLESS',
          '  DURATION SHORT.', '',
          '  PRIVATE SECTION.',
-         f"    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE '{app['pe_area']}'.", '',
+         f"    CONSTANTS gc_area TYPE zif_ca_ops_types=>ty_area VALUE '{app['area']}'.", '',
          '    TYPES:',
          '      BEGIN OF ty_flags,',
          '        create TYPE abap_bool,',

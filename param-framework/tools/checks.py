@@ -22,14 +22,18 @@ Checks
   messages            every ZIF_CA_PARAM_TYPES=>GC_MSG constant has a message row with the same
                       number and name; texts <= 73
   abapgit_up_to_date  tools/abapgit_serialize.py --check (generated XML equals the sources)
-  customer_terms      none of the words of config/customer_terms.txt in src/, the message texts or the
-                      text elements (whole words, case ignored)
+  customer_terms      none of the words of config/customer_terms.txt (rules and flags as in the shared
+                      tools) in any text file of the component - code, DDIC, docs, configuration, tools,
+                      README and change log (test fixtures excepted); single allowed lines in
+                      config/customer_terms_allowed.txt, each with its reason (unused entries fail)
   packaging           self-contained: no file names the operations framework's or a consumer's
                       folder (the framework is the base layer; the change log may name them)
 
 Modification log:
 2026-11-10 | Common checks from the shared tools (tools/abaptools/checks.py); method names, abapGit
            | metadata, customer wording and packaging checks added.
+2026-11-11 | customer_terms reads every text file of the component (docs, configuration, tools, README,
+           | change log), not only src/, the text elements and the message texts; allowlist with reasons.
 """
 import os
 import re
@@ -40,8 +44,7 @@ sys.path.insert(0, os.path.join(ROOT, '..', 'tools'))
 from abaptools import checks as _shared  # noqa: E402
 from abaptools.checks import (files, read, strip_comments, statements,  # noqa: E402,F401
                               check_name_lengths, check_method_names, check_artifact_header, check_pcre_only,
-                              check_no_cp, check_no_select_star, check_final, check_test_classes,
-                              check_customer_terms)
+                              check_no_cp, check_no_select_star, check_final, check_test_classes)
 
 DECLARATION = re.compile(r'^\s*(CONSTANTS|TYPES|DATA|CLASS-DATA|STATICS)\b', re.I)
 SENTENCE = re.compile(r"'([^'\n]*[A-Za-z]{2,}\s+[A-Za-z]{2,}[^'\n]*)'|`([^`\n]*[A-Za-z]{2,}\s+[A-Za-z]{2,}[^`\n]*)`")
@@ -91,6 +94,15 @@ def check_abapgit(root):
 
 def check_packaging(root):
     return _shared.check_packaging(root, ('ops-framework', 'ops-suite'))  # packaging: forbidden folders
+
+
+# customer_terms: the whole component (test fixtures excepted, see TERM_SKIP_DIRS of the shared tools)
+TERM_SCOPES = ('.',)
+TERM_ALLOWLIST = 'config/customer_terms_allowed.txt'
+
+
+def check_customer_terms(root):
+    return _shared.check_customer_terms(root, None, TERM_SCOPES, TERM_ALLOWLIST)
 
 
 CHECKS = [

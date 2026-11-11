@@ -46,6 +46,9 @@ JQ4SP
 VYSPA
 BASE | case, text
 # Customer fields, statuses and object prefixes of a consumer
+PE | case
+PE_AREA
+peArea
 ZZ_FIN_TRANS_NUM
 SRCPOSTED
 ZCD | prefix

@@ -33,21 +33,21 @@ New sources / feeder systems later: a row in `ZCA_OPS_FEEDER` and texts in `ZCA_
 
 ## 3. Worked example - a fictitious second customer
 
-Customer "example insurer", prefix `PE`, area `ZPE_OPS`. Payments in `ZPE_PAYMENT` (one row per payment), requests from two feeder systems - a claims system (`CLM`) and a billing system (`BIL`) - in `ZPE_REQUEST`, link in `ZPE_PAY_REQ`. The unit test `tools/tests/test_payment_model.py` uses exactly this shape.
+Customer "example insurer", prefix `XX`, area `ZXX_OPS`. Payments in `ZXX_PAYMENT` (one row per payment), requests from two feeder systems - a claims system (`CLM`) and a billing system (`BIL`) - in `ZXX_REQUEST`, link in `ZXX_PAY_REQ`. The unit test `tools/tests/test_payment_model.py` uses exactly this shape.
 
 ```json
 {
-  "model": {"prefix": "PE", "area": "ZPE_OPS", "areas": ["ZPE_OPS"], "consumer": "example insurer",
-            "service": "ZUI_PE_PAYM", "package_folder": "src/paym", "pending_folder": "config/payment_model/pending",
+  "model": {"prefix": "XX", "area": "ZXX_OPS", "areas": ["ZXX_OPS"], "consumer": "example insurer",
+            "service": "ZUI_XX_PAYM", "package_folder": "src/paym", "pending_folder": "config/payment_model/pending",
             "since": "2026-11-11", "window_days": 40, "trend_days": 30, "peak_day_min": 500000,
-            "intents": {"trace": ["ZPETrace", "display"], "exceptions": ["ZPEExc", "manage"], "job": ["ZPEJob", "display"]}},
-  "payment": {"from": "zpe_payment as Pay",
-              "joins": ["left outer join zpe_method as Mth on Mth.method = Pay.method"],
+            "intents": {"trace": ["ZXXTrace", "display"], "exceptions": ["ZXXExc", "manage"], "job": ["ZXXJob", "display"]}},
+  "payment": {"from": "zxx_payment as Pay",
+              "joins": ["left outer join zxx_method as Mth on Mth.method = Pay.method"],
               "fields": {"BusinessDate": {"expr": "Pay.pay_date"}, "PaymentRun": {"expr": "Pay.run_id"},
                          "PaymentDocument": {"expr": "Pay.pay_doc"}, "MethodClass": {"expr": "Mth.class"},
                          "TransactionType": {"expr": null, "verify": "not delivered by the payment table"}, "...": {}}},
-  "payment_request": {"from": "zpe_pay_req as Lnk", "fields": {"PaymentDocument": {"expr": "Lnk.pay_doc"}, "...": {}}},
-  "request": {"from": "zpe_request as Req", "where": ["Req.accepted = 'X'"], "fields": {"Source": {"expr": "Req.feeder"}, "...": {}}},
+  "payment_request": {"from": "zxx_pay_req as Lnk", "fields": {"PaymentDocument": {"expr": "Lnk.pay_doc"}, "...": {}}},
+  "request": {"from": "zxx_request as Req", "where": ["Req.accepted = 'X'"], "fields": {"Source": {"expr": "Req.feeder"}, "...": {}}},
   "request_attempt": {"status": "pending", "reason": "attempt table not yet named", "from": "‹attempt table› as Att", "fields": {}}
 }
 ```
@@ -73,4 +73,4 @@ Optional sections of the same spec; generated only when active (flags `LEDGER`, 
 
 Model keys: `ledger` {`area`, `parameter`, `default`} - the ledger parameter of the parameter framework (`ZI_<P>_LedgCfg`: value, else definition default, else the delivered default, the leading ledger `0L`); `gl_reference_type` - the reference type (`I_JournalEntry`-ReferenceDocumentType) of the G/L documents of a batch key. The product adds the **standard** part on SAP's **released CDS views** (clean core, 2026-11-11): G/L documents of a batch key (`I_JournalEntry` by reference type + original reference document + company code), journal lines (`I_JournalEntryItem` in the model's ledger, read by key, with every accounting attribute; header `I_JournalEntry`, account text `I_GLAccountText` in the chart of accounts of `I_CompanyCode`), G/L reversals (reverse document of `I_JournalEntry`) as GL_REVERSAL events, the payment's **share** of the summary (payment amount / batch total, pro-rata G/L amount - never a 1:1 G/L line), the batch key level (transferred / not transferred / difference), the group reconciliation per business date x company code x account x currency (journal aggregated by company code, account and posting date for the configured accounts only; analytical cube + query), the changes timeline of a payment and of a request, change volumes per type, source, payment type, company code, house bank and day. Rules: amounts per currency, company-code DCL on every entity, read-only, nothing stored. **Clean core:** the product's G/L side uses released views only (VERIFY V110: C1 state and element names on the target release); the adapters map the consumer's subledger, which usually has no released view - read its tables read-only in the adapters and record them as the consumer's known clean-core exception (with the reason "no released view") in its delivery, so ATC findings on them are accepted deliberately, not silently. Never map the G/L side of an adapter to the journal tables when a released view exists.
 
-**Worked example (fictitious customer `PE`).** `ledger_item` from `zpe_item as Itm` (items with `Itm.cleared_by` = payment document, batch key `Itm.batch_id`); `ledger_batch` from `zpe_batch_total as Tot` grouped per batch / company code / account / currency, `GlReferenceKey` = `Tot.batch_id`; model `ledger` = {`area`: `ZPE_OPS`, `parameter`: `ZPE_LEDGER`, `default`: `0L`}, `gl_reference_type` = `ZPEGL`; `recon_account` from `zpe_clearing_account`; `recon_result` absent (the customer has no reconciliation check yet: the reconciliation shows the live legs only); `recon_bank_line` pending until the statement fields are confirmed; `document_event` from `zpe_doc_change`. The unit tests `tools/tests/test_payment_model.py` use this shape.
+**Worked example (fictitious customer `XX`).** `ledger_item` from `zxx_item as Itm` (items with `Itm.cleared_by` = payment document, batch key `Itm.batch_id`); `ledger_batch` from `zxx_batch_total as Tot` grouped per batch / company code / account / currency, `GlReferenceKey` = `Tot.batch_id`; model `ledger` = {`area`: `ZXX_OPS`, `parameter`: `ZXX_LEDGER`, `default`: `0L`}, `gl_reference_type` = `ZXXGL`; `recon_account` from `zxx_clearing_account`; `recon_result` absent (the customer has no reconciliation check yet: the reconciliation shows the live legs only); `recon_bank_line` pending until the statement fields are confirmed; `document_event` from `zxx_doc_change`. The unit tests `tools/tests/test_payment_model.py` use this shape.

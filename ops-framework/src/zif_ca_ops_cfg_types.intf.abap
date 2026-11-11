@@ -11,7 +11,7 @@
 *& 2026-11-07 | GC_PROD_MAINTAINABLE withdrawn: new rows only by transport from DV1 (user decision, D-3).
 *& 2026-11-10 | Moved from ZIF_CD_OPS_CFG_TYPES to the reusable framework ZCA_OPS: types, client and request
 *&            | constants, activities and the messages of the gate and of the framework app (class
-*&            | ZCA_OPS; 434 parameter, 435 area); the area is ZIF_CA_OPS_TYPES=>TY_AREA (was TY_PE_AREA
+*&            | ZCA_OPS; 434 parameter, 435 area); the area is ZIF_CA_OPS_TYPES=>TY_AREA (was the consumer-specific area type
 *&            | CHAR 4); a consumer's field check messages stay in its own types interface.
 *& 2026-11-10 | Message 436: e-mail template ID of an alert rule / channel not valid (alert e-mail templates).
 *& 2026-11-10 | Messages 437-439: control register (owner / backup user, team, runbook link).

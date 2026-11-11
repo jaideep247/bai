@@ -50,7 +50,7 @@ exceptions with an SLA due date.
 
 | Question | Rule |
 |---|---|
-| Which **area**? | A process gets **its own area** when its runs would otherwise be the latest run of another engine's area (a consumer's self-check reads the last run of an area). The area is a parameter area (≤ 16 characters, e.g. `ZPE_PAY`), created when the process is activated. |
+| Which **area**? | A process gets **its own area** when its runs would otherwise be the latest run of another engine's area (a consumer's self-check reads the last run of an area). The area is a parameter area (≤ 16 characters, e.g. `ZXX_PAY`), created when the process is activated. |
 | **Process ID**, **check IDs** | ≤ 20 characters, upper case. The check ID is GROUP2 of every finding - the key of controls, alert patterns and the dashboard; never rename it. |
 | **No-code aggregate or class?** | Aggregate when the rule is *rows of one approved table in a status (+ one more condition), counted or aged in days from a date field, per company code*. A class when it needs a join or anti-join (A without B), the latest row per object, times in hours, amounts, or several tables. |
 | **Schedule group** | One run per area and group (run variant): e.g. `DAILY` before the review cut-off, `HOURLY` for a flow with an SLA in hours. |
@@ -67,9 +67,9 @@ class skeleton with its test class. Rows are appended once - run it again after 
 
 ```sh
 # from the repository root - simple case on the command line
-python3 tools/abaptools/new_process.py --root <component> --area ZPE_PAY --process PAY_LIFE \
-    --name "Payment lifecycle" --role Z_PE_PAY_OPERATOR --owner-team "Payment operations" \
-    --agg "PAY_PENDING:COUNT:ZPE_REQUEST:STATUS:EQ:PENDING" --class "PAY_REFUND:ZCL_PE_C_REFUND" --dry-run
+python3 tools/abaptools/new_process.py --root <component> --area ZXX_PAY --process PAY_LIFE \
+    --name "Payment lifecycle" --role Z_XX_PAY_OPERATOR --owner-team "Payment operations" \
+    --agg "PAY_PENDING:COUNT:ZXX_REQUEST:STATUS:EQ:PENDING" --class "PAY_REFUND:ZCL_XX_C_REFUND" --dry-run
 
 # full case: a specification file (JSON), kept next to the seed files
 python3 tools/abaptools/new_process.py --root <component> --spec <component>/config/processes/<AREA>_<PROCESS>.json

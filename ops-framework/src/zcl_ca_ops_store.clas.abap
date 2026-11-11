@@ -11,7 +11,7 @@
 *& 2026-11-06 | rollback( ) added.
 *& 2026-11-06 | Exception carry-forward in save_findings; reconcile( ) auto-resolves.
 *& 2026-11-06 | Carry-forward keeps a pending waiver request (exceptions app).
-*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
+*& 2026-11-06 | Webhook key of the area (rename regression fixed); column names in comments.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-06 | get_stale_runs: running runs older than a limit, own run excluded (audit A06).
 *& 2026-11-06 | Parameter cache is run-scoped: start_run takes a fresh snapshot (audit A64).

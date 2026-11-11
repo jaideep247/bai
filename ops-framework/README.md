@@ -60,7 +60,7 @@ A consumer is any team's check, monitor or report; it references only `ZCA_*` ob
 (the demo `src/demo/zcl_ca_ops_demo.clas.abap` is a complete example in 200 lines, with its unit test).
 
 1. **Register an area.** The area is a parameter area of ZCA_PARAM (one area register,
-   `ZCA_PARAM_AREA`, at most 16 characters, e.g. `ZPE_OPS`) - enter it in the parameter app. Every run,
+   `ZCA_PARAM_AREA`, at most 16 characters, e.g. `ZXX_OPS`) - enter it in the parameter app. Every run,
    finding, alert rule, lock and authorisation of the consumer names it; `start_run` refuses an unknown or
    inactive area (message 043). Give users object `ZCA_OPS` with `ZCA_PARAR` = the area
    (`docs/auth_zca_ops.md`) and check it before a run:
@@ -75,7 +75,7 @@ zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activi
 
 ```abap
 DATA(lo_params) = zcl_ca_ops_factory=>get_params( ).
-DATA(lv_days) = lo_params->get_param( iv_name = 'ZPE_LOOKBACK_DAYS' iv_area = gc_area iv_default = `7` ).
+DATA(lv_days) = lo_params->get_param( iv_name = 'ZXX_LOOKBACK_DAYS' iv_area = gc_area iv_default = `7` ).
 ```
 
 3. **Write findings.** Start the run, make it durable, write the findings (B / E / W become exceptions
@@ -116,7 +116,7 @@ ENDTRY.
    above applies them. A prepared report goes out by e-mail with
 
 ```abap
-zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'ZPE_DAILY' iv_subject = lv_subject iv_html = lv_html ).
+zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'ZXX_DAILY' iv_subject = lv_subject iv_html = lv_html ).
 " recipients: parameter ALERT_ZPE_DAILY in area CA_OPS (SO23 lists), fallback ALERT_DEFAULT
 ```
 
@@ -140,12 +140,12 @@ ls_finding-context       = lv_label_line.                " labelled lines, never
    implementing `ZIF_CA_OPS_ALERT_SECTION`, named in the parameter `ALERT_SECTION_CLASS` (area `CA_OPS`):
 
 ```abap
-CLASS zcl_pe_alert_section DEFINITION PUBLIC FINAL CREATE PUBLIC.
+CLASS zcl_xx_alert_section DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_alert_section.
 ENDCLASS.
 
-CLASS zcl_pe_alert_section IMPLEMENTATION.
+CLASS zcl_xx_alert_section IMPLEMENTATION.
   METHOD zif_ca_ops_alert_section~owns.        " the finding is shown in this section
     rv_owns = xsdbool( is_finding-check_code = gc_check_ack_missing ).
   ENDMETHOD.
@@ -157,7 +157,7 @@ CLASS zcl_pe_alert_section IMPLEMENTATION.
   METHOD zif_ca_ops_alert_section~text.
   ENDMETHOD.
   METHOD zif_ca_ops_alert_section~template_id.  " optional: template of messages with owned findings
-    rv_template_id = 'ZPE_ALERT_ACK'.             " its table goes where the template has {{TABLE_SECTION}}
+    rv_template_id = 'ZXX_ALERT_ACK'.             " its table goes where the template has {{TABLE_SECTION}}
   ENDMETHOD.
 ENDCLASS.
 ```
@@ -169,23 +169,23 @@ ENDCLASS.
    registered target, never below 30 days, one commit per package, test mode counts only.
 
 ```abap
-CLASS zcl_pe_purge_target DEFINITION PUBLIC FINAL CREATE PUBLIC.
+CLASS zcl_xx_purge_target DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_purge_target.
 ENDCLASS.
 
-CLASS zcl_pe_purge_target IMPLEMENTATION.
+CLASS zcl_xx_purge_target IMPLEMENTATION.
   METHOD zif_ca_ops_purge_target~count_purgeable.
-    SELECT COUNT(*) FROM zpe_event WHERE created_at < @iv_cutoff INTO @rv_count.
+    SELECT COUNT(*) FROM zxx_event WHERE created_at < @iv_cutoff INTO @rv_count.
   ENDMETHOD.
   METHOD zif_ca_ops_purge_target~delete_package.
-    SELECT event_id FROM zpe_event WHERE created_at < @iv_cutoff
+    SELECT event_id FROM zxx_event WHERE created_at < @iv_cutoff
       ORDER BY event_id INTO TABLE @DATA(lt_keys) UP TO @iv_max ROWS.
-    DELETE zpe_event FROM TABLE @( CORRESPONDING #( lt_keys ) ).
+    DELETE zxx_event FROM TABLE @( CORRESPONDING #( lt_keys ) ).
     rv_count = sy-dbcnt.                       " no commit: the purge commits per package
   ENDMETHOD.
 ENDCLASS.
-" ZCA_OPS_PURGE: TARGET = ZPE_EVENT, CLASS_NAME = ZCL_PE_PURGE_TARGET,
+" ZCA_OPS_PURGE: TARGET = ZXX_EVENT, CLASS_NAME = ZCL_XX_PURGE_TARGET,
 "                PARAM_AREA = CA_OPS, PARAM_NAME = RETENTION_DAYS_ZPE_EVENT (definition delivered by the consumer)
 ```
 
@@ -197,18 +197,18 @@ ENDCLASS.
    completeness check. Scaffold `../tools/abaptools/new_process.py`, guide `docs/ADDING_A_BUSINESS_PROCESS.md`.
 
 ```abap
-CLASS zcl_pe_c_refund DEFINITION PUBLIC FINAL CREATE PUBLIC.
+CLASS zcl_xx_c_refund DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_check.
 ENDCLASS.
 
-CLASS zcl_pe_c_refund IMPLEMENTATION.
+CLASS zcl_xx_c_refund IMPLEMENTATION.
   METHOD zif_ca_ops_check~run.             " GROUP1 / GROUP2 are stamped by the runner
-    rs_result-findings = NEW zcl_pe_refund_dao( )->rejected_without_refund( is_context-today ).
+    rs_result-findings = NEW zcl_xx_refund_dao( )->rejected_without_refund( is_context-today ).
     rs_result-item_count = lines( rs_result-findings ).
   ENDMETHOD.
 ENDCLASS.
-" ZCA_OPS_CHECK: AREA = ZPE_OPS, CHECK_ID = PE_REFUND, PROCESS_ID = PAY_LIFE, CLASS_NAME = ZCL_PE_C_REFUND,
+" ZCA_OPS_CHECK: AREA = ZXX_OPS, CHECK_ID = XX_REFUND, PROCESS_ID = PAY_LIFE, CLASS_NAME = ZCL_XX_C_REFUND,
 "                SCHED_GROUP = DAILY, BUKRS_AWARE = X, ACTIVE = X
 ```
 

@@ -42,7 +42,7 @@ SPEC = {
     # class ZCA_OPS, area CA_OPS
     'framework': dict(
         ddic='', draft_ddic='ui', prefix='ca',
-        folder='ui', pe_area='CA_OPS', root='OpsCfgAll', draft='zca_d_opscfg', service='ZUI_CA_OPS_CFG',
+        folder='ui', area='CA_OPS', root='OpsCfgAll', draft='zca_d_opscfg', service='ZUI_CA_OPS_CFG',
         title='Processes, checks, alerting, purge targets and controls', tables=[
             ('zca_ops_alrule', 'AlertRule', 'zca_d_alrule', 'Alert rule', 'Alert rules', [],
              [('area', 'area', True), ('enum', 'min_severity', ',' + SEV),
