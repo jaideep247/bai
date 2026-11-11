@@ -7,6 +7,7 @@
 //          / late from the payment worklist (ZI_CD_PayWorkState; a clean payment has none - source unknown bucket).
 // Modification log: 2026-11-11 | Generated from the mapping spec (payment model).
 // CompanyCode: VERIFY-SE11 DPAYH-BUKRS (as ZI_CD_PayLifeRun)
+// CompanyCurrency: Released view I_CompanyCode (C1, VERIFY.md V110) - Currency, Country (country of TFK042Z); TFK042Z stays a table read (no released view)
 // TransactionType: V83: transaction of the request (field of ZCD_PAYM_REQ_LOG confirmed by the user 2026-11-11, name VERIFY-SE11) - reached through the request (pending section); blank until then
 // RequestStatus: V84: business request lifecycle status (PENDING / SCHEDULED / SRCPOSTED / source reject) - no confirmed table / field (control_seed.md section 2a P2)
 // PaymentMethod: VERIFY-SE11 DPAYH-PYMET (as ZI_CD_PayLifeRun)
@@ -20,8 +21,8 @@
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #XL, dataClass: #TRANSACTIONAL }
 define view entity ZI_CD_PaymFact
   as select from ZI_CD_PayLifeRun as Pay
-    left outer join t001               as Cc  on  Cc.bukrs        = Pay.CompanyCode
-    left outer join tfk042z            as Pm  on  Pm.land1        = Cc.land1
+    left outer join I_CompanyCode      as Cc  on  Cc.CompanyCode  = Pay.CompanyCode
+    left outer join tfk042z            as Pm  on  Pm.land1        = Cc.Country
                                               and Pm.zlsch        = Pay.PaymentMethod
     left outer join ZI_CD_PayMethodCls as McC on  McC.Flow        = 'C'
                                               and McC.PaymentMethod = Pay.PaymentMethod
@@ -33,7 +34,7 @@ define view entity ZI_CD_PaymFact
   key Pay.RunId as PaymentRun,
   key Pay.PaymentDocument as PaymentDocument,
       Pay.CompanyCode as CompanyCode,
-      Cc.waers as CompanyCurrency,
+      Cc.Currency as CompanyCurrency,
       cast( case when Pm.xeinz = 'X' then 'C' when Pm.zlsch is null then ' ' else 'D' end as abap.char( 1 ) ) as Flow,
       cast( coalesce( Ws.SourceSystem, ' ' ) as abap.char( 10 ) ) as Source,
       cast( '' as abap.char( 20 ) ) as TransactionType,

@@ -66,7 +66,7 @@ Every field name above that is not confirmed goes into configuration (not code) 
 
 Confirmed facts applied (§1, §3): FIKEY links subledger and G/L (DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY, AWTYP `TRACE_GL_AWTYP`, same BUKRS, STBLG blank); BSEG-XREF2 = DFKKOP-AUGBL; FEBEP-CHECT = AUGBL (methods E G H I J K L) / DFKKCR-ZTNUM (C); the G/L receives consolidated amounts per clearing account - the proof is layered (payment -> share of the FIKEY summary -> G/L document -> journal lines), never document by document; a reversal gives a new AUGBL; stop and reissue = new payment document and cheque number; AUGRD 05 = reversal; DFKKCR-STATE B cashed; FEBEP-VB1OK / VB2OK posted flags; DPAYH status values. Mapping: `config/payment_model/mapping.json` (sections `ledger_item`, `ledger_batch`, `recon_account`, `recon_result`, `recon_bank_line`, `document_event`); design `Dashboard_Production_Support.md` §9.
 
-**Suite VERIFY items (V100-V109; the product's V110-V114 are in `ops-framework/docs/VERIFY.md`).** Nothing activated; every row open.
+**Suite VERIFY items (V100-V109, V115; the product's V110-V114 are in `ops-framework/docs/VERIFY.md`).** Nothing activated; every row open.
 
 | ID | Kind | Item |
 |---|---|---|
@@ -74,9 +74,10 @@ Confirmed facts applied (§1, §3): FIKEY links subledger and G/L (DFKKKO-FIKEY 
 | V101 | VERIFY-SE11 / QA1 | DFKKOP-HKONT, BETRW, WAERS, TVORG, VKONT, OPUPW / OPUPK / OPUPZ (adapter `ZI_CD_LedgItem`); that the clearing document's FIKEY carries the offset of every cleared item on the item's account (DFKKSUMC of that FIKEY per HKONT = sum of the cleared items); DFKKSUMC-BETRW and ACDOCA-WSL carry the same sign (subledger - G/L difference 0 on a clean key) |
 | V102 | VERIFY-SE11 | Reconciliation key header (DFKKSUM) status field (open / closed) for `BatchStatus`; DFKKKO secondary index on FIKEY (items of a key) |
 | V103 | VERIFY-SE11 | Main / sub transaction text tables (TFKHVOT / TFKTVOT candidates, key APPLK / HVORG / TVORG / SPRAS) - texts blank until confirmed |
-| V104 | VERIFY-SE11 | BKPF-AWKEY form of a 12-character FIKEY (left-aligned, no padding) for the join of `ZI_CD_LedgGlDoc` (as A_GL_TRANSFER) |
+| V104 | VERIFY-SE11 | BKPF-AWKEY form of a 12-character FIKEY (left-aligned, no padding) for the join of `ZI_CD_LedgGlDoc` (as A_GL_TRANSFER; read there as `I_JournalEntry`-OriginalReferenceDocument since D-C8 was changed 2026-11-11) |
 | V105 | VERIFY | Cheque bank lines: CHECT = cheque number -> DFKKCR-DOC1R to reach the payment document (`ZCL_CD_OPS_CHEQUE_LINK` rule) for `ClearingDocument` of method C lines |
 | V106 | VERIFY-SE11 / ST05 | BSEG secondary index BUKRS / XREF2 (or the clearing-account restriction) before the G/L clearing line of a bank line is mapped (`GlFiscalYear` / `GlDocument` / `GlLineItem`; HCK VERIFY item 14) |
 | V107 | VERIFY-SE11 | FEBKO-AZNUM (statement number), FEBEP-VALUT (value date) added to `ZI_CD_HckRcBankLine` |
 | V108 | VERIFY-SE11 / ABAP Unit | DFKKKO-STBEL / CPUDT / ERNAM and the CPUDT index; DPAYH by DOC1R - then activate `A_DOC_CHANGE` (`config/hck_seed.md` §2) with its control and alert rows; run `ltc_docchg`, `ltc_docchg_dao` |
 | V109 | VERIFY-ADT / QA1 | Suite helper CDS `ZI_CD_LedgRcLast` / `_LedgRcPiv` / `_LedgRcDay` (stored result per group-day equals the morning report: legs, differences, verdict) and `ZI_CD_DocEvtU` (UNION ALL, 45-day window of `ZI_CD_PayLifeRun`) |
+| V115 | VERIFY-ADT / QA1 / PlanViz | D-C8 (changed 2026-11-11) on the suite side: `ZI_CD_HckRcGlLine` (released `I_JournalEntryItem`, no DCL of its own) gives `GET_GL_DAYS` the same totals as the former ACDOCA read (QA1: one window of all sets, old statement vs new, per company code / account / currency / day / AWTYP; `I_JournalEntryItem`-Ledger = ACDOCA-RLDNR for `EBS_GL_LEDGER`); PlanViz **LDG-PV6** (`Performance_Review.md` §13); ABAP Unit `ZCL_CD_HCK_RECON_DAO` (`gl_days_per_awtyp` on the view double); `ZI_CD_PaymFact` on `I_CompanyCode` (Country, Currency = T001 LAND1, WAERS); ATC clean-core findings of the subledger tables accepted as the known exception (`Dashboard_Production_Support.md` §9b) |

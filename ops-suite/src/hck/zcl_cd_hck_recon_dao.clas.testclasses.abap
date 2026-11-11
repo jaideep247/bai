@@ -5,9 +5,11 @@
 *& ZCD_HCK_RCSET, the posting area ZBTR (RECON entries, in memory), the bank line view
 *& ZI_CD_HckRcBankLine (grouped per account / currency / day / code /
 *& direction, last day, lines without returns lot - DFKKRP, deposits per
-*& posting document), ACDOCA (per day and reference procedure, deposit
+*& posting document), the G/L line view ZI_CD_HckRcGlLine over the released
+*& I_JournalEntryItem (per day and reference procedure), ACDOCA (deposit
 *& documents per assignment, assignment sums, groups that do not net to
-*& zero with the cap), DFKKSUMC and DPAYH; empty key lists read nothing.
+*& zero with the cap; the same journal lines in both doubles), DFKKSUMC and
+*& DPAYH; empty key lists read nothing.
 *& No real database read; does not prove live SAP runtime behavior
 *& (VERIFY-DDIC field names, VERIFY-ADT: CDS entity and JOIN @itab doubles).
 *& Modification log:
@@ -16,6 +18,8 @@
 *&            | is not read (roles_active_only).
 *& 2026-11-08 | Customer posting areas: roles are ZBTR entries (ZCL_CD_OPS_POSTAREA_MEM); roles_recon_entries_only
 *&            | - RECON / BAI2 entries only, never a lifecycle entry or a '*' entry.
+*& 2026-11-11 | D-C8: get_gl_days on ZI_CD_HckRcGlLine (released I_JournalEntryItem);
+*&            | the journal lines are inserted field by field into its double too.
 *&---------------------------------------------------------------------*
 CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -97,6 +101,11 @@ CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
         iv_amount      TYPE zif_cd_hck_recon_types=>ty_amount
       RETURNING
         VALUE(rs_line) TYPE acdoca.
+    METHODS gl_view_line
+      IMPORTING
+        is_line        TYPE acdoca
+      RETURNING
+        VALUE(rs_line) TYPE zi_cd_hckrcglline.
     METHODS accounts
       RETURNING
         VALUE(rt_accounts) TYPE zif_cd_hck_recon_types=>tt_account.
@@ -127,7 +136,7 @@ CLASS ltc_recon_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCD_HCK_RCSET' ) ( 'ZI_CD_HCKRCBANKLINE' )
+      i_dependency_list = VALUE #( ( 'ZCD_HCK_RCSET' ) ( 'ZI_CD_HCKRCBANKLINE' ) ( 'ZI_CD_HCKRCGLLINE' )
                                    ( 'DFKKRP' ) ( 'ACDOCA' ) ( 'DFKKSUMC' ) ( 'DPAYH' ) ) ).
   ENDMETHOD.
 
@@ -262,8 +271,25 @@ CLASS ltc_recon_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD gl_view_line.
+    " The same journal line as the released view delivers it (ZI_CD_HckRcGlLine over I_JournalEntryItem)
+    rs_line-sourceledger                = is_line-rldnr.
+    rs_line-ledger                      = is_line-rldnr.
+    rs_line-companycode                 = is_line-rbukrs.
+    rs_line-fiscalyear                  = is_line-gjahr.
+    rs_line-accountingdocument          = is_line-belnr.
+    rs_line-ledgergllineitem            = is_line-docln.
+    rs_line-glaccount                   = is_line-racct.
+    rs_line-transactioncurrency         = is_line-rwcur.
+    rs_line-postingdate                 = is_line-budat.
+    rs_line-referencedocumenttype       = is_line-awtyp.
+    rs_line-amountintransactioncurrency = is_line-wsl.
+  ENDMETHOD.
+
+
   METHOD insert_gl_lines.
     DATA lt_lines TYPE STANDARD TABLE OF acdoca WITH EMPTY KEY.
+    DATA lt_view_lines TYPE STANDARD TABLE OF zi_cd_hckrcglline WITH EMPTY KEY.
     " Day 1: two transfer lines and one other posting; another account, ledger and day are not read
     INSERT gl_line( iv_docln = 1 iv_belnr = '0200000001' iv_day = gc_test-day1 iv_amount = 60 ) INTO TABLE lt_lines.
     INSERT gl_line( iv_docln = 2 iv_belnr = '0200000001' iv_day = gc_test-day1 iv_amount = 70 ) INTO TABLE lt_lines.
@@ -291,6 +317,10 @@ CLASS ltc_recon_dao IMPLEMENTATION.
     INSERT gl_line( iv_docln = 1 iv_belnr = '0400000003' iv_day = gc_test-day2 iv_amount = 45
                     iv_zuonr = gc_test-zuonr_op ) INTO TABLE lt_lines.
     go_env->insert_test_data( lt_lines ).
+    LOOP AT lt_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      INSERT gl_view_line( <ls_line> ) INTO TABLE lt_view_lines.
+    ENDLOOP.
+    go_env->insert_test_data( lt_view_lines ).
   ENDMETHOD.
 
 

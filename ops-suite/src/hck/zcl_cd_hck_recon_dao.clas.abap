@@ -16,6 +16,10 @@
 *& 2026-11-08 | Customer posting areas: get_btc_roles from ZBTR usage RECON through ZCL_CD_OPS_POSTAREA (was a SELECT
 *&            | on ZCD_HCK_BTCROLE).
 *& 2026-11-10 | get_sets reads TOLERANCE_SET (set tolerance maintained).
+*& 2026-11-11 | Decision D-C8 changed: get_gl_days reads the released view
+*&            | I_JournalEntryItem (through ZI_CD_HckRcGlLine, no DCL in a
+*&            | control read); the document-key, assignment IN-list and HAVING /
+*&            | top-N reads stay on ACDOCA (performance, PlanViz first).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation reads (HANA)</p>
 "! Access paths and the SQL-trace items: Performance_Review.md, section "Three-way
@@ -132,18 +136,22 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
     IF it_keys IS INITIAL.
       RETURN.
     ENDIF.
-    " VERIFY-DDIC: ACDOCA RLDNR, RBUKRS, RACCT, RWCUR / WSL (transaction currency, signed), BUDAT,
-    " AWTYP. One statement for all sets: the key table is joined on HANA (as EBS R18)
-    SELECT a~rbukrs AS bukrs, a~racct AS hkont, a~rwcur AS currency, a~budat AS day, a~awtyp,
-           SUM( a~wsl ) AS amount, COUNT(*) AS line_count
-      FROM acdoca AS a
-      INNER JOIN @it_keys AS k ON  a~rbukrs = k~bukrs
-                               AND a~racct  = k~hkont
-                               AND a~rwcur  = k~currency
-      WHERE a~rldnr = @iv_ledger
-        AND a~budat BETWEEN @iv_from AND @iv_to
-      GROUP BY a~rbukrs, a~racct, a~rwcur, a~budat, a~awtyp
-      ORDER BY a~rbukrs, a~racct, a~rwcur, a~budat, a~awtyp
+    " Released view I_JournalEntryItem through ZI_CD_HckRcGlLine (decision D-C8; the view keeps the
+    " released view's DCL out of a control read). A straight aggregate on ledger, company code, account,
+    " currency and posting date - the predicate of the ledger model's ZI_CD_LedgAcctDay, so the stored
+    " G/L leg and the drill-down read one source. One statement for all sets: the key table is joined
+    " on HANA (as EBS R18). PlanViz LDG-PV6 (Performance_Review.md section 13)
+    SELECT a~companycode AS bukrs, a~glaccount AS hkont, a~transactioncurrency AS currency,
+           a~postingdate AS day, a~referencedocumenttype AS awtyp,
+           SUM( a~amountintransactioncurrency ) AS amount, COUNT(*) AS line_count
+      FROM zi_cd_hckrcglline AS a
+      INNER JOIN @it_keys AS k ON  a~companycode         = k~bukrs
+                               AND a~glaccount           = k~hkont
+                               AND a~transactioncurrency = k~currency
+      WHERE a~ledger = @iv_ledger
+        AND a~postingdate BETWEEN @iv_from AND @iv_to
+      GROUP BY a~companycode, a~glaccount, a~transactioncurrency, a~postingdate, a~referencedocumenttype
+      ORDER BY a~companycode, a~glaccount, a~transactioncurrency, a~postingdate, a~referencedocumenttype
       INTO CORRESPONDING FIELDS OF TABLE @rt_days.
   ENDMETHOD.
 
@@ -211,7 +219,10 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
     IF it_docs IS INITIAL.
       RETURN.
     ENDIF.
-    " VERIFY-DDIC: ACDOCA ZUONR (assignment = Stripe descriptor after payout processing), DRCRK
+    " VERIFY-DDIC: ACDOCA ZUONR (assignment = Stripe descriptor after payout processing), DRCRK.
+    " Stays on the journal table (D-C8): a document-key read (JOIN @itab on BUKRS / BELNR / GJAHR with
+    " RLDNR - the primary key prefix), not an account / date aggregate; through the released view the
+    " key prefix depends on the view's ledger derivation (Performance_Review.md section 9, R8)
     SELECT a~rbukrs AS bukrs, a~belnr, a~gjahr, a~zuonr, a~drcrk AS cdi,
            SUM( a~wsl ) AS amount, COUNT(*) AS line_count
       FROM acdoca AS a
@@ -234,6 +245,9 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
     lt_zuonr = VALUE #( FOR lv_zuonr IN it_zuonr ( sign   = zif_ca_ops_types=>gc_range-sign_include
                                                    option = zif_ca_ops_types=>gc_range-option_equal
                                                    low    = lv_zuonr ) ).
+    " Stays on the journal table (D-C8): the assignment IN list has no index; on the table the account
+    " and the window bound the column scan - through the view stack the push-down of the IN list is
+    " unproven (Performance_Review.md section 9, R9)
     SELECT a~zuonr, a~drcrk AS cdi, SUM( a~wsl ) AS amount, COUNT(*) AS line_count
       FROM acdoca AS a
       WHERE a~rldnr  = @iv_ledger
@@ -254,7 +268,10 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
     ENDIF.
     " ACH collections are cleared one-to-one by assignment (F.13): a group that does not net to zero
     " is open; a line without assignment is not part of that model (the day leg covers it).
-    " Read on ACDOCA (account in the key) - BSEG has no account index (Performance_Review.md)
+    " Read on ACDOCA (account in the key) - BSEG has no account index (Performance_Review.md).
+    " Stays on the journal table (D-C8): GROUP BY assignment with HAVING and a top-N over ~20 days of
+    " the busiest clearing account (millions of lines on a 2-million-payment day); HAVING and the row
+    " cap through the released view stack need PlanViz first (Performance_Review.md section 9, R10)
     SELECT a~zuonr, MIN( a~budat ) AS first_day, SUM( a~wsl ) AS amount, COUNT(*) AS line_count
       FROM acdoca AS a
       WHERE a~rldnr  = @iv_ledger

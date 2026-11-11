@@ -2,6 +2,31 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (ledger model on released CDS views)
+
+Goal (user, 2026-11-11): the G/L side of the ledger and document-change model reads SAP's released CDS views
+instead of tables (clean core, upgrade-stable); a consumer's subledger reads stay table reads where no released
+view exists.
+
+### Changed
+- Templates `templates/payment_model`: `ZI_<P>_LedgJrnl` reads `I_JournalEntryItem` with the header
+  `I_JournalEntry`, the chart of accounts of `I_CompanyCode` and the account text `I_GLAccountText` (was the
+  journal, document header, entry view, company code and account text tables); the posting key from
+  `I_JournalEntryItem` (no entry-view join; fallback in VERIFY V110). `ZI_<P>_LedgGlDoc` finds the G/L documents of
+  a batch key on `I_JournalEntry` (reference type + original reference document + company code; reverse document /
+  year), `ZI_<P>_LedgAcctDay` aggregates `I_JournalEntryItem`, the G/L reversal branch of `ZI_<P>_DocEvtAll` reads
+  the reversal document's header from `I_JournalEntry`. Output element names, the "reversed documents excluded"
+  rule and the per-key / per-account-and-day aggregation unchanged - consuming views, services, DCLs, UI
+  annotations and CDS tests keep working. The source views' DCL is not inherited (the product's projections keep
+  their own DCL).
+- Generated CDS tests: `ltc_acct_day` doubles `I_JournalEntryItem` (field by field); new `ltc_journal` (configured
+  ledger only, header attributes, account text in the company code's chart of accounts, line of a reversed
+  document flagged) and `ltc_gl_doc` (G/L documents of a batch key by reference type + key + company code, reversed
+  document listed) double `I_JournalEntryItem`, `I_JournalEntry`, `I_CompanyCode`, `I_GLAccountText`.
+- `docs/VERIFY.md` V110 (released views, C1 release state, element names, posting key fallback), V113 (PlanViz
+  under the released views), V114 (new CDS tests); `docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md` §5 (released views;
+  the consumer's subledger tables as a recorded clean-core exception).
+
 ## [Unreleased] - 2026-11-11 (customer-neutral product)
 
 Goal (user, 2026-11-11): the framework and the shared tools stay generic; a customer's tables, fields,

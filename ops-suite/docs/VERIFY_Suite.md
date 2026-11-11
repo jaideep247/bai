@@ -14,7 +14,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | V67-V69 | SAP job monitor: mass activity workers, payment run, Control-M rows | `Release_Readiness.md` |
 | V80, V81 | Operations response features: runbook rows, overview page cards | `Release_Readiness.md` |
 | **V82-V93** | **Service health, process flow, missing-volume checks, payment model mapping (build B)** | **this document, §2** |
-| V100-V109 | Ledger drill-down, group reconciliation, document changes (build C) | `USAA_Known_Tables.md` §4 |
+| V100-V109, V115 | Ledger drill-down, group reconciliation, document changes (build C); V115 released views of the G/L side (D-C8 changed 2026-11-11) | `USAA_Known_Tables.md` §4 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping
 

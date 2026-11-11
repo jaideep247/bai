@@ -7,13 +7,17 @@
 *& several requests and a request to several payments, the feeder reference
 *& is masked unless the feeder row marks it visible; ledger model: a
 *& payment's share of the batch summary, totals per currency, reversed G/L
-*& documents left out, batch key transfer status, journal aggregated per
-*& reconciled account and day; the old and new clearing document linked
-*& on the change timeline. Generated - never edit.
+*& documents left out, batch key transfer status, the journal line and the
+*& G/L documents of a batch key from the released views (I_JournalEntryItem,
+*& I_JournalEntry, I_CompanyCode, I_GLAccountText doubled), journal
+*& aggregated per reconciled account and day; the old and new clearing
+*& document linked on the change timeline. Generated - never edit.
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& {{SINCE}} | Generated from the product template (payment model, ledger and
 *&            | document-change model).
+*& 2026-11-11 | Released views: ltc_acct_day doubles I_JournalEntryItem (was
+*&            | the journal table); new ltc_journal, ltc_gl_doc.
 *&---------------------------------------------------------------------*
 "! ZR_{{P}}_PAYMCUBE: two currencies are never added; collections and disbursements stay apart
 CLASS ltc_cube DEFINITION FINAL
@@ -710,11 +714,309 @@ CLASS ltc_batch_key IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
+
+"! ZI_{{P}}_LEDGJRNL: the journal line from the released views - configured ledger only, header attributes, account
+"! text in the company code's chart of accounts, a line of a reversed document flagged (released views doubled)
+CLASS ltc_journal DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        ledger       TYPE c LENGTH 2 VALUE 'L1',
+        other_ledger TYPE c LENGTH 2 VALUE 'L2',
+        bukrs        TYPE c LENGTH 4 VALUE 'ZT01',
+        year         TYPE n LENGTH 4 VALUE '2026',
+        chart        TYPE c LENGTH 4 VALUE 'ZCOA',
+        other_chart  TYPE c LENGTH 4 VALUE 'ZOTH',
+        account      TYPE c LENGTH 10 VALUE 'GLA1',
+        text         TYPE c LENGTH 50 VALUE 'Clearing account',
+        other_text   TYPE c LENGTH 50 VALUE 'Text of another chart of accounts',
+        doc          TYPE c LENGTH 10 VALUE 'GD1',
+        reversed     TYPE c LENGTH 10 VALUE 'GD2',
+        reversal     TYPE c LENGTH 10 VALUE 'GD3',
+        doc_type     TYPE c LENGTH 2 VALUE 'ZT',
+        transfer     TYPE c LENGTH 5 VALUE '{{GL_REFTYPE}}',
+        batch        TYPE c LENGTH 20 VALUE 'K1',
+        usd          TYPE c LENGTH 5 VALUE 'USD',
+        day          TYPE d VALUE '20261110',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS configured_ledger_only FOR TESTING.
+    METHODS header_and_account_text FOR TESTING.
+    METHODS reversed_doc_flagged FOR TESTING.
+
+    METHODS item
+      IMPORTING
+        iv_ledger      TYPE clike
+        iv_doc         TYPE clike
+        iv_amount      TYPE decfloat34
+      RETURNING
+        VALUE(rs_item) TYPE i_journalentryitem.
+    METHODS header
+      IMPORTING
+        iv_doc           TYPE clike
+        iv_reverse_doc   TYPE clike OPTIONAL
+      RETURNING
+        VALUE(rs_header) TYPE i_journalentry.
+ENDCLASS.
+
+
+CLASS ltc_journal IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_{{P}}_LEDGJRNL' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD item.
+    rs_item-ledger                      = iv_ledger.
+    rs_item-sourceledger                = iv_ledger.
+    rs_item-companycode                 = gc-bukrs.
+    rs_item-fiscalyear                  = gc-year.
+    rs_item-accountingdocument          = iv_doc.
+    rs_item-ledgergllineitem            = '000001'.
+    rs_item-glaccount                   = gc-account.
+    rs_item-postingdate                 = gc-day.
+    rs_item-transactioncurrency         = gc-usd.
+    rs_item-amountintransactioncurrency = iv_amount.
+  ENDMETHOD.
+
+
+  METHOD header.
+    rs_header-companycode                    = gc-bukrs.
+    rs_header-fiscalyear                     = gc-year.
+    rs_header-accountingdocument             = iv_doc.
+    rs_header-accountingdocumenttype         = gc-doc_type.
+    rs_header-postingdate                    = gc-day.
+    rs_header-accountingdocumentcreationdate = gc-day.
+    rs_header-referencedocumenttype          = gc-transfer.
+    rs_header-originalreferencedocument      = gc-batch.
+    rs_header-reversedocument                = iv_reverse_doc.
+    IF iv_reverse_doc IS NOT INITIAL.
+      rs_header-reversedocumentfiscalyear = gc-year.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_cfg TYPE STANDARD TABLE OF zi_{{p}}_ledgcfg WITH EMPTY KEY.
+    DATA lt_items TYPE STANDARD TABLE OF i_journalentryitem WITH EMPTY KEY.
+    DATA lt_headers TYPE STANDARD TABLE OF i_journalentry WITH EMPTY KEY.
+    DATA lt_companies TYPE STANDARD TABLE OF i_companycode WITH EMPTY KEY.
+    DATA lt_texts TYPE STANDARD TABLE OF i_glaccounttext WITH EMPTY KEY.
+    DATA ls_cfg TYPE zi_{{p}}_ledgcfg.
+    DATA ls_company TYPE i_companycode.
+    DATA ls_text TYPE i_glaccounttext.
+    go_env->clear_doubles( ).
+    ls_cfg-ledger = gc-ledger.
+    INSERT ls_cfg INTO TABLE lt_cfg.
+    ls_company-companycode     = gc-bukrs.
+    ls_company-chartofaccounts = gc-chart.
+    INSERT ls_company INTO TABLE lt_companies.
+    " The account's text in the company code's chart of accounts and in another chart (never shown)
+    ls_text-chartofaccounts   = gc-chart.
+    ls_text-glaccount         = gc-account.
+    ls_text-language          = sy-langu.
+    ls_text-glaccountlongname = gc-text.
+    INSERT ls_text INTO TABLE lt_texts.
+    ls_text-chartofaccounts   = gc-other_chart.
+    ls_text-glaccountlongname = gc-other_text.
+    INSERT ls_text INTO TABLE lt_texts.
+    " GD1 in the configured ledger and in another ledger; GD2 reversed by GD3
+    INSERT header( gc-doc ) INTO TABLE lt_headers.
+    INSERT header( iv_doc = gc-reversed iv_reverse_doc = gc-reversal ) INTO TABLE lt_headers.
+    INSERT item( iv_ledger = gc-ledger iv_doc = gc-doc iv_amount = 100 ) INTO TABLE lt_items.
+    INSERT item( iv_ledger = gc-other_ledger iv_doc = gc-doc iv_amount = 999 ) INTO TABLE lt_items.
+    INSERT item( iv_ledger = gc-ledger iv_doc = gc-reversed iv_amount = 40 ) INTO TABLE lt_items.
+    go_env->insert_test_data( lt_cfg ).
+    go_env->insert_test_data( lt_companies ).
+    go_env->insert_test_data( lt_texts ).
+    go_env->insert_test_data( lt_headers ).
+    go_env->insert_test_data( lt_items ).
+  ENDMETHOD.
+
+
+  METHOD configured_ledger_only.
+    TRY.
+        SELECT ledger, gldocument, amountintranscurrency FROM zi_{{p}}_ledgjrnl
+          ORDER BY gldocument INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Lines of the configured ledger only' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-ledger ) exp = CONV string( gc-ledger )
+                                            msg = 'Ledger of the parameter' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV decfloat34( lt_rows[ 1 ]-amountintranscurrency )
+                                            exp = CONV decfloat34( 100 )
+                                            msg = 'Amount in transaction currency of the line' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD header_and_account_text.
+    TRY.
+        SELECT documenttype, entrydate, glaccounttext, referencetype, referencekey FROM zi_{{p}}_ledgjrnl
+          WHERE gldocument = @gc-doc INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One line of GD1' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-documenttype ) exp = CONV string( gc-doc_type )
+                                            msg = 'Document type from the header' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-entrydate exp = gc-day msg = 'Entry date from the header' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-glaccounttext ) exp = CONV string( gc-text )
+                                            msg = 'Account text in the chart of accounts of the company code' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-referencetype ) exp = CONV string( gc-transfer )
+                                            msg = 'Reference type from the header' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-referencekey ) exp = CONV string( gc-batch )
+                                            msg = 'Reference key from the header' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD reversed_doc_flagged.
+    TRY.
+        SELECT gldocument, reversaldocument, isreversal FROM zi_{{p}}_ledgjrnl
+          ORDER BY gldocument INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'GD1 and GD2' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-isreversal exp = abap_false msg = 'GD1 not reversed' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-isreversal exp = abap_true
+                                            msg = 'Line of a reversed document flagged' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 2 ]-reversaldocument )
+                                            exp = CONV string( gc-reversal )
+                                            msg = 'Reversal document from the header' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZI_{{P}}_LEDGGLDOC: the G/L documents of a batch key found on the released header view by reference type + key +
+"! company code; a reversed document listed with IsReversed (I_JournalEntry doubled)
+CLASS ltc_gl_doc DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        batch       TYPE c LENGTH 2 VALUE 'K1',
+        bukrs       TYPE c LENGTH 4 VALUE 'ZT01',
+        other_bukrs TYPE c LENGTH 4 VALUE 'ZT02',
+        year        TYPE n LENGTH 4 VALUE '2026',
+        account     TYPE c LENGTH 10 VALUE 'GLA1',
+        account_2   TYPE c LENGTH 10 VALUE 'GLA2',
+        usd         TYPE c LENGTH 5 VALUE 'USD',
+        transfer    TYPE c LENGTH 5 VALUE '{{GL_REFTYPE}}',
+        other_ref   TYPE c LENGTH 5 VALUE 'ZOTH',
+        doc         TYPE c LENGTH 10 VALUE 'GD1',
+        reversed    TYPE c LENGTH 10 VALUE 'GD2',
+        reversal    TYPE c LENGTH 10 VALUE 'GD3',
+        other_type  TYPE c LENGTH 10 VALUE 'GD4',
+        other_cc    TYPE c LENGTH 10 VALUE 'GD5',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS documents_of_the_key FOR TESTING.
+
+    METHODS header
+      IMPORTING
+        iv_doc           TYPE clike
+        iv_bukrs         TYPE clike DEFAULT gc-bukrs
+        iv_ref_type      TYPE clike DEFAULT gc-transfer
+        iv_reverse_doc   TYPE clike OPTIONAL
+      RETURNING
+        VALUE(rs_header) TYPE i_journalentry.
+ENDCLASS.
+
+
+CLASS ltc_gl_doc IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_{{P}}_LEDGGLDOC' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD header.
+    rs_header-companycode               = iv_bukrs.
+    rs_header-fiscalyear                = gc-year.
+    rs_header-accountingdocument        = iv_doc.
+    rs_header-referencedocumenttype     = iv_ref_type.
+    rs_header-originalreferencedocument = gc-batch.
+    rs_header-reversedocument           = iv_reverse_doc.
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_batches TYPE STANDARD TABLE OF zi_{{p}}_ledgbatch WITH EMPTY KEY.
+    DATA lt_headers TYPE STANDARD TABLE OF i_journalentry WITH EMPTY KEY.
+    DATA ls_batch TYPE zi_{{p}}_ledgbatch.
+    go_env->clear_doubles( ).
+    " The batch key K1 on two accounts (one document list, not two)
+    ls_batch-batchkey       = gc-batch.
+    ls_batch-companycode    = gc-bukrs.
+    ls_batch-glaccount      = gc-account.
+    ls_batch-currency       = gc-usd.
+    ls_batch-glreferencekey = gc-batch.
+    INSERT ls_batch INTO TABLE lt_batches.
+    ls_batch-glaccount      = gc-account_2.
+    INSERT ls_batch INTO TABLE lt_batches.
+    " GD1 active, GD2 reversed by GD3; GD4 another reference type, GD5 another company code - not the key's
+    INSERT header( gc-doc ) INTO TABLE lt_headers.
+    INSERT header( iv_doc = gc-reversed iv_reverse_doc = gc-reversal ) INTO TABLE lt_headers.
+    INSERT header( iv_doc = gc-other_type iv_ref_type = gc-other_ref ) INTO TABLE lt_headers.
+    INSERT header( iv_doc = gc-other_cc iv_bukrs = gc-other_bukrs ) INTO TABLE lt_headers.
+    go_env->insert_test_data( lt_batches ).
+    go_env->insert_test_data( lt_headers ).
+  ENDMETHOD.
+
+
+  METHOD documents_of_the_key.
+    TRY.
+        SELECT gldocument, isreversed, reversaldocument FROM zi_{{p}}_ledggldoc
+          WHERE batchkey = @gc-batch
+          ORDER BY gldocument INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2
+                                            msg = 'Reference type + key + company code; one row per document' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-isreversed exp = abap_false msg = 'GD1 active' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-isreversed exp = abap_true msg = 'GD2 reversed' ).
+        cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 2 ]-reversaldocument )
+                                            exp = CONV string( gc-reversal )
+                                            msg = 'Its reversal document' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
 #endif
 #if RECON
 
 
 "! ZI_{{P}}_LEDGACCTDAY: journal aggregated per reconciled account, currency and day in the configured ledger
+"! (the released view I_JournalEntryItem doubled, field by field)
 CLASS ltc_acct_day DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -752,7 +1054,7 @@ CLASS ltc_acct_day DEFINITION FINAL
         iv_amount      TYPE decfloat34
         iv_docln       TYPE clike
       RETURNING
-        VALUE(rs_line) TYPE acdoca.
+        VALUE(rs_line) TYPE i_journalentryitem.
 ENDCLASS.
 
 
@@ -769,21 +1071,22 @@ CLASS ltc_acct_day IMPLEMENTATION.
 
 
   METHOD jrnl.
-    rs_line-rldnr  = iv_ledger.
-    rs_line-rbukrs = gc-bukrs.
-    rs_line-gjahr  = '2026'.
-    rs_line-belnr  = 'GD1'.
-    rs_line-docln  = iv_docln.
-    rs_line-racct  = iv_account.
-    rs_line-rwcur  = iv_currency.
-    rs_line-budat  = iv_day.
-    rs_line-awtyp  = iv_ref.
-    rs_line-wsl    = iv_amount.
+    rs_line-ledger                      = iv_ledger.
+    rs_line-sourceledger                = iv_ledger.
+    rs_line-companycode                 = gc-bukrs.
+    rs_line-fiscalyear                  = '2026'.
+    rs_line-accountingdocument          = 'GD1'.
+    rs_line-ledgergllineitem            = iv_docln.
+    rs_line-glaccount                   = iv_account.
+    rs_line-transactioncurrency         = iv_currency.
+    rs_line-postingdate                 = iv_day.
+    rs_line-referencedocumenttype       = iv_ref.
+    rs_line-amountintransactioncurrency = iv_amount.
   ENDMETHOD.
 
 
   METHOD setup.
-    DATA lt_lines TYPE STANDARD TABLE OF acdoca WITH EMPTY KEY.
+    DATA lt_lines TYPE STANDARD TABLE OF i_journalentryitem WITH EMPTY KEY.
     DATA lt_cfg TYPE STANDARD TABLE OF zi_{{p}}_ledgcfg WITH EMPTY KEY.
     DATA lt_accounts TYPE STANDARD TABLE OF zi_{{p}}_ledgacct WITH EMPTY KEY.
     DATA ls_cfg TYPE zi_{{p}}_ledgcfg.
