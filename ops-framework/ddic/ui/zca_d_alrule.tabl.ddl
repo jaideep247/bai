@@ -26,6 +26,10 @@ define table zca_d_alrule {
   escalateafter : abap.int4;
   escalationdest : abap.char(255);
   escoverride : abap_boolean;
+  escaftermin : abap.int4;
+  escrepeatmin : abap.int4;
+  escmaxcount : abap.int4;
+  escseverity : abap.char(1);
   active : abap_boolean;
   templateid : abap.char(30);
   showamounts : abap_boolean;

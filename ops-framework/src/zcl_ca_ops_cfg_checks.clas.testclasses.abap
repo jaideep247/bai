@@ -16,6 +16,7 @@
 *&            | injected renderer double LTD_MAIL_TEMPLATE).
 *& 2026-11-10 | LTC_CONTROL_CHECK: owner / backup user (double LTD_USERS), team (parameter CONTROL_TEAMS of the
 *&            | in-memory parameter store), runbook link (control register of the daily review).
+*& 2026-11-11 | LTC_RESPONSE_CHECK: runbook link of an active row, correlation key fields and window.
 *&---------------------------------------------------------------------*
 "! Alert configuration from memory: only the channels are read by the checks
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
@@ -558,6 +559,51 @@ CLASS ltc_control_check IMPLEMENTATION.
                                        msg = 'A link without http(s):// is refused (439)' ).
     cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>url_valid( 'https://wiki.example.com/run book' )
                                        msg = 'A link with a blank is refused' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Operations response features: runbook link of an active row, correlation key fields and window (153 / 154)
+CLASS ltc_response_check DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    METHODS active_runbook_needs_link    FOR TESTING.
+    METHODS key_fields_of_the_finding    FOR TESTING.
+    METHODS window_at_least_one_minute   FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_response_check IMPLEMENTATION.
+
+  " Rule: an active runbook row needs an http(s) link - the placeholder of a seed row is refused
+  METHOD active_runbook_needs_link.
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>link_valid( 'https://wiki.example.com/runbook/no-ack' )
+                                      msg = 'An https link is accepted' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>link_valid( space )
+                                       msg = 'An active row without link is refused (439)' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>link_valid( '<Site runbook URL>' )
+                                       msg = 'The placeholder of a seed row is refused while active' ).
+  ENDMETHOD.
+
+
+  " Rule: the key is built from finding fields only, in any case, comma separated
+  METHOD key_fields_of_the_finding.
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>key_fields_valid( 'GROUP1, object_key' )
+                                      msg = 'Finding fields, any case, blanks ignored' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>key_fields_valid( 'GROUP1,AMOUNT' )
+                                       msg = 'A field that is not a key field is refused (153)' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>key_fields_valid( space )
+                                       msg = 'An empty list is refused (153)' ).
+  ENDMETHOD.
+
+
+  " Rule: the correlation window is at least one minute
+  METHOD window_at_least_one_minute.
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>window_min_valid( 1 ) msg = 'One minute is accepted' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>window_min_valid( 0 ) msg = 'Zero is refused (154)' ).
   ENDMETHOD.
 
 ENDCLASS.

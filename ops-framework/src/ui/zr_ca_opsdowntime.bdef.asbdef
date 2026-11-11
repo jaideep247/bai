@@ -1,0 +1,61 @@
+managed implementation in class zbp_r_ca_opsdowntime unique;
+strict ( 2 );
+
+// Planned downtime windows (2026-11-11, operations response features). Application data planned in the
+// productive client by operations (not customizing): no draft - a window is one complete entry, saved at once
+// and checked on save (ZCL_CA_OPS_DOWNTIME_POLICY). Four-eyes: a window takes effect only once a second user
+// with ZCA_OPS 85 for the area approves it (action approveWindow, never the planner). An approved window is
+// not changed any more; it ends by itself at its end, or earlier with End now (action endWindow, 02).
+// ETag LocalLastChangedAt: an approval on a version the approver did not see is refused (HTTP 412).
+// VERIFY-ADT: global authorisation for create with the area checked on save (validateArea, 01), internal
+// update of read-only fields in local mode, determinations and validations without draft (V76).
+define behavior for ZR_CA_OpsDowntime alias Downtime
+persistent table zca_ops_dtwin
+lock master
+authorization master ( global, instance )
+etag master LocalLastChangedAt
+{
+  create;
+  update ( features : instance );
+  delete ( features : instance );
+
+  field ( numbering : managed, readonly ) WindowId;
+  field ( readonly ) TimeZone, FromUtc, ToUtc, CreatedBy, CreatedAt, ApprovedBy, ApprovedAt, EndedBy,
+                     LastChangedBy, LastChangedAt, LocalLastChangedAt, WindowStatus, StatusCriticality;
+  field ( mandatory ) Area, FromDate, FromTime, ToDate, ToTime, Reason;
+  field ( readonly : update ) Area;
+
+  action ( features : instance ) approveWindow result [1] $self;
+  action ( features : instance ) endWindow result [1] $self;
+
+  determination setTimeZone on modify { create; }
+  determination setUtc on save { create; field FromDate, FromTime, ToDate, ToTime; }
+  validation validateArea on save { create; }
+  validation validateWindow on save { create; field FromDate, FromTime, ToDate, ToTime, Reason, CheckPattern,
+                                      ObjectPattern, GroupPattern; }
+
+  mapping for zca_ops_dtwin
+  {
+    WindowId           = window_id;
+    Area               = area;
+    CheckPattern       = check_pattern;
+    ObjectPattern      = object_pattern;
+    GroupPattern       = group_pattern;
+    FromDate           = from_date;
+    FromTime           = from_time;
+    ToDate             = to_date;
+    ToTime             = to_time;
+    TimeZone           = time_zone;
+    FromUtc            = from_utc;
+    ToUtc              = to_utc;
+    Reason             = reason;
+    CreatedBy          = created_by;
+    CreatedAt          = created_at;
+    ApprovedBy         = approved_by;
+    ApprovedAt         = approved_at;
+    EndedBy            = ended_by;
+    LastChangedBy      = last_changed_by;
+    LastChangedAt      = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

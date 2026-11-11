@@ -6,6 +6,7 @@
 //          pool). Read-only apart from the action markReviewed.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
 //                   2026-11-10 | Company code of the slice (company-code isolation; DCL with BUKRS).
+//                   2026-11-11 | Planned downtime mark of the slice (operations response features).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Daily control review'
 @Metadata.allowExtensions: true
@@ -38,6 +39,8 @@ define root view entity ZC_CA_OpsCtlReview
       StatusRank,
       StatusCriticality,
       FindingCount,
+      DowntimeFindings,
+      IsPlannedDowntime,
       LastFindingAt,
       OpenExceptions,
       EvidenceRun,

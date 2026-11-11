@@ -39,6 +39,10 @@
 *&            | not company-specific); the company code is part of the identity of an exception - the
 *&            | carry-forward inherits only from an earlier exception of the same object type, key, check code
 *&            | and company code, so two company codes never share an owner, waiver or classification.
+*& 2026-11-11 | Operations response features: save_findings marks a finding recorded inside an approved
+*&            | planned downtime window (DOWNTIME_ID, ZCL_CA_OPS_FACTORY=>GET_DOWNTIME, one read per save) and
+*&            | correlates new open exceptions (CORR_ID / CORR_ROLE / CORR_KEY, rules ZCA_OPS_CORR, open parents
+*&            | read by CORR_KEY - index COR; ZCL_CA_OPS_CORRELATOR); the carry-forward inherits the correlation.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - DB store (ZCA_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -164,6 +168,25 @@ CLASS zcl_ca_ops_store DEFINITION
         iv_run_id    TYPE zif_ca_ops_types=>ty_run_id
       RETURNING
         VALUE(rv_no) TYPE i.
+
+    "! Planned downtime: the approved window in effect now that covers each new finding (DOWNTIME_ID)
+    METHODS mark_downtime
+      IMPORTING
+        is_run TYPE zif_ca_ops_types=>ty_run
+        iv_now TYPE timestampl
+      CHANGING
+        ct_new TYPE tt_db_finding.
+
+    "! Alert correlation of the new open exceptions (active rules ZCA_OPS_CORR of the area, open parents of
+    "! their keys); the carry-forward has already given inherited rows their group
+    METHODS correlate
+      IMPORTING
+        is_run TYPE zif_ca_ops_types=>ty_run
+        iv_now TYPE timestampl
+      CHANGING
+        ct_new TYPE tt_db_finding
+      RAISING
+        zcx_ca_ops_error.
 
     METHODS inherit
       IMPORTING
@@ -302,6 +325,14 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     carry_forward( EXPORTING iv_today = lv_today
                    CHANGING  cs_run   = cs_run
                              ct_new   = lt_db ).
+    " the findings are recorded as usual; inside an approved window they carry the mark (alert held back)
+    mark_downtime( EXPORTING is_run = cs_run
+                             iv_now = lv_now
+                   CHANGING  ct_new = lt_db ).
+    " new open exceptions of a correlation key: the first is the parent, later ones in its window children
+    correlate( EXPORTING is_run = cs_run
+                         iv_now = lv_now
+               CHANGING  ct_new = lt_db ).
 
     " A duplicate key is a sy-subrc / count here, never CX_SY_OPEN_SQL_DB (the caller rolls back)
     INSERT zca_ops_finding FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS.
@@ -396,7 +427,8 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     " index ZCA_OPS_FINDING~OBJ: MANDT, AREA, OBJECT_KEY (fix 5; OBJECT_TYPE is a filter)
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
            due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
-           waiver_req_by, waiver_req_at, waiver_reason, last_changed_at, reason_code, bukrs
+           waiver_req_by, waiver_req_at, waiver_reason, last_changed_at, reason_code, bukrs,
+           corr_id, corr_role, corr_key
       FROM zca_ops_finding
       FOR ALL ENTRIES IN @it_keys
       WHERE area      = @is_run-area
@@ -524,12 +556,69 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD mark_downtime.
+    DATA ls_finding TYPE zif_ca_ops_types=>ty_finding.
+    DATA(lt_windows) = zcl_ca_ops_factory=>get_downtime( )->windows( iv_area = is_run-area
+                                                                     iv_from = iv_now
+                                                                     iv_to   = iv_now ).
+    IF lt_windows IS INITIAL.
+      RETURN.
+    ENDIF.
+    LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_new>).
+      ls_finding = CORRESPONDING #( <ls_new> ).
+      <ls_new>-downtime_id = zcl_ca_ops_downtime_policy=>covering( it_windows = lt_windows
+                                                                  iv_area    = is_run-area
+                                                                  is_finding = ls_finding
+                                                                  iv_from    = iv_now ).
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD correlate.
+    DATA lt_rules TYPE zif_ca_ops_resp_types=>tt_corr_rule.
+    DATA lt_parents TYPE zif_ca_ops_resp_types=>tt_corr_parent.
+    SELECT area, corr_rule, check_pattern, key_fields, key_pattern, window_min
+      FROM zca_ops_corr
+      WHERE area   = @is_run-area
+        AND active = @abap_true
+      ORDER BY corr_rule
+      INTO CORRESPONDING FIELDS OF TABLE @lt_rules.
+    IF lt_rules IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lt_items) = zcl_ca_ops_correlator=>select( it_rules = lt_rules
+                                                    it_rows  = ct_new ).
+    IF lt_items IS INITIAL.
+      RETURN.
+    ENDIF.
+    " index COR (MANDT, CORR_KEY): the open parents of the keys, whatever run raised them
+    SELECT corr_key, corr_id, first_seen_at
+      FROM zca_ops_finding
+      FOR ALL ENTRIES IN @lt_items
+      WHERE corr_key  = @lt_items-corr_key
+        AND area      = @is_run-area
+        AND corr_role = @zif_ca_ops_resp_types=>gc_corr_role-parent
+        AND run_id   <> @is_run-run_id
+        AND disposition IN ( @zif_ca_ops_types=>gc_disposition-open,
+                             @zif_ca_ops_types=>gc_disposition-assigned )
+      INTO CORRESPONDING FIELDS OF TABLE @lt_parents.
+    zcl_ca_ops_correlator=>assign( EXPORTING it_items   = lt_items
+                                             it_parents = lt_parents
+                                             iv_now     = iv_now
+                                   CHANGING  ct_rows    = ct_new ).
+  ENDMETHOD.
+
+
   METHOD inherit.
     cs_new-first_seen_at = COND #( WHEN is_prev-first_seen_at IS INITIAL THEN is_prev-created_at
                                    ELSE is_prev-first_seen_at ).
     cs_new-occurrences   = nmax( val1 = is_prev-occurrences val2 = 1 ) + 1.
     cs_new-owner         = is_prev-owner.
     cs_new-reason_code   = is_prev-reason_code.
+    " the exception stays in its correlation group (the parent stays the parent)
+    cs_new-corr_id       = is_prev-corr_id.
+    cs_new-corr_role     = is_prev-corr_role.
+    cs_new-corr_key      = is_prev-corr_key.
     CASE is_prev-disposition.
       WHEN zif_ca_ops_types=>gc_disposition-waived.
         IF is_prev-waiver_until IS INITIAL OR is_prev-waiver_until >= iv_today.

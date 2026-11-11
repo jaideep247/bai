@@ -1,12 +1,17 @@
 {
-  "_comment": "Domains and data elements of the operations framework. The area of a run, finding, alert rule, lock and purge target is ZCA_PARAM_AREA_ID of the parameter framework (one area register); the other fields use built-in types and SAP data elements, except the status of a control (2026-11-10: fixed values with translatable texts, shown by the review app and the consumers' cards). tools/abapgit_serialize.py writes src/<name>.doma.xml / .dtel.xml for every entry added here. Labels: short <= 10, medium <= 20, long <= 40, heading <= 55, text <= 60 characters.",
+  "_comment": "Domains and data elements of the operations framework. The area of a run, finding, alert rule, lock and purge target is ZCA_PARAM_AREA_ID of the parameter framework (one area register); the other fields use built-in types and SAP data elements, except the status of a control (2026-11-10: fixed values with translatable texts, shown by the review app and the consumers' cards) and the status of a planned downtime window (2026-11-11, downtime app ZUI_CA_OPS_DTW). tools/abapgit_serialize.py writes src/<name>.doma.xml / .dtel.xml for every entry added here. Labels: short <= 10, medium <= 20, long <= 40, heading <= 55, text <= 60 characters.",
   "domains": [
     {"name": "ZCA_OPS_CTL_STATUS", "type": "CHAR", "length": 1, "lowercase": false,
      "text": "Status of a control on a business date",
-     "values": [["H", "Healthy"], ["W", "Watch"], ["A", "Action required"]]}
+     "values": [["H", "Healthy"], ["W", "Watch"], ["A", "Action required"]]},
+    {"name": "ZCA_OPS_DTW_STATUS", "type": "CHAR", "length": 1, "lowercase": false,
+     "text": "Status of a planned downtime window",
+     "values": [["P", "Awaiting approval"], ["S", "Scheduled"], ["A", "Active"], ["E", "Ended"]]}
   ],
   "data_elements": [
     {"name": "ZCA_OPS_CTL_STATUS", "domain": "ZCA_OPS_CTL_STATUS", "text": "Status of a control on a business date",
-     "short": "Status", "medium": "Control status", "long": "Status of the control", "heading": "Status"}
+     "short": "Status", "medium": "Control status", "long": "Status of the control", "heading": "Status"},
+    {"name": "ZCA_OPS_DTW_STATUS", "domain": "ZCA_OPS_DTW_STATUS", "text": "Status of a planned downtime window",
+     "short": "Status", "medium": "Window status", "long": "Status of the downtime window", "heading": "Status"}
   ]
 }

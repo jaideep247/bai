@@ -36,5 +36,18 @@ define root view entity ZC_CA_OpsException
       WaiverReason,
       CreatedAt,
       LastChangedAt,
-      _History : redirected to composition child ZC_CA_OpsExcHist
+      // Operations response features (2026-11-11): planned downtime, correlation, runbook of the check
+      DowntimeId,
+      IsPlannedDowntime,
+      CorrelationId,
+      CorrelationRole,
+      @EndUserText.label: 'Open correlated exceptions'
+      _CorrCount.OpenChildren as CorrelatedOpen,
+      @EndUserText.label: 'Runbook'
+      _Runbook.RunbookUrl     as RunbookUrl,
+      @EndUserText.label: 'First action'
+      _Runbook.FirstAction    as FirstAction,
+      _History      : redirected to composition child ZC_CA_OpsExcHist,
+      _CorrChildren : redirected to ZC_CA_OpsException,
+      _CorrParent   : redirected to ZC_CA_OpsException
 }

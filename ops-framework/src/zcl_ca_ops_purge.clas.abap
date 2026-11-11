@@ -22,6 +22,7 @@
 *&            | ALERT_LOG, consumer targets from the registry ZCA_OPS_PURGE (plug-ins of
 *&            | ZIF_CA_OPS_PURGE_TARGET, retention parameter per row); result column DEPENDENT (was FINDINGS).
 *& 2026-11-10 | Built-in target REVIEW (sign-offs of the daily control review, RETENTION_DAYS_REVIEW 400).
+*& 2026-11-11 | Built-in target DOWNTIME (ended planned downtime windows, DOWNTIME_RETENTION_DAYS 400).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge</p>
 CLASS zcl_ca_ops_purge DEFINITION
@@ -167,6 +168,12 @@ CLASS zcl_ca_ops_purge IMPLEMENTATION.
         param_area   = zif_ca_ops_types=>gc_param_area
         param_name   = |{ zif_ca_ops_types=>gc_param_prefix-retention_days }{ zif_ca_ops_purge_dao=>gc_target-review }|
         default_days = gc_review_days
+        handler      = io_dao )
+      " planned downtime windows (2026-11-11): the parameter of the feature (prefix DOWNTIME_)
+      ( target       = zif_ca_ops_purge_dao=>gc_target-downtime
+        param_area   = zif_ca_ops_types=>gc_param_area
+        param_name   = zif_ca_ops_resp_types=>gc_param-downtime_retention
+        default_days = zif_ca_ops_resp_types=>gc_param_default-downtime_retention
         handler      = io_dao ) ).
     LOOP AT io_dao->get_targets( ) ASSIGNING FIELD-SYMBOL(<ls_row>).
       TRY.

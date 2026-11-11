@@ -77,12 +77,24 @@ annotate entity ZC_CA_AlertRule with
   EscOverride;
 
   @UI.identification: [{ position: 210 }]
-  Active;
+  EscAfterMin;
 
   @UI.identification: [{ position: 220 }]
-  TemplateId;
+  EscRepeatMin;
 
   @UI.identification: [{ position: 230 }]
+  EscMaxCount;
+
+  @UI.identification: [{ position: 240 }]
+  EscSeverity;
+
+  @UI.identification: [{ position: 250 }]
+  Active;
+
+  @UI.identification: [{ position: 260 }]
+  TemplateId;
+
+  @UI.identification: [{ position: 270 }]
   ShowAmounts;
 
   @UI.hidden: true

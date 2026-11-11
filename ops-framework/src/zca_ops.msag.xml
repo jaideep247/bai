@@ -419,6 +419,126 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>140</MSGNR>
+     <TEXT>&amp;1 finding(s) in planned downtime &amp;2: recorded, not alerted</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>141</MSGNR>
+     <TEXT>&amp;1 correlated exception(s) alerted with their parent only</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>142</MSGNR>
+     <TEXT>Escalation &amp;1 of &amp;2 (open and unassigned for &amp;3 min):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>143</MSGNR>
+     <TEXT>Downtime window: the end &amp;1 is not after the start &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>144</MSGNR>
+     <TEXT>Downtime window of &amp;1 hour(s) is longer than &amp;2 (DOWNTIME_MAX_HOURS)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>145</MSGNR>
+     <TEXT>Downtime window starts &amp;1 minute(s) in the past (allowed: &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>146</MSGNR>
+     <TEXT>Downtime window overlaps window &amp;1 of the same scope</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>147</MSGNR>
+     <TEXT>Four-eyes: &amp;1 planned this window and cannot approve it</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>148</MSGNR>
+     <TEXT>Downtime window is approved: only End now is possible</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>149</MSGNR>
+     <TEXT>Downtime window has ended: no further change</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>150</MSGNR>
+     <TEXT>Scope pattern &amp;1 is not valid PCRE (complete value, any case)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>151</MSGNR>
+     <TEXT>Enter the reason of the planned downtime</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>152</MSGNR>
+     <TEXT>No authorisation for area &amp;1, activity &amp;2 (ZCA_OPS)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>153</MSGNR>
+     <TEXT>Key field list &amp;1 invalid (finding fields, comma separated)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>154</MSGNR>
+     <TEXT>Correlation window &amp;1 must be at least 1 minute</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>155</MSGNR>
+     <TEXT>Correlation ID could not be generated - findings not saved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>156</MSGNR>
+     <TEXT>Escalation of area &amp;1: &amp;2 escalated, &amp;3 skipped, &amp;4 failed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>157</MSGNR>
+     <TEXT>Run-level alert of rule &amp;1 suppressed: planned downtime &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>158</MSGNR>
+     <TEXT>Enter the start and the end of the window (date and time)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>159</MSGNR>
+     <TEXT>Downtime window awaits approval: change or delete it instead</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

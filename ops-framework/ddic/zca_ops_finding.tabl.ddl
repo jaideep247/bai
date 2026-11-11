@@ -56,9 +56,26 @@ define table zca_ops_finding {
   // the company code at finding time. Read authorisation (DCLs) and the actions of the exceptions app check
   // ZCA_OPS with BUKRS for a filled value; part of the identity of an exception (carry-forward)
   bukrs         : bukrs;
+  // Planned downtime (2026-11-11): the approved window (ZCA_OPS_DTWIN) that covered the finding when it was
+  // recorded - the finding is recorded as usual, the alert router suppresses its alert (ZCA_OPS_ALLOG status D).
+  // Set by the store at write time: the scope patterns (PCRE) cannot be evaluated in CDS. Blank = no window
+  downtime_id   : sysuuid_x16;
+  // Alert correlation (2026-11-11, ZCA_OPS_CORR): the group of exceptions of one correlation key and window -
+  // a correlation ID, not a pointer to the parent row, because the carry-forward supersedes the parent's row
+  // (run ID and finding number) at every run that raises it again; the ID is inherited like owner and reason
+  // code. CORR_ROLE P = parent (the first exception of the key in the window, alerted with the number of its
+  // children), C = child (not alerted on its own). CORR_KEY = SHA-1 of area, rule, company code and key value
+  // (finds the open parent of a new exception). Blank = not correlated
+  corr_id       : sysuuid_x16;
+  corr_role     : abap.char(1);
+  corr_key      : abap.char(40);
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and
 // the exception repository know only the object key, so a leading OBJECT_TYPE left AREA alone usable
 // @index OPN: MANDT, AREA, DISPOSITION, DUE_DATE
 // @index OBJ: MANDT, AREA, OBJECT_KEY
+// COR (2026-11-11): the open parent of a correlation key (store) and the children of a group (router, apps)
+// @index COR: MANDT, CORR_KEY
+// CRI (2026-11-11): the exceptions of a correlation group (exceptions app facet, child counts)
+// @index CRI: MANDT, CORR_ID

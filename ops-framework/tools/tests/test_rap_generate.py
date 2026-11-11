@@ -3,7 +3,9 @@
 and generated, every pattern field of the alert rules is validated as PCRE on save, the control register
 (2026-11-10) checks owner / backup, team, runbook link and the finding field on save; the check registry of
 the process onboarding (2026-11-10) checks the plug-in interface, the aggregate functions and operators, and
-the table and field names of an aggregate row on save.
+the table and field names of an aggregate row on save; the operations response features (2026-11-11) check
+the runbook link of an active runbook row, the patterns, key fields and window of a correlation rule and the
+escalation severity of an alert rule on save.
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-framework/)
 """
@@ -22,7 +24,9 @@ class FrameworkAppTest(unittest.TestCase):
         expected = {('framework', 'zca_ops_alrule', 'rule_pattern'), ('framework', 'zca_ops_alrule', 'check_pattern'),
                     ('framework', 'zca_ops_alrule', 'group1_pattern'), ('framework', 'zca_ops_alrule', 'group2_pattern'),
                     # company-code pattern of a rule (company-code isolation, 2026-11-10)
-                    ('framework', 'zca_ops_alrule', 'bukrs_pattern')}
+                    ('framework', 'zca_ops_alrule', 'bukrs_pattern'),
+                    # correlation rules (operations response features, 2026-11-11)
+                    ('framework', 'zca_ops_corr', 'check_pattern'), ('framework', 'zca_ops_corr', 'key_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
                  for c in t[6] if c[0] == 'pcre'}
         self.assertEqual(found, expected)
@@ -38,7 +42,8 @@ class FrameworkAppTest(unittest.TestCase):
         tables = [t[0] for t in rap_generate.SPEC['framework']['tables']]
         self.assertEqual(tables, ['zca_ops_alrule', 'zca_ops_alchn', 'zca_ops_purge',
                                   'zca_ops_control', 'zca_ops_ctlt', 'zca_ops_ctlchk',
-                                  'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl'])
+                                  'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl',
+                                  'zca_ops_runbook', 'zca_ops_corr'])
 
     def test_check_registry_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
@@ -60,6 +65,17 @@ class FrameworkAppTest(unittest.TestCase):
                                  ('team', 'zcl_ca_ops_cfg_checks=>team_valid'),
                                  ('runbook_url', 'zcl_ca_ops_cfg_checks=>url_valid')})
         self.assertIn(('enum', 'match_field', 'RULE_ID,CHECK_CODE,GROUP2'), checks['zca_ops_ctlchk'])
+
+    def test_response_features_checked_on_save(self):
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        # an active runbook row needs its link; a seed row with the placeholder is saved inactive
+        self.assertIn(('when', 'active', 'X',
+                       [('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>link_valid', 'url_invalid')]),
+                      checks['zca_ops_runbook'])
+        self.assertIn(('enum', 'match_field', 'RULE_ID,CHECK_CODE,GROUP2'), checks['zca_ops_runbook'])
+        valid = {(c[1], c[3]) for c in checks['zca_ops_corr'] if c[0] == 'valid'}
+        self.assertEqual(valid, {('key_fields', 'corr_fields_invalid'), ('window_min', 'corr_window_invalid')})
+        self.assertIn(('enum', 'esc_severity', ',B,E,W,I'), checks['zca_ops_alrule'])
 
 
 if __name__ == '__main__':

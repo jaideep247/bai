@@ -3,6 +3,9 @@
 // reprocess statements or clarify payment lots (read-only scope)
 // 2026-11-10: action Classify (reason code of an open exception, e.g. TIMING / INVESTIGATING)
 // 2026-11-10: company code of the exception (blank = area-level), column and filter
+// 2026-11-11: runbook link and first action of the check (facet Runbook), planned downtime mark, correlation:
+//             facet "Correlated exceptions" on a parent (its children - the Resolve action works on several
+//             selected rows, each with its own authorisation and ETag) and "Parent exception" on a child
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions',
                   title: { type: #STANDARD, value: 'CheckCode' },
@@ -10,8 +13,14 @@
 annotate entity ZC_CA_OpsException with
 {
   @UI.facet: [ { id: 'Exception', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Exception', position: 10 },
+               { id: 'Runbook', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Runbook',
+                 label: 'Runbook', position: 15 },
                { id: 'History', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'History', position: 20,
-                 targetElement: '_History' } ]
+                 targetElement: '_History' },
+               { id: 'Correlated', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Correlated exceptions',
+                 position: 30, targetElement: '_CorrChildren' },
+               { id: 'Parent', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Parent exception',
+                 position: 40, targetElement: '_CorrParent' } ]
   @UI.lineItem: [ { position: 10, importance: #HIGH },
                   { type: #FOR_ACTION, dataAction: 'assignOwner', label: 'Assign' },
                   { type: #FOR_ACTION, dataAction: 'resolveException', label: 'Resolve' },
@@ -90,6 +99,27 @@ annotate entity ZC_CA_OpsException with
   @UI.identification: [ { position: 230 } ]
   @UI.selectionField: [ { position: 70 } ]
   ReasonCode;
+  // Operations response features (2026-11-11)
+  @UI.fieldGroup: [ { qualifier: 'Runbook', position: 10, type: #WITH_URL, url: 'RunbookUrl' } ]
+  @UI.lineItem: [ { position: 95, importance: #LOW, type: #WITH_URL, url: 'RunbookUrl' } ]
+  RunbookUrl;
+  @UI.fieldGroup: [ { qualifier: 'Runbook', position: 20 } ]
+  FirstAction;
+  @UI.lineItem: [ { position: 96, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 240 } ]
+  @UI.selectionField: [ { position: 80 } ]
+  IsPlannedDowntime;
+  @UI.identification: [ { position: 250 } ]
+  DowntimeId;
+  @UI.lineItem: [ { position: 97, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 260 } ]
+  @UI.selectionField: [ { position: 90 } ]
+  CorrelationRole;
+  @UI.lineItem: [ { position: 98, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 270 } ]
+  CorrelatedOpen;
+  @UI.hidden: true
+  CorrelationId;
   @UI.hidden: true
   RunId;
   @UI.hidden: true

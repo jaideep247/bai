@@ -21,3 +21,7 @@ that is blank for a message is not shown.
 | Text symbol | L13 | Run ended |
 | Text symbol | L14 | Amount total |
 | Text symbol | L15 | Exceptions app |
+| Text symbol | L16 | Runbook |
+| Text symbol | L17 | First action |
+| Text symbol | L18 | Correlated exceptions (not alerted) |
+| Text symbol | L19 | Escalation |

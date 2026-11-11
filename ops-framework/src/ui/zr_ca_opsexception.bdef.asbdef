@@ -15,7 +15,8 @@ etag master LastChangedAt
   field ( readonly ) RunId, FindingNo, Area, CompanyCode, ObjectType, ObjectKey, Group1, Group2, RuleId, CheckCode,
                      Severity, ActionCode, Amount, Currency, Reference, Message, Disposition, Owner, DueDate,
                      ResolvedBy, ResolvedAt, Resolution, FirstSeenAt, Occurrences, WaiverUntil, WaiverReqBy,
-                     WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt, ReasonCode;
+                     WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt, ReasonCode,
+                     DowntimeId, IsPlannedDowntime, CorrelationId, CorrelationRole;
 
   // VERIFY-ADT: internal create by association (history written only by the actions)
   association _History { internal create; }
@@ -60,6 +61,9 @@ etag master LastChangedAt
     CreatedAt    = created_at;
     LastChangedAt = last_changed_at;
     ReasonCode   = reason_code;
+    DowntimeId      = downtime_id;
+    CorrelationId   = corr_id;
+    CorrelationRole = corr_role;
   }
 }
 

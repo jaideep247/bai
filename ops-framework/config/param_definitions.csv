@@ -9,9 +9,17 @@ CA_OPS,ALERT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,,,Time zone of the times i
 CA_OPS,CHECK_STALE_MIN_DEFAULT,P,INT,1,,1500,,,,,Area dashboard: a run older than this is stale (minutes),OPS FRAMEWORK
 CA_OPS,CONTROL_TEAMS,P,LIST,,,"ONSITE,OFFSHORE",,,X,,Teams a control may name (control register; comma list),OPS FRAMEWORK
 CA_OPS,CONTROL_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of business date and review cut-off (TTZZ),OPS FRAMEWORK
+CA_OPS,DOWNTIME_MAX_HOURS,P,INT,1,,24,,,,,Longest planned downtime window (hours),OPS FRAMEWORK
+CA_OPS,DOWNTIME_PAST_TOL_MIN,P,INT,0,,15,,,,,Minutes a downtime window may start in the past on save,OPS FRAMEWORK
+CA_OPS,DOWNTIME_RETENTION_DAYS,P,INT,,,400,,,,,Retention of ended downtime windows (days; >= 30),OPS FRAMEWORK
+CA_OPS,DOWNTIME_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone in which downtime windows are entered (TTZZ),OPS FRAMEWORK
+CA_OPS,ESC_MAX_DEFAULT,P,INT,1,20,3,,,,,Escalations of one exception when the rule names none,OPS FRAMEWORK
 CA_OPS,EXC_REASON_CODES,P,LIST,,,"TIMING,INVESTIGATING",,,X,,Reason codes of an open exception (classification),OPS FRAMEWORK
+CA_OPS,METRIC_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of month / week of the response-time metrics,OPS FRAMEWORK
 CA_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_REVIEW,P,INT,,,400,,,,,Retention of daily control sign-offs (days; >= 30),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),OPS FRAMEWORK
+CA_OPS,SHIFT_TIMES_DEFAULT,S,TIME,,,000000,,,X,,Shift start times (HHMMSS rows) of teams without own times,OPS FRAMEWORK
+CA_OPS,SHIFT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of the shift start times (TTZZ),OPS FRAMEWORK
 CA_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,OPS FRAMEWORK

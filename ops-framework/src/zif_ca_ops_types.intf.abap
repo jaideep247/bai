@@ -37,6 +37,11 @@
 *&            | pattern on the company code (TY_ALERT_RULE-BUKRS_PATTERN).
 *& 2026-11-10 | Error classes: configuration messages of the check registry (082-092, 103) are CONFIG;
 *&            | name prefix CHECK_ read in area CA_OPS (freshness of the area dashboard).
+*& 2026-11-11 | Operations response features (docs/OPERATIONS_FEATURES.md): name prefixes RUNBOOK_, DOWNTIME_,
+*&            | ESC_, CORR_, METRIC_, SHIFT_ read in area CA_OPS; alert log statuses D (planned downtime) and
+*&            | K (correlated children); rule fields of the escalation until acknowledged (ESC_AFTER_MIN,
+*&            | ESC_REPEAT_MIN, ESC_MAX_COUNT, ESC_SEVERITY); log fields ESC_STEP / FINDING_NO; context keys
+*&            | RUNBOOK_URL, FIRST_ACTION, CORRELATED_COUNT, ESCALATION of the alert e-mail.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -138,6 +143,13 @@ INTERFACE zif_ca_ops_types
       exception TYPE ty_param_name VALUE 'EXC_',
       "! Check registry and area dashboard (ZIF_CA_OPS_CHK_TYPES=>GC_PARAM, 2026-11-10)
       check     TYPE ty_param_name VALUE 'CHECK_',
+      "! Operations response features (ZIF_CA_OPS_RESP_TYPES=>GC_PARAM, 2026-11-11)
+      runbook     TYPE ty_param_name VALUE 'RUNBOOK_',
+      downtime    TYPE ty_param_name VALUE 'DOWNTIME_',
+      escalation  TYPE ty_param_name VALUE 'ESC_',
+      correlation TYPE ty_param_name VALUE 'CORR_',
+      metric      TYPE ty_param_name VALUE 'METRIC_',
+      shift       TYPE ty_param_name VALUE 'SHIFT_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters
@@ -443,6 +455,13 @@ INTERFACE zif_ca_ops_types
       reference_line     TYPE ty_message,
       "! Amount totals per currency - only when the rule shows amounts (SHOW_AMOUNTS)
       amount_total       TYPE ty_message,
+      "! Runbook link and first action of the check of the message (ZCA_OPS_RUNBOOK; 2026-11-11)
+      runbook_url        TYPE c LENGTH 255,
+      first_action       TYPE c LENGTH 120,
+      "! Open exceptions correlated with the parents of the message (alerted with them only)
+      correlated_count   TYPE c LENGTH 10,
+      "! Escalation step of an escalation message (n of m; blank = no escalation)
+      escalation         TYPE c LENGTH 20,
       table_main         TYPE c LENGTH 80,
       table_section      TYPE c LENGTH 80,
     END OF ty_mail_header.
@@ -515,6 +534,10 @@ INTERFACE zif_ca_ops_types
       repeat    TYPE c LENGTH 1 VALUE 'R',
       "! Delivered in part (e.g. application log stopped adding lines, audit A45)
       partial   TYPE c LENGTH 1 VALUE 'P',
+      "! Findings in an approved planned downtime window: recorded, not alerted (2026-11-11)
+      downtime  TYPE c LENGTH 1 VALUE 'D',
+      "! Correlated children: alerted with their parent only (2026-11-11)
+      correlated TYPE c LENGTH 1 VALUE 'K',
     END OF gc_alert_status.
 
   "! One alert rule: which findings of which area go to which channel
@@ -548,6 +571,14 @@ INTERFACE zif_ca_ops_types
       escalation_dest TYPE ty_alert_dest,
       "! X = a due escalation is delivered even inside the throttle window (audit A46)
       esc_override    TYPE abap_bool,
+      "! Escalation until acknowledged (2026-11-11): an open, unassigned exception is escalated to
+      "! ESCALATION_DEST after ESC_AFTER_MIN minutes, every ESC_REPEAT_MIN minutes (0 = once), at most
+      "! ESC_MAX_COUNT times (0 = parameter ESC_MAX_DEFAULT), severity floor ESC_SEVERITY (blank = MIN_SEVERITY).
+      "! ESC_AFTER_MIN > 0 replaces the run-based ESCALATE_AFTER of the rule
+      esc_after_min   TYPE i,
+      esc_repeat_min  TYPE i,
+      esc_max_count   TYPE i,
+      esc_severity    TYPE ty_severity,
       active          TYPE abap_bool,
       "! E-mail template of the rule's messages (SMTG template ID; blank = channel default, then the
       "! generic template ALERT_TEMPLATE_DEFAULT, then the built-in layout)
@@ -615,6 +646,10 @@ INTERFACE zif_ca_ops_types
       template_id TYPE ty_template_id,
       renderer    TYPE ty_renderer,
       render_info TYPE ty_message,
+      "! n-th escalation of one exception (0 = an ordinary alert) and the escalated exception's finding
+      "! number (with RUN_ID; 2026-11-11)
+      esc_step    TYPE i,
+      finding_no  TYPE i,
     END OF ty_alert_log.
   TYPES tt_alert_log TYPE STANDARD TABLE OF ty_alert_log WITH EMPTY KEY.
 

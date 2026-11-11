@@ -10,6 +10,7 @@
 //                   2026-11-10 | Company-code isolation: rows per slice (ZI_CA_OpsCtlSlice); status, findings,
 //                                open exceptions and sign-off of the slice's company code only; the evidence run
 //                                (area-level: a run has no company code) on every slice of the date.
+//                   2026-11-11 | Findings of the date in planned downtime (operations response features).
 // VERIFY-ADT: CROSS JOIN in a CDS view entity (7.58); fallback: inner join on Day.BusinessDate >= '00000000'.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Control review: control per business date'
@@ -60,6 +61,7 @@ define view entity ZI_CA_OpsCtlDay
       Day.IsCurrentDay,
       cast( coalesce( Fd.StatusRank, 0 ) as abap.int4 )     as StatusRank,
       cast( coalesce( Fd.FindingCount, 0 ) as abap.int4 )   as FindingCount,
+      cast( coalesce( Fd.DowntimeFindings, 0 ) as abap.int4 ) as DowntimeFindings,
       Fd.LastFindingAt,
       cast( coalesce( Op.OpenExceptions, 0 ) as abap.int4 ) as OpenExceptions,
       Ev.EvidenceRun,

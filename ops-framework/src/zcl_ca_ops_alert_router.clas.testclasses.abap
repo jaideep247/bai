@@ -20,6 +20,10 @@
 *& 2026-11-10 | Alert e-mail templates: renderer double LTD_MAIL_TEMPLATE injected (no SMTG call); template
 *&            | rendered after the claim and logged, fallback to the built-in layout logged, rule before
 *&            | channel before generic template, a prepared report in a template (SEND).
+*& 2026-11-11 | LTC_RESPONSE (operations response features): planned downtime suppresses and logs D (findings and
+*&            | an area-wide window for run-level alerts), correlated children logged K and counted in the
+*&            | parent's message, runbook in the message, escalation until acknowledged (due step sent once,
+*&            | not again, children / downtime skipped, authorisation 16). Doubles LTD_DOWNTIME, LTD_AUTH.
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -32,6 +36,13 @@ CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
     DATA mt_claims   TYPE zif_ca_ops_types=>tt_alert_log.
     DATA mv_claimed_elsewhere TYPE abap_bool.
     DATA mt_repeat   TYPE zif_ca_ops_types=>tt_repeat_key.
+    "! Operations response features (2026-11-11): marks of the run's findings, open children, runbooks,
+    "! escalation candidates and the log of escalation intents
+    DATA mt_marks      TYPE zif_ca_ops_resp_types=>tt_finding_mark.
+    DATA mt_children   TYPE zif_ca_ops_resp_types=>tt_corr_count.
+    DATA mt_runbooks   TYPE zif_ca_ops_resp_types=>tt_runbook.
+    DATA mt_candidates TYPE zif_ca_ops_resp_types=>tt_esc_candidate.
+    DATA mt_intent_log TYPE zif_ca_ops_types=>tt_alert_log.
 ENDCLASS.
 
 CLASS ltd_alert_dao IMPLEMENTATION.
@@ -61,6 +72,69 @@ CLASS ltd_alert_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_ca_ops_alert_dao~get_repeat_keys.
     rt_keys = mt_repeat.
+  ENDMETHOD.
+  METHOD zif_ca_ops_alert_dao~get_marks.
+    rt_marks = mt_marks.
+  ENDMETHOD.
+  METHOD zif_ca_ops_alert_dao~get_child_counts.
+    LOOP AT mt_children INTO DATA(ls_count).
+      IF line_exists( it_corr_ids[ table_line = ls_count-corr_id ] ).
+        INSERT ls_count INTO TABLE rt_counts.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+  METHOD zif_ca_ops_alert_dao~get_runbooks.
+    rt_runbooks = mt_runbooks.
+  ENDMETHOD.
+  METHOD zif_ca_ops_alert_dao~get_escalation_candidates.
+    LOOP AT mt_candidates INTO DATA(ls_candidate) WHERE first_seen_at <= iv_seen_before.
+      INSERT ls_candidate INTO TABLE rt_candidates.
+    ENDLOOP.
+  ENDMETHOD.
+  METHOD zif_ca_ops_alert_dao~get_intent_log.
+    LOOP AT mt_intent_log INTO DATA(ls_log).
+      IF line_exists( it_intent_keys[ table_line = ls_log-intent_key ] ).
+        INSERT ls_log INTO TABLE rt_log.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
+
+"! Planned downtime API: the windows given by the test, decided by the real policy
+CLASS ltd_downtime DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_downtime.
+    DATA mt_windows TYPE zif_ca_ops_resp_types=>tt_window.
+ENDCLASS.
+
+CLASS ltd_downtime IMPLEMENTATION.
+  METHOD zif_ca_ops_downtime~windows.
+    rt_windows = mt_windows.
+  ENDMETHOD.
+  METHOD zif_ca_ops_downtime~planned.
+    rv_window_id = zcl_ca_ops_downtime_policy=>covering( it_windows = mt_windows iv_area = iv_area
+                                                         is_finding = is_finding iv_from = iv_from iv_to = iv_to ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_downtime~area_planned.
+    rv_window_id = zcl_ca_ops_downtime_policy=>area_wide( it_windows = mt_windows iv_area = iv_area iv_at = iv_at ).
+  ENDMETHOD.
+ENDCLASS.
+
+"! Authorisation of the escalation job (ZCA_OPS 16 for the area): allowed unless the test refuses it
+CLASS ltd_auth DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_auth.
+    DATA mv_refuse TYPE abap_bool.
+ENDCLASS.
+
+CLASS ltd_auth IMPLEMENTATION.
+  METHOD zif_ca_ops_auth~is_allowed.
+    rv_allowed = xsdbool( mv_refuse = abap_false ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_auth~check.
+    IF mv_refuse = abap_true.
+      RAISE EXCEPTION TYPE zcx_ca_ops_error MESSAGE e041(zca_ops) WITH iv_area iv_activity.
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.
 
@@ -806,6 +880,324 @@ CLASS ltc_alert_router IMPLEMENTATION.
                                             msg = 'The log names the template' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Operations response features (2026-11-11): planned downtime, correlation, runbook, escalation until
+"! acknowledged - router decisions with the doubles above (no database, no SMTG, no delivery)
+CLASS ltc_response DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        rule_id    TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ZT_RESP',
+        dest       TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'ZT_OPS',
+        escalation TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'ZT_LEAD',
+        channel_cl TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_CA_OPS_CHN_EMAIL',
+        now        TYPE timestampl VALUE '20261111100000.0000000',
+        hour_ago   TYPE timestampl VALUE '20261111090000.0000000',
+        win_from   TYPE timestampl VALUE '20261111090000.0000000',
+        win_to     TYPE timestampl VALUE '20261111110000.0000000',
+        window_id  TYPE zif_ca_ops_resp_types=>ty_uuid VALUE '000000000000000000000000000000A9',
+        parent_id  TYPE zif_ca_ops_resp_types=>ty_uuid VALUE '000000000000000000000000000000B9',
+        approver   TYPE syuname VALUE 'ZT_APPROVER',
+        url        TYPE zif_ca_ops_resp_types=>ty_runbook_url VALUE 'https://wiki.example.com/unmapped-btc',
+        check      TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNMAPPED_BTC',
+        day        TYPE t VALUE '100000',
+        finding_no TYPE i VALUE 7,
+      END OF gc.
+
+    DATA mo_dao      TYPE REF TO ltd_alert_dao.
+    DATA mo_channel  TYPE REF TO ltd_channel.
+    DATA mo_clock    TYPE REF TO ltd_clock.
+    DATA mo_store    TYPE REF TO ltd_store.
+    DATA mo_downtime TYPE REF TO ltd_downtime.
+    DATA mo_auth     TYPE REF TO ltd_auth.
+    DATA ms_run      TYPE zif_ca_ops_types=>ty_run.
+
+    METHODS setup.
+    METHODS teardown.
+    "! Active e-mail rule of the test area (E or worse), digest, escalation destination
+    METHODS given_rule
+      IMPORTING
+        iv_esc_after_min TYPE i DEFAULT 0
+        iv_min_rag       TYPE zif_ca_ops_types=>ty_rag OPTIONAL.
+    METHODS finding
+      IMPORTING
+        iv_object_key     TYPE zif_ca_ops_types=>ty_object_key
+      RETURNING
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
+    METHODS mark
+      IMPORTING
+        iv_object_key  TYPE zif_ca_ops_types=>ty_object_key
+        iv_downtime    TYPE zif_ca_ops_resp_types=>ty_uuid OPTIONAL
+        iv_role        TYPE zif_ca_ops_resp_types=>ty_corr_role OPTIONAL.
+    METHODS dispatch
+      IMPORTING
+        it_findings TYPE zif_ca_ops_types=>tt_finding.
+    METHODS escalate
+      RETURNING
+        VALUE(rs_result) TYPE zif_ca_ops_resp_types=>ty_escalation_result.
+    METHODS candidate
+      IMPORTING
+        iv_role             TYPE zif_ca_ops_resp_types=>ty_corr_role OPTIONAL
+      RETURNING
+        VALUE(rs_candidate) TYPE zif_ca_ops_resp_types=>ty_esc_candidate.
+    METHODS logged
+      IMPORTING
+        iv_status       TYPE char1
+      RETURNING
+        VALUE(rv_count) TYPE i.
+
+    METHODS downtime_finding_not_alerted FOR TESTING.
+    METHODS area_window_holds_run_alert  FOR TESTING.
+    METHODS child_held_back_parent_count FOR TESTING.
+    METHODS runbook_link_in_the_message  FOR TESTING.
+    METHODS due_escalation_sent_once     FOR TESTING.
+    METHODS escalated_step_not_resent    FOR TESTING.
+    METHODS child_and_downtime_skipped   FOR TESTING.
+    METHODS not_yet_due_not_escalated    FOR TESTING.
+    METHODS escalation_needs_execute     FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_response IMPLEMENTATION.
+
+  METHOD setup.
+    mo_dao      = NEW #( ).
+    mo_channel  = NEW #( ).
+    mo_clock    = NEW #( ).
+    mo_store    = NEW #( ).
+    mo_downtime = NEW #( ).
+    mo_auth     = NEW #( ).
+    zcl_ca_ops_injector=>inject_mail_template( NEW ltd_mail_template( ) ).
+    zcl_ca_ops_injector=>inject_alert_dao( mo_dao ).
+    zcl_ca_ops_injector=>inject_clock( mo_clock ).
+    zcl_ca_ops_injector=>inject_store( mo_store ).
+    zcl_ca_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
+    zcl_ca_ops_injector=>inject_downtime( mo_downtime ).
+    zcl_ca_ops_injector=>inject_auth( mo_auth ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc-channel_cl
+                                        io_instance   = mo_channel ).
+    mo_clock->mv_now  = gc-now.
+    mo_clock->mv_time = gc-day.
+    INSERT VALUE #( channel = zif_ca_ops_types=>gc_channel-email class_name = gc-channel_cl active = abap_true )
+      INTO TABLE mo_dao->mt_channels.
+    CLEAR ms_run.
+    ms_run-area   = zcl_ca_ops_param_seed=>gc_test_area-first.
+    ms_run-status = zif_ca_ops_types=>gc_run_status-error.
+    ms_run-rag    = zif_ca_ops_types=>gc_rag-red.
+    TRY.
+        ms_run-run_id = cl_system_uuid=>create_uuid_x16_static( ).
+      CATCH cx_uuid_error.
+        cl_abap_unit_assert=>fail( msg = 'UUID for test run could not be created' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_ca_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  METHOD given_rule.
+    DATA ls_rule TYPE zif_ca_ops_types=>ty_alert_rule.
+    ls_rule-rule_id         = gc-rule_id.
+    ls_rule-area            = zcl_ca_ops_param_seed=>gc_test_area-first.
+    ls_rule-min_severity    = zif_ca_ops_types=>gc_severity-error.
+    ls_rule-min_rag         = iv_min_rag.
+    ls_rule-channel         = zif_ca_ops_types=>gc_channel-email.
+    ls_rule-destination     = gc-dest.
+    ls_rule-escalation_dest = gc-escalation.
+    ls_rule-esc_after_min   = iv_esc_after_min.
+    ls_rule-esc_repeat_min  = 60.
+    ls_rule-digest          = abap_true.
+    ls_rule-active          = abap_true.
+    INSERT ls_rule INTO TABLE mo_dao->mt_rules.
+  ENDMETHOD.
+
+
+  METHOD finding.
+    rs_finding-object_type = 'LINE'.
+    rs_finding-object_key  = iv_object_key.
+    rs_finding-rule_id     = 'R14'.
+    rs_finding-check_code  = gc-check.
+    rs_finding-severity    = zif_ca_ops_types=>gc_severity-error.
+    rs_finding-message     = 'Unmapped code'.
+  ENDMETHOD.
+
+
+  METHOD mark.
+    INSERT VALUE #( object_type = 'LINE'
+                    object_key  = iv_object_key
+                    check_code  = gc-check
+                    downtime_id = iv_downtime
+                    corr_id     = COND #( WHEN iv_role IS NOT INITIAL THEN gc-parent_id )
+                    corr_role   = iv_role ) INTO TABLE mo_dao->mt_marks.
+  ENDMETHOD.
+
+
+  METHOD dispatch.
+    TRY.
+        zcl_ca_ops_factory=>get_alert( )->dispatch( is_run = ms_run it_findings = it_findings ).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |dispatch must not raise: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD escalate.
+    TRY.
+        rs_result = zcl_ca_ops_factory=>get_alert( )->escalate( zcl_ca_ops_param_seed=>gc_test_area-first ).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |escalate must not raise: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD candidate.
+    rs_candidate-run_id        = ms_run-run_id.
+    rs_candidate-finding_no    = gc-finding_no.
+    rs_candidate-first_seen_at = gc-hour_ago.
+    rs_candidate-corr_role     = iv_role.
+    rs_candidate-finding       = finding( 'S0001/1' ).
+  ENDMETHOD.
+
+
+  METHOD logged.
+    LOOP AT mo_dao->mt_inserted TRANSPORTING NO FIELDS WHERE status = iv_status.
+      rv_count += 1.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  " Rule: a finding recorded in an approved planned downtime window is not alerted; the decision is logged D
+  METHOD downtime_finding_not_alerted.
+    given_rule( ).
+    mark( iv_object_key = 'S0001/1' iv_downtime = gc-window_id ).
+    dispatch( VALUE #( ( finding( 'S0001/1' ) ) ) ).
+    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing is delivered' ).
+    cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-downtime ) exp = 1
+                                        msg = 'One decision D in the alert log' ).
+  ENDMETHOD.
+
+
+  " Rule: a run-level alert (RAG) inside an approved area-wide window is held back and logged D
+  METHOD area_window_holds_run_alert.
+    given_rule( iv_min_rag = zif_ca_ops_types=>gc_rag-red ).
+    INSERT VALUE #( window_id = gc-window_id area = zcl_ca_ops_param_seed=>gc_test_area-first
+                    from_utc = gc-win_from to_utc = gc-win_to approved_by = gc-approver ) INTO TABLE mo_downtime->mt_windows.
+    dispatch( VALUE #( ) ).
+    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'The red run is not alerted' ).
+    cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-downtime ) exp = 1
+                                        msg = 'Logged D' ).
+  ENDMETHOD.
+
+
+  " Rule: a correlated child is not alerted on its own (logged K); the parent's message names its open children
+  METHOD child_held_back_parent_count.
+    given_rule( ).
+    mark( iv_object_key = 'S0001/1' iv_role = zif_ca_ops_resp_types=>gc_corr_role-parent ).
+    mark( iv_object_key = 'S0001/2' iv_role = zif_ca_ops_resp_types=>gc_corr_role-child ).
+    INSERT VALUE #( corr_id = gc-parent_id children = 1 ) INTO TABLE mo_dao->mt_children.
+    dispatch( VALUE #( ( finding( 'S0001/1' ) ) ( finding( 'S0001/2' ) ) ) ).
+    cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1 msg = 'One message' ).
+    DATA(ls_message) = mo_channel->mt_delivered[ 1 ].
+    cl_abap_unit_assert=>assert_equals( act = ls_message-item_count exp = 1 msg = 'Only the parent is listed' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_message-context-header-correlated_count exp = '1'
+                                        msg = 'The parent names its child' ).
+    cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-correlated ) exp = 1
+                                        msg = 'The held-back child is logged K' ).
+  ENDMETHOD.
+
+
+  " Rule: the alert e-mail carries the runbook link of its check
+  METHOD runbook_link_in_the_message.
+    given_rule( ).
+    INSERT VALUE #( area = zcl_ca_ops_param_seed=>gc_test_area-first match_field = zif_ca_ops_ctl_types=>gc_match_field-check_code
+                    match_value = gc-check runbook_url = gc-url first_action = 'Map the code' ) INTO TABLE mo_dao->mt_runbooks.
+    dispatch( VALUE #( ( finding( 'S0001/1' ) ) ) ).
+    cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-context-header-runbook_url exp = gc-url
+                                        msg = 'Runbook link of the check' ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = mo_channel->mt_delivered[ 1 ]-html sub = gc-url ) >= 0 )
+                                      msg = 'The built-in layout shows the link' ).
+  ENDMETHOD.
+
+
+  " Rule: an open, unassigned exception past ESC_AFTER_MIN is escalated once to the escalation destination,
+  " the step and the exception on the claim
+  METHOD due_escalation_sent_once.
+    given_rule( iv_esc_after_min = 30 ).
+    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+    DATA(ls_result) = escalate( ).
+    cl_abap_unit_assert=>assert_equals( act = ls_result-escalated exp = 1 msg = 'One escalation' ).
+    cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1 msg = 'One message' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-destination exp = gc-escalation
+                                        msg = 'To the escalation destination' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-esc_step exp = 1 msg = 'Step 1 on the claim' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-finding_no exp = gc-finding_no
+                                        msg = 'The exception on the claim' ).
+  ENDMETHOD.
+
+
+  " Rule: a step already sent is not sent again (the next job sends the next step when it is due)
+  METHOD escalated_step_not_resent.
+    given_rule( iv_esc_after_min = 30 ).
+    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+    escalate( ).
+    DATA(ls_sent) = mo_dao->mt_claims[ 1 ].
+    ls_sent-status = zif_ca_ops_types=>gc_alert_status-sent.
+    INSERT ls_sent INTO TABLE mo_dao->mt_intent_log.
+    CLEAR mo_channel->mt_delivered.
+    DATA(ls_result) = escalate( ).
+    cl_abap_unit_assert=>assert_equals( act = ls_result-escalated exp = 0 msg = 'Nothing more' ).
+    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'No second message' ).
+  ENDMETHOD.
+
+
+  " Rule: a correlated child escalates with its parent; an exception in planned downtime is held back
+  METHOD child_and_downtime_skipped.
+    given_rule( iv_esc_after_min = 30 ).
+    INSERT candidate( zif_ca_ops_resp_types=>gc_corr_role-child ) INTO TABLE mo_dao->mt_candidates.
+    DATA(ls_result) = escalate( ).
+    cl_abap_unit_assert=>assert_equals( act = ls_result-skipped exp = 1 msg = 'The child is skipped' ).
+    CLEAR mo_dao->mt_candidates.
+    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+    INSERT VALUE #( window_id = gc-window_id area = zcl_ca_ops_param_seed=>gc_test_area-first
+                    from_utc = gc-win_from to_utc = gc-win_to approved_by = gc-approver ) INTO TABLE mo_downtime->mt_windows.
+    ls_result = escalate( ).
+    cl_abap_unit_assert=>assert_equals( act = ls_result-skipped exp = 1 msg = 'Planned downtime holds it back' ).
+    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing is escalated' ).
+  ENDMETHOD.
+
+
+  " Rule: before ESC_AFTER_MIN nothing is escalated; a rule without time-based escalation never escalates
+  METHOD not_yet_due_not_escalated.
+    given_rule( iv_esc_after_min = 90 ).
+    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+    cl_abap_unit_assert=>assert_equals( act = escalate( )-escalated exp = 0 msg = '60 of 90 minutes' ).
+    CLEAR mo_dao->mt_rules.
+    given_rule( ).
+    cl_abap_unit_assert=>assert_equals( act = escalate( )-escalated exp = 0 msg = 'Run-based rule' ).
+    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing delivered' ).
+  ENDMETHOD.
+
+
+  " Rule: the escalation job needs ZCA_OPS 16 for the area (041)
+  METHOD escalation_needs_execute.
+    given_rule( iv_esc_after_min = 30 ).
+    mo_auth->mv_refuse = abap_true.
+    TRY.
+        zcl_ca_ops_factory=>get_alert( )->escalate( zcl_ca_ops_param_seed=>gc_test_area-first ).
+        cl_abap_unit_assert=>fail( msg = 'Without authorisation the job must stop' ).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '041'
+                                            msg = 'Message 041' ).
     ENDTRY.
   ENDMETHOD.
 

@@ -12,6 +12,8 @@
 //                   2026-11-10 | Overview card counters: CheckCount (one per registered check, area-level slice
 //                              | only), StaleCount, IsAttention (open exception or stale) - for a consumer's
 //                              | overview page KPI and list cards (summed after the DCL).
+//                   2026-11-11 | Planned downtime mark of the area (ZI_CA_OpsDtwActive, area-level slice only):
+//                              | IsPlannedDowntime and the active windows (operations response features).
 // VERIFY-ADT: cross join with left outer joins, a literal in the ON condition of a left outer join, the
 //             TIMESTAMPL -> TIMESTAMP cast and tstmp_seconds_between (as the consumers' "as of" views), coalesce
 //             over a LEFT OUTER JOIN column (7.58).
@@ -37,6 +39,8 @@ define root view entity ZR_CA_OpsCheckStatus
                                                and Run.started_at = Last.LastRunAt
                                                and Run.test_mode  = ' '
     left outer join ZI_CA_OpsChkStaleA as StA  on  StA.Area = Sl.Area
+    left outer join ZI_CA_OpsDtwActive as Dtw  on  Dtw.Area       = Sl.Area
+                                               and Sl.CompanyCode = ' '
 {
   key Sl.Area                                               as Area,
   key Sl.CheckId                                            as CheckId,
@@ -84,6 +88,9 @@ define root view entity ZR_CA_OpsCheckStatus
                    > coalesce( StA.StaleAfterMinutes, StD.StaleAfterMinutes ) * 60 then 1
               else 3 end as abap.int1 )                     as StaleCriticality,
       // Counters for cards (sum over the slices the user may read)
+      // Planned downtime of the area now (area-level slice only: a window has no company code)
+      cast( coalesce( Dtw.ActiveWindows, 0 ) as abap.int4 ) as PlannedDowntimeWindows,
+      cast( case when Dtw.ActiveWindows is null then ' ' else 'X' end as abap_boolean ) as IsPlannedDowntime,
       cast( 1 as abap.int4 )                                as SliceCount,
       cast( case when coalesce( Op.WorstRank, 0 ) > 0 then 1 else 0 end as abap.int4 ) as FlaggedCount,
       // One per registered check (area-level slice only), so a company-code slice never counts a check twice

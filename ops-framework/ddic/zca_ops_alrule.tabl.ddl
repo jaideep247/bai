@@ -34,6 +34,14 @@ define table zca_ops_alrule {
   escalation_dest : abap.char(255);
   // X = a due escalation is delivered even inside the throttle window (audit A46)
   esc_override    : abap_boolean;
+  // Escalation until acknowledged (2026-11-11, job ZCA_OPS_ESCALATE): an open, unassigned exception of the rule
+  // (severity >= ESC_SEVERITY, blank = MIN_SEVERITY) is escalated to ESCALATION_DEST after ESC_AFTER_MIN minutes,
+  // repeated every ESC_REPEAT_MIN minutes (0 = once) up to ESC_MAX_COUNT times (0 = parameter ESC_MAX_DEFAULT);
+  // stops when assigned, waived or resolved. ESC_AFTER_MIN > 0 takes precedence over ESCALATE_AFTER (runs)
+  esc_after_min   : abap.int4;
+  esc_repeat_min  : abap.int4;
+  esc_max_count   : abap.int4;
+  esc_severity    : abap.char(1);
   active          : abap_boolean;
   // E-mail template of the rule (SAP e-mail template ID, SMTG; blank = channel default, then generic).
   // VERIFY-SE11: data element of the SMTG template ID and its length (CHAR 30 assumed)

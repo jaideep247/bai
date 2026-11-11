@@ -31,6 +31,13 @@
 *&            | (blank = any; an area-level finding has a blank company code and matches only a blank pattern
 *&            | or a pattern that accepts blank) - findings of another company code never reach a company
 *&            | code's list.
+*& 2026-11-11 | Operations response features: the run-based escalation (ESCALATE_AFTER) applies only to a rule
+*&            | without time-based escalation (ESC_AFTER_MIN = 0, precedence documented in
+*&            | docs/OPERATIONS_FEATURES.md); ESCALATION_STEP (time-based escalation until acknowledged: first
+*&            | after ESC_AFTER_MIN, then every ESC_REPEAT_MIN, at most ESC_MAX_COUNT / ESC_MAX_DEFAULT) and
+*&            | ESCALATION_RULE (severity floor ESC_SEVERITY); RUNBOOK_FOR (CHECK_CODE before GROUP2 before
+*&            | RULE_ID); the message context carries runbook link, first action, correlated children and the
+*&            | escalation step (IS_EXTRA of BUILD_MESSAGES).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert rule policy</p>
 CLASS zcl_ca_ops_alert_policy DEFINITION
@@ -86,6 +93,16 @@ CLASS zcl_ca_ops_alert_policy DEFINITION
       END OF ty_selection.
     TYPES tt_selection TYPE STANDARD TABLE OF ty_selection WITH EMPTY KEY.
 
+    "! Context of a message beyond the run's exceptions (2026-11-11): runbook rows of the area, marks of the
+    "! stored findings (correlation), open children per correlation group, escalation step text (n of m)
+    TYPES:
+      BEGIN OF ty_extra,
+        runbooks   TYPE zif_ca_ops_resp_types=>tt_runbook,
+        marks      TYPE zif_ca_ops_resp_types=>tt_finding_mark,
+        children   TYPE zif_ca_ops_resp_types=>tt_corr_count,
+        escalation TYPE string,
+      END OF ty_extra.
+
     "! Severity floor and the four patterns (PCRE, complete value, case ignored; blank = any)
     METHODS matches
       IMPORTING
@@ -132,13 +149,53 @@ CLASS zcl_ca_ops_alert_policy DEFINITION
       RETURNING
         VALUE(rv_escalate) TYPE abap_bool.
 
+    "! Time-based escalation until acknowledged: the step due for an open, unassigned exception first seen
+    "! at iv_first_seen - 0 before ESC_AFTER_MIN minutes (and for a rule without it), then 1, and one more
+    "! every ESC_REPEAT_MIN minutes (0 = once), at most ESC_MAX_COUNT (0 = iv_max_default; never above
+    "! ZIF_CA_OPS_RESP_TYPES=>GC_ESC_MAX_HARD)
+    METHODS escalation_step
+      IMPORTING
+        is_rule         TYPE zif_ca_ops_types=>ty_alert_rule
+        iv_first_seen   TYPE timestampl
+        iv_now          TYPE timestampl
+        iv_max_default  TYPE i
+      RETURNING
+        VALUE(rv_step)  TYPE i.
+
+    "! Most escalations of one exception under the rule (ESC_MAX_COUNT, else iv_max_default; hard cap)
+    METHODS escalation_max
+      IMPORTING
+        is_rule        TYPE zif_ca_ops_types=>ty_alert_rule
+        iv_max_default TYPE i
+      RETURNING
+        VALUE(rv_max)  TYPE i.
+
+    "! The rule as the escalation applies it: severity floor ESC_SEVERITY (blank = MIN_SEVERITY)
+    METHODS escalation_rule
+      IMPORTING
+        is_rule        TYPE zif_ca_ops_types=>ty_alert_rule
+      RETURNING
+        VALUE(rs_rule) TYPE zif_ca_ops_types=>ty_alert_rule.
+
+    "! Runbook row of a finding: same area, CHECK_CODE before GROUP2 before RULE_ID (exact values; blank =
+    "! none) - the rule of ZI_CA_OpsFindRunbook
+    METHODS runbook_for
+      IMPORTING
+        it_runbooks       TYPE zif_ca_ops_resp_types=>tt_runbook
+        iv_area           TYPE zif_ca_ops_types=>ty_area
+        is_finding        TYPE zif_ca_ops_types=>ty_finding
+      RETURNING
+        VALUE(rs_runbook) TYPE zif_ca_ops_resp_types=>ty_runbook.
+
     "! @parameter it_facts | stored exceptions of the run (new / repeated / overdue, due date, owner)
+    "! @parameter is_extra | runbooks, correlation marks and children, escalation step (2026-11-11)
     METHODS build_messages
       IMPORTING
         is_selection       TYPE ty_selection
         is_run             TYPE zif_ca_ops_types=>ty_run
         iv_destination     TYPE zif_ca_ops_types=>ty_alert_dest
         it_facts           TYPE zif_ca_ops_types=>tt_exception_fact OPTIONAL
+        is_extra           TYPE ty_extra OPTIONAL
       RETURNING
         VALUE(rt_messages) TYPE zif_ca_ops_types=>tt_alert_message.
 
@@ -171,6 +228,8 @@ CLASS zcl_ca_ops_alert_policy DEFINITION
     DATA ms_mail    TYPE ty_mail_settings.
     "! Exceptions of the run being built (BUILD_MESSAGES)
     DATA mt_facts   TYPE zif_ca_ops_types=>tt_exception_fact.
+    "! Runbooks, correlation and escalation of the messages being built (BUILD_MESSAGES)
+    DATA ms_extra   TYPE ty_extra.
 
     METHODS pattern_hit
       IMPORTING
@@ -374,14 +433,79 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
 
 
   METHOD needs_escalation.
-    rv_escalate = xsdbool( is_rule-escalate_after > 0
+    " a rule with time-based escalation (ESC_AFTER_MIN) escalates by the escalation job only
+    rv_escalate = xsdbool( is_rule-esc_after_min <= 0
+                       AND is_rule-escalate_after > 0
                        AND is_rule-escalation_dest IS NOT INITIAL
                        AND iv_consecutive >= is_rule-escalate_after ).
   ENDMETHOD.
 
 
+  METHOD escalation_step.
+    IF is_rule-esc_after_min <= 0 OR iv_first_seen IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA lv_age TYPE decfloat34.
+    TRY.
+        lv_age = cl_abap_tstmp=>subtract( tstmp1 = iv_now tstmp2 = iv_first_seen ).
+      CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
+        RETURN.
+    ENDTRY.
+    DATA(lv_after) = is_rule-esc_after_min * zif_ca_ops_resp_types=>gc_seconds_per_minute.
+    IF lv_age < lv_after.
+      RETURN.
+    ENDIF.
+    rv_step = COND #( WHEN is_rule-esc_repeat_min <= 0 THEN 1
+                      ELSE floor( ( lv_age - lv_after )
+                                  / ( is_rule-esc_repeat_min * zif_ca_ops_resp_types=>gc_seconds_per_minute ) ) + 1 ).
+    rv_step = nmin( val1 = rv_step val2 = escalation_max( is_rule = is_rule iv_max_default = iv_max_default ) ).
+  ENDMETHOD.
+
+
+  METHOD escalation_max.
+    rv_max = COND #( WHEN is_rule-esc_max_count > 0 THEN is_rule-esc_max_count
+                     WHEN iv_max_default > 0 THEN iv_max_default
+                     ELSE 1 ).
+    rv_max = nmin( val1 = rv_max val2 = zif_ca_ops_resp_types=>gc_esc_max_hard ).
+  ENDMETHOD.
+
+
+  METHOD escalation_rule.
+    rs_rule = is_rule.
+    IF is_rule-esc_severity IS NOT INITIAL.
+      rs_rule-min_severity = is_rule-esc_severity.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD runbook_for.
+    DATA(lt_order) = VALUE string_table( ( CONV #( zif_ca_ops_ctl_types=>gc_match_field-check_code ) )
+                                         ( CONV #( zif_ca_ops_ctl_types=>gc_match_field-group2 ) )
+                                         ( CONV #( zif_ca_ops_ctl_types=>gc_match_field-rule_id ) ) ).
+    LOOP AT lt_order ASSIGNING FIELD-SYMBOL(<lv_field>).
+      DATA(lv_value) = SWITCH zif_ca_ops_types=>ty_group( <lv_field>
+                                                          WHEN zif_ca_ops_ctl_types=>gc_match_field-check_code
+                                                          THEN is_finding-check_code
+                                                          WHEN zif_ca_ops_ctl_types=>gc_match_field-group2
+                                                          THEN is_finding-group2
+                                                          ELSE is_finding-rule_id ).
+      IF lv_value IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      READ TABLE it_runbooks INTO rs_runbook WITH KEY area        = iv_area
+                                                      match_field = CONV zif_ca_ops_ctl_types=>ty_match_field( <lv_field> )
+                                                      match_value = lv_value.
+      IF sy-subrc = 0.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+    CLEAR rs_runbook.
+  ENDMETHOD.
+
+
   METHOD build_messages.
     mt_facts = it_facts.
+    ms_extra = is_extra.
     DATA(lv_max) = COND i( WHEN is_selection-rule-max_items > 0 THEN is_selection-rule-max_items
                            ELSE gc_default_max_items ).
     DATA(lv_total) = lines( is_selection-findings ).
@@ -633,6 +757,33 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
                                                       iv_v2    = is_run-jobname
                                                       iv_v3    = is_run-jobcount ).
     rs_header-amount_total = iv_amounts.
+    " runbook of the most severe finding that has one (the findings arrive ranked, B first)
+    LOOP AT it_findings ASSIGNING <ls_finding>.
+      DATA(ls_runbook) = runbook_for( it_runbooks = ms_extra-runbooks
+                                      iv_area     = is_run-area
+                                      is_finding  = <ls_finding> ).
+      IF ls_runbook IS NOT INITIAL.
+        rs_header-runbook_url  = ls_runbook-runbook_url.
+        rs_header-first_action = ls_runbook-first_action.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+    " correlated children of the parents in the message: alerted with them only
+    DATA(lv_children) = 0.
+    LOOP AT it_findings ASSIGNING <ls_finding>.
+      READ TABLE ms_extra-marks ASSIGNING FIELD-SYMBOL(<ls_mark>)
+           WITH TABLE KEY object_type  = <ls_finding>-object_type
+                          object_key   = <ls_finding>-object_key
+                          check_code   = <ls_finding>-check_code
+                          company_code = <ls_finding>-company_code.
+      IF sy-subrc = 0 AND <ls_mark>-corr_role = zif_ca_ops_resp_types=>gc_corr_role-parent.
+        lv_children += VALUE i( ms_extra-children[ corr_id = <ls_mark>-corr_id ]-children OPTIONAL ).
+      ENDIF.
+    ENDLOOP.
+    IF lv_children > 0.
+      rs_header-correlated_count = |{ lv_children }|.
+    ENDIF.
+    rs_header-escalation = ms_extra-escalation.
   ENDMETHOD.
 
 

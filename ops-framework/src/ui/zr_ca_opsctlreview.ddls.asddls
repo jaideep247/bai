@@ -11,6 +11,8 @@
 //                   2026-11-10 | Company-code isolation: key CompanyCode (slice); every counter counts slices, so
 //                                a card of a user of one company code sums only the slices he may read (DCL on
 //                                the slice's own company code = filter before the cards' aggregation).
+//                   2026-11-11 | Planned downtime mark of the slice (findings recorded in an approved window) and
+//                                the counter DowntimeCount (operations response features).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Daily control review'
 @Metadata.ignorePropagatedAnnotations: true
@@ -42,6 +44,8 @@ define root view entity ZR_CA_OpsCtlReview
                               when 1 then 2
                               else 3 end as abap.int1 )     as StatusCriticality,
       S.FindingCount,
+      S.DowntimeFindings,
+      S.IsPlannedDowntime,
       S.LastFindingAt,
       S.OpenExceptions,
       S.EvidenceRun,
@@ -75,6 +79,7 @@ define root view entity ZR_CA_OpsCtlReview
       cast( case S.StatusRank when 2 then 1 else 0 end as abap.int4 ) as ActionRequiredCount,
       cast( case S.StatusRank when 1 then 1 else 0 end as abap.int4 ) as WatchCount,
       cast( case when S.StatusRank > 0 then 1 else 0 end as abap.int4 ) as FlaggedCount,
+      cast( case S.IsPlannedDowntime when 'X' then 1 else 0 end as abap.int4 ) as DowntimeCount,
       _StatusText,
       _ResultText
 }

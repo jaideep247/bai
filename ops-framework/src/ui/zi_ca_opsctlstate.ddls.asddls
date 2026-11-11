@@ -6,6 +6,7 @@
 //          Read-only.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
 //                   2026-11-10 | Company code of the slice (company-code isolation).
+//                   2026-11-11 | Planned downtime mark: findings of the date in an approved window.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Control review: derived state'
 @Metadata.ignorePropagatedAnnotations: true
@@ -35,6 +36,8 @@ define view entity ZI_CA_OpsCtlState
                               when 1 then 'W'
                               else 'H' end as zca_ops_ctl_status ) as ControlStatus,
       D.FindingCount,
+      D.DowntimeFindings,
+      cast( case when D.DowntimeFindings > 0 then 'X' else ' ' end as abap_boolean ) as IsPlannedDowntime,
       D.LastFindingAt,
       D.OpenExceptions,
       D.EvidenceRun,

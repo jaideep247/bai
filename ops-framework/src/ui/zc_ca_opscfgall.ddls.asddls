@@ -19,5 +19,7 @@ define root view entity ZC_CA_OpsCfgAll
       _Process : redirected to composition child ZC_CA_Process,
       _RegisteredCheck : redirected to composition child ZC_CA_RegisteredCheck,
       _AggregateCheck : redirected to composition child ZC_CA_AggregateCheck,
-      _ApprovedTable : redirected to composition child ZC_CA_ApprovedTable
+      _ApprovedTable : redirected to composition child ZC_CA_ApprovedTable,
+      _RunbookLink : redirected to composition child ZC_CA_RunbookLink,
+      _CorrelationRule : redirected to composition child ZC_CA_CorrelationRule
 }
