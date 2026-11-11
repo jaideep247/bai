@@ -12,3 +12,13 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zcd_ops_svc
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zcd_ops_svcmap
+  {
+    last_changed_at as LastChangedAt
+  }

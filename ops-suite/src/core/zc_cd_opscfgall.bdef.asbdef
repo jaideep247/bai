@@ -14,6 +14,8 @@ define behavior for ZC_CD_OpsCfgAll alias OpsCfgAll
 
   use association _ApprovedTable { create; with draft; }
   use association _PayStage { create; with draft; }
+  use association _Service { create; with draft; }
+  use association _ServiceMap { create; with draft; }
 }
 
 define behavior for ZC_CD_ApprovedTable alias ApprovedTable
@@ -26,6 +28,24 @@ use etag
 }
 
 define behavior for ZC_CD_PayStage alias PayStage
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_Service alias Service
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_ServiceMap alias ServiceMap
 use etag
 {
   use update;

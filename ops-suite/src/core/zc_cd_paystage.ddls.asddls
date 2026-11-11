@@ -13,6 +13,7 @@ define view entity ZC_CD_PayStage
       Source,
       MatchValue,
       Active,
+      StuckDays,
       LastChangedBy,
       LastChangedAt,
       LocalLastChangedAt,

@@ -17,6 +17,8 @@ authorization master ( global )
 
   association _ApprovedTable { create ( features : global ); with draft; }
   association _PayStage { create ( features : global ); with draft; }
+  association _Service { create ( features : global ); with draft; }
+  association _ServiceMap { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -28,6 +30,10 @@ authorization master ( global )
     validation ApprovedTable ~ validateTransport;
     validation PayStage ~ validateFields;
     validation PayStage ~ validateTransport;
+    validation Service ~ validateFields;
+    validation Service ~ validateTransport;
+    validation ServiceMap ~ validateFields;
+    validation ServiceMap ~ validateTransport;
   }
 }
 
@@ -91,6 +97,77 @@ etag master LocalLastChangedAt
     Label = label;
     Source = source;
     MatchValue = match_value;
+    Active = active;
+    StuckDays = stuck_days;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_Service alias Service
+persistent table zcd_ops_svc
+with additional save
+draft table zcd_d_svc
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Service;
+  field ( mandatory : create ) Service;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_svc
+  {
+    Service = service;
+    Label = label;
+    Seq = seq;
+    WeightB = weight_b;
+    WeightE = weight_e;
+    WeightW = weight_w;
+    StalePoints = stale_points;
+    GreenMin = green_min;
+    AmberMin = amber_min;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_ServiceMap alias ServiceMap
+persistent table zcd_ops_svcmap
+with additional save
+draft table zcd_d_svcmap
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Service, Area, MatchField, MatchValue;
+  field ( mandatory : create ) Service, Area, MatchField, MatchValue;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_svcmap
+  {
+    Service = service;
+    Area = area;
+    MatchField = match_field;
+    MatchValue = match_value;
+    Weight = weight;
     Active = active;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;

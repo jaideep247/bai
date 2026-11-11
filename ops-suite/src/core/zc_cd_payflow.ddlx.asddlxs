@@ -1,0 +1,60 @@
+// UI annotations: Production support - process flow (overview page, entity PaymentFlow)
+// Works now (Fiori elements OVP has no flow card): list card "Process flow" in stage order with criticality per row
+// (presentation variant Flow) and bar card FlowBars (in stage, stuck). The ProcessFlow diagram is the custom card
+// of ui/cards/processflow over the same entity set (docs/Process_Flow_Card.md, VERIFY - manifests not in the
+// repository).
+// VERIFY-ADT: row criticality of an OVP V4 list card (lineItem criticality); bar order by StageSequence.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Stage', typeNamePlural: 'Process flow', title: { type: #STANDARD, value: 'StageLabel' } }
+@UI.chart: [ { qualifier: 'FlowBars', title: 'Payments per stage (stuck in red)', chartType: #BAR_STACKED,
+               dimensions: [ 'Stage' ], measures: [ 'PaymentCount', 'StuckCount' ],
+               dimensionAttributes: [ { dimension: 'Stage', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'PaymentCount', role: #AXIS_1 }, { measure: 'StuckCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { qualifier: 'Flow', sortOrder: [ { by: 'StageSequence', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] },
+                           { qualifier: 'FlowBars', sortOrder: [ { by: 'StageSequence', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'FlowBars' } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Current business date', filter: 'IsCurrentDay EQ X' } ]
+annotate entity ZC_CD_PayFlow with
+{
+  @EndUserText.label: 'Business date'
+  @UI.selectionField: [ { position: 20 } ]
+  BusinessDate;
+  @EndUserText.label: 'Company code'
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Stage'
+  @UI.lineItem: [ { position: 10, criticality: 'FlowCriticality' } ]
+  Stage;
+  @UI.hidden: true
+  StageSequence;
+  @EndUserText.label: 'Stage'
+  StageLabel;
+  @EndUserText.label: 'Counted from'
+  StageSource;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Expected days in stage'
+  StuckAfterDays;
+  @EndUserText.label: 'Days since the business date'
+  AgeDays;
+  @EndUserText.label: 'In stage'
+  @UI.lineItem: [ { position: 20 } ]
+  PaymentCount;
+  @EndUserText.label: 'Stuck'
+  @UI.lineItem: [ { position: 30, criticality: 'FlowCriticality' } ]
+  @UI.dataPoint: { qualifier: 'Stuck', title: 'Stuck beyond expected time', criticality: 'FlowCriticality' }
+  StuckCount;
+  @EndUserText.label: 'Reached'
+  @UI.lineItem: [ { position: 40 } ]
+  ReachedCount;
+  @EndUserText.label: 'Drop from previous stage'
+  @UI.lineItem: [ { position: 50 } ]
+  DropCount;
+  @UI.hidden: true
+  FlowCriticality;
+}

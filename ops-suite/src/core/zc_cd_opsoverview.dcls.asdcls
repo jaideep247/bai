@@ -14,6 +14,8 @@
 //                                company code - the KPI cards sum only slices the user may read) and variances
 //                                (company code of the reconciliation group): area authorised AND ( company code blank
 //                                OR ( area, company code ) authorised ). Freshness is area-level (runs only).
+//                   2026-11-11 | Service health (slice per company code, never summed), its contributors (area of the
+//                                findings) and the process flow (as the payment lifecycle).
 // VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); BUKRS not mapped in the first condition = not checked;
 //             IS INITIAL in an access condition (fallback: CompanyCode = ' ').
 @EndUserText.label: 'Production support overview - read access'
@@ -37,4 +39,18 @@ define role ZC_CD_OpsOverview {
     where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
       and ( CompanyCode is initial
          or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  // >>> 2026-11-11 service health and process flow (build B) - keep this block together at merge
+  // Service health: area CD_OPS, slice of the company code (blank = area-level slice); contributors: area of the
+  // findings and their company code; process flow: as the payment lifecycle (CD_OPS + company code of the rows)
+  grant select on ZC_CD_SvcHealth
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_CD_SvcContrib
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_CD_PayFlow
+    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
+  // <<< 2026-11-11 service health and process flow (build B)
 }

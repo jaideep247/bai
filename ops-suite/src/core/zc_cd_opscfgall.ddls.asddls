@@ -11,5 +11,7 @@ define root view entity ZC_CD_OpsCfgAll
       LastChangedAtMax,
       TransportRequestID,
       _ApprovedTable : redirected to composition child ZC_CD_ApprovedTable,
-      _PayStage : redirected to composition child ZC_CD_PayStage
+      _PayStage : redirected to composition child ZC_CD_PayStage,
+      _Service : redirected to composition child ZC_CD_Service,
+      _ServiceMap : redirected to composition child ZC_CD_ServiceMap
 }

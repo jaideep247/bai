@@ -12,6 +12,7 @@ define table zcd_d_paystage {
   source : abap.char(10);
   matchvalue : abap.char(30);
   active : abap_boolean;
+  stuckdays : abap.int4;
   lastchangedby : abp_lastchange_user;
   lastchangedat : abp_lastchange_tstmpl;
   locallastchangedat : abp_locinst_lastchange_tstmpl;

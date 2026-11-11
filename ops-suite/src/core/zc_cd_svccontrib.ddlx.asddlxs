@@ -1,0 +1,42 @@
+// UI annotations: Production support - service health causes (overview page, entity ServiceContributor)
+// List card "Service health - worst contributors": largest points first, 10 rows; row opens the exceptions app
+// filtered by area (IT support) - business users see the service name and the problem count only.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Cause', typeNamePlural: 'Service health - worst contributors',
+                  title: { type: #STANDARD, value: 'CheckCode' } }
+@UI.presentationVariant: [ { qualifier: 'Worst', sortOrder: [ { by: 'Points', direction: #DESC } ], maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Current business date', filter: 'IsCurrentDay EQ X' } ]
+annotate entity ZC_CD_SvcContrib with
+{
+  @EndUserText.label: 'Business service'
+  @UI.lineItem: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Service;
+  @EndUserText.label: 'Business date'
+  @UI.selectionField: [ { position: 30 } ]
+  BusinessDate;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 20 } ]
+  CompanyCode;
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 30 } ]
+  Area;
+  @EndUserText.label: 'Check code'
+  @UI.lineItem: [ { position: 40 } ]
+  CheckCode;
+  @EndUserText.label: 'Business service'
+  ServiceName;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Open problems'
+  @UI.lineItem: [ { position: 50 } ]
+  Problems;
+  @EndUserText.label: 'Points lost'
+  @UI.lineItem: [ { position: 60 } ]
+  Points;
+}

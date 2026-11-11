@@ -18,6 +18,8 @@ define view entity ZR_CD_PayStage
       match_value as MatchValue,
       @EndUserText.label: 'Active'
       active as Active,
+      @EndUserText.label: 'Days in the stage before stuck (0 = none)'
+      stuck_days as StuckDays,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,

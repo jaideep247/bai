@@ -18,10 +18,13 @@ define table zcd_ops_paystage {
   // The status value (PAYRUN) or the worklist outcome / request stage (REQUEST) counted for the stage
   match_value   : abap.char(30);
   active        : abap_boolean;
+  // Process flow card (2026-11-11): calendar days after the business date (run date / due date) a payment or
+  // request may still be in this stage; older ones are counted as stuck. 0 = no expected time (final stages)
+  stuck_days    : abap.int4;
   // RAP configuration apps (design 5): set by the framework, ignored by engines
   last_changed_by       : abp_lastchange_user;
   last_changed_at       : abp_lastchange_tstmpl;
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
-// Read by ZR_CD_PayLifecycle (overview page, payment lifecycle card): counts are computed live from DPAYH and the
+// Read by ZR_CD_PayLifecycle and ZR_CD_PayFlow (overview page, payment lifecycle and process flow cards): counts are computed live from DPAYH and the
 // worklist, never stored here. Delivered rows: config/pay_stages.csv. New rows only by transport (DV1).

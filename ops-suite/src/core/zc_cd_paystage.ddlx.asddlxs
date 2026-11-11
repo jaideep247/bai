@@ -32,6 +32,10 @@ annotate entity ZC_CD_PayStage with
   @UI.identification: [{ position: 60 }]
   Active;
 
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  StuckDays;
+
   @UI.hidden: true
   LastChangedBy;
 

@@ -165,6 +165,7 @@ ZCL_CD_OPS_POSTAREA_FACTORY,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target 
 ZCL_CD_OPS_POSTAREA_INJECTOR,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_POSTAREA (test seam: injected and reset by every reader test)
 ZCL_CD_OPS_POSTAREA_MEM,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_POSTAREA (test double (in-memory posting areas): every reader test adds entries and counts its reads)
 ZCL_CD_OPS_PURGE_TARGET,own test include,,8,90,,Not run in target SAP
+ZCL_CD_OPS_SVC_CDS_TEST,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_TRACE_DAO,own test include,,14,90,,"Not run in target SAP; partial exemption: reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"
 ZCL_CD_OPS_TRACE_ENGINE,own test include,,38,90,,Not run in target SAP
 ZCL_CD_OPS_UTIL,own test include,,7,90,,Not run in target SAP

@@ -4,4 +4,6 @@ define service ZUI_CD_OPS_CFG {
   expose ZC_CD_OpsCfgAll as OpsCfgAll;
   expose ZC_CD_ApprovedTable as ApprovedTable;
   expose ZC_CD_PayStage as PayStage;
+  expose ZC_CD_Service as Service;
+  expose ZC_CD_ServiceMap as ServiceMap;
 }

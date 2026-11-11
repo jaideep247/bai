@@ -149,6 +149,12 @@ SPEC = {
             ('zcd_ops_paystage', 'PayStage', 'zcd_d_paystage', 'Payment stage', 'Payment lifecycle stages', [],
              [('enum', 'source', 'PAYRUN,REQUEST'),
               ('when', 'active', 'X', [('required', 'match_value'), ('required', 'label')])]),
+            # Service health card of the overview page (2026-11-11): business services, their score settings and what
+            # each covers (exact values, joined in CDS - as the covered checks of the framework's controls)
+            ('zcd_ops_svc', 'Service', 'zcd_d_svc', 'Business service', 'Business services (health score)', [],
+             [('when', 'active', 'X', [('required', 'label')])]),
+            ('zcd_ops_svcmap', 'ServiceMap', 'zcd_d_svcmap', 'Covered by', 'What a business service covers', [],
+             [('enum', 'match_field', 'AREA,CONTROL,RULE_ID,CHECK_CODE,GROUP2')]),
         ]),
 }
 
@@ -198,6 +204,13 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           # Payment lifecycle stages (2026-11-10)
           'stage': 'Stage', 'label': 'Label of the stage',
           'source': 'Counted from (PAYRUN / REQUEST)',
+          # Service health and process flow (2026-11-11)
+          'stuck_days': 'Days in the stage before stuck (0 = none)', 'service': 'Business service',
+          'weight_b': 'Points per open blocking finding', 'weight_e': 'Points per open error finding',
+          'weight_w': 'Points per open warning finding', 'stale_points': 'Points per stale monitor',
+          'green_min': 'Good from score', 'amber_min': 'Watch from score',
+          'match_field': 'Covers (AREA / CONTROL / RULE_ID / CHECK_CODE / GROUP2)',
+          'match_value': 'Value (exact; blank for AREA)', 'weight': 'Weight (multiplier)',
           'match_value': 'Payment status (PAYRUN) / worklist outcome or stage (REQUEST)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME=RENAME, TOKENS=TOKENS, LABELS=LABELS)

@@ -46,7 +46,7 @@
       "exclude": [
         "/src/[a-z]+/zcd_d_[a-z]+\\.tabl\\.xml$",
         "/src/fmon/zcd_fmon_prq_wa\\.tabl\\.xml$",
-        "/src/core/zcd_ops_paystage\\.tabl\\.xml$"
+        "/src/core/zcd_ops_(paystage|svc|svcmap)\\.tabl\\.xml$"
       ]
     },
     "definitions_top": false,

@@ -11,7 +11,11 @@ annotate entity ZC_CD_OpsCfgAll with
     { id: 'ApprovedTable', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Approved tables per reader', position: 20, targetElement: '_ApprovedTable' },
     { id: 'PayStage', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Payment lifecycle stages', position: 30, targetElement: '_PayStage' }
+      label: 'Payment lifecycle stages', position: 30, targetElement: '_PayStage' },
+    { id: 'Service', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Business services (health score)', position: 40, targetElement: '_Service' },
+    { id: 'ServiceMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'What a business service covers', position: 50, targetElement: '_ServiceMap' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

@@ -1,0 +1,51 @@
+// UI annotations: Production support - service health (overview page, entity ServiceHealth)
+// List card "Service health" (presentation variant Worst: lowest score first, then the configured order) and KPI
+// data point Score (criticality ScoreCriticality); header navigates to the contributors (ServiceContributor).
+// Managers' overview page: same card. Company code view: filter / group by CompanyCode (slice).
+// VERIFY-ADT: OVP V4 list card with a data point column and criticality (as the control center cards).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Business service', typeNamePlural: 'Service health',
+                  title: { type: #STANDARD, value: 'ServiceName' } }
+@UI.presentationVariant: [ { qualifier: 'Worst',
+                             sortOrder: [ { by: 'Score', direction: #ASC }, { by: 'ServiceSequence', direction: #ASC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Current business date', filter: 'IsCurrentDay EQ X' } ]
+annotate entity ZC_CD_SvcHealth with
+{
+  @EndUserText.label: 'Business service'
+  @UI.lineItem: [ { position: 10 } ]
+  Service;
+  @EndUserText.label: 'Business date'
+  @UI.selectionField: [ { position: 20 } ]
+  BusinessDate;
+  @EndUserText.label: 'Company code (blank = all, area-level)'
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.lineItem: [ { position: 20 } ]
+  CompanyCode;
+  @EndUserText.label: 'Business service'
+  ServiceName;
+  @UI.hidden: true
+  ServiceSequence;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Open problems'
+  @UI.lineItem: [ { position: 40 } ]
+  OpenProblems;
+  @EndUserText.label: 'Stale monitors'
+  @UI.lineItem: [ { position: 50 } ]
+  StaleMonitors;
+  @EndUserText.label: 'Points lost'
+  Points;
+  @EndUserText.label: 'Health score'
+  @UI.lineItem: [ { position: 30, type: #AS_DATAPOINT } ]
+  @UI.dataPoint: { qualifier: 'Score', title: 'Health score', targetValue: 100, criticality: 'ScoreCriticality',
+                   visualization: #PROGRESS }
+  Score;
+  @UI.hidden: true
+  ScoreCriticality;
+}
