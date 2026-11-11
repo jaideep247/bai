@@ -45,6 +45,9 @@
 *&            | RUNBOOK_URL, FIRST_ACTION, CORRELATED_COUNT, ESCALATION of the alert e-mail.
 *& 2026-11-11 | Name prefix LINK_ read in area CA_OPS (link registry walker).
 *& 2026-11-11 | Name prefix CAT_ read in area CA_OPS (process catalogue: outage check window).
+*& 2026-11-11 | Explainable, versioned results: TY_FINDING-CFG_VERSION / CFG_RULE (TY_CFG_VERSION, TY_CFG_RULE)
+*&            | and EVENT_AT (pilot metrics); name prefixes BRK_ (clearing-account break analysis) and PILOT_
+*&            | (pilot pack) read in area CA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -159,6 +162,10 @@ INTERFACE zif_ca_ops_types
       link        TYPE ty_param_name VALUE 'LINK_',
       "! Process catalogue and its risk checks (ZIF_CA_OPS_CAT_TYPES=>GC_PARAM, 2026-11-11)
       catalogue   TYPE ty_param_name VALUE 'CAT_',
+      "! Clearing-account break analysis (ZIF_CA_OPS_BRK_TYPES=>GC_PARAM, 2026-11-11)
+      break       TYPE ty_param_name VALUE 'BRK_',
+      "! Pilot pack / shadow mode (docs/PILOT_PACK.md, 2026-11-11)
+      pilot       TYPE ty_param_name VALUE 'PILOT_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters
@@ -202,6 +209,10 @@ INTERFACE zif_ca_ops_types
   TYPES ty_amount      TYPE p LENGTH 12 DECIMALS 2.
   TYPES ty_currency    TYPE c LENGTH 5.
   TYPES ty_class_name  TYPE c LENGTH 30.
+  "! Configuration version of a finding: SHA-1 (hex) of the effective configuration rows of its check
+  TYPES ty_cfg_version TYPE c LENGTH 40.
+  "! Configuration row inside a check that produced or explained a finding (aggregate ID, bucket rule ID)
+  TYPES ty_cfg_rule    TYPE c LENGTH 20.
 
   "! Plug-in interfaces of the framework (passed to ZCL_CA_OPS_FACTORY=>GET_PLUGIN, A62)
   CONSTANTS:
@@ -344,6 +355,15 @@ INTERFACE zif_ca_ops_types
       "! never amounts - shown on every rule). DETAILS is the check's free text and may carry amounts:
       "! the e-mail shows it only on rules with SHOW_AMOUNTS
       context       TYPE string,
+      "! Explainable, versioned results (2026-11-11): the configuration version that produced the finding (SHA-1
+      "! of the effective configuration rows of its check, ZCL_CA_OPS_CFG_VERSION - the runner sets it when blank)
+      "! and the configuration row inside the check that produced or explained it (aggregate ID, bucket rule ID);
+      "! stored as ZCA_OPS_FINDING-CFG_VERSION / CFG_RULE. BUSINESS_DATE is stored too (BUS_DATE)
+      cfg_version   TYPE ty_cfg_version,
+      cfg_rule      TYPE ty_cfg_rule,
+      "! Time of the business event the finding is about (UTC; blank = not known): time to detect of the pilot
+      "! metrics = first seen - event time (else the business date)
+      event_at      TYPE timestampl,
     END OF ty_finding.
   TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 

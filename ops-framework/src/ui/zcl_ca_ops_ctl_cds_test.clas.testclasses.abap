@@ -14,6 +14,8 @@
 *&            | slices of a control and date (ltc_slice: area-level always, a company code with findings,
 *&            | open exceptions or a sign-off); the status of a slice counts only the findings of its own
 *&            | company code (ltc_day).
+*& 2026-11-11 | Explainable, versioned results: changes after the sign-off (ltc_reopen: new, severity, amount,
+*&            | configuration version, unchanged repeat, before the sign-off); reopened state and reason (ltc_state).
 *&---------------------------------------------------------------------*
 "! ZI_CA_OPSCTLFIND: findings of the covered checks of a control
 CLASS ltc_find DEFINITION FINAL FOR TESTING
@@ -143,15 +145,19 @@ CLASS ltc_state IMPLEMENTATION.
                        ( area = gc-area controlid = 'C3' businessdate = gc-day statusrank = 2
                          statusatreview = zif_ca_ops_ctl_types=>gc_status-watch reviewrank = 1 reviewedat = gc-reviewed_at )
                        ( area = gc-area controlid = 'C4' businessdate = gc-day statusrank = 0 lastfindingat = gc-later
-                         statusatreview = zif_ca_ops_ctl_types=>gc_status-healthy reviewrank = 0 reviewedat = gc-reviewed_at ) ).
+                         statusatreview = zif_ca_ops_ctl_types=>gc_status-healthy reviewrank = 0 reviewedat = gc-reviewed_at )
+                       ( area = gc-area controlid = 'C5' businessdate = gc-day statusrank = 1 lastfindingat = gc-later
+                         statusatreview = zif_ca_ops_ctl_types=>gc_status-watch reviewrank = 1 reviewedat = gc-reviewed_at
+                         reopenamountcount = 1 reopenconfigcount = 2 ) ).
     go_env->insert_test_data( lt_days ).
   ENDMETHOD.
 
 
   METHOD status_and_awaiting.
-    SELECT controlid, controlstatus, isreviewed, isawaitingreview, isflagged FROM zi_ca_opsctlstate
+    SELECT controlid, controlstatus, isreviewed, isawaitingreview, isflagged, isreopened, reopenreason, reopenfindings
+      FROM zi_ca_opsctlstate
       ORDER BY controlid INTO TABLE @DATA(lt_rows).
-    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 4 msg = 'One row per control and date' ).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 5 msg = 'One row per control and date' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-controlstatus exp = zif_ca_ops_ctl_types=>gc_status-healthy
                                         msg = 'Rank 0 = healthy' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-isawaitingreview exp = abap_true msg = 'Not signed off: awaiting' ).
@@ -162,8 +168,18 @@ CLASS ltc_state IMPLEMENTATION.
                                         msg = 'Rank 2 = action required' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-isawaitingreview exp = abap_true
                                         msg = 'Worse than at sign-off: awaiting again' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 4 ]-isawaitingreview exp = abap_true
-                                        msg = 'A finding after the sign-off: awaiting again' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-reopenreason exp = zif_ca_ops_ctl_types=>gc_reopen-worse
+                                        msg = 'Reopened: worse status' ).
+    " 2026-11-11: a finding raised again unchanged after the sign-off keeps the sign-off
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 4 ]-isawaitingreview exp = abap_false
+                                        msg = 'Unchanged repeat after the sign-off: still reviewed' ).
+    cl_abap_unit_assert=>assert_initial( act = lt_rows[ 4 ]-isreopened msg = 'Not reopened' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 5 ]-isawaitingreview exp = abap_true
+                                        msg = 'Changed findings after the sign-off: awaiting again' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 5 ]-isreopened exp = abap_true msg = 'Reopened' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 5 ]-reopenreason exp = zif_ca_ops_ctl_types=>gc_reopen-amount
+                                        msg = 'Amount before configuration' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 5 ]-reopenfindings exp = 3 msg = 'Three changed findings' ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -407,6 +423,109 @@ CLASS ltc_day IMPLEMENTATION.
     cl_abap_unit_assert=>assert_initial( act = lt_rows[ 2 ]-statusatreview msg = 'ZT01: not signed off by ZT02' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-statusrank exp = 2 msg = 'ZT02: action required' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-findingcount exp = 3 msg = 'ZT02: its three findings' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZI_CA_OPSCTLREOPEN: findings of a signed-off slice compared with the rows they replaced
+CLASS ltc_reopen DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        area        TYPE zif_ca_ops_types=>ty_area VALUE 'ZT_OPS_A',
+        control     TYPE zif_ca_ops_ctl_types=>ty_control_id VALUE 'ZT_PAYFILES',
+        day         TYPE d VALUE '20261110',
+        run_old     TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000A1',
+        run_new     TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000A2',
+        earlier     TYPE timestampl VALUE '20261110120000.0000000',
+        reviewed_at TYPE timestampl VALUE '20261110140000.0000000',
+        later       TYPE timestampl VALUE '20261110150000.0000000',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS changes_after_sign_off FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_reopen IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_CA_OPSCTLREOPEN' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_live TYPE STANDARD TABLE OF zi_ca_opsctlfind WITH EMPTY KEY.
+    DATA lt_reviews TYPE STANDARD TABLE OF zca_ops_review WITH EMPTY KEY.
+    DATA lt_prev TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    lt_reviews = VALUE #( ( area = gc-area control_id = gc-control business_date = gc-day
+                            status_at_review = zif_ca_ops_ctl_types=>gc_status-watch reviewed_at = gc-reviewed_at ) ).
+    " Live findings of the new run (after the sign-off): K1 unchanged, K2 amount, K3 severity, K4 other version,
+    " K5 new; K6 recorded before the sign-off (not compared)
+    lt_live = VALUE #( ( area = gc-area controlid = gc-control businessdate = gc-day runid = gc-run_new findingno = 1
+                         findingarea = gc-area objecttype = 'DOC' objectkey = 'K1' checkcode = 'C' severity = 'W'
+                         amount = 10 currency = 'USD' configversion = 'V1' firstseenat = gc-earlier createdat = gc-later )
+                       ( area = gc-area controlid = gc-control businessdate = gc-day runid = gc-run_new findingno = 2
+                         findingarea = gc-area objecttype = 'DOC' objectkey = 'K2' checkcode = 'C' severity = 'W'
+                         amount = 20 currency = 'USD' configversion = 'V1' firstseenat = gc-earlier createdat = gc-later )
+                       ( area = gc-area controlid = gc-control businessdate = gc-day runid = gc-run_new findingno = 3
+                         findingarea = gc-area objecttype = 'DOC' objectkey = 'K3' checkcode = 'C' severity = 'E'
+                         amount = 10 currency = 'USD' configversion = 'V1' firstseenat = gc-earlier createdat = gc-later )
+                       ( area = gc-area controlid = gc-control businessdate = gc-day runid = gc-run_new findingno = 4
+                         findingarea = gc-area objecttype = 'DOC' objectkey = 'K4' checkcode = 'C' severity = 'W'
+                         amount = 10 currency = 'USD' configversion = 'V2' firstseenat = gc-earlier createdat = gc-later )
+                       ( area = gc-area controlid = gc-control businessdate = gc-day runid = gc-run_new findingno = 5
+                         findingarea = gc-area objecttype = 'DOC' objectkey = 'K5' checkcode = 'C' severity = 'W'
+                         amount = 10 currency = 'USD' configversion = 'V1' firstseenat = gc-later createdat = gc-later )
+                       ( area = gc-area controlid = gc-control businessdate = gc-day runid = gc-run_old findingno = 9
+                         findingarea = gc-area objecttype = 'DOC' objectkey = 'K9' checkcode = 'C' severity = 'W'
+                         amount = 10 currency = 'USD' configversion = 'V1' firstseenat = gc-earlier createdat = gc-earlier ) ).
+    " The rows the new run replaced (superseded by it)
+    lt_prev = VALUE #( ( run_id = gc-run_old finding_no = 1 area = gc-area object_type = 'DOC' object_key = 'K1'
+                         check_code = 'C' severity = 'W' amount = 10 currency = 'USD' cfg_version = 'V1'
+                         superseded_by = gc-run_new )
+                       ( run_id = gc-run_old finding_no = 2 area = gc-area object_type = 'DOC' object_key = 'K2'
+                         check_code = 'C' severity = 'W' amount = 15 currency = 'USD' cfg_version = 'V1'
+                         superseded_by = gc-run_new )
+                       ( run_id = gc-run_old finding_no = 3 area = gc-area object_type = 'DOC' object_key = 'K3'
+                         check_code = 'C' severity = 'W' amount = 10 currency = 'USD' cfg_version = 'V1'
+                         superseded_by = gc-run_new )
+                       ( run_id = gc-run_old finding_no = 4 area = gc-area object_type = 'DOC' object_key = 'K4'
+                         check_code = 'C' severity = 'W' amount = 10 currency = 'USD' cfg_version = 'V1'
+                         superseded_by = gc-run_new ) ).
+    go_env->insert_test_data( lt_reviews ).
+    go_env->insert_test_data( lt_live ).
+    go_env->insert_test_data( lt_prev ).
+  ENDMETHOD.
+
+
+  " Rule: after the sign-off, new / severity / amount / version changes flag a finding; an unchanged repeat and a
+  " finding recorded before the sign-off do not
+  METHOD changes_after_sign_off.
+    SELECT findingno, newflag, statusflag, amountflag, configflag FROM zi_ca_opsctlreopen
+      ORDER BY findingno INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 5 msg = 'Only findings after the sign-off' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-newflag + lt_rows[ 1 ]-statusflag + lt_rows[ 1 ]-amountflag
+                                              + lt_rows[ 1 ]-configflag
+                                        exp = 0 msg = 'Unchanged repeat: no flag' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-amountflag exp = 1 msg = 'Amount changed' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-statusflag exp = 1 msg = 'Severity changed' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 4 ]-configflag exp = 1 msg = 'Other configuration version' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 5 ]-newflag exp = 1 msg = 'First seen after the sign-off' ).
   ENDMETHOD.
 
 ENDCLASS.

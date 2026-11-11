@@ -13,6 +13,8 @@
 //                                the slice's own company code = filter before the cards' aggregation).
 //                   2026-11-11 | Planned downtime mark of the slice (findings recorded in an approved window) and
 //                                the counter DowntimeCount (operations response features).
+//                   2026-11-11 | Reopened sign-off with its reason (text of domain ZCA_OPS_REOPEN) and the findings that
+//                                changed since the sign-off; counter ReopenedCount (explainable, versioned results).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Daily control review'
 @Metadata.ignorePropagatedAnnotations: true
@@ -21,6 +23,7 @@ define root view entity ZR_CA_OpsCtlReview
   as select from ZI_CA_OpsCtlState as S
   association [0..*] to ZI_CA_OpsCtlStatusT as _StatusText on $projection.ControlStatus = _StatusText.ControlStatus
   association [0..*] to ZI_CA_OpsCtlStatusT as _ResultText on $projection.ReviewResult = _ResultText.ControlStatus
+  association [0..*] to ZI_CA_OpsReopenT    as _ReopenText on $projection.ReopenReason = _ReopenText.ReopenReason
 {
   key S.Area,
   key S.ControlId,
@@ -63,6 +66,14 @@ define root view entity ZR_CA_OpsCtlReview
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       S.LastChangedAt,
       S.IsReviewed,
+      S.IsReopened,
+      @ObjectModel.text.association: '_ReopenText'
+      S.ReopenReason,
+      S.ReopenFindings,
+      S.ReopenNewCount,
+      S.ReopenStatusCount,
+      S.ReopenAmountCount,
+      S.ReopenConfigCount,
       S.IsAwaitingReview,
       S.IsFlagged,
       cast( case when S.IsAwaitingReview = 'X'
@@ -80,6 +91,8 @@ define root view entity ZR_CA_OpsCtlReview
       cast( case S.StatusRank when 1 then 1 else 0 end as abap.int4 ) as WatchCount,
       cast( case when S.StatusRank > 0 then 1 else 0 end as abap.int4 ) as FlaggedCount,
       cast( case S.IsPlannedDowntime when 'X' then 1 else 0 end as abap.int4 ) as DowntimeCount,
+      cast( case S.IsReopened when 'X' then 1 else 0 end as abap.int4 )      as ReopenedCount,
       _StatusText,
-      _ResultText
+      _ResultText,
+      _ReopenText
 }

@@ -14,10 +14,14 @@
 *& 2026-11-10 | Initial version (process onboarding framework).
 *& 2026-11-11 | Process catalogue: a check of a process that is not in effect is not run (information
 *&            | finding PROCESS_INACTIVE, not reconciled); the catalogue is a local double.
+*& 2026-11-11 | Explainable, versioned results: the configuration version of the run on every finding (registry
+*&            | row and the check's own rows), another version when a row changes, a version set by the check kept.
 *&---------------------------------------------------------------------*
 CLASS ltd_check DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_check.
+    INTERFACES zif_ca_ops_check_config.
+    DATA mt_lines TYPE string_table.
     DATA mt_findings TYPE zif_ca_ops_types=>tt_finding.
     DATA mv_fail TYPE abap_bool.
     DATA mv_partial TYPE abap_bool.
@@ -35,6 +39,9 @@ CLASS ltd_check IMPLEMENTATION.
     rs_result-findings   = mt_findings.
     rs_result-item_count = 1.
     rs_result-partial    = mv_partial.
+  ENDMETHOD.
+  METHOD zif_ca_ops_check_config~config_lines.
+    rt_lines = mt_lines.
   ENDMETHOD.
 ENDCLASS.
 
@@ -247,6 +254,8 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
     METHODS failed_alert_is_recorded     FOR TESTING.
     METHODS inactive_process_skipped     FOR TESTING.
     METHODS active_process_runs          FOR TESTING.
+    METHODS config_version_stamped       FOR TESTING.
+    METHODS own_version_kept             FOR TESTING.
 ENDCLASS.
 
 
@@ -480,6 +489,44 @@ CLASS ltc_runner IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_ca_ops_cat_types=>gc_code-process_inactive ] ) )
           msg = 'No skip note for a process in effect' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Rule: every finding carries the configuration version of its check - the registry row and the check's own
+  " rows; another row value gives another version (explainable, versioned results)
+  METHOD config_version_stamped.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        INSERT zcl_ca_ops_cfg_version=>line( iv_kind = 'AGG' is_row = 'AMBER=1' ) INTO TABLE mo_ok->mt_lines.
+        run( ).
+        DATA(lv_first) = mo_store->mt_saved[ 1 ]-cfg_version.
+        DATA(ls_check) = mo_dao->mt_checks[ 1 ].
+        cl_abap_unit_assert=>assert_equals( act = lv_first
+                                            exp = zcl_ca_ops_cfg_version=>of_check( is_check = ls_check
+                                                                                    it_lines = mo_ok->mt_lines )
+                                            msg = 'Version of the registry row and the check rows' ).
+        cl_abap_unit_assert=>assert_equals( act = strlen( lv_first ) exp = 40 msg = 'SHA-1 in hex' ).
+        CLEAR: mo_ok->mt_lines, mo_store->mt_saved.
+        INSERT zcl_ca_ops_cfg_version=>line( iv_kind = 'AGG' is_row = 'AMBER=2' ) INTO TABLE mo_ok->mt_lines.
+        run( ).
+        cl_abap_unit_assert=>assert_differs( act = mo_store->mt_saved[ 1 ]-cfg_version exp = lv_first
+                                             msg = 'Changed threshold, other version' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a version the check set itself (e.g. of a snapshot it reads) is kept
+  METHOD own_version_kept.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        mo_ok->mt_findings[ 1 ]-cfg_version = 'SNAPSHOT_VERSION'.
+        run( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mt_saved[ 1 ]-cfg_version exp = 'SNAPSHOT_VERSION'
+                                            msg = 'Version of the check kept' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

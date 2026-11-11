@@ -6,12 +6,17 @@
 *& ranks, whether a sign-off may be saved (action required needs an
 *& observation and a next action; a result that differs from the derived
 *& status needs an observation), whether a control awaits review (no
-*& sign-off, the status got worse, or a newer finding) and whether that
+*& sign-off, the status got worse, or a covered finding changed since the
+*& sign-off - new, severity, amount, configuration version) and whether that
 *& review is overdue (business date over, or past the control's cut-off on
 *& the date). The CDS views of the review app and of the consumers' cards
 *& apply the same rules (docs/CONTROL_REVIEW.md); tests prove them here.
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-11 | Explainable, versioned results: a sign-off is reopened by a covered finding that is new since
+*&            | the sign-off or changed in severity, amount or configuration version (REOPEN_REASON per finding,
+*&            | the reason of the slice = the first that applies; a worse status reopens with WORSE); a finding
+*&            | raised again unchanged no longer reopens it (IS_AWAITING, REOPEN_REASON_OF_SLICE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - daily control review rules</p>
 CLASS zcl_ca_ops_review_policy DEFINITION
@@ -48,7 +53,27 @@ CLASS zcl_ca_ops_review_policy DEFINITION
       RETURNING
         VALUE(rv_result) TYPE zif_ca_ops_ctl_types=>ty_status.
 
-    "! Active and (not signed off, worse than at the sign-off, or a finding after the sign-off)
+    "! Why a covered finding recorded after the sign-off reopens it: NEW (first seen after the sign-off),
+    "! STATUS (severity differs from the replaced row), AMOUNT (amount or currency differs), CONFIG (another
+    "! configuration version, both known); blank = raised again unchanged (does not reopen)
+    CLASS-METHODS reopen_reason
+      IMPORTING
+        is_finding       TYPE zif_ca_ops_ctl_types=>ty_reopen_finding
+        iv_reviewed_at   TYPE timestampl
+      RETURNING
+        VALUE(rv_reason) TYPE zif_ca_ops_ctl_types=>ty_reopen.
+
+    "! Reason of a signed-off slice: the first of NEW, STATUS, AMOUNT, CONFIG among its findings' reasons,
+    "! else WORSE when the status is worse than at the sign-off; blank = the sign-off stands
+    CLASS-METHODS reopen_reason_of_slice
+      IMPORTING
+        it_reasons          TYPE string_table
+        iv_derived_status   TYPE zif_ca_ops_ctl_types=>ty_status
+        iv_status_at_review TYPE zif_ca_ops_ctl_types=>ty_status
+      RETURNING
+        VALUE(rv_reason)    TYPE zif_ca_ops_ctl_types=>ty_reopen.
+
+    "! Active and (not signed off, worse than at the sign-off, or reopened by a changed covered finding)
     CLASS-METHODS is_awaiting
       IMPORTING
         is_state           TYPE zif_ca_ops_ctl_types=>ty_await_state
@@ -136,7 +161,42 @@ CLASS zcl_ca_ops_review_policy IMPLEMENTATION.
     ENDIF.
     rv_awaiting = xsdbool( is_state-status_at_review IS INITIAL
                            OR status_rank( is_state-derived_status ) > status_rank( is_state-status_at_review )
-                           OR is_state-last_finding_at > is_state-reviewed_at ).
+                           OR is_state-reopen_reason IS NOT INITIAL ).
+  ENDMETHOD.
+
+
+  METHOD reopen_reason.
+    IF is_finding-first_seen_at > iv_reviewed_at.
+      rv_reason = zif_ca_ops_ctl_types=>gc_reopen-new.
+    ELSEIF is_finding-has_prev = abap_false.
+      " no replaced row known: no evidence of a change
+      RETURN.
+    ELSEIF is_finding-prev_severity <> is_finding-severity.
+      rv_reason = zif_ca_ops_ctl_types=>gc_reopen-status.
+    ELSEIF is_finding-prev_amount <> is_finding-amount OR is_finding-prev_currency <> is_finding-currency.
+      rv_reason = zif_ca_ops_ctl_types=>gc_reopen-amount.
+    ELSEIF is_finding-prev_version IS NOT INITIAL AND is_finding-cfg_version IS NOT INITIAL
+       AND is_finding-prev_version <> is_finding-cfg_version.
+      rv_reason = zif_ca_ops_ctl_types=>gc_reopen-config.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD reopen_reason_of_slice.
+    DATA(lt_order) = VALUE string_table( ( CONV #( zif_ca_ops_ctl_types=>gc_reopen-new ) )
+                                         ( CONV #( zif_ca_ops_ctl_types=>gc_reopen-status ) )
+                                         ( CONV #( zif_ca_ops_ctl_types=>gc_reopen-amount ) )
+                                         ( CONV #( zif_ca_ops_ctl_types=>gc_reopen-config ) ) ).
+    LOOP AT lt_order INTO DATA(lv_reason).
+      IF line_exists( it_reasons[ table_line = lv_reason ] ).
+        rv_reason = lv_reason.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+    IF iv_status_at_review IS NOT INITIAL
+       AND status_rank( iv_derived_status ) > status_rank( iv_status_at_review ).
+      rv_reason = zif_ca_ops_ctl_types=>gc_reopen-worse.
+    ENDIF.
   ENDMETHOD.
 
 

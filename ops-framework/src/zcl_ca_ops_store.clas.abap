@@ -43,6 +43,9 @@
 *&            | planned downtime window (DOWNTIME_ID, ZCL_CA_OPS_FACTORY=>GET_DOWNTIME, one read per save) and
 *&            | correlates new open exceptions (CORR_ID / CORR_ROLE / CORR_KEY, rules ZCA_OPS_CORR, open parents
 *&            | read by CORR_KEY - index COR; ZCL_CA_OPS_CORRELATOR); the carry-forward inherits the correlation.
+*& 2026-11-11 | Explainable, versioned results: save_findings stores the configuration version and row of a
+*&            | finding (CFG_VERSION / CFG_RULE - each row keeps its own, nothing inherited) and, for the pilot
+*&            | metrics, its business date and event time (BUS_DATE / EVENT_AT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - DB store (ZCA_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -301,6 +304,11 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
       ls_db-details     = <ls_finding>-details.
       ls_db-error_class = <ls_finding>-error_class.
       ls_db-bukrs       = <ls_finding>-company_code.
+      " explainable, versioned results: the configuration that produced the finding (never inherited)
+      ls_db-cfg_version = <ls_finding>-cfg_version.
+      ls_db-cfg_rule    = <ls_finding>-cfg_rule.
+      ls_db-bus_date    = <ls_finding>-business_date.
+      ls_db-event_at    = <ls_finding>-event_at.
       ls_db-created_at  = lv_now.
       ls_db-created_by  = sy-uname.
       ls_db-last_changed_at = lv_now.

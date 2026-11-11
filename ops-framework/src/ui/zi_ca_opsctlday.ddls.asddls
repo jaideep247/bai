@@ -11,6 +11,8 @@
 //                                open exceptions and sign-off of the slice's company code only; the evidence run
 //                                (area-level: a run has no company code) on every slice of the date.
 //                   2026-11-11 | Findings of the date in planned downtime (operations response features).
+//                   2026-11-11 | Changes after the sign-off (ZI_CA_OpsCtlReopDay: new, severity, amount, configuration
+//                                version - explainable, versioned results).
 // VERIFY-ADT: CROSS JOIN in a CDS view entity (7.58); fallback: inner join on Day.BusinessDate >= '00000000'.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Control review: control per business date'
@@ -37,6 +39,10 @@ define view entity ZI_CA_OpsCtlDay
     left outer join zca_ops_ctlt        as TxtE on  TxtE.langu      = 'E'
                                                 and TxtE.area       = Ctl.area
                                                 and TxtE.control_id = Ctl.control_id
+    left outer join ZI_CA_OpsCtlReopDay as Ro   on  Ro.Area         = Sl.Area
+                                                and Ro.ControlId    = Sl.ControlId
+                                                and Ro.BusinessDate = Sl.BusinessDate
+                                                and Ro.CompanyCode  = Sl.CompanyCode
     left outer join zca_ops_review      as Rev  on  Rev.area          = Sl.Area
                                                 and Rev.control_id    = Sl.ControlId
                                                 and Rev.business_date = Sl.BusinessDate
@@ -76,7 +82,11 @@ define view entity ZI_CA_OpsCtlDay
       Rev.reviewed_at                                       as ReviewedAt,
       Rev.observation                                       as Observation,
       Rev.next_action                                       as NextAction,
-      Rev.last_changed_at                                   as LastChangedAt
+      Rev.last_changed_at                                   as LastChangedAt,
+      cast( coalesce( Ro.NewCount, 0 ) as abap.int4 )       as ReopenNewCount,
+      cast( coalesce( Ro.StatusCount, 0 ) as abap.int4 )    as ReopenStatusCount,
+      cast( coalesce( Ro.AmountCount, 0 ) as abap.int4 )    as ReopenAmountCount,
+      cast( coalesce( Ro.ConfigCount, 0 ) as abap.int4 )    as ReopenConfigCount
 }
 where
   Ctl.active = 'X'

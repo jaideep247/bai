@@ -13,6 +13,8 @@
 *& still measured. Reads only through ZIF_CA_OPS_CHECK_DAO.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Explainable, versioned results: the active aggregate rows of the check are its configuration
+*&            | rows (ZIF_CA_OPS_CHECK_CONFIG, description left out); each finding names its row (CFG_RULE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - no-code aggregate check</p>
 "! Example: requests in status PENDING whose request date passed, per company code, amber 1 /
@@ -24,6 +26,7 @@ CLASS zcl_ca_ops_chk_agg DEFINITION
 
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_check.
+    INTERFACES zif_ca_ops_check_config.
 
 ENDCLASS.
 
@@ -64,8 +67,21 @@ CLASS zcl_ca_ops_chk_agg IMPLEMENTATION.
                           reference   = <ls_agg>-tabname
                           message     = lx_error->get_text( )
                           details     = zcl_ca_ops_util=>exception_trace( lx_error )
-                          error_class = zcl_ca_ops_util=>error_class( lx_error ) ) INTO TABLE rs_result-findings.
+                          error_class = zcl_ca_ops_util=>error_class( lx_error )
+                          cfg_rule    = <ls_agg>-agg_id ) INTO TABLE rs_result-findings.
       ENDTRY.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_check_config~config_lines.
+    DATA(lt_aggs) = zcl_ca_ops_factory=>get_check_dao( )->get_aggregates( iv_area     = is_check-area
+                                                                         iv_check_id = is_check-check_id ).
+    LOOP AT lt_aggs INTO DATA(ls_agg).
+      " the text changes no result
+      CLEAR ls_agg-description.
+      INSERT zcl_ca_ops_cfg_version=>line( iv_kind = zif_ca_ops_chk_types=>gc_object_type-aggregate
+                                           is_row  = ls_agg ) INTO TABLE rt_lines.
     ENDLOOP.
   ENDMETHOD.
 

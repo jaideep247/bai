@@ -11,6 +11,8 @@
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
 *& 2026-11-10 | TY_REVIEW-BUKRS: company code of the reviewed slice (company-code isolation).
+*& 2026-11-11 | Reopened sign-off (explainable, versioned results): reasons (domain ZCA_OPS_REOPEN), the
+*&            | comparison of a finding with the row it replaced (TY_REOPEN_FINDING), TY_AWAIT_STATE-REOPEN_REASON.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - control review types</p>
 INTERFACE zif_ca_ops_ctl_types
@@ -21,6 +23,39 @@ INTERFACE zif_ca_ops_ctl_types
   TYPES ty_status TYPE c LENGTH 1.
   TYPES ty_text TYPE c LENGTH 255.
   TYPES ty_match_field TYPE c LENGTH 10.
+  "! Reason a sign-off was reopened (domain ZCA_OPS_REOPEN: translatable texts); blank = not reopened
+  TYPES ty_reopen TYPE zca_ops_reopen.
+
+  "! Reasons, in the order the review shows the first that applies (CDS ZI_CA_OpsCtlState, same order)
+  CONSTANTS:
+    BEGIN OF gc_reopen,
+      "! A covered finding first seen after the sign-off
+      new    TYPE ty_reopen VALUE 'NEW',
+      "! A covered finding raised again with another severity
+      status TYPE ty_reopen VALUE 'STATUS',
+      "! A covered finding raised again with another amount or currency
+      amount TYPE ty_reopen VALUE 'AMOUNT',
+      "! A covered finding raised again under another configuration version (both versions known)
+      config TYPE ty_reopen VALUE 'CONFIG',
+      "! The derived status is worse than at the sign-off
+      worse  TYPE ty_reopen VALUE 'WORSE',
+    END OF gc_reopen.
+
+  "! A covered finding recorded after the sign-off and the row it replaced (blank = none: SUPERSEDED_BY)
+  TYPES:
+    BEGIN OF ty_reopen_finding,
+      first_seen_at TYPE timestampl,
+      severity      TYPE zif_ca_ops_types=>ty_severity,
+      amount        TYPE zif_ca_ops_types=>ty_amount,
+      currency      TYPE zif_ca_ops_types=>ty_currency,
+      cfg_version   TYPE zif_ca_ops_types=>ty_cfg_version,
+      "! X = the replaced row was found (the fields below are its values)
+      has_prev      TYPE abap_bool,
+      prev_severity TYPE zif_ca_ops_types=>ty_severity,
+      prev_amount   TYPE zif_ca_ops_types=>ty_amount,
+      prev_currency TYPE zif_ca_ops_types=>ty_currency,
+      prev_version  TYPE zif_ca_ops_types=>ty_cfg_version,
+    END OF ty_reopen_finding.
 
   "! Status of a control on a business date (labels: fixed values of domain ZCA_OPS_CTL_STATUS)
   CONSTANTS:
@@ -85,6 +120,10 @@ INTERFACE zif_ca_ops_ctl_types
       "! Blank when the control was not signed off for the date
       status_at_review TYPE ty_status,
       reviewed_at      TYPE timestampl,
+      "! Reason of the covered findings changed since the sign-off (ZCL_CA_OPS_REVIEW_POLICY=>REOPEN_REASON of
+      "! each, the first of GC_REOPEN that applies); blank = none. 2026-11-11: replaces "any finding after the
+      "! sign-off" - a finding raised again unchanged no longer reopens a sign-off (LAST_FINDING_AT informative)
+      reopen_reason    TYPE ty_reopen,
     END OF ty_await_state.
 
   "! Parameters of the control review (area CA_OPS)

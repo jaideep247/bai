@@ -2,6 +2,27 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (build F: explainable, versioned results)
+
+Goal (user, 2026-11-11): every finding says which rule and which configuration produced it; a control sign-off is
+reopened when a covered finding changes after it (`docs/EXPLAINABLE_RESULTS.md`).
+
+### Added
+- `ZCA_OPS_FINDING-CFG_VERSION` / `CFG_RULE` (configuration version and row of a finding), `BUS_DATE` / `EVENT_AT`
+  (pilot metrics); `TY_FINDING-CFG_VERSION`, `CFG_RULE`, `EVENT_AT`; the store writes them (never inherited).
+- `ZIF_CA_OPS_CHECK_CONFIG` (optional: a check's effective configuration rows), `ZCL_CA_OPS_CFG_VERSION` (SHA-1 of the
+  sorted lines with the registry row); the runner stamps the version on every finding; `ZCL_CA_OPS_CHK_AGG` names its
+  aggregate rows and sets `CFG_RULE`.
+- Exceptions app: facet *Explanation* (check, rule, configuration rule, version, business date, event time).
+- Control review: reopened sign-off with reason - domain `ZCA_OPS_REOPEN`, `ZI_CA_OpsReopenT`, `ZI_CA_OpsCtlReopen`,
+  `ZI_CA_OpsCtlReopDay`; `IsReopened`, `ReopenReason`, counts per reason, counter `ReopenedCount`;
+  `ZCL_CA_OPS_REVIEW_POLICY=>REOPEN_REASON` / `REOPEN_REASON_OF_SLICE`.
+- Name prefixes `BRK_` and `PILOT_` read in area `CA_OPS`.
+
+### Changed
+- Awaiting review: a finding raised again unchanged after the sign-off no longer reopens it (before: any finding after
+  the sign-off) - decision D-F1. VERIFY V132, V133.
+
 ## [Unreleased] - 2026-11-11 (process catalogue with activation)
 
 Goal (user, 2026-11-11): choose which SAP standard processes are active at a customer (some use dunning or invoicing,

@@ -6,6 +6,8 @@
 // 2026-11-11: runbook link and first action of the check (facet Runbook), planned downtime mark, correlation:
 //             facet "Correlated exceptions" on a parent (its children - the Resolve action works on several
 //             selected rows, each with its own authorisation and ETag) and "Parent exception" on a child
+// 2026-11-11: explainable, versioned results - facet "Explanation": check, rule, configuration rule and version
+//             of the run that produced the exception, business date and event time
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions',
                   title: { type: #STANDARD, value: 'CheckCode' },
@@ -15,6 +17,8 @@ annotate entity ZC_CA_OpsException with
   @UI.facet: [ { id: 'Exception', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Exception', position: 10 },
                { id: 'Runbook', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Runbook',
                  label: 'Runbook', position: 15 },
+               { id: 'Explanation', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Explanation',
+                 label: 'Explanation', position: 17 },
                { id: 'History', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'History', position: 20,
                  targetElement: '_History' },
                { id: 'Correlated', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Correlated exceptions',
@@ -73,10 +77,12 @@ annotate entity ZC_CA_OpsException with
   @UI.identification: [ { position: 110 } ]
   Reference;
   @UI.identification: [ { position: 120 } ]
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 20 } ]
   RuleId;
   @UI.identification: [ { position: 130 } ]
   Group1;
   @UI.identification: [ { position: 140 } ]
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 10 } ]
   Group2;
   @UI.identification: [ { position: 150 } ]
   Occurrences;
@@ -118,6 +124,20 @@ annotate entity ZC_CA_OpsException with
   @UI.lineItem: [ { position: 98, importance: #MEDIUM } ]
   @UI.identification: [ { position: 270 } ]
   CorrelatedOpen;
+  // Explainable, versioned results (2026-11-11): what produced the exception
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 30 } ]
+  @UI.lineItem: [ { position: 99, importance: #LOW } ]
+  @UI.selectionField: [ { position: 100 } ]
+  ConfigRule;
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 40 } ]
+  ConfigVersion;
+  @UI.lineItem: [ { position: 100, importance: #LOW } ]
+  @UI.selectionField: [ { position: 110 } ]
+  ConfigVersionShort;
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 50 } ]
+  BusinessDate;
+  @UI.fieldGroup: [ { qualifier: 'Explanation', position: 60 } ]
+  EventAt;
   @UI.hidden: true
   CorrelationId;
   @UI.hidden: true

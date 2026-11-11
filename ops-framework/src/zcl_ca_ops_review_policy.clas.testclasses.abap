@@ -4,10 +4,13 @@
 *& Pure tests of the daily control review rules: severity -> status, ranks,
 *& what a sign-off needs (action required: observation and next action; a
 *& result that differs from the derived status: observation), awaiting
-*& review (no sign-off, worse status, newer finding) and overdue (date over,
+*& review (no sign-off, worse status, changed finding) and overdue (date over,
 *& past the cut-off). No doubles; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-11 | Explainable, versioned results: reopen reasons of a finding (new, severity, amount,
+*&            | configuration version; unchanged repeat none), reason of a slice (order, worse status), a
+*&            | finding raised again unchanged no longer reopens a sign-off.
 *&---------------------------------------------------------------------*
 CLASS ltc_review_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -35,7 +38,10 @@ CLASS ltc_review_policy DEFINITION FINAL FOR TESTING
     METHODS unknown_result_refused      FOR TESTING.
     METHODS unreviewed_is_awaiting      FOR TESTING.
     METHODS worse_status_reopens        FOR TESTING.
-    METHODS newer_finding_reopens       FOR TESTING.
+    METHODS changed_finding_reopens     FOR TESTING.
+    METHODS unchanged_repeat_keeps      FOR TESTING.
+    METHODS finding_reopen_reasons      FOR TESTING.
+    METHODS slice_reason_first_applies  FOR TESTING.
     METHODS inactive_never_awaits       FOR TESTING.
     METHODS overdue_after_cutoff        FOR TESTING.
     METHODS past_date_overdue           FOR TESTING.
@@ -147,14 +153,90 @@ CLASS ltc_review_policy IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD newer_finding_reopens.
+  " Rule: a covered finding changed since the sign-off reopens it (awaiting again, with the reason)
+  METHOD changed_finding_reopens.
     cl_abap_unit_assert=>assert_true(
       act = zcl_ca_ops_review_policy=>is_awaiting( VALUE #( active           = abap_true
                                                             derived_status   = zif_ca_ops_ctl_types=>gc_status-watch
                                                             status_at_review = zif_ca_ops_ctl_types=>gc_status-watch
                                                             last_finding_at  = gc_test-later
+                                                            reviewed_at      = gc_test-reviewed_at
+                                                            reopen_reason    = zif_ca_ops_ctl_types=>gc_reopen-amount ) )
+      msg = 'A changed finding after the sign-off: awaiting again' ).
+  ENDMETHOD.
+
+
+  " Rule: a finding raised again unchanged after the sign-off keeps the sign-off (2026-11-11)
+  METHOD unchanged_repeat_keeps.
+    cl_abap_unit_assert=>assert_false(
+      act = zcl_ca_ops_review_policy=>is_awaiting( VALUE #( active           = abap_true
+                                                            derived_status   = zif_ca_ops_ctl_types=>gc_status-watch
+                                                            status_at_review = zif_ca_ops_ctl_types=>gc_status-watch
+                                                            last_finding_at  = gc_test-later
                                                             reviewed_at      = gc_test-reviewed_at ) )
-      msg = 'A finding after the sign-off: awaiting again' ).
+      msg = 'Repeat without change: still reviewed' ).
+  ENDMETHOD.
+
+
+  " Rule: NEW first seen after the sign-off; STATUS / AMOUNT / CONFIG against the replaced row; none unchanged
+  METHOD finding_reopen_reasons.
+    DATA ls_finding TYPE zif_ca_ops_ctl_types=>ty_reopen_finding.
+    ls_finding-first_seen_at = gc_test-earlier.
+    ls_finding-severity      = zif_ca_ops_types=>gc_severity-warning.
+    ls_finding-amount        = 100.
+    ls_finding-currency      = 'USD'.
+    ls_finding-cfg_version   = 'V2'.
+    ls_finding-has_prev      = abap_true.
+    ls_finding-prev_severity = zif_ca_ops_types=>gc_severity-warning.
+    ls_finding-prev_amount   = 100.
+    ls_finding-prev_currency = 'USD'.
+    ls_finding-prev_version  = 'V2'.
+    cl_abap_unit_assert=>assert_initial(
+      act = zcl_ca_ops_review_policy=>reopen_reason( is_finding = ls_finding iv_reviewed_at = gc_test-reviewed_at )
+      msg = 'Unchanged repeat: no reason' ).
+    ls_finding-prev_version = 'V1'.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_review_policy=>reopen_reason( is_finding = ls_finding iv_reviewed_at = gc_test-reviewed_at )
+      exp = zif_ca_ops_ctl_types=>gc_reopen-config msg = 'Other configuration version' ).
+    CLEAR ls_finding-prev_version.
+    cl_abap_unit_assert=>assert_initial(
+      act = zcl_ca_ops_review_policy=>reopen_reason( is_finding = ls_finding iv_reviewed_at = gc_test-reviewed_at )
+      msg = 'Unknown earlier version: no reason' ).
+    ls_finding-prev_amount = 90.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_review_policy=>reopen_reason( is_finding = ls_finding iv_reviewed_at = gc_test-reviewed_at )
+      exp = zif_ca_ops_ctl_types=>gc_reopen-amount msg = 'Amount changed' ).
+    ls_finding-prev_severity = zif_ca_ops_types=>gc_severity-error.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_review_policy=>reopen_reason( is_finding = ls_finding iv_reviewed_at = gc_test-reviewed_at )
+      exp = zif_ca_ops_ctl_types=>gc_reopen-status msg = 'Severity changed' ).
+    ls_finding-first_seen_at = gc_test-later.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_review_policy=>reopen_reason( is_finding = ls_finding iv_reviewed_at = gc_test-reviewed_at )
+      exp = zif_ca_ops_ctl_types=>gc_reopen-new msg = 'First seen after the sign-off' ).
+  ENDMETHOD.
+
+
+  " Rule: the slice shows the first reason of NEW, STATUS, AMOUNT, CONFIG; else WORSE for a worse status
+  METHOD slice_reason_first_applies.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_review_policy=>reopen_reason_of_slice(
+              it_reasons          = VALUE #( ( `CONFIG` ) ( `AMOUNT` ) )
+              iv_derived_status   = zif_ca_ops_ctl_types=>gc_status-action
+              iv_status_at_review = zif_ca_ops_ctl_types=>gc_status-watch )
+      exp = zif_ca_ops_ctl_types=>gc_reopen-amount msg = 'Amount before configuration' ).
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_review_policy=>reopen_reason_of_slice(
+              it_reasons          = VALUE #( )
+              iv_derived_status   = zif_ca_ops_ctl_types=>gc_status-action
+              iv_status_at_review = zif_ca_ops_ctl_types=>gc_status-watch )
+      exp = zif_ca_ops_ctl_types=>gc_reopen-worse msg = 'Worse status' ).
+    cl_abap_unit_assert=>assert_initial(
+      act = zcl_ca_ops_review_policy=>reopen_reason_of_slice(
+              it_reasons          = VALUE #( )
+              iv_derived_status   = zif_ca_ops_ctl_types=>gc_status-healthy
+              iv_status_at_review = zif_ca_ops_ctl_types=>gc_status-watch )
+      msg = 'Better status: the sign-off stands' ).
   ENDMETHOD.
 
 

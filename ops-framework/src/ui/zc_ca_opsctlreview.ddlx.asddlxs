@@ -1,6 +1,8 @@
 // UI annotations: Daily control review (list report, service ZUI_CA_OPS_REV)
 // Default filter: the current business date (IsCurrentDay = X, today in CONTROL_TIME_ZONE); clear it and pick
 // a business date to review another day. Flagged = Watch + Action required.
+// 2026-11-11: reopened sign-off (a covered finding new, changed in severity or amount, or of another configuration
+//             version since the sign-off; or a worse status) with its reason - column, filter and variant Reopened.
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Control review', typeNamePlural: 'Daily control review',
                   title: { type: #STANDARD, value: 'ControlName' },
@@ -10,7 +12,8 @@
                                           { by: 'Sequence', direction: #ASC } ],
                              visualizations: [ { type: #AS_LINEITEM } ] } ]
 @UI.selectionVariant: [ { qualifier: 'Flagged', text: 'Flagged (watch and action required)', filter: 'IsFlagged EQ X' },
-                        { qualifier: 'Awaiting', text: 'Awaiting review', filter: 'IsAwaitingReview EQ X' } ]
+                        { qualifier: 'Awaiting', text: 'Awaiting review', filter: 'IsAwaitingReview EQ X' },
+                        { qualifier: 'Reopened', text: 'Sign-off reopened', filter: 'IsReopened EQ X' } ]
 annotate entity ZC_CA_OpsCtlReview with
 {
   @UI.facet: [ { id: 'Control', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Control', position: 10 },
@@ -145,6 +148,33 @@ annotate entity ZC_CA_OpsCtlReview with
   LastChangedAt;
   @EndUserText.label: 'Signed off'
   IsReviewed;
+  // Explainable, versioned results (2026-11-11): why a signed-off slice awaits review again
+  @EndUserText.label: 'Sign-off reopened'
+  @UI.lineItem: [ { position: 72, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 92 } ]
+  @UI.selectionField: [ { position: 55 } ]
+  IsReopened;
+  @EndUserText.label: 'Reopen reason'
+  @UI.lineItem: [ { position: 73, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 94 } ]
+  ReopenReason;
+  @UI.hidden: true
+  ReopenText;
+  @EndUserText.label: 'Findings changed since sign-off'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 96 } ]
+  ReopenFindings;
+  @EndUserText.label: 'New since sign-off'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 97 } ]
+  ReopenNewCount;
+  @EndUserText.label: 'Severity changed'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 98 } ]
+  ReopenStatusCount;
+  @EndUserText.label: 'Amount changed'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 99 } ]
+  ReopenAmountCount;
+  @EndUserText.label: 'Other configuration version'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 100 } ]
+  ReopenConfigCount;
   @EndUserText.label: 'Awaiting review'
   @UI.lineItem: [ { position: 70, importance: #HIGH } ]
   @UI.selectionField: [ { position: 50 } ]

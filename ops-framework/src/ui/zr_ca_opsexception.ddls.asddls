@@ -5,6 +5,8 @@
 // 2026-11-11 (operations response features): planned downtime mark, correlation group and role, the parent and
 // the correlated children of a group (same view: their own DCL rule applies to every row shown), the open
 // children of a parent, the runbook link of the check (ZI_CA_OpsFindRunbook)
+// 2026-11-11 (explainable, versioned results): configuration rule and version of the finding; business date and
+// event time (pilot metrics)
 // VERIFY-ADT: self-associations of the root entity redirected in the projection; IS INITIAL on a RAW element
 define root view entity ZR_CA_OpsException
   as select from zca_ops_finding
@@ -93,6 +95,19 @@ define root view entity ZR_CA_OpsException
       corr_id       as CorrelationId,
       @EndUserText.label: 'Correlation role'
       corr_role     as CorrelationRole,
+      // Explainable, versioned results (2026-11-11): the check (GROUP2) and rule (RULE_ID) are above; the
+      // configuration row inside the check and the configuration version of the run that produced the finding
+      @EndUserText.label: 'Configuration rule'
+      cfg_rule      as ConfigRule,
+      @EndUserText.label: 'Configuration version'
+      cfg_version   as ConfigVersion,
+      @EndUserText.label: 'Version (short)'
+      cast( substring( cfg_version, 1, 8 ) as abap.char( 8 ) ) as ConfigVersionShort,
+      // Pilot metrics (2026-11-11): business date and event time the finding is about
+      @EndUserText.label: 'Business date'
+      bus_date      as BusinessDate,
+      @EndUserText.label: 'Event time'
+      event_at      as EventAt,
       _History,
       _CorrChildren,
       _CorrParent,

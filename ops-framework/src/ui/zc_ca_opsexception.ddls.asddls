@@ -41,6 +41,12 @@ define root view entity ZC_CA_OpsException
       IsPlannedDowntime,
       CorrelationId,
       CorrelationRole,
+      // Explainable, versioned results and pilot metrics (2026-11-11)
+      ConfigRule,
+      ConfigVersion,
+      ConfigVersionShort,
+      BusinessDate,
+      EventAt,
       @EndUserText.label: 'Open correlated exceptions'
       _CorrCount.OpenChildren as CorrelatedOpen,
       @EndUserText.label: 'Runbook'

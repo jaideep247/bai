@@ -32,6 +32,8 @@
 *&            | superseded (company code = part of the exception's identity).
 *& 2026-11-11 | planned_downtime_is_marked, correlated_parent_and_child, carry_keeps_correlation (operations
 *&            | response features); ZCA_OPS_CORR and ZCA_OPS_DTWIN doubled (empty: the earlier tests unchanged).
+*& 2026-11-11 | stores_config_version (explainable, versioned results): version, configuration row, business
+*&            | date and event time stored; a carried-forward row keeps the version of its own run.
 *&---------------------------------------------------------------------*
 "! Clock double. A user of the exceptions app can act "during" a run: from the hook_from-th to the
 "! hook_to-th call of NOW (the store asks for the write stamp right after its read) the exception
@@ -145,6 +147,7 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS writes_set_change_stamp      FOR TESTING.
     METHODS stores_system_and_error_cls  FOR TESTING.
     METHODS stores_company_code          FOR TESTING.
+    METHODS stores_config_version        FOR TESTING.
     METHODS carry_other_company_separate FOR TESTING.
     METHODS planned_downtime_is_marked   FOR TESTING.
     METHODS correlated_parent_and_child  FOR TESTING.
@@ -333,6 +336,37 @@ CLASS ltc_store IMPLEMENTATION.
                                             exp = lc_bukrs msg = 'Company code stored on the finding' ).
         cl_abap_unit_assert=>assert_initial( act = read_row( iv_run_id = ls_run-run_id iv_finding_no = 2 )-bukrs
                                              msg = 'Area-level finding keeps a blank company code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (explainable, versioned results): the configuration version and row of a finding are stored as given;
+  " a repeat under another configuration keeps its own version (nothing inherited from the earlier row)
+  METHOD stores_config_version.
+    CONSTANTS lc_first TYPE zif_ca_ops_types=>ty_cfg_version VALUE 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'.
+    CONSTANTS lc_second TYPE zif_ca_ops_types=>ty_cfg_version VALUE 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'.
+    TRY.
+        DATA(ls_run) = mo_cut->start_run( iv_area = zcl_ca_ops_param_seed=>gc_test_area-first ).
+        DATA(ls_finding) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_finding-cfg_version   = lc_first.
+        ls_finding-cfg_rule      = 'A1'.
+        ls_finding-business_date = '20261104'.
+        ls_finding-event_at      = '20261104230000.0000000'.
+        mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( ls_finding ) )
+                               CHANGING  cs_run      = ls_run ).
+        DATA(ls_row) = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-cfg_version exp = lc_first msg = 'Version stored' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-cfg_rule exp = 'A1' msg = 'Configuration row stored' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-bus_date exp = '20261104' msg = 'Business date stored' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-event_at exp = ls_finding-event_at msg = 'Event time stored' ).
+        DATA(ls_next) = mo_cut->start_run( iv_area = zcl_ca_ops_param_seed=>gc_test_area-first ).
+        ls_finding-cfg_version = lc_second.
+        mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( ls_finding ) )
+                               CHANGING  cs_run      = ls_next ).
+        cl_abap_unit_assert=>assert_equals( act = read_row( iv_run_id = ls_next-run_id iv_finding_no = 1 )-cfg_version
+                                            exp = lc_second msg = 'Repeat keeps the version of its own run' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -659,7 +693,7 @@ CLASS ltc_store IMPLEMENTATION.
 
   METHOD read_row.
     SELECT SINGLE disposition, owner, due_date, first_seen_at, occurrences, superseded_by, waiver_until,
-                  resolution, resolved_by, bukrs
+                  resolution, resolved_by, bukrs, cfg_version, cfg_rule, bus_date, event_at
       FROM zca_ops_finding
       WHERE run_id     = @iv_run_id
         AND finding_no = @iv_finding_no

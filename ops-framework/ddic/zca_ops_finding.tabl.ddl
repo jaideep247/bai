@@ -69,6 +69,20 @@ define table zca_ops_finding {
   corr_id       : sysuuid_x16;
   corr_role     : abap.char(1);
   corr_key      : abap.char(40);
+  // Explainable, versioned results (2026-11-11, docs/EXPLAINABLE_RESULTS.md): CFG_VERSION = the configuration
+  // version that produced the finding - SHA-1 of the effective configuration rows of its check (registry row,
+  // aggregate rows, bucket rules, the parameter values the check reads; ZCL_CA_OPS_CFG_VERSION), set by the
+  // runner; CFG_RULE = the configuration row inside the check that produced or explained the finding (aggregate
+  // ID, bucket rule ID). The check ID is GROUP2, the rule RULE_ID. Blank = not known (a producer outside the
+  // runner). Not inherited by the carry-forward: each row keeps the version of its own run, so a later run under
+  // another configuration is visible (control review: sign-off reopened, reason CONFIG)
+  cfg_version   : abap.char(40);
+  cfg_rule      : abap.char(20);
+  // Pilot metrics (2026-11-11, docs/PILOT_PACK.md): the business date the finding is about and, where the
+  // producer knows it, the time of the business event (UTC) - time to detect = FIRST_SEEN_AT - EVENT_AT
+  // (else the business date); blank = not known
+  bus_date      : abap.dats;
+  event_at      : timestampl;
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and

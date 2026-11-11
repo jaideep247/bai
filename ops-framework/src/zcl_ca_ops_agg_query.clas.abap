@@ -13,6 +13,7 @@
 *& 2026-11-11 | Process catalogue: window MAX_AGE_DAYS (rows at most n days old), operator NI (none of a
 *&            | list, status and condition), a date / time window instead of the age limits (outage check;
 *&            | TIME_FIELD bounds the first and last day; message 255).
+*& 2026-11-11 | Explainable results: a finding names its aggregate row (CFG_RULE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - aggregate check builder (pure)</p>
 "! Security: the table must be approved for the area (ZCA_OPS_TABWL); every field name must
@@ -267,6 +268,7 @@ CLASS zcl_ca_ops_agg_query IMPLEMENTATION.
                       reference    = is_agg-tabname
                       company_code = <ls_row>-company_code
                       item_count   = <ls_row>-row_count
+                      cfg_rule     = is_agg-agg_id
                       message      = zcl_ca_ops_util=>text(
                                        iv_msgno = COND #( WHEN lv_age = abap_true
                                                           THEN zif_ca_ops_chk_types=>gc_msg-agg_age

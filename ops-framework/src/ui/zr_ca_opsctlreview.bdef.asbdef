@@ -24,7 +24,8 @@ etag master LastChangedAt
                      ReviewedTimeLocal, Observation, NextAction, LastChangedAt, IsReviewed, IsAwaitingReview,
                      IsFlagged, IsReviewOverdue, ControlCount, ReviewedCount, AwaitingCount, OverdueCount,
                      ActionRequiredCount, WatchCount, FlaggedCount, DowntimeFindings, IsPlannedDowntime,
-                     DowntimeCount;
+                     DowntimeCount, IsReopened, ReopenReason, ReopenFindings, ReopenNewCount, ReopenStatusCount,
+                     ReopenAmountCount, ReopenConfigCount, ReopenedCount;
 
   action markReviewed parameter ZA_CA_CtlReview result [1] $self;
 }

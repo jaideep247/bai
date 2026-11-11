@@ -9,6 +9,9 @@
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
 //                   2026-11-10 | Company code of the finding (blank = area-level): the slice it counts in.
 //                   2026-11-11 | Planned downtime mark of the finding (DowntimeFlag; operations response features).
+//                   2026-11-11 | Identity, amount, severity, configuration version and first-seen time of the finding
+//                                (explainable, versioned results: a sign-off reopened by a changed finding,
+//                                ZI_CA_OpsCtlReopen).
 // VERIFY-ADT: OR of field comparisons in the ON condition of an inner join (7.58); PlanViz: findings read by
 //             RUN_ID (primary key) of the runs of the date (CTL-08).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -34,6 +37,14 @@ define view entity ZI_CA_OpsCtlFind
       Fnd.severity                                          as Severity,
       Fnd.disposition                                       as Disposition,
       Fnd.created_at                                        as CreatedAt,
+      Fnd.area                                              as FindingArea,
+      Fnd.object_type                                       as ObjectType,
+      Fnd.object_key                                        as ObjectKey,
+      Fnd.check_code                                        as CheckCode,
+      Fnd.amount                                            as Amount,
+      Fnd.currency                                          as Currency,
+      Fnd.cfg_version                                       as ConfigVersion,
+      Fnd.first_seen_at                                     as FirstSeenAt,
       cast( case when Fnd.severity = 'B' or Fnd.severity = 'E' then 2
                  when Fnd.severity = 'W' then 1
                  else 0 end as abap.int4 )                  as StatusRank,

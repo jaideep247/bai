@@ -16,7 +16,8 @@ etag master LastChangedAt
                      Severity, ActionCode, Amount, Currency, Reference, Message, Disposition, Owner, DueDate,
                      ResolvedBy, ResolvedAt, Resolution, FirstSeenAt, Occurrences, WaiverUntil, WaiverReqBy,
                      WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt, ReasonCode,
-                     DowntimeId, IsPlannedDowntime, CorrelationId, CorrelationRole;
+                     DowntimeId, IsPlannedDowntime, CorrelationId, CorrelationRole,
+                     ConfigRule, ConfigVersion, ConfigVersionShort, BusinessDate, EventAt;
 
   // VERIFY-ADT: internal create by association (history written only by the actions)
   association _History { internal create; }
@@ -64,6 +65,10 @@ etag master LastChangedAt
     DowntimeId      = downtime_id;
     CorrelationId   = corr_id;
     CorrelationRole = corr_role;
+    ConfigRule      = cfg_rule;
+    ConfigVersion   = cfg_version;
+    BusinessDate    = bus_date;
+    EventAt         = event_at;
   }
 }
 

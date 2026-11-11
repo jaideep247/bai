@@ -18,6 +18,9 @@
 *& 2026-11-11 | Process catalogue: a check of a business process that is not in effect (the process row is
 *&            | inactive or its catalogue process is not active today) is not run - one information finding
 *&            | PROCESS_INACTIVE (message 241) instead; its open exceptions stay open (a switch-off is not a fix).
+*& 2026-11-11 | Explainable, versioned results: every finding of a check carries the configuration version of
+*&            | the run (ZCL_CA_OPS_CFG_VERSION over the registry row and, when the check implements
+*&            | ZIF_CA_OPS_CHECK_CONFIG, its own configuration rows) unless the check set one itself.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - generic check runner</p>
 "! Report ZCA_OPS_CHECK_RUN (one job per area and schedule group). No check, no business table
@@ -75,10 +78,12 @@ CLASS zcl_ca_ops_check_runner DEFINITION
       RETURNING
         VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
-    "! The identity of the check on its findings: GROUP1 process, GROUP2 check; defaults for the rest
+    "! The identity of the check on its findings: GROUP1 process, GROUP2 check, the configuration version;
+    "! defaults for the rest
     METHODS stamp
       IMPORTING
         is_check    TYPE zif_ca_ops_chk_types=>ty_check
+        iv_version  TYPE zif_ca_ops_types=>ty_cfg_version
       CHANGING
         ct_findings TYPE zif_ca_ops_types=>tt_finding.
 
@@ -207,12 +212,17 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
 
 
   METHOD run_check.
+    DATA lt_lines TYPE string_table.
     TRY.
         " the factory checks the interface by RTTI before the class is created (message 032)
-        rs_result = CAST zif_ca_ops_check( zcl_ca_ops_factory=>get_plugin(
-                      iv_class_name = is_check-class_name
-                      iv_interface  = zif_ca_ops_chk_types=>gc_check_intf ) )->run( is_check   = is_check
-                                                                                   is_context = is_context ).
+        DATA(lo_plugin) = zcl_ca_ops_factory=>get_plugin( iv_class_name = is_check-class_name
+                                                          iv_interface  = zif_ca_ops_chk_types=>gc_check_intf ).
+        " the configuration the check runs with: its own rows when it names them (explainable results)
+        IF lo_plugin IS INSTANCE OF zif_ca_ops_check_config.
+          lt_lines = CAST zif_ca_ops_check_config( lo_plugin )->config_lines( is_check ).
+        ENDIF.
+        rs_result = CAST zif_ca_ops_check( lo_plugin )->run( is_check   = is_check
+                                                             is_context = is_context ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
         CLEAR rs_result.
         rs_result-partial = abap_true.
@@ -225,6 +235,8 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
                        ix_error = lx_root ) INTO TABLE rs_result-findings.
     ENDTRY.
     stamp( EXPORTING is_check    = is_check
+                     iv_version  = zcl_ca_ops_cfg_version=>of_check( is_check = is_check
+                                                                     it_lines = lt_lines )
            CHANGING  ct_findings = rs_result-findings ).
   ENDMETHOD.
 
@@ -242,6 +254,7 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
                                                          iv_v2    = is_check-process_id
                                                          iv_v3    = is_check-area ) ) INTO TABLE lt_one.
     stamp( EXPORTING is_check    = is_check
+                     iv_version  = zcl_ca_ops_cfg_version=>of_check( is_check )
            CHANGING  ct_findings = lt_one ).
     rs_finding = lt_one[ 1 ].
   ENDMETHOD.
@@ -268,6 +281,9 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
     LOOP AT ct_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
       <ls_finding>-group1 = is_check-process_id.
       <ls_finding>-group2 = is_check-check_id.
+      IF <ls_finding>-cfg_version IS INITIAL.
+        <ls_finding>-cfg_version = iv_version.
+      ENDIF.
       IF <ls_finding>-object_type IS INITIAL.
         <ls_finding>-object_type = zif_ca_ops_chk_types=>gc_object_type-check.
       ENDIF.
