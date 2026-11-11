@@ -1,0 +1,7 @@
+OBJECT_ID,LAYER_ID,SOURCE_NAME,SOURCE_KIND,KEY_FIELDS,DESCRIPTION,ACTIVE
+CD_CHECK_HIST,CD,ZCD_CHECK_HIST,T,ZTNUM,Cheque status history from the cheque printer,X
+CD_EBS_ACCOUNT,CD,ZCD_EBS_ACCT,T,"BUKRS,HBKID,HKTID",House bank accounts of the payment engine,X
+CD_PAY_LIFE_RUN,CD,ZI_CD_PAYLIFERUN,V,"BUSINESSDATE,RUNID,PAYMENTDOCUMENT",Newest non-proposal run row of a payment (view),X
+CD_PAY_METHOD_CLS,CD,ZI_CD_PAYMETHODCLS,V,"FLOW,PAYMENTMETHOD",Method class per flow and method (posting area),X
+CD_PAY_WORK_STATE,CD,ZI_CD_PAYWORKSTATE,V,CLEARINGDOC,"Source, outcome and finding of a payment (worklist)",X
+CD_RC_BANK_LINE,CD,ZI_CD_HCKRCBANKLINE,V,"KUKEY,ESNUM",Bank line with the payment engine account (view),X

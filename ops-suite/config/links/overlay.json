@@ -1,0 +1,143 @@
+{
+  "_comment": "Link registry, customer overlay of the ops suite (layer CD, prefix CD_) on top of the product layers of the operations framework (ops-framework/config/links: S4CORE, CONTRACT). Holds what is this landscape's own: custom tables and views (ZCD_*, ZI_CD_*), custom fields on standard tables (DFKKOP-ZZ_FIN_TRANS_NUM, DFKKOP-ZZ_BILLPLANID, DPAYH-ZZ_PAYMENT_STATUS) and the links between them and the standard objects. Facts: docs/USAA_Known_Tables.md. A field not confirmed in SE11 is evidence V with its VERIFY item; a field still unnamed is a placeholder in angle quotes - its links are PENDING (not seeded) until the item names it. The payment model mapping (config/payment_model/mapping.json) names the links of its joins; tools/payment_model.py renders them from this registry. Run tools/link_registry.py after a change (seed rows, lineage, CDS snippets, impact). docs/Link_Registry_Overlay.md.",
+  "layer": {"id": "CD", "kind": "C", "rank": 30, "prefix": "CD_", "description": "Customer overlay of the ops suite",
+            "owner": "PE RTB", "active": true},
+  "objects": [
+    {"id": "CD_PAYM_REQ_LOG", "source": "ZCD_PAYM_REQ_LOG", "kind": "T", "keys": ["‹FIN number field›", "COUNTER"],
+     "description": "Payment request log (one row per attempt)",
+     "fields": [
+       {"name": "‹FIN number field›", "evidence": "V", "verify": "V82", "description": "FIN number of the request"},
+       {"name": "COUNTER", "evidence": "C", "description": "Attempt counter (never pick the highest)"},
+       {"name": "SOURCE", "evidence": "C", "description": "Source system of the request"},
+       {"name": "ZZ_STATUS", "evidence": "C", "description": "Processing status (SUCCESS = accepted attempt)"},
+       {"name": "ZZ_MEMBER_NO", "sensitivity": "M", "evidence": "C", "description": "Member number (masked)"}
+     ]},
+    {"id": "CD_SPE_EXCP_LOG", "source": "ZCD_SPE_EXCP_LOG", "kind": "T", "keys": ["‹request key field›"],
+     "description": "Status updates to the sources (SPE)",
+     "fields": [
+       {"name": "‹request key field›", "evidence": "V", "verify": "V121", "description": "Key of the request the row reports"}
+     ]},
+    {"id": "CD_CHECK_HIST", "source": "ZCD_CHECK_HIST", "kind": "T", "keys": ["ZTNUM"],
+     "description": "Cheque status history from the cheque printer",
+     "fields": [
+       {"name": "ZTNUM", "evidence": "V", "verify": "V121", "description": "Cheque number"},
+       {"name": "STATE", "evidence": "C", "description": "Processing state of the record"}
+     ]},
+    {"id": "CD_FILE_REGISTER", "source": "ZCDT_REGUT", "kind": "T", "keys": ["‹file key field›"],
+     "description": "Payment file register of the payment runs",
+     "fields": [
+       {"name": "‹file key field›", "evidence": "V", "verify": "V121", "description": "File key"},
+       {"name": "‹run date field›", "evidence": "V", "verify": "V121", "description": "Run date of the file"},
+       {"name": "‹run ID field›", "evidence": "V", "verify": "V121", "description": "Run identification of the file"}
+     ]},
+    {"id": "CD_CLEAR_HISTORY", "source": "DFKKRAPT", "kind": "T", "keys": ["‹item document field›"],
+     "description": "Clearing reset history (candidate table, V100)",
+     "fields": [
+       {"name": "‹item document field›", "evidence": "V", "verify": "V100", "description": "Document of the reset item"},
+       {"name": "‹historical clearing field›", "evidence": "V", "verify": "V100", "description": "Earlier clearing document"}
+     ]},
+    {"id": "CD_BANK_ACK", "source": "‹ACK table›", "kind": "T", "keys": ["‹payment key field›"],
+     "description": "Bank acknowledgement per payment (ACK table)",
+     "fields": [
+       {"name": "‹payment key field›", "evidence": "V", "verify": "V121", "description": "Payment reference of the ACK"}
+     ]},
+    {"id": "CD_PAY_LIFE_RUN", "source": "ZI_CD_PayLifeRun", "kind": "V", "keys": ["BusinessDate", "RunId", "PaymentDocument"],
+     "description": "Newest non-proposal run row of a payment (view)",
+     "fields": [
+       {"name": "BusinessDate", "evidence": "C", "description": "Run date"},
+       {"name": "RunId", "evidence": "C", "description": "Run identification"},
+       {"name": "PaymentDocument", "evidence": "C", "description": "Payment document"},
+       {"name": "CompanyCode", "evidence": "C", "description": "Company code"},
+       {"name": "PaymentMethod", "evidence": "C", "description": "Payment method"}
+     ]},
+    {"id": "CD_PAY_METHOD_CLS", "source": "ZI_CD_PayMethodCls", "kind": "V", "keys": ["Flow", "PaymentMethod"],
+     "description": "Method class per flow and method (posting area)",
+     "fields": [
+       {"name": "Flow", "evidence": "C", "description": "Flow C collection / D disbursement"},
+       {"name": "PaymentMethod", "evidence": "C", "description": "Payment method"},
+       {"name": "MethodClass", "evidence": "C", "description": "Method class"}
+     ]},
+    {"id": "CD_PAY_WORK_STATE", "source": "ZI_CD_PayWorkState", "kind": "V", "keys": ["ClearingDoc"],
+     "description": "Source, outcome and finding of a payment (worklist)",
+     "fields": [
+       {"name": "ClearingDoc", "evidence": "C", "description": "Payment document"}
+     ]},
+    {"id": "CD_RC_BANK_LINE", "source": "ZI_CD_HckRcBankLine", "kind": "V", "keys": ["Kukey", "Esnum"],
+     "description": "Bank line with the payment engine account (view)",
+     "fields": [
+       {"name": "Kukey", "evidence": "C", "description": "Short key of the statement"},
+       {"name": "Esnum", "evidence": "C", "description": "Line of the statement"},
+       {"name": "PeAccount", "evidence": "C", "description": "Account of the line reference"},
+       {"name": "BankReference", "evidence": "C", "description": "Payment reference of the line"}
+     ]},
+    {"id": "CD_EBS_ACCOUNT", "source": "ZCD_EBS_ACCT", "kind": "T", "keys": ["BUKRS", "HBKID", "HKTID"],
+     "description": "House bank accounts of the payment engine",
+     "fields": [
+       {"name": "BUKRS", "evidence": "C", "description": "Company code"},
+       {"name": "HBKID", "evidence": "C", "description": "House bank"},
+       {"name": "HKTID", "evidence": "C", "description": "Account ID"},
+       {"name": "ACCOUNT_NO", "evidence": "C", "description": "Account of the line reference"},
+       {"name": "ACTIVE", "evidence": "C", "description": "Active row"}
+     ]}
+  ],
+  "fields": [
+    {"object": "CA_OPEN_ITEM", "name": "ZZ_FIN_TRANS_NUM", "evidence": "C", "description": "Custom field: FIN number of the request"},
+    {"object": "CA_OPEN_ITEM", "name": "ZZ_BILLPLANID", "evidence": "C", "description": "Custom field: bill plan of the item"},
+    {"object": "CA_PAYMENT_RUN", "name": "ZZ_PAYMENT_STATUS", "evidence": "C", "description": "Custom field: live payment status"},
+    {"object": "S4_BUSINESS_PARTNER", "name": "‹source field›", "evidence": "V", "verify": "V121", "description": "Custom field: source that created the partner"}
+  ],
+  "links": [
+    {"id": "CD_REQ_TO_OPEN_ITEMS", "from": "CD_PAYM_REQ_LOG", "to": "CA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
+     "active": false, "verify": "V82", "owner": "PE RTB", "description": "Request -> items with its FIN number",
+     "conditions": [{"kind": "EQ", "from": "‹FIN number field›", "to": "ZZ_FIN_TRANS_NUM"}]},
+    {"id": "CD_ITEM_TO_REQUEST", "from": "CA_OPEN_ITEM", "to": "CD_PAYM_REQ_LOG", "cardinality": "N1", "quality": "C",
+     "active": false, "verify": "V82", "owner": "PE RTB", "description": "Item -> request (row SUCCESS, never highest COUNTER)",
+     "conditions": [{"kind": "EQ", "from": "ZZ_FIN_TRANS_NUM", "to": "‹FIN number field›"},
+                    {"kind": "PREFER", "to": "ZZ_STATUS", "value": "SUCCESS"}]},
+    {"id": "CD_REQ_TO_PARTNER_SRC", "from": "CD_PAYM_REQ_LOG", "to": "S4_BUSINESS_PARTNER", "cardinality": "NM", "quality": "C",
+     "active": false, "verify": "V121", "owner": "PE RTB", "description": "Request -> partner by member number with the source",
+     "conditions": [{"kind": "EQ", "from": "ZZ_MEMBER_NO", "to": "BPEXT"},
+                    {"kind": "EQ", "from": "SOURCE", "to": "‹source field›"}]},
+    {"id": "CD_REQ_TO_PARTNER", "from": "CD_PAYM_REQ_LOG", "to": "S4_BUSINESS_PARTNER", "cardinality": "NM", "quality": "C",
+     "fallback_of": "CD_REQ_TO_PARTNER_SRC", "active": false, "verify": "V121", "owner": "PE RTB",
+     "description": "Fallback: partner by member number only (legacy)",
+     "conditions": [{"kind": "EQ", "from": "ZZ_MEMBER_NO", "to": "BPEXT"}]},
+    {"id": "CD_REQ_TO_STATUS_UPD", "from": "CD_PAYM_REQ_LOG", "to": "CD_SPE_EXCP_LOG", "cardinality": "NM", "quality": "P",
+     "active": false, "verify": "V121", "owner": "PE RTB", "description": "Request -> status updates sent to its source",
+     "conditions": [{"kind": "EQ", "from": "‹FIN number field›", "to": "‹request key field›"}]},
+    {"id": "CD_CHEQUE_TO_STATUS_HIST", "from": "CA_CHEQUE", "to": "CD_CHECK_HIST", "cardinality": "NM", "quality": "C",
+     "active": false, "verify": "V121", "owner": "PE RTB", "description": "Cheque -> its status history",
+     "conditions": [{"kind": "EQ", "from": "ZTNUM", "to": "ZTNUM"}]},
+    {"id": "CD_RUN_TO_FILE", "from": "CA_PAYMENT_RUN", "to": "CD_FILE_REGISTER", "cardinality": "NM", "quality": "C",
+     "active": false, "verify": "V121", "owner": "PE RTB", "description": "Payment run -> its payment files",
+     "conditions": [{"kind": "EQ", "from": "LAUFD", "to": "‹run date field›"},
+                    {"kind": "EQ", "from": "LAUFI", "to": "‹run ID field›"}]},
+    {"id": "CD_ITEM_TO_CLEAR_HIST", "from": "CA_OPEN_ITEM", "to": "CD_CLEAR_HISTORY", "cardinality": "1N", "quality": "P",
+     "active": false, "verify": "V100", "owner": "PE RTB", "description": "Item -> its earlier clearings (reset history)",
+     "conditions": [{"kind": "EQ", "from": "OPBEL", "to": "‹item document field›"}]},
+    {"id": "CD_PAYMENT_TO_ACK", "from": "CA_OPEN_ITEM", "to": "CD_BANK_ACK", "cardinality": "NM", "quality": "P",
+     "active": false, "verify": "V121", "owner": "PE RTB", "description": "Payment document -> bank acknowledgements",
+     "conditions": [{"kind": "EQ", "from": "AUGBL", "to": "‹payment key field›"}]},
+    {"id": "CD_PAYRUN_TO_COMPANY", "from": "CD_PAY_LIFE_RUN", "to": "S4_COMPANY_CODE", "cardinality": "N1", "quality": "C",
+     "active": false, "verify": "V110", "owner": "PE RTB", "description": "Payment -> company code (country, currency)",
+     "conditions": [{"kind": "EQ", "from": "CompanyCode", "to": "CompanyCode"}]},
+    {"id": "CD_PAYRUN_TO_CLASS_C", "from": "CD_PAY_LIFE_RUN", "to": "CD_PAY_METHOD_CLS", "cardinality": "N1", "quality": "C",
+     "owner": "PE RTB", "description": "Payment -> method class as a collection",
+     "conditions": [{"kind": "CONST", "to": "Flow", "value": "C"},
+                    {"kind": "EQ", "from": "PaymentMethod", "to": "PaymentMethod"}]},
+    {"id": "CD_PAYRUN_TO_CLASS_D", "from": "CD_PAY_LIFE_RUN", "to": "CD_PAY_METHOD_CLS", "cardinality": "N1", "quality": "C",
+     "owner": "PE RTB", "description": "Payment -> method class as a disbursement",
+     "conditions": [{"kind": "CONST", "to": "Flow", "value": "D"},
+                    {"kind": "EQ", "from": "PaymentMethod", "to": "PaymentMethod"}]},
+    {"id": "CD_PAYRUN_TO_WORK_STATE", "from": "CD_PAY_LIFE_RUN", "to": "CD_PAY_WORK_STATE", "cardinality": "N1", "quality": "C",
+     "owner": "PE RTB", "description": "Payment -> its worklist state",
+     "conditions": [{"kind": "EQ", "from": "PaymentDocument", "to": "ClearingDoc"}]},
+    {"id": "CD_BANKLINE_TO_ACCOUNT", "from": "CD_RC_BANK_LINE", "to": "CD_EBS_ACCOUNT", "cardinality": "NM", "quality": "C",
+     "owner": "PE RTB", "description": "Bank line -> active house bank account of its reference",
+     "conditions": [{"kind": "EQ", "from": "PeAccount", "to": "ACCOUNT_NO"},
+                    {"kind": "CONST", "to": "ACTIVE", "value": "X"}]},
+    {"id": "CD_BANKLINE_TO_CLEARING", "from": "CD_RC_BANK_LINE", "to": "CA_DOC_HEADER", "cardinality": "N1", "quality": "C",
+     "owner": "PE RTB", "description": "Bank line -> header of the payment it references",
+     "conditions": [{"kind": "EQ", "from": "BankReference", "to": "OPBEL"}]}
+  ]
+}
