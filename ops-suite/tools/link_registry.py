@@ -2,7 +2,7 @@
 """
 Artifact: tools/link_registry.py
 Purpose:  The suite's customer overlay of the link registry of ZCA_OPS (layer CD on top of the product layers
-          S4CORE and CONTRACT of ../ops-framework/config/links): validates the overlay with the product layers and
+          S4CORE and FICA of ../ops-framework/config/links): validates the overlay with the product layers and
           the repository's DDIC / CDS metadata, writes the seed rows of the overlay (config/links/seed, maintained in
           the framework's configuration app ZUI_CA_OPS_CFG), the lineage of all three layers, the CDS snippets of the
           overlay's links and the field impact (links, payment model sections, aggregate checks). Shared engine
@@ -32,7 +32,7 @@ PROFILE = {
     'aggregates': ['config/check_aggregates.csv'],
     'payment_model': os.path.join('config', 'payment_model', 'mapping.json'),
     'show_all': True,
-    'title': 'Link registry of the ops suite (S4CORE, CONTRACT, CD)',
+    'title': 'Link registry of the ops suite (S4CORE, FICA, CD)',
 }
 
 if __name__ == '__main__':

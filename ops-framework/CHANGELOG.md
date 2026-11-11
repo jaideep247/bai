@@ -2,6 +2,22 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (SAP component names, FICA layer)
+
+User decision 2026-11-11: FI-CA, FS-CD, FICA, FSCD and EBS are SAP standard component names, not words of a
+consumer.
+
+### Changed
+- `config/customer_terms.txt`: "FI-CA", "FS-CD", "FICA", "FSCD" and "EBS" removed (every other term, "payment
+  engine" included, kept); framework documents may say FI-CA / FS-CD where that is the precise SAP term.
+- Link registry: industry layer `CONTRACT` (contract accounting, ID prefix `CA_`) renamed to `FICA` (the SAP
+  FI-CA / FS-CD standard layer, ID prefix `FICA_` - `CA_` was visually close to the framework prefix `CA`): spec
+  `config/links/packages/fica.json` (was `contract_accounting.json`), every object and link ID (`FICA_OPEN_ITEM`,
+  `FICA_ITEM_TO_CLEARING_HDR`, ...), the worked example `xx_overlay.json`, seed rows, lineage, CDS snippets and
+  impact regenerated with `tools/link_registry.py`; `docs/LINK_REGISTRY.md`, `docs/INSTALL.md` §6c, V117. CDS
+  association names derived from the IDs are unchanged (`_OpenItem`, ...). A system that already holds the seed
+  rows of `CONTRACT` deletes them and creates the `FICA` rows (no ABAP object names a layer or link ID).
+
 ## [Unreleased] - 2026-11-11 (link registry)
 
 Goal (user, 2026-11-11): custom fields and their links against different tables - how a custom field flows from one

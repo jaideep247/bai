@@ -2,6 +2,14 @@
 
 All notable changes of the parameter framework (`param-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (SAP component names)
+
+Release constant unchanged: no ABAP object changed.
+
+### Changed
+- `config/customer_terms.txt`: "FI-CA", "FS-CD", "FICA", "FSCD" and "EBS" removed - SAP standard component
+  names, not words of a consumer (user decision 2026-11-11); the same list as the operations framework's.
+
 ## [Unreleased] - 2026-11-11 (customer wording)
 
 Release constant unchanged: no ABAP object changed.

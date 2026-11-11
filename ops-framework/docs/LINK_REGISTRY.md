@@ -35,7 +35,7 @@ framework (a drill-down, a generated CDS view, an impact report) uses the same d
 | Rank | Layer | Kind | Prefix | Holds | Delivered by |
 |---|---|---|---|---|---|
 | 10 | `S4CORE` | S product baseline | `S4_` | SAP standard objects of the S/4HANA core: journal entry, journal entry item, company code (released CDS views `I_JournalEntry`, `I_JournalEntryItem`, `I_CompanyCode`), bank statement header / line (`FEBKO`, `FEBEP`), business partner (`BUT000`) | the framework, `config/links/s4core.json` |
-| 20 | `CONTRACT` | I industry package | `CA_` | SAP standard tables of contract accounting (contract accounts receivable and payable and its collections / disbursements extension): document header and items (`DFKKKO`, `DFKKOP`), reconciliation-key summary records (`DFKKSUMC`), payment run (`DPAYH`), cheque register (`DFKKCR`), returns lot items (`DFKKRP`), notification-of-change lot items (`DFKKNRP`), payment methods per country (`TFK042Z`) | the framework, `config/links/packages/contract_accounting.json` |
+| 20 | `FICA` | I industry package | `FICA_` | SAP FI-CA / FS-CD standard layer: SAP standard tables of contract accounts receivable and payable (FI-CA) and its insurance collections / disbursements extension (FS-CD): document header and items (`DFKKKO`, `DFKKOP`), reconciliation-key summary records (`DFKKSUMC`), payment run (`DPAYH`), cheque register (`DFKKCR`), returns lot items (`DFKKRP`), notification-of-change lot items (`DFKKNRP`), payment methods per country (`TFK042Z`) | the framework, `config/links/packages/fica.json` |
 | 30+ | the customer's | C customer overlay | its own, e.g. `XX_` | the customer's tables and CDS views, its custom fields on standard objects, its links, its activation overrides and replacements | the consumer, e.g. `<consumer>/config/links/overlay.json` |
 
 Rules (offline and at run time):
@@ -120,7 +120,7 @@ finding with the counts (228).
 ```abap
 DATA(lo_walker) = NEW zcl_ca_ops_link_walker( ).
 DATA(ls_result) = lo_walker->walk( VALUE #( area      = 'XX_OPS'
-                                            object_id = 'CA_DOC_HEADER'
+                                            object_id = 'FICA_DOC_HEADER'
                                             keys      = VALUE #( ( fieldname = 'OPBEL' value = lv_document ) ) ) ).
 " ls_result-nodes: node_id, parent_id, depth, object_id, keys (masked), link_id, step, quality, path
 " ls_result-truncated / ls_result-problems: limits reached, links skipped
@@ -154,7 +154,7 @@ The registry check `ZCL_CA_OPS_CHK_LINKS` (contract `ZIF_CA_OPS_CHECK`) is regis
 
 | Output | Framework (`ops-framework/`) | Consumer |
 |---|---|---|
-| Seed rows of the six tables (CSV, columns = DDIC fields; pending rows left out) | `config/links/seed/` (S4CORE, CONTRACT) | `config/links/seed/` (its overlay only) |
+| Seed rows of the six tables (CSV, columns = DDIC fields; pending rows left out) | `config/links/seed/` (S4CORE, FICA) | `config/links/seed/` (its overlay only) |
 | Lineage: Mermaid diagram per layer, link table with status, custom field flows | `docs/links/lineage.md` | `docs/links/lineage.md` (all layers) |
 | CDS join and association snippet per link | `docs/links/cds_snippets.md` | `docs/links/cds_snippets.md` (its links) |
 | Impact: per field the object keys, links (role, status), payment model sections, aggregate checks | `docs/links/impact.md` | `docs/links/impact.md` |
@@ -168,7 +168,7 @@ A join of a payment model section (`ADDING_A_CUSTOMER_PAYMENT_MODEL.md`) is eith
 
 ```json
 "joins": [
-  {"link": "CA_ITEM_TO_CLEARING_HDR", "join": "inner join", "alias": "Clr", "from_alias": "Op"}
+  {"link": "FICA_ITEM_TO_CLEARING_HDR", "join": "inner join", "alias": "Clr", "from_alias": "Op"}
 ],
 "join_layout": {"source": 18, "alias": 3, "left": 15}
 ```
@@ -185,15 +185,15 @@ country of one object and the method of another) stays CDS text.
 `config/links/examples/xx_overlay.json` (validated with the product layers by `--check`, never seeded):
 
 1. **Its table**: object `XX_PAY_REQUEST` (`ZXX_PAY_REQ`, keys `REQ_ID`, `ATTEMPT`; `MEMBER_ID` masked).
-2. **Its custom field on a standard table**: field row `CA_OPEN_ITEM-ZZXX_REQ_ID` of layer XX (the append on
+2. **Its custom field on a standard table**: field row `FICA_OPEN_ITEM-ZZXX_REQ_ID` of layer XX (the append on
    `DFKKOP`), and `S4_BUSINESS_PARTNER-ZZXX_FEEDER`.
 3. **The flow**: `XX_REQ_TO_ITEMS` (`DFKKOP-ZZXX_REQ_ID = ZXX_PAY_REQ-REQ_ID`); back `XX_ITEM_TO_REQ` (N1 with
    `PREFER STATUS = 'OK'`: the accepted attempt); from the items on, the product's links continue the flow without a
-   line of the customer: `CA_ITEM_TO_CLEARING_HDR`, `CA_CLEARING_TO_RUN`, `CA_PAYMENT_TO_CHEQUE`, ... to the bank line.
+   line of the customer: `FICA_ITEM_TO_CLEARING_HDR`, `FICA_CLEARING_TO_RUN`, `FICA_PAYMENT_TO_CHEQUE`, ... to the bank line.
 4. **A fallback chain**: `XX_REQ_TO_PARTNER_FDR` (member number + feeder), fallback `XX_REQ_TO_PARTNER` (member number
    only, quality P).
-5. **Switch-off**: activation K `CA_PAYMENT_TO_NOC` off (no notification-of-change lots at XX).
-6. **Replacement**: `XX_PAYMENT_TO_STMT_LINE` replaces `CA_PAYMENT_TO_STMT_LINE` (the customer's bank drops leading
+5. **Switch-off**: activation K `FICA_PAYMENT_TO_NOC` off (no notification-of-change lots at XX).
+6. **Replacement**: `XX_PAYMENT_TO_STMT_LINE` replaces `FICA_PAYMENT_TO_STMT_LINE` (the customer's bank drops leading
    zeros: transform `NOZERO`) — the payment model renders `... on Ln.chect = ltrim( Op.augbl, '0' )` wherever the
    standard link is named.
 7. `python3 tools/link_registry.py --check` in the customer's folder; load its seed rows in DV1 (`ZUI_CA_OPS_CFG`,
@@ -205,7 +205,7 @@ country of one object and the method of another) stays CDS text.
 | Layer | Objects | Fields | Links | Active | Inactive (VERIFY) |
 |---|---|---|---|---|---|
 | S4CORE | 6 | 32 | 7 | 2 (bank statement line <-> header) | 5 (released view elements V110, bank statement header fields V117) |
-| CONTRACT | 8 | 30 | 20 | 16 | 4 (V110 / V117) |
+| FICA | 8 | 30 | 20 | 16 | 4 (V110 / V117) |
 
 Every link, its conditions and status: `docs/links/lineage.md`. Join facts are confirmed in a reference landscape
 (S/4HANA 2023) unless the link is quality P; field names still to be confirmed in SE11 are evidence V (V117), the

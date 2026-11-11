@@ -5,7 +5,7 @@
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zca_ops_lnkobj {
   key mandt     : abap.clnt not null;
-  // Starts with the prefix of its layer (e.g. CA_OPEN_ITEM)
+  // Starts with the prefix of its layer (e.g. FICA_OPEN_ITEM)
   key object_id : abap.char(30) not null;
   layer_id      : abap.char(10);
   // Table or CDS view entity read by the walker (approved per area in ZCA_OPS_TABWL, S_TABU_NAM display)

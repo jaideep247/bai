@@ -7,7 +7,7 @@ tables, custom fields on standard tables, its own links) on top, and may switch 
 
 Layers (one JSON spec per layer, ranked; a higher rank may extend and reference a lower one, never the reverse):
   S  product baseline   SAP standard objects of the core (released CDS views where available)
-  I  industry package   SAP standard objects of an industry solution (e.g. contract accounting)
+  I  industry package   SAP standard objects of an industry solution (e.g. SAP FI-CA / FS-CD)
   C  customer overlay   the customer's own tables / views, custom fields on standard objects, its own links,
                         activation overrides and replacements of standard links
 
@@ -49,7 +49,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 # The product layers delivered with the framework (every consumer's registry starts with them)
 PRODUCT_LAYERS = [os.path.join(REPO, 'ops-framework', 'config', 'links', 's4core.json'),
-                  os.path.join(REPO, 'ops-framework', 'config', 'links', 'packages', 'contract_accounting.json')]
+                  os.path.join(REPO, 'ops-framework', 'config', 'links', 'packages', 'fica.json')]
 
 LAYER_KINDS = {'S': 'product baseline', 'I': 'industry package', 'C': 'customer overlay'}
 SOURCE_KINDS = {'T': 'table', 'V': 'CDS view'}

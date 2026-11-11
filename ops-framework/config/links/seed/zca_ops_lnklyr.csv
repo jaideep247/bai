@@ -1,3 +1,3 @@
 LAYER_ID,LAYER_KIND,LAYER_RANK,ID_PREFIX,DESCRIPTION,OWNER,ACTIVE
 S4CORE,S,10,S4_,Product baseline: S/4HANA core standard objects,OPS FRAMEWORK,X
-CONTRACT,I,20,CA_,Industry package: contract accounting (standard),OPS FRAMEWORK,X
+FICA,I,20,FICA_,Industry package: SAP FI-CA / FS-CD (standard),OPS FRAMEWORK,X

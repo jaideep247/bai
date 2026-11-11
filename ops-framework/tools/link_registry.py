@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Link registry of the operations framework ZCA_OPS: the product layers (baseline S4CORE, industry package
-CONTRACT) - seed rows of the registry tables, lineage, CDS snippets and field impact.
+FICA) - seed rows of the registry tables, lineage, CDS snippets and field impact.
 
 Wrapper of the shared engine ../../tools/abaptools/link_registry.py (spec format, validation and outputs described
 there and in docs/LINK_REGISTRY.md); this file is the framework's profile. The worked example of a customer overlay
@@ -11,6 +11,8 @@ Usage: python3 tools/link_registry.py [--check]
 
 Modification log:
 2026-11-11 | Initial version (link registry: product baseline and contract accounting package).
+2026-11-11 | Industry layer renamed CONTRACT -> FICA (SAP FI-CA / FS-CD standard layer, ID prefix FICA_); spec
+           | config/links/packages/fica.json.
 """
 import os
 import sys
@@ -22,13 +24,13 @@ import abaptools  # noqa: E402
 _engine = abaptools.fresh('link_registry', 'ops_framework')
 
 PROFILE = {
-    'own': ['config/links/s4core.json', 'config/links/packages/contract_accounting.json'],
+    'own': ['config/links/s4core.json', 'config/links/packages/fica.json'],
     'examples': ['config/links/examples/xx_overlay.json'],
     'seed_folder': 'config/links/seed',
     'docs_folder': 'docs/links',
     'ddic': ['ddic', 'src'],
     'aggregates': ['config/check_aggregates.csv'],
-    'title': 'Link registry of the product (S4CORE, CONTRACT)',
+    'title': 'Link registry of the product (S4CORE, FICA)',
 }
 
 if __name__ == '__main__':

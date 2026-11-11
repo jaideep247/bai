@@ -113,7 +113,7 @@ class RulesTest(unittest.TestCase):
     def test_active_link_on_verify_field_refused(self):
         self.overlay['fields'][0]['evidence'] = 'V'
         self.overlay['fields'][0]['verify'] = 'V999'
-        self.assertIn('XX_REQ_TO_ITEMS: active, but to field CA_OPEN_ITEM-ZZXX_REQ_ID is VERIFY', self.problems())
+        self.assertIn('XX_REQ_TO_ITEMS: active, but to field FICA_OPEN_ITEM-ZZXX_REQ_ID is VERIFY', self.problems())
 
     def test_verify_field_needs_its_item(self):
         self.overlay['fields'][0]['evidence'] = 'V'
@@ -150,7 +150,7 @@ class RulesTest(unittest.TestCase):
 
     def test_lower_layer_cannot_use_customer_field(self):
         reg = registry_with(self.overlay)
-        reg.links['CA_HDR_TO_ITEMS']['conditions'].append({'kind': 'EQ', 'from': 'OPBEL', 'to': 'ZZXX_REQ_ID'})
+        reg.links['FICA_HDR_TO_ITEMS']['conditions'].append({'kind': 'EQ', 'from': 'OPBEL', 'to': 'ZZXX_REQ_ID'})
         self.assertIn('belongs to a higher layer (XX)', '\n'.join(lr.validate(reg)))
 
     def test_transform_needs_argument(self):
@@ -163,7 +163,7 @@ class RulesTest(unittest.TestCase):
 
     def test_unknown_field_refused(self):
         self.link('XX_REQ_TO_ITEMS')['conditions'][0]['to'] = 'NO_SUCH_FIELD'
-        self.assertIn('to field NO_SUCH_FIELD is not a field of CA_OPEN_ITEM', self.problems())
+        self.assertIn('to field NO_SUCH_FIELD is not a field of FICA_OPEN_ITEM', self.problems())
 
     def test_ddic_metadata_checked(self):
         ddic = {'ZXX_PAY_REQ': {'REQ_ID', 'ATTEMPT', 'FEEDER', 'STATUS'}}
@@ -180,13 +180,13 @@ class EffectTest(unittest.TestCase):
 
     def test_replacement_resolves_to_customer_link(self):
         reg = example()
-        self.assertEqual(reg.resolve('CA_PAYMENT_TO_STMT_LINE')['id'], 'XX_PAYMENT_TO_STMT_LINE')
-        self.assertEqual(reg.status(reg.links['CA_PAYMENT_TO_STMT_LINE']), 'replaced by XX_PAYMENT_TO_STMT_LINE')
+        self.assertEqual(reg.resolve('FICA_PAYMENT_TO_STMT_LINE')['id'], 'XX_PAYMENT_TO_STMT_LINE')
+        self.assertEqual(reg.status(reg.links['FICA_PAYMENT_TO_STMT_LINE']), 'replaced by XX_PAYMENT_TO_STMT_LINE')
 
     def test_activation_override_switches_off(self):
         reg = example()
-        self.assertEqual(reg.status(reg.links['CA_PAYMENT_TO_NOC']), 'switched off (XX)')
-        self.assertEqual(reg.status(reg.links['CA_HDR_TO_ITEMS']), 'active')
+        self.assertEqual(reg.status(reg.links['FICA_PAYMENT_TO_NOC']), 'switched off (XX)')
+        self.assertEqual(reg.status(reg.links['FICA_HDR_TO_ITEMS']), 'active')
 
     def test_fallback_chain_in_order(self):
         chain = lr.chains(example())['XX_REQ_TO_PARTNER_FDR']
@@ -194,10 +194,10 @@ class EffectTest(unittest.TestCase):
 
     def test_layer_switched_off(self):
         overlay = spec_of(EXAMPLE)
-        overlay['activation'].append({'kind': 'L', 'id': 'CONTRACT', 'active': False, 'reason': 'test'})
+        overlay['activation'].append({'kind': 'L', 'id': 'FICA', 'active': False, 'reason': 'test'})
         reg = registry_with(overlay)
-        self.assertEqual(reg.status(reg.links['CA_HDR_TO_ITEMS']), 'layer off')
-        self.assertEqual(reg.resolve('CA_PAYMENT_TO_STMT_LINE')['id'], 'XX_PAYMENT_TO_STMT_LINE')
+        self.assertEqual(reg.status(reg.links['FICA_HDR_TO_ITEMS']), 'layer off')
+        self.assertEqual(reg.resolve('FICA_PAYMENT_TO_STMT_LINE')['id'], 'XX_PAYMENT_TO_STMT_LINE')
 
 
 class SeedTest(unittest.TestCase):
@@ -232,17 +232,17 @@ class RenderTest(unittest.TestCase):
 
     def test_compact_join(self):
         reg = example()
-        self.assertEqual(lr.render_join(reg, 'CA_ITEM_TO_CLEARING_HDR', 'inner join', 'Clr', 'Op'),
+        self.assertEqual(lr.render_join(reg, 'FICA_ITEM_TO_CLEARING_HDR', 'inner join', 'Clr', 'Op'),
                          ['inner join dfkkko as Clr on Clr.opbel = Op.augbl'])
 
     def test_replacement_rendered_with_transform(self):
         reg = example()
-        self.assertEqual(lr.render_join(reg, 'CA_PAYMENT_TO_STMT_LINE', 'left outer join', 'Ln', 'Op'),
+        self.assertEqual(lr.render_join(reg, 'FICA_PAYMENT_TO_STMT_LINE', 'left outer join', 'Ln', 'Op'),
                          ["left outer join febep as Ln on Ln.chect = ltrim( Op.augbl, '0' )"])
 
     def test_layout_columns(self):
         reg = example()
-        lines = lr.render_join(reg, 'CA_HDR_TO_ITEMS', 'left outer join', 'It', 'Hd',
+        lines = lr.render_join(reg, 'FICA_HDR_TO_ITEMS', 'left outer join', 'It', 'Hd',
                                {'source': 8, 'alias': 3, 'left': 10})
         self.assertEqual(lines, ['left outer join dfkkop   as It  on  It.opbel   = Hd.opbel'])
 
@@ -281,7 +281,7 @@ class PaymentModelParityTest(unittest.TestCase):
 
     def test_registry_join_keys_checked(self):
         spec = payment_model.load(os.path.join(SUITE, 'config', 'payment_model', 'mapping.json'))
-        spec['ledger_item']['joins'] = [{'link': 'CA_ITEM_TO_CLEARING_HDR', 'alias': 'Clr'}]
+        spec['ledger_item']['joins'] = [{'link': 'FICA_ITEM_TO_CLEARING_HDR', 'alias': 'Clr'}]
         with self.assertRaises(payment_model.SpecError):
             payment_model.validate(spec)
 
@@ -291,8 +291,8 @@ class DocumentsTest(unittest.TestCase):
     def test_suite_impact_names_payment_model_and_links(self):
         text = text_of(os.path.join(SUITE, 'docs', 'links', 'impact.md'))
         row = next(line for line in text.splitlines() if line.startswith('| DFKKOP-AUGBL |'))
-        self.assertIn('payment model ledger_item (active): join CA_ITEM_TO_CLEARING_HDR', row)
-        self.assertIn('CA_PAYMENT_TO_STMT_LINE (from, active)', row)
+        self.assertIn('payment model ledger_item (active): join FICA_ITEM_TO_CLEARING_HDR', row)
+        self.assertIn('FICA_PAYMENT_TO_STMT_LINE (from, active)', row)
 
     def test_suite_lineage_shows_custom_field_flow(self):
         text = text_of(os.path.join(SUITE, 'docs', 'links', 'lineage.md'))

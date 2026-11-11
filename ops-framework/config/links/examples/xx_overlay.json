@@ -14,14 +14,14 @@
      ]}
   ],
   "fields": [
-    {"object": "CA_OPEN_ITEM", "name": "ZZXX_REQ_ID", "evidence": "C", "description": "Custom field: request number on the item"},
+    {"object": "FICA_OPEN_ITEM", "name": "ZZXX_REQ_ID", "evidence": "C", "description": "Custom field: request number on the item"},
     {"object": "S4_BUSINESS_PARTNER", "name": "ZZXX_FEEDER", "evidence": "C", "description": "Custom field: feeder that created the partner"}
   ],
   "links": [
-    {"id": "XX_REQ_TO_ITEMS", "from": "XX_PAY_REQUEST", "to": "CA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
+    {"id": "XX_REQ_TO_ITEMS", "from": "XX_PAY_REQUEST", "to": "FICA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
      "owner": "XX PAYMENT TEAM", "description": "Request -> items posted for it",
      "conditions": [{"kind": "EQ", "from": "REQ_ID", "to": "ZZXX_REQ_ID"}]},
-    {"id": "XX_ITEM_TO_REQ", "from": "CA_OPEN_ITEM", "to": "XX_PAY_REQUEST", "cardinality": "N1", "quality": "C",
+    {"id": "XX_ITEM_TO_REQ", "from": "FICA_OPEN_ITEM", "to": "XX_PAY_REQUEST", "cardinality": "N1", "quality": "C",
      "owner": "XX PAYMENT TEAM", "description": "Item -> its request (the accepted attempt)",
      "conditions": [{"kind": "EQ", "from": "ZZXX_REQ_ID", "to": "REQ_ID"},
                     {"kind": "PREFER", "to": "STATUS", "value": "OK"}]},
@@ -33,12 +33,12 @@
      "fallback_of": "XX_REQ_TO_PARTNER_FDR", "owner": "XX PAYMENT TEAM",
      "description": "Fallback: partner by member number only (old partners)",
      "conditions": [{"kind": "EQ", "from": "MEMBER_ID", "to": "BPEXT"}]},
-    {"id": "XX_PAYMENT_TO_STMT_LINE", "from": "CA_OPEN_ITEM", "to": "S4_BANK_STMT_LINE", "cardinality": "NM", "quality": "C",
-     "replaces": "CA_PAYMENT_TO_STMT_LINE", "owner": "XX PAYMENT TEAM",
+    {"id": "XX_PAYMENT_TO_STMT_LINE", "from": "FICA_OPEN_ITEM", "to": "S4_BANK_STMT_LINE", "cardinality": "NM", "quality": "C",
+     "replaces": "FICA_PAYMENT_TO_STMT_LINE", "owner": "XX PAYMENT TEAM",
      "description": "Payment -> bank lines (bank drops leading zeros)",
      "conditions": [{"kind": "EQ", "from": "AUGBL", "to": "CHECT", "transform": "NOZERO"}]}
   ],
   "activation": [
-    {"kind": "K", "id": "CA_PAYMENT_TO_NOC", "active": false, "reason": "No notification-of-change lots at XX", "owner": "XX PAYMENT TEAM"}
+    {"kind": "K", "id": "FICA_PAYMENT_TO_NOC", "active": false, "reason": "No notification-of-change lots at XX", "owner": "XX PAYMENT TEAM"}
   ]
 }

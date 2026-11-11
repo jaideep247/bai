@@ -1,7 +1,4 @@
 OBJECT_ID,FIELD_NAME,LAYER_ID,SOURCE_NAME,DATA_ELEMENT,SENSITIVITY,EVIDENCE,VERIFY_REF,DESCRIPTION
-CA_OPEN_ITEM,ZZ_BILLPLANID,CD,DFKKOP,,,C,,Custom field: bill plan of the item
-CA_OPEN_ITEM,ZZ_FIN_TRANS_NUM,CD,DFKKOP,,,C,,Custom field: FIN number of the request
-CA_PAYMENT_RUN,ZZ_PAYMENT_STATUS,CD,DPAYH,,,C,,Custom field: live payment status
 CD_CHECK_HIST,STATE,CD,ZCD_CHECK_HIST,,,C,,Processing state of the record
 CD_CHECK_HIST,ZTNUM,CD,ZCD_CHECK_HIST,,,V,V121,Cheque number
 CD_EBS_ACCOUNT,ACCOUNT_NO,CD,ZCD_EBS_ACCT,,,C,,Account of the line reference
@@ -26,3 +23,6 @@ CD_RC_BANK_LINE,BANKREFERENCE,CD,ZI_CD_HCKRCBANKLINE,,,C,,Payment reference of t
 CD_RC_BANK_LINE,ESNUM,CD,ZI_CD_HCKRCBANKLINE,,,C,,Line of the statement
 CD_RC_BANK_LINE,KUKEY,CD,ZI_CD_HCKRCBANKLINE,,,C,,Short key of the statement
 CD_RC_BANK_LINE,PEACCOUNT,CD,ZI_CD_HCKRCBANKLINE,,,C,,Account of the line reference
+FICA_OPEN_ITEM,ZZ_BILLPLANID,CD,DFKKOP,,,C,,Custom field: bill plan of the item
+FICA_OPEN_ITEM,ZZ_FIN_TRANS_NUM,CD,DFKKOP,,,C,,Custom field: FIN number of the request
+FICA_PAYMENT_RUN,ZZ_PAYMENT_STATUS,CD,DPAYH,,,C,,Custom field: live payment status

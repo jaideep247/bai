@@ -1,5 +1,5 @@
 {
-  "_comment": "Link registry, customer overlay of the ops suite (layer CD, prefix CD_) on top of the product layers of the operations framework (ops-framework/config/links: S4CORE, CONTRACT). Holds what is this landscape's own: custom tables and views (ZCD_*, ZI_CD_*), custom fields on standard tables (DFKKOP-ZZ_FIN_TRANS_NUM, DFKKOP-ZZ_BILLPLANID, DPAYH-ZZ_PAYMENT_STATUS) and the links between them and the standard objects. Facts: docs/USAA_Known_Tables.md. A field not confirmed in SE11 is evidence V with its VERIFY item; a field still unnamed is a placeholder in angle quotes - its links are PENDING (not seeded) until the item names it. The payment model mapping (config/payment_model/mapping.json) names the links of its joins; tools/payment_model.py renders them from this registry. Run tools/link_registry.py after a change (seed rows, lineage, CDS snippets, impact). docs/Link_Registry_Overlay.md.",
+  "_comment": "Link registry, customer overlay of the ops suite (layer CD, prefix CD_) on top of the product layers of the operations framework (ops-framework/config/links: S4CORE, FICA). Holds what is this landscape's own: custom tables and views (ZCD_*, ZI_CD_*), custom fields on standard tables (DFKKOP-ZZ_FIN_TRANS_NUM, DFKKOP-ZZ_BILLPLANID, DPAYH-ZZ_PAYMENT_STATUS) and the links between them and the standard objects. Facts: docs/USAA_Known_Tables.md. A field not confirmed in SE11 is evidence V with its VERIFY item; a field still unnamed is a placeholder in angle quotes - its links are PENDING (not seeded) until the item names it. The payment model mapping (config/payment_model/mapping.json) names the links of its joins; tools/payment_model.py renders them from this registry. Run tools/link_registry.py after a change (seed rows, lineage, CDS snippets, impact). docs/Link_Registry_Overlay.md.",
   "layer": {"id": "CD", "kind": "C", "rank": 30, "prefix": "CD_", "description": "Customer overlay of the ops suite",
             "owner": "PE RTB", "active": true},
   "objects": [
@@ -82,16 +82,16 @@
      ]}
   ],
   "fields": [
-    {"object": "CA_OPEN_ITEM", "name": "ZZ_FIN_TRANS_NUM", "evidence": "C", "description": "Custom field: FIN number of the request"},
-    {"object": "CA_OPEN_ITEM", "name": "ZZ_BILLPLANID", "evidence": "C", "description": "Custom field: bill plan of the item"},
-    {"object": "CA_PAYMENT_RUN", "name": "ZZ_PAYMENT_STATUS", "evidence": "C", "description": "Custom field: live payment status"},
+    {"object": "FICA_OPEN_ITEM", "name": "ZZ_FIN_TRANS_NUM", "evidence": "C", "description": "Custom field: FIN number of the request"},
+    {"object": "FICA_OPEN_ITEM", "name": "ZZ_BILLPLANID", "evidence": "C", "description": "Custom field: bill plan of the item"},
+    {"object": "FICA_PAYMENT_RUN", "name": "ZZ_PAYMENT_STATUS", "evidence": "C", "description": "Custom field: live payment status"},
     {"object": "S4_BUSINESS_PARTNER", "name": "‹source field›", "evidence": "V", "verify": "V121", "description": "Custom field: source that created the partner"}
   ],
   "links": [
-    {"id": "CD_REQ_TO_OPEN_ITEMS", "from": "CD_PAYM_REQ_LOG", "to": "CA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
+    {"id": "CD_REQ_TO_OPEN_ITEMS", "from": "CD_PAYM_REQ_LOG", "to": "FICA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
      "active": false, "verify": "V82", "owner": "PE RTB", "description": "Request -> items with its FIN number",
      "conditions": [{"kind": "EQ", "from": "‹FIN number field›", "to": "ZZ_FIN_TRANS_NUM"}]},
-    {"id": "CD_ITEM_TO_REQUEST", "from": "CA_OPEN_ITEM", "to": "CD_PAYM_REQ_LOG", "cardinality": "N1", "quality": "C",
+    {"id": "CD_ITEM_TO_REQUEST", "from": "FICA_OPEN_ITEM", "to": "CD_PAYM_REQ_LOG", "cardinality": "N1", "quality": "C",
      "active": false, "verify": "V82", "owner": "PE RTB", "description": "Item -> request (row SUCCESS, never highest COUNTER)",
      "conditions": [{"kind": "EQ", "from": "ZZ_FIN_TRANS_NUM", "to": "‹FIN number field›"},
                     {"kind": "PREFER", "to": "ZZ_STATUS", "value": "SUCCESS"}]},
@@ -106,18 +106,18 @@
     {"id": "CD_REQ_TO_STATUS_UPD", "from": "CD_PAYM_REQ_LOG", "to": "CD_SPE_EXCP_LOG", "cardinality": "NM", "quality": "P",
      "active": false, "verify": "V121", "owner": "PE RTB", "description": "Request -> status updates sent to its source",
      "conditions": [{"kind": "EQ", "from": "‹FIN number field›", "to": "‹request key field›"}]},
-    {"id": "CD_CHEQUE_TO_STATUS_HIST", "from": "CA_CHEQUE", "to": "CD_CHECK_HIST", "cardinality": "NM", "quality": "C",
+    {"id": "CD_CHEQUE_TO_STATUS_HIST", "from": "FICA_CHEQUE", "to": "CD_CHECK_HIST", "cardinality": "NM", "quality": "C",
      "active": false, "verify": "V121", "owner": "PE RTB", "description": "Cheque -> its status history",
      "conditions": [{"kind": "EQ", "from": "ZTNUM", "to": "ZTNUM"}]},
-    {"id": "CD_RUN_TO_FILE", "from": "CA_PAYMENT_RUN", "to": "CD_FILE_REGISTER", "cardinality": "NM", "quality": "C",
+    {"id": "CD_RUN_TO_FILE", "from": "FICA_PAYMENT_RUN", "to": "CD_FILE_REGISTER", "cardinality": "NM", "quality": "C",
      "active": false, "verify": "V121", "owner": "PE RTB", "description": "Payment run -> its payment files",
      "conditions": [{"kind": "EQ", "from": "LAUFD", "to": "‹run date field›"},
                     {"kind": "EQ", "from": "LAUFI", "to": "‹run ID field›"},
                     {"kind": "EQ", "from": "HBKID", "to": "‹house bank field›"}]},
-    {"id": "CD_ITEM_TO_CLEAR_HIST", "from": "CA_OPEN_ITEM", "to": "CD_CLEAR_HISTORY", "cardinality": "1N", "quality": "P",
+    {"id": "CD_ITEM_TO_CLEAR_HIST", "from": "FICA_OPEN_ITEM", "to": "CD_CLEAR_HISTORY", "cardinality": "1N", "quality": "P",
      "active": false, "verify": "V100", "owner": "PE RTB", "description": "Item -> its earlier clearings (reset history)",
      "conditions": [{"kind": "EQ", "from": "OPBEL", "to": "‹item document field›"}]},
-    {"id": "CD_PAYMENT_TO_ACK", "from": "CA_OPEN_ITEM", "to": "CD_BANK_ACK", "cardinality": "NM", "quality": "P",
+    {"id": "CD_PAYMENT_TO_ACK", "from": "FICA_OPEN_ITEM", "to": "CD_BANK_ACK", "cardinality": "NM", "quality": "P",
      "active": false, "verify": "V121", "owner": "PE RTB", "description": "Payment document -> bank acknowledgements",
      "conditions": [{"kind": "EQ", "from": "AUGBL", "to": "‹payment key field›"}]},
     {"id": "CD_PAYRUN_TO_COMPANY", "from": "CD_PAY_LIFE_RUN", "to": "S4_COMPANY_CODE", "cardinality": "N1", "quality": "C",
@@ -138,7 +138,7 @@
      "owner": "PE RTB", "description": "Bank line -> active house bank account of its reference",
      "conditions": [{"kind": "EQ", "from": "PeAccount", "to": "ACCOUNT_NO"},
                     {"kind": "CONST", "to": "ACTIVE", "value": "X"}]},
-    {"id": "CD_BANKLINE_TO_CLEARING", "from": "CD_RC_BANK_LINE", "to": "CA_DOC_HEADER", "cardinality": "N1", "quality": "C",
+    {"id": "CD_BANKLINE_TO_CLEARING", "from": "CD_RC_BANK_LINE", "to": "FICA_DOC_HEADER", "cardinality": "N1", "quality": "C",
      "owner": "PE RTB", "description": "Bank line -> header of the payment it references",
      "conditions": [{"kind": "EQ", "from": "BankReference", "to": "OPBEL"}]}
   ]

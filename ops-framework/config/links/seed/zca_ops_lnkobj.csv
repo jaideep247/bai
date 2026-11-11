@@ -1,12 +1,12 @@
 OBJECT_ID,LAYER_ID,SOURCE_NAME,SOURCE_KIND,KEY_FIELDS,DESCRIPTION,ACTIVE
-CA_CHEQUE,CONTRACT,DFKKCR,T,"DOC1R,ZTNUM",Cheque register,X
-CA_DOC_HEADER,CONTRACT,DFKKKO,T,OPBEL,Subledger document header,X
-CA_NOC_ITEM,CONTRACT,DFKKNRP,T,"KEYN1,POSNA",Notification-of-change lot item,X
-CA_OPEN_ITEM,CONTRACT,DFKKOP,T,OPBEL,Subledger items (walked per document),X
-CA_PAYMENT_RUN,CONTRACT,DPAYH,T,"LAUFD,LAUFI,DOC1R",Payment of a payment run (payment data header),X
-CA_PAY_METHOD_CFG,CONTRACT,TFK042Z,T,"LAND1,ZLSCH",Payment method per country (collection or not),X
-CA_RETURN_ITEM,CONTRACT,DFKKRP,T,SELW1,Returns lot items (walked per payment reference),X
-CA_SUMMARY_RECORD,CONTRACT,DFKKSUMC,T,FIKEY,Summary records of a reconciliation key (G/L transfer),X
+FICA_CHEQUE,FICA,DFKKCR,T,"DOC1R,ZTNUM",Cheque register,X
+FICA_DOC_HEADER,FICA,DFKKKO,T,OPBEL,Subledger document header,X
+FICA_NOC_ITEM,FICA,DFKKNRP,T,"KEYN1,POSNA",Notification-of-change lot item,X
+FICA_OPEN_ITEM,FICA,DFKKOP,T,OPBEL,Subledger items (walked per document),X
+FICA_PAYMENT_RUN,FICA,DPAYH,T,"LAUFD,LAUFI,DOC1R",Payment of a payment run (payment data header),X
+FICA_PAY_METHOD_CFG,FICA,TFK042Z,T,"LAND1,ZLSCH",Payment method per country (collection or not),X
+FICA_RETURN_ITEM,FICA,DFKKRP,T,SELW1,Returns lot items (walked per payment reference),X
+FICA_SUMMARY_RECORD,FICA,DFKKSUMC,T,FIKEY,Summary records of a reconciliation key (G/L transfer),X
 S4_BANK_STMT_HDR,S4CORE,FEBKO,T,KUKEY,Electronic bank statement header,X
 S4_BANK_STMT_LINE,S4CORE,FEBEP,T,"KUKEY,ESNUM",Electronic bank statement line,X
 S4_BUSINESS_PARTNER,S4CORE,BUT000,T,PARTNER,Business partner (table; released view: V117),X

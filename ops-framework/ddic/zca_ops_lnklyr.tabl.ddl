@@ -5,13 +5,13 @@
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zca_ops_lnklyr {
   key mandt    : abap.clnt not null;
-  // Layer of the link registry: product baseline (S4CORE), industry package (CONTRACT), a customer's overlay
+  // Layer of the link registry: product baseline (S4CORE), industry package (FICA), a customer's overlay
   key layer_id : abap.char(10) not null;
   // S product baseline, I industry package, C customer overlay
   layer_kind   : abap.char(1);
   // Order of the layers: a higher rank may extend and reference a lower one, never the reverse; unique
   layer_rank   : abap.int4;
-  // Every object and link ID of the layer starts with it (e.g. CA_, XX_)
+  // Every object and link ID of the layer starts with it (e.g. FICA_, XX_)
   id_prefix    : abap.char(10);
   description  : abap.char(60);
   owner        : abap.char(30);

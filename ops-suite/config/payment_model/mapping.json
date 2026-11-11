@@ -141,7 +141,7 @@
     ],
     "from": "dfkkop as Op",
     "joins": [
-      {"link": "CA_ITEM_TO_CLEARING_HDR", "join": "inner join", "alias": "Clr", "from_alias": "Op"}
+      {"link": "FICA_ITEM_TO_CLEARING_HDR", "join": "inner join", "alias": "Clr", "from_alias": "Op"}
     ],
     "where": ["Op.augbl <> ' '"],
     "fields": {

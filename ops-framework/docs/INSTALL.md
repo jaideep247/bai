@@ -191,7 +191,7 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
 
 1. After the pull: the configuration app `ZUI_CA_OPS_CFG` comes regenerated with *Link registry layers*, *objects*,
    *object fields*, *links*, *link conditions* and *activation overrides*.
-2. DV1, customizing request: create the product rows of `config/links/seed/*.csv` (layers S4CORE and CONTRACT -
+2. DV1, customizing request: create the product rows of `config/links/seed/*.csv` (layers S4CORE and FICA -
    layers, objects, fields, links, conditions in this order), then the consumer's own seed rows (its
    `config/links/seed`). Rows whose fields are still VERIFY come inactive; leave them so until the item is closed.
 3. `ZCA_OPS_TABWL`: approve, for the consumer's area, every source its walks read (security sign-off per table);
