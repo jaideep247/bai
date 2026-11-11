@@ -44,6 +44,7 @@ exceptions with an SLA due date.
 | Purge | `ZCA_OPS_RETENTION` (findings with their runs, target RUN) | a purge target only when the process writes own tables |
 | Authorisation | object `ZCA_OPS`, DCLs with the company-code rule | a role with `ZCA_PARAR` = the area |
 | Completeness | offline check `process_onboarding`; `ZCL_CA_OPS_CHK_ONBOARD` every morning | nothing |
+| Runbook, escalation, correlation, downtime (2026-11-11) | `ZCA_OPS_RUNBOOK`, `ZCA_OPS_ALRULE-ESC_*`, `ZCA_OPS_CORR`, downtime app `ZUI_CA_OPS_DTW` (`docs/OPERATIONS_FEATURES.md`) | optional: one runbook row per check (`GROUP2` = check ID; inactive until the link is known), `ESC_AFTER_MIN` on the process's rule, a correlation rule when one cause raises many findings |
 
 ## 1. Decide before you build
 

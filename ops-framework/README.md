@@ -28,7 +28,8 @@ standard. Both components stay separate and are shipped together (user decision 
 | Configuration apps | gate `ZCL_CA_OPS_CFG_GATE` (+ `_CLIENT`, `_TRANSPORT`, `_AUTH`, `_POLICY`, `_FACTORY`, `_INJECTOR`, `ZIF_CA_OPS_CFG_*`), field checks `ZCL_CA_OPS_CFG_CHECKS`; app `ZUI_CA_OPS_CFG` (alert rules, channels, purge targets, controls and their checks and guidance; generated) |
 | Control register and daily review | tables `ZCA_OPS_CONTROL`, `ZCA_OPS_CTLT` (guidance per language), `ZCA_OPS_CTLCHK` (checks a control covers) in `ZUI_CA_OPS_CFG`; sign-off `ZCA_OPS_REVIEW`; review app `ZUI_CA_OPS_REV` (RAP BO `ZR_CA_OpsCtlReview`, action *Mark reviewed*); status per business date derived in CDS from the findings (`ZI_CA_OpsCtlFind` ... `ZI_CA_OpsCtlState`), never stored; `ZCL_CA_OPS_REVIEW_POLICY`, `ZIF_CA_OPS_REVIEW_DAO` / `ZCL_CA_OPS_REVIEW_DAO`, `ZIF_CA_OPS_CTL_TYPES`, domain `ZCA_OPS_CTL_STATUS` - `docs/CONTROL_REVIEW.md` |
 | Process onboarding (2026-11-10) | contract `ZIF_CA_OPS_CHECK` and generic runner `ZCL_CA_OPS_CHECK_RUNNER` / report `ZCA_OPS_CHECK_RUN` (one job per area and schedule group); process register `ZCA_OPS_PROC`, check registry `ZCA_OPS_CHECK`; no-code aggregate check `ZCL_CA_OPS_CHK_AGG` (`ZCA_OPS_AGG` over tables approved per area in `ZCA_OPS_TABWL`, builder `ZCL_CA_OPS_AGG_QUERY`: COUNT / AGE per company code, amber / red); onboarding check `ZCL_CA_OPS_CHK_ONBOARD`; `ZIF_CA_OPS_CHECK_DAO` / `ZCL_CA_OPS_CHECK_DAO`, `ZIF_CA_OPS_CHK_TYPES`; area dashboard `ZUI_CA_OPS_DASH` (`ZR_CA_OpsCheckStatus`, freshness `CHECK_STALE_MIN_<area>`) - `docs/ADDING_A_BUSINESS_PROCESS.md` |
-| Retention purge | `ZCL_CA_OPS_PURGE`, `ZIF_CA_OPS_PURGE_DAO` / `ZCL_CA_OPS_PURGE_DAO`, targets `ZIF_CA_OPS_PURGE_TARGET`, registry `ZCA_OPS_PURGE`, report `ZCA_OPS_RETENTION` |
+| Operations response features (2026-11-11) | runbook link per check `ZCA_OPS_RUNBOOK` (CDS `ZI_CA_OpsFindRunbook`); planned downtime windows `ZCA_OPS_DTWIN` (app `ZUI_CA_OPS_DTW`, four-eyes; API `ZIF_CA_OPS_DOWNTIME` / `ZCL_CA_OPS_DOWNTIME`, `ZCL_CA_OPS_DOWNTIME_POLICY`; finding mark, alert log D); escalation until acknowledged (`ZCA_OPS_ALRULE-ESC_*`, report `ZCA_OPS_ESCALATE`); alert correlation `ZCA_OPS_CORR` (`ZCL_CA_OPS_CORRELATOR`; parent alerted with its children's count, log K); response-time metrics MTTA / MTTR (`ZUI_CA_OPS_MET`); shift handover (`ZUI_CA_OPS_HOVR`); `ZIF_CA_OPS_RESP_TYPES` - `docs/OPERATIONS_FEATURES.md` |
+| Retention purge | `ZCL_CA_OPS_PURGE`, `ZIF_CA_OPS_PURGE_DAO` / `ZCL_CA_OPS_PURGE_DAO`, targets `ZIF_CA_OPS_PURGE_TARGET`, registry `ZCA_OPS_PURGE`, report `ZCA_OPS_RETENTION` (built-in targets RUN, ALERT_LOG, REVIEW, DOWNTIME) |
 | Utilities | `ZIF_CA_OPS_TYPES`, `ZCX_CA_OPS_ERROR` (message class `ZCA_OPS`), `ZCL_CA_OPS_UTIL`, `ZCL_CA_OPS_CLOCK`, `ZCL_CA_OPS_FILE_PATH`, `ZCL_CA_OPS_AUTH` (object `ZCA_OPS`), `ZIF_CA_OPS_PARAMS` / `ZCL_CA_OPS_PARAMS` (adapter over ZCA_PARAM), `ZCL_CA_OPS_FACTORY` / `ZCL_CA_OPS_INJECTOR`, `ZCL_CA_OPS_PARAM_SEED` (generated, tests) |
 
 ## Install with abapGit
@@ -43,7 +44,8 @@ repository, see `.abapgit.xml`). **Step by step for a new customer, with the che
   `zip -d zca_ops.zip 'src/demo/*'`), then in abapGit *New Offline* -> package `ZCA_OPS` -> *Import ZIP* -> *Pull*.
 - After the pull: register area `CA_OPS` and the definitions of `config/param_definitions.csv` in the
   ZCA_PARAM app (`ZUI_CA_PARAM_O4`), create the service bindings `ZUI_CA_OPS_EXC_O4` and
-  `ZUI_CA_OPS_CFG_O4` and `ZUI_CA_OPS_REV_O4` and `ZUI_CA_OPS_DASH_O4` (OData V4 - UI), create the SLG0 object `ZCA_OPS` / sub-object `ALERT` when
+  `ZUI_CA_OPS_CFG_O4` and `ZUI_CA_OPS_REV_O4` and `ZUI_CA_OPS_DASH_O4` and `ZUI_CA_OPS_DTW_O4`, `ZUI_CA_OPS_MET_O4`,
+  `ZUI_CA_OPS_HOVR_O4` (OData V4 - UI), schedule `ZCA_OPS_ESCALATE` per area where rules escalate by time, create the SLG0 object `ZCA_OPS` / sub-object `ALERT` when
   a rule uses the APPLOG channel, run ABAP Unit and ATC, run the demo report `ZCA_OPS_DEMO`, work through
   `docs/VERIFY.md`.
 
@@ -231,6 +233,7 @@ ENDCLASS.
 | `docs/ALERT_TEMPLATES.md` | alert e-mail templates: how a mail is built, context keys, configuration, fallback, delivery, VERIFY items |
 | `templates/` | the framework's e-mail templates as documented sources (generic template `ZCA_OPS_ALERT_DEFAULT`) |
 | `docs/ADDING_A_BUSINESS_PROCESS.md` | adding a business process end to end (Fiori to backend): registry, no-code aggregate or check class, control, alert rule, dashboard, freshness, purge, authorisation, completeness checks; worked example |
+| `docs/OPERATIONS_FEATURES.md` | operations response features (2026-11-11): runbook links, planned downtime, escalation until acknowledged, alert correlation, response-time metrics, shift handover - configuration, rules, decisions, objects |
 | `docs/CONTROL_REVIEW.md` | control register and daily control review: which findings belong to a control, derived status, sign-off, awaiting / overdue review, review app |
 | `docs/VERIFY.md` | what offline checks cannot prove |
 | `CHANGELOG.md` | changes, releases |

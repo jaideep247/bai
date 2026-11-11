@@ -1,7 +1,8 @@
 // UI annotations: shift handover (service ZUI_CA_OPS_HOVR, list report, 2026-11-11)
 // Per team, area and company code since the start of the previous shift: new, resolved, still open, escalated,
 // controls awaiting sign-off, planned downtime active / next shift. Data points of a consumer's overview card
-// "Shift handover": New, Resolved, Open, Escalated, AwaitingSignOff, DowntimeNext. VERIFY-ADT: OVP V4 card (V81).
+// "Shift handover": New, Resolved, Open, Escalated, AwaitingSignOff, DowntimeNext.
+// VERIFY-ADT: OVP V4 card (V79; the first consumer's overview card: its V81).
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Handover', typeNamePlural: 'Shift handover',
                   title: { type: #STANDARD, value: 'Team' },

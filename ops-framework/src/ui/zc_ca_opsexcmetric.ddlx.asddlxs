@@ -1,7 +1,7 @@
 // UI annotations: exception response-time metrics (service ZUI_CA_OPS_MET, analytical list page, 2026-11-11)
 // Charts: raised / resolved per month, MTTA / MTTR per month, open exceptions by age. Data points of a consumer's
 // overview card "Response times": Raised, Mtta, Mttr, Open, Reopened (sums / averages over the rows the user may
-// read). VERIFY-ADT: analytical list page and OVP V4 cards on a transactional_query projection (V79).
+// read). VERIFY-ADT: analytical list page and OVP V4 cards on a transactional_query projection (V78, V79).
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exception response times',
                   title: { type: #STANDARD, value: 'CheckCode' },
