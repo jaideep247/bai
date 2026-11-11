@@ -1,0 +1,17 @@
+SCHED_FOLDER,SCHED_JOB,SAP_PATTERN,CRITICALITY,DESCRIPTION,ACTIVE,SEQ
+‹Control-M folder›,‹JQ4SP job: COLL_DAY 010›,ZSTRP_PAYOUT.*,H,Stripe payout / chargeback (cycle COLL_DAY 010),,10
+‹Control-M folder›,‹JQ4SP job: COLL_DAY 020›,ZBAI_FILE_LOAD.*,H,BAI load JPMC + BOA (cycle COLL_DAY 020),,20
+‹Control-M folder›,‹JQ4SP job: COLL_DAY 030›,ZCOLL_PAY_EVE.*,M,ACH PNC & PUB evening (cycle COLL_DAY 030),,30
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 010›,ZPAYM_REQ_MORN.*,H,Payment request cycle morning (cycle DISB_DAY 010),,40
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 020›,ZPAYM_REQ_LIFE.*,M,LifeCo wire / ACH morning (cycle DISB_DAY 020),,50
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 030›,ZPAYM_REQ_REG.*,M,Regular payment cycle (cycle DISB_DAY 030),,60
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 040›,ZPAYM_WIRE_CORP.*,H,Wire CORP payment (cycle DISB_DAY 040),,70
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 050›,ZPAYM_WIRE_ACK.*,M,Wire acknowledgment (cycle DISB_DAY 050),,80
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 060›,ZPAYM_REQ_EVE.*,M,ACH PNC & PUB evening (cycle DISB_DAY 060),,90
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 070›,ZPAYM_CHECK_ECT.*,H,ECT check payment (cycle DISB_DAY 070),,100
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 080›,ZPAYM_ACH_CORP.*,H,ACH CORP payment (cycle DISB_DAY 080),,110
+‹Control-M folder›,‹JQ4SP job: DISB_DAY 090›,ZPAYM_ACH_ACK.*,M,ACH acknowledgment (cycle DISB_DAY 090),,120
+‹Control-M folder›,‹JQ4SP job: RECON_EOD 010›,ZPOST_GL.*,H,Recon key close / transfer / GL OFSAA (cycle RECON_EOD 010),,130
+‹Control-M folder›,‹JQ4SP job: RECON_EOD 020›,ZEXPENSE_GL.*,H,BlackLine expense (cycle RECON_EOD 020),,140
+‹Control-M folder›,‹JQ4SP job: CLEARING 010›,‹SM37 job name of the clearing job as PCRE›,H,Clearing job (cycle CLEARING 010),,150
+‹Control-M folder›,‹JQ4SP job: every other ZCD job›,ZCD_.*,M,Every other SAP job of the suite (ZCD_<function>_<ENTITY>),,900

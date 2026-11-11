@@ -1,0 +1,34 @@
+{
+  "_comment": "SAP job failures (2026-11-11): the framework's SAP job monitor (ops-framework/docs/JOB_MONITORING.md) run for the suite in its own area CD_JOBS (decision D-PO1). Input of tools/abaptools/new_process.py. Two framework check classes in the fast schedule group FAST (every 5 minutes): JOB_FAILURES (incremental after a watermark: cancelled jobs, job log errors of RFKK_MA_SCHEDULER / ZICD_CALL_SM69_COMMAND_NEW jobs, failed children whose root - the job Control-M started - did not abort) and JOB_STATES (long-running, released and not started). Own tables: the framework's evidence tables, purge target JOB_EVIDENCE. The suite's plug-ins (mass activity resolver and enricher, payment run enricher) are delivered outside JOB_RESOLVERS / JOB_ENRICHERS until VERIFY V67 / V68 are confirmed; the claim of the health check's named job cycles (ZCL_CD_HCK_JOB_CLAIM) is active (docs/HCK_MORNING_REPORT.md section 9b).",
+  "area": "CD_JOBS",
+  "process": "SAP_JOBS",
+  "name": "SAP job failures",
+  "owner_team": "PE RTB batch support",
+  "auth_role": "Z_CD_OPS_BATCH",
+  "schedule_group": "FAST",
+  "active": true,
+  "own_data": true,
+  "purge_target": "JOB_EVIDENCE",
+  "purge_class": "ZCL_CA_OPS_JOB_PURGE",
+  "purge_param": "RETENTION_DAYS_JOB_EVIDENCE",
+  "new_area": {"description": "Ops suite SAP job failures (job monitor)", "owner_team": "PE RTB"},
+  "control": {"area": "CD_JOBS", "id": "SAP_JOB_FAILURES", "create": true, "description": "SAP job failures",
+              "category": "Batch processing", "cutoff_time": "083000", "seq": 130,
+              "guidance": "Confirm every SAP job failure since the last review is assigned or resolved - above all a child that failed while the Control-M job finished; record the job, the root job and whether a restart from Control-M is safe."},
+  "alert_rule": {"id": "JOB_FAIL", "min_severity": "E", "destination": "ZCD_BATCHSUP"},
+  "checks": [
+    {"id": "JOB_FAILURES", "description": "Cancelled jobs, job log errors, children failed under a root",
+     "bukrs_aware": false, "class": "ZCL_CA_OPS_CHK_JOB_FAIL"},
+    {"id": "JOB_STATES", "description": "Long-running jobs, released jobs not started",
+     "bukrs_aware": false, "class": "ZCL_CA_OPS_CHK_JOB_STATE"}
+  ],
+  "verify": [
+    "VERIFY-SE11 V58 / V59 (framework): TBTCO / TBTCP / BALHDR fields and the indexes of the windows (status + end date, start date, event) - ST05 / PlanViz of one FAST run in QA1 at peak volume (2 million payments a day).",
+    "VERIFY V61 (framework): the start-after-job event SAP_END_OF_JOB and its parameter layout (name 32 + count 8).",
+    "VERIFY V62 (framework): parent job fields of TBTCO (JOB_PARENT_FIELDS) and the job log message announcing a released job (JOB_CHILD_MSG_IDS / _PCRE) - resolvers FIELD and JOBLOG stay off until confirmed.",
+    "VERIFY-SE11 V67: how the worker jobs of one RFKK_MA_SCHEDULER run are named and which mass activity table links them (JOB_MA_WORKER_PCRE, JOB_MA_SCHED_PCRE, JOB_MA_RUN_PCRE) - ZCL_CD_JOB_RES_MASSACT / ZCL_CD_JOB_ENR_MASSACT stay out of JOB_RESOLVERS / JOB_ENRICHERS until then; the failed intervals of a run are not read (interval table not confirmed).",
+    "VERIFY-SE11 V68: mass activity type of the payment run FPY1 (JOB_PAYRUN_ACTIVITIES) and a DPAYH index on LAUFD / LAUFI (payments = LAUFD + LAUFI with DOC1R filled, confirmed path) - ZCL_CD_JOB_ENR_PAYRUN stays out of JOB_ENRICHERS until then.",
+    "V69: Control-M folder / job names and the SAP job names they start (config/scheduler_jobs.csv, rows inactive with placeholders) from the Control-M export; the SO23 list ZCD_BATCHSUP of rule JOB_FAIL (proposed name).",
+    "Area CD_JOBS in ZCA_PARAM_AREA, roles of config/auth_zcd_ops.md section 3 (Z_CD_OPS_BATCH: CD_JOBS 16; display / operator / approver), owner and backup of the process in DV1, job ZCA_OPS_CHECK_RUN with P_AREA = CD_JOBS, P_GROUP = FAST every 5 minutes."
+  ]
+}

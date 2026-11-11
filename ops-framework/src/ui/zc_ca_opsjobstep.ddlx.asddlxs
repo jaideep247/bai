@@ -1,0 +1,30 @@
+// UI annotations: SAP job failures board - steps of a job (object page table)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Step', typeNamePlural: 'Steps', title: { type: #STANDARD, value: 'ProgramName' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StepCount', direction: #ASC } ] } ]
+annotate entity ZC_CA_OpsJobStep with
+{
+  @UI.hidden: true
+  JobName;
+  @UI.hidden: true
+  JobCount;
+  @EndUserText.label: 'Step'
+  @UI.lineItem: [ { position: 10 } ]
+  StepCount;
+  @EndUserText.label: 'Program'
+  @UI.lineItem: [ { position: 20 } ]
+  ProgramName;
+  @EndUserText.label: 'Variant'
+  @UI.lineItem: [ { position: 30 } ]
+  Variant;
+  @EndUserText.label: 'Step user'
+  @UI.lineItem: [ { position: 40 } ]
+  StepUser;
+  @EndUserText.label: 'Spool list'
+  @UI.lineItem: [ { position: 50 } ]
+  SpoolId;
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  CompanyCode;
+}

@@ -27,6 +27,7 @@
 *&            | (ZCD_HCK_AGGGRP no longer doubled).
 *& 2026-11-08 | Drift table example ZCD_BTC_RULE (ZCD_BTC_MAP is now the customer posting area ZBTM).
 *& 2026-11-10 | S_TABU_NAM 03 through a core authorisation double; refused_table_display_813 (B4).
+*& 2026-11-11 | jobs_monitored_by_area (SAP job monitor, area CD_JOBS: de-duplication of E_JOBS).
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -791,6 +792,7 @@ CLASS ltc_dao_reads DEFINITION FINAL FOR TESTING
     METHODS applog_stats_per_object FOR TESTING.
     METHODS open_exceptions_oldest_first FOR TESTING.
     METHODS alert_stats_in_window FOR TESTING.
+    METHODS jobs_monitored_by_area FOR TESTING.
 ENDCLASS.
 
 
@@ -1125,6 +1127,39 @@ CLASS ltc_dao_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = CONV symsgno( '813' )
                                             msg = 'S_TABU_NAM refusal is message 813' ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Rule: jobs with an exception of the SAP job monitor (area CD_JOBS) are monitored; information findings
+  " (a claimed job) and findings of another area are not
+  METHOD jobs_monitored_by_area.
+    DATA lt_rows TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_finding.
+    TRY.
+        ls_row-run_id      = gc_test-run_id.
+        ls_row-object_type = zif_ca_ops_job_types=>gc_object_type.
+        ls_row-finding_no  = 1.
+        ls_row-area        = zif_cd_job_types=>gc_area.
+        ls_row-object_key  = 'ZCD_A/00000001'.
+        ls_row-severity    = zif_ca_ops_types=>gc_severity-error.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-finding_no  = 2.
+        ls_row-object_key  = 'ZCD_B/00000001'.
+        ls_row-severity    = zif_ca_ops_types=>gc_severity-info.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-finding_no  = 3.
+        ls_row-area        = zif_cd_ops_types=>gc_pe_area-health_check.
+        ls_row-object_key  = 'ZCD_C/00000001'.
+        ls_row-severity    = zif_ca_ops_types=>gc_severity-error.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_keys) = mo_cut->get_jobs_monitored( VALUE #( ( CONV #( 'ZCD_A/00000001' ) )
+                                                             ( CONV #( 'ZCD_B/00000001' ) )
+                                                             ( CONV #( 'ZCD_C/00000001' ) ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_keys ) exp = 1 msg = 'One monitored job' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_keys[ 1 ] exp = 'ZCD_A/00000001' msg = 'With an exception' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

@@ -37,6 +37,7 @@
 *&            | pattern on the company code (TY_ALERT_RULE-BUKRS_PATTERN).
 *& 2026-11-10 | Error classes: configuration messages of the check registry (082-092, 103) are CONFIG;
 *&            | name prefix CHECK_ read in area CA_OPS (freshness of the area dashboard).
+*& 2026-11-11 | Name prefix JOB_ read in area CA_OPS (SAP job monitor).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -138,6 +139,8 @@ INTERFACE zif_ca_ops_types
       exception TYPE ty_param_name VALUE 'EXC_',
       "! Check registry and area dashboard (ZIF_CA_OPS_CHK_TYPES=>GC_PARAM, 2026-11-10)
       check     TYPE ty_param_name VALUE 'CHECK_',
+      "! SAP job monitor (ZIF_CA_OPS_JOB_TYPES=>GC_PARAM, 2026-11-11)
+      job       TYPE ty_param_name VALUE 'JOB_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters

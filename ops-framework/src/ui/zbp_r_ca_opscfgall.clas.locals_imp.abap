@@ -33,6 +33,7 @@ INTERFACE lif_c.
       classname                      TYPE string VALUE `CLASSNAME`,
       condfield                      TYPE string VALUE `CONDFIELD`,
       condop                         TYPE string VALUE `CONDOP`,
+      criticality                    TYPE string VALUE `CRITICALITY`,
       datefield                      TYPE string VALUE `DATEFIELD`,
       destination                    TYPE string VALUE `DESTINATION`,
       dimension                      TYPE string VALUE `DIMENSION`,
@@ -48,6 +49,7 @@ INTERFACE lif_c.
       quietto                        TYPE string VALUE `QUIETTO`,
       rulepattern                    TYPE string VALUE `RULEPATTERN`,
       runbookurl                     TYPE string VALUE `RUNBOOKURL`,
+      sappattern                     TYPE string VALUE `SAPPATTERN`,
       statusfield                    TYPE string VALUE `STATUSFIELD`,
       statusop                       TYPE string VALUE `STATUSOP`,
       tablename                      TYPE string VALUE `TABLENAME`,
@@ -69,6 +71,7 @@ INTERFACE lif_c.
       process                        TYPE string VALUE `Process`,
       purgetarget                    TYPE string VALUE `PurgeTarget`,
       registeredcheck                TYPE string VALUE `RegisteredCheck`,
+      schedulerjob                   TYPE string VALUE `SchedulerJob`,
     END OF gc_ent,
     BEGIN OF gc_if,
       zif_ca_ops_alert_channel       TYPE string VALUE `ZIF_CA_OPS_ALERT_CHANNEL`,
@@ -88,6 +91,7 @@ INTERFACE lif_c.
       process                        TYPE string VALUE `ZCA_OPS_PROC`,
       purgetarget                    TYPE string VALUE `ZCA_OPS_PURGE`,
       registeredcheck                TYPE string VALUE `ZCA_OPS_CHECK`,
+      schedulerjob                   TYPE string VALUE `ZCA_OPS_JOBSCH`,
     END OF gc_tab,
     BEGIN OF gc_val,
       aggregatecheck_aggfunc         TYPE string VALUE `COUNT,AGE`,
@@ -97,6 +101,7 @@ INTERFACE lif_c.
       alertrule_minseverity          TYPE string VALUE `,B,E,W,I`,
       controlcheck_matchfield        TYPE string VALUE `RULE_ID,CHECK_CODE,GROUP2`,
       paymdimtext_dimension          TYPE string VALUE `FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS`,
+      schedulerjob_criticality       TYPE string VALUE `H,M,L`,
     END OF gc_val.
 ENDINTERFACE.
 
@@ -197,6 +202,9 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     IF requested_authorizations-%assoc-_PaymFeeder = if_abap_behv=>mk-on.
       result-%assoc-_PaymFeeder = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
+    IF requested_authorizations-%assoc-_SchedulerJob = if_abap_behv=>mk-on.
+      result-%assoc-_SchedulerJob = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -240,6 +248,9 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_PaymFeeder = if_abap_behv=>mk-on.
       result-%assoc-_PaymFeeder = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_SchedulerJob = if_abap_behv=>mk-on.
+      result-%assoc-_SchedulerJob = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -1770,6 +1781,124 @@ CLASS lhc_paymfeeder IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_schedulerjob DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR SchedulerJob RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR SchedulerJob RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR SchedulerJob~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR SchedulerJob~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_schedulerjob IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY SchedulerJob
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-schedulerjob.
+      IF zcl_ca_ops_util=>pcre_valid( ls_row-SapPattern ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-SapPattern
+                        element = lif_c=>gc_el-sappattern ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Criticality )
+                                        iv_list  = lif_c=>gc_val-schedulerjob_criticality ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Criticality
+                        v2 = lif_c=>gc_el-criticality v3 = lif_c=>gc_val-schedulerjob_criticality
+                        element = lif_c=>gc_el-criticality ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-schedulerjob.
+        INSERT INITIAL LINE INTO TABLE reported-schedulerjob ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-schedulerjob.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-schedulerjob.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-schedulerjob.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_ca_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -1799,7 +1928,8 @@ CLASS lsc_zr_ca_opscfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-aggregatecheck table = lif_c=>gc_tab-aggregatecheck )
             ( entity = lif_c=>gc_ent-approvedtable table = lif_c=>gc_tab-approvedtable )
             ( entity = lif_c=>gc_ent-paymdimtext table = lif_c=>gc_tab-paymdimtext )
-            ( entity = lif_c=>gc_ent-paymfeeder table = lif_c=>gc_tab-paymfeeder ) )
+            ( entity = lif_c=>gc_ent-paymfeeder table = lif_c=>gc_tab-paymfeeder )
+            ( entity = lif_c=>gc_ent-schedulerjob table = lif_c=>gc_tab-schedulerjob ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

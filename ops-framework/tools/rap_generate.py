@@ -21,6 +21,7 @@ Modification log:
            | checks) and approved tables.
 2026-11-11 | Payment model: dimension texts (ZCA_OPS_PMDIM) and feeder systems with deep-link URL template
            | (ZCA_OPS_FEEDER, check url_invalid).
+2026-11-11 | SAP job monitor: scheduler jobs and the SAP job names they start (pattern checked on save).
 """
 import os
 import sys
@@ -87,6 +88,10 @@ SPEC = {
              [('enum', 'dimension', 'FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS')]),
             ('zca_ops_feeder', 'PaymFeeder', 'zca_d_feeder', 'Feeder system', 'Feeder systems of the payment model', [],
              [('valid', 'url_template', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid')]),
+            # SAP job monitor (2026-11-11): jobs of the external workload scheduler and the SAP job names they
+            # start (PCRE, complete name) - the board shows scheduler job -> SAP parent job -> failed child
+            ('zca_ops_jobsch', 'SchedulerJob', 'zca_d_jobsch', 'Scheduler job', 'Scheduler jobs and SAP job names', [],
+             [('pcre', 'sap_pattern'), ('enum', 'criticality', 'H,M,L')]),
         ]),
 }
 
@@ -121,7 +126,10 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'text': 'Text on cards', 'seq': 'Display order', 'feeder': 'Feeder system (source value)',
           'url_template': 'Deep link (https URL, placeholder {REF})',
           'ref_visible': 'Feeder reference shown in full (not sensitive)',
-          'approved_by': 'Approved by (reviewer)'}
+          'approved_by': 'Approved by (reviewer)',
+          # SAP job monitor (2026-11-11)
+          'sched_folder': 'Scheduler folder', 'sched_job': 'Scheduler job',
+          'sap_pattern': 'SAP job names (PCRE, complete name)', 'criticality': 'Criticality (H / M / L)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

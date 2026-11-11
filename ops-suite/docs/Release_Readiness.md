@@ -161,6 +161,48 @@ lifecycle `CD_COLL` / `BASE_REQ_LIFE` (P2, `config/control_seed.md` §2b). Nothi
 - **D-PO2 Onboarding check in the morning report (approved 2026-11-10)** (`D_PROC_ONBOARD`) instead of the framework job `CA_OPS` / `MORNING`; the other is left inactive (one report per gap).
 - **D-PO3 R2 / R3 limits in hours (approved 2026-11-10).** The no-code aggregate works in days; hours need the check class (or a later time-stamp field of the framework's aggregate rows).
 
+## SAP job failures (2026-11-11)
+
+Any job failure in SAP is on the board, also a child job that failed while the job Control-M started ended *finished*:
+the framework's SAP job monitor (`ops-framework/docs/JOB_MONITORING.md`) runs for the suite as process `CD_JOBS` /
+`SAP_JOBS` (own area, decision D-PO1) every 5 minutes; board `ZUI_CA_OPS_JOBS`, overview cards *Job failures today*,
+control `SAP_JOB_FAILURES`, rule `JOB_FAIL`, runbook §5q, split with the morning report's job checks
+(`HCK_MORNING_REPORT.md` §9b). The process is delivered **active**; the plug-ins that need unconfirmed tables or job
+naming (mass activity resolver and enricher, payment run enricher) are delivered but kept out of `JOB_RESOLVERS` /
+`JOB_ENRICHERS`; the scheduler rows (`config/scheduler_jobs.csv`) are inactive until the Control-M export. Nothing
+activated, no ABAP Unit run.
+
+| Gate | Evidence |
+|---|---|
+| Gate 1 (DV1) | `ops-framework/docs/VERIFY.md` V58-V66; ABAP Unit of the framework classes of `JOB_MONITORING.md` §9 and of `ZCL_CD_JOB_*`, `ZCL_CD_HCK_JOB_CLAIM`, `ZCL_CD_HCK_C_TECH_JOBS`, `ZCL_CD_HCK_DAO` |
+| Gate 2 (QA1) | `QA1_Pilot.md` S7, cases JOB-QA-01 ... JOB-QA-10 (JOB-QA-01 *parent finished, child aborted*) |
+| Before a plug-in joins the lists | suite V67 (mass activity), V68 (payment run); V69 for the scheduler rows |
+
+**Suite VERIFY items (framework V58-V66 in `ops-framework/docs/VERIFY.md`; never reused).**
+- **V67 (VERIFY-SE11, before `ZCL_CD_JOB_RES_MASSACT` / `ZCL_CD_JOB_ENR_MASSACT` join the lists):** how the worker jobs
+  of one `RFKK_MA_SCHEDULER` run are named and how a job name carries activity type, run date and run ID
+  (`JOB_MA_WORKER_PCRE`, `JOB_MA_SCHED_PCRE`, `JOB_MA_RUN_PCRE`); which mass activity table holds the run, its jobs and its
+  intervals (to make the link C and to add the failed intervals - not built until confirmed).
+- **V68 (VERIFY-SE11, before `ZCL_CD_JOB_ENR_PAYRUN` joins `JOB_ENRICHERS`):** the mass activity type of the payment run
+  FPY1 (`JOB_PAYRUN_ACTIVITIES`) and a DPAYH index on `LAUFD` / `LAUFI` (the payments of a run use the confirmed
+  path DPAYH `LAUFD` + `LAUFI` with `DOC1R` filled - no proposal flag needed).
+- **V69 (business, before the scheduler rows are activated):** Control-M folder and job names (`JQ4SP*`) and the SAP job
+  names (PCRE) each starts, from the Control-M export, in `config/scheduler_jobs.csv` (`ZCA_OPS_JOBSCH`, configuration
+  app *Scheduler jobs*); the SO23 list `ZCD_BATCHSUP` of rule `JOB_FAIL` (proposed name for the batch support list).
+
+**Decisions (proposed 2026-11-11 - for the user).**
+- **D-JM1 Failed child = one finding on the child** (`JOB_CHILD_FAILED`, object key = the child job, reference = the root
+  job, the parent and the Control-M job in the context): one exception per failed job; the root itself gets no finding
+  unless it fails. Alternative: one finding on the root per run listing its failed children.
+- **D-JM2 Root still running = child failed.** A child that fails while its root still runs is `JOB_CHILD_FAILED` at once
+  (schedulers such as `RFKK_MA_SCHEDULER` end *finished* even when a worker failed); the board shows the root's live status.
+- **D-JM3 Severities:** cancelled and child failed E (alert), job log errors / long-running / not started W (board and
+  exceptions, no e-mail).
+- **D-JM4 Named job cycles stay with the morning report** (claim), every other failure with `CD_JOBS`; `E_JOBS` drops the
+  jobs `CD_JOBS` reports. The cycle steps are therefore alerted only by the morning report - if they should be alerted
+  within minutes too, remove `ZCL_CD_HCK_JOB_CLAIM` from `JOB_CLAIMS` and leave the cycle checks without alert rule.
+- **D-JM5 Throttle 0** on rule `JOB_FAIL` (a digest per 5-minute run); the list `ZCD_BATCHSUP` is a proposed name.
+
 ## Control center (2026-11-10)
 
 Daily controls with sign-off (framework `ZCA_OPS`: control register, review app `ZUI_CA_OPS_REV`, exception classification), payment lifecycle, open reconciliation variances and the business date on the overview page (`Dashboard_Production_Support.md` §1a). Nothing activated, no ABAP Unit run.

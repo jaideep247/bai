@@ -48,6 +48,10 @@ no separate sign-off activity.
 | `Z_CA_OPS_BATCH` (job user) | `CA_OPS` + the consumer areas it runs | 16 | * |
 | `Z_CA_OPS_CONFIG` (configuration owner of the framework) | `CA_OPS` | 01, 02, 03, 06 | * |
 
+**SAP job monitor (2026-11-11).** The job user of `ZCA_OPS_CHECK_RUN` for the monitor's area also needs `S_BTCH_JOB`
+JOBACTION `PROT` (display job log), JOBGROUP `*` - read only; the monitor never releases, cancels, changes or restarts
+a job, so no other batch authorisation (VERIFY V64, `docs/JOB_MONITORING.md` §10).
+
 A consumer adds its own roles with its areas (in its own authorisation sheet; the demo consumer: area `CA_DEMO`, `docs/INSTALL.md`). Segregation of duties: the operator (02) and the approver (85) of an area are different users; the exceptions app also refuses an approval by the requester (four-eyes).
 
 ## 3a. Read access (DCL)
@@ -58,6 +62,7 @@ A consumer adds its own roles with its areas (in its own authorisation sheet; th
 | `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | the rule of §3c on the exception (path `_Exception.Area`, `_Exception.CompanyCode`) |
 | `ZC_CA_OpsCtlReview` (`ZUI_CA_OPS_REV`) | `ZC_CA_OPSCTLREVIEW` | the rule of §3c on `Area` (of the control) and `CompanyCode` (of the slice) |
 | `ZC_CA_OpsCheckStatus` (`ZUI_CA_OPS_DASH`, area dashboard, 2026-11-10) | `ZC_CA_OPSCHECKSTATUS` | the rule of §3c on `Area` (of the check) and `CompanyCode` (of the slice: blank = area-level row with run and freshness, else the open exceptions of that company code) |
+| `ZC_CA_OpsJobFailure` and its facet views `ZC_CA_OpsJobStep`, `_Msg`, `_Alog`, `_Bo` (`ZUI_CA_OPS_JOBS`, SAP job failures board, 2026-11-11) | `ZC_CA_OPSJOBFAILURE` | the rule of §3c on `Area` (of the monitor run that kept the job) and `CompanyCode` (of an enricher's business object; blank = area-level) |
 
 VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36, V51.
 

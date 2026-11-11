@@ -29,6 +29,7 @@ and the channel refuses the route before anything is sent if a list was deleted 
 | ZCD_RETOPS | Returns / NOC operations | FMON_PART |
 | ZCD_COMPL | Compliance | NOC_AGING |
 | ZCD_RTBSUP | RTB support | HCK_RED, HCK_RECON, ALL_ABORT, RUN_LOCKED, morning report |
+| ZCD_BATCHSUP | Batch support (SAP job failures) - proposed name, confirm (V69) | JOB_FAIL |
 | ZCD_RTBLEAD | RTB lead (escalation) | ESCALATION_DEST of EBS_BLOCK, FMON_PART, FMON_SLA, FMON_BAIDL, FMON_REGEN, HCK_RED, HCK_RECON |
 
 ## ZCA_OPS_ALRULE
@@ -36,7 +37,7 @@ and the channel refuses the route before anything is sent if a list was deleted 
 **Rules of business processes (process onboarding, 2026-11-10)** are seed rows of `config/alert_rules.csv` (the
 columns of `ZCA_OPS_ALRULE`, written by `tools/abaptools/new_process.py`): one rule per process, area of the process,
 `GROUP1_PATTERN` = the process ID (the framework's runner stamps GROUP1 = process). Delivered: `COLL_LIFE`
-(process `CD_COLL` / `BASE_REQ_LIFE`, inactive, ‹SO23 list›; `config/control_seed.md` §2b).
+(process `CD_COLL` / `BASE_REQ_LIFE`, inactive, ‹SO23 list›; `config/control_seed.md` §2b). `JOB_FAIL` (process `CD_JOBS` / `SAP_JOBS`, SAP job failures, **active**, 2026-11-11): severity E - cancelled jobs and children that failed under a root that did not abort - to `ZCD_BATCHSUP`, digest per run, **throttle 0** (the job monitor runs every 5 minutes; a throttle would hold back the next failure), on abort; job log errors, long-running and not started jobs (W) are on the board and in the exceptions app only.
 
 RULE / CHECK / GROUP1 / GROUP2 patterns are **PCRE matched to the complete value, case ignored** (blank = any;
 user decision 2026-11-06): `.*SLA.*` = any check code containing SLA, `RUN_LOCKED` = exactly that code. The

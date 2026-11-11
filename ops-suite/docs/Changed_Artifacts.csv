@@ -54,6 +54,7 @@ config/postarea_zrsn.csv,Config,
 config/process_register.csv,Config,
 config/purge_targets.csv,Config,
 config/repository.json,Config,
+config/scheduler_jobs.csv,Config,
 config/service_map.csv,Config,
 config/service_register.csv,Config,
 config/zcd_btc_rule.csv,Config,
@@ -71,6 +72,7 @@ config/payment_model/pending/zr_cd_paymattempt.ddls.asddls,CDS,
 config/payment_model/pending/zr_cd_paymevent.ddls.asddls,CDS,
 config/payment_model/pending/zr_cd_paymrequest.ddls.asddls,CDS,
 config/processes/CD_COLL_BASE_REQ_LIFE.json,Config,
+config/processes/CD_JOBS_SAP_JOBS.json,Config,
 config/samples/bai2_sample.txt,Config,
 config/samples/camt053_sample.xml,abapGit,
 config/samples/camt054_returns_sample.xml,abapGit,
@@ -176,6 +178,7 @@ docs/USAA_Known_Tables.md,Doc,
 docs/portable_checks.json,Doc,
 docs/history/Audit_History.md,Doc,
 docs/processes/CD_COLL_BASE_REQ_LIFE.md,Doc,
+docs/processes/CD_JOBS_SAP_JOBS.md,Doc,
 docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.abap,ABAP,Check COLL_R2_SCHEDULED of process BASE_REQ_LIFE (area CD_COLL):
 docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.testclasses.abap,ABAP,Tests of check COLL_R2_SCHEDULED through ZIF_CA_OPS_CHECK~RUN with a data access
 docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_refund.clas.abap,ABAP,Check COLL_R3_REFUND of process BASE_REQ_LIFE (area CD_COLL):
@@ -296,6 +299,18 @@ src/core/zcd_pay_outcome.tabl.xml,abapGit,
 src/core/zcd_pay_outpkg.tabl.xml,abapGit,
 src/core/zcd_pay_outpkgm.tabl.xml,abapGit,
 src/core/zcd_pay_outwm.tabl.xml,abapGit,
+src/core/zcl_cd_job_dao.clas.abap,ABAP,SQL of the suite's SAP job monitor plug-ins (read only): payments of
+src/core/zcl_cd_job_dao.clas.testclasses.abap,ABAP,SQL tests of the suite's SAP job monitor plug-in data access on
+src/core/zcl_cd_job_dao.clas.xml,abapGit,
+src/core/zcl_cd_job_enr_massact.clas.abap,ABAP,Enricher of the framework's SAP job monitor (ZIF_CA_OPS_JOB_ENRICHER)
+src/core/zcl_cd_job_enr_massact.clas.testclasses.abap,ABAP,Unit tests of the mass activity enricher: blank JOB_MA_RUN_PCRE adds
+src/core/zcl_cd_job_enr_massact.clas.xml,abapGit,
+src/core/zcl_cd_job_enr_payrun.clas.abap,ABAP,Enricher of the framework's SAP job monitor (ZIF_CA_OPS_JOB_ENRICHER)
+src/core/zcl_cd_job_enr_payrun.clas.testclasses.abap,ABAP,Unit tests of the payment run enricher with a data access double: a
+src/core/zcl_cd_job_enr_payrun.clas.xml,abapGit,
+src/core/zcl_cd_job_res_massact.clas.abap,ABAP,Parent / child resolver of the framework's SAP job monitor
+src/core/zcl_cd_job_res_massact.clas.testclasses.abap,ABAP,Unit tests of the mass activity resolver with a double of the job
+src/core/zcl_cd_job_res_massact.clas.xml,abapGit,
 src/core/zcl_cd_ops_ack_mail.clas.abap,ABAP,Missing or late bank ACK in the alert e-mail (user request 2026-11-10).
 src/core/zcl_cd_ops_ack_mail.clas.testclasses.abap,ABAP,Domain tests of the missing bank ACK table: two files in different
 src/core/zcl_cd_ops_ack_mail.clas.xml,abapGit,
@@ -434,6 +449,10 @@ src/core/zi_cd_trxitempay.ddls.asddls,CDS,
 src/core/zi_cd_trxitempay.ddls.xml,abapGit,
 src/core/zi_cd_trxretnocu.ddls.asddls,CDS,
 src/core/zi_cd_trxretnocu.ddls.xml,abapGit,
+src/core/zif_cd_job_dao.intf.abap,ABAP,Data access of the suite's SAP job monitor plug-ins: payments of payment
+src/core/zif_cd_job_dao.intf.xml,abapGit,
+src/core/zif_cd_job_types.intf.abap,ABAP,Types and constants of the suite's adoption of the framework's SAP job
+src/core/zif_cd_job_types.intf.xml,abapGit,
 src/core/zif_cd_ops_cfg_types.intf.abap,ABAP,Field check messages (class ZCD_OPS) of the suite's configuration apps
 src/core/zif_cd_ops_cfg_types.intf.xml,abapGit,
 src/core/zif_cd_ops_pattern_dao.intf.abap,ABAP,Repository of the pattern check and the pattern migration: configured
@@ -1298,6 +1317,9 @@ src/hck/zcl_cd_hck_factory.clas.abap,ABAP,Single resolution point of the HCK dat
 src/hck/zcl_cd_hck_factory.clas.xml,abapGit,
 src/hck/zcl_cd_hck_injector.clas.abap,ABAP,Test seam of the HCK factory: injects a DAO double; reset( ) clears it.
 src/hck/zcl_cd_hck_injector.clas.xml,abapGit,
+src/hck/zcl_cd_hck_job_claim.clas.abap,ABAP,Claim of the morning health check towards the framework's SAP job
+src/hck/zcl_cd_hck_job_claim.clas.testclasses.abap,ABAP,Unit tests of the health check's claim towards the SAP job monitor: a
+src/hck/zcl_cd_hck_job_claim.clas.xml,abapGit,
 src/hck/zcl_cd_hck_param.clas.abap,ABAP,Parsing of check parameters (PARAM1-4 of ZCD_HCK_DEF): comma or
 src/hck/zcl_cd_hck_param.clas.testclasses.abap,ABAP,"Unit tests of check parameter parsing (PCRE pattern lists, validation,"
 src/hck/zcl_cd_hck_param.clas.xml,abapGit,
@@ -1517,6 +1539,14 @@ tools/rap_generate.py,Other,
 tools/test_checks.py,Other,
 tools/test_path_register.csv,Doc,
 tools/usage_checks.py,Other,
+tools/__pycache__/auth_checks.cpython-313.pyc,Other,
+tools/__pycache__/cds_abap_parity.cpython-313.pyc,Other,
+tools/__pycache__/literal_scan.cpython-313.pyc,Other,
+tools/__pycache__/name_checks.cpython-313.pyc,Other,
+tools/__pycache__/param_definitions.cpython-313.pyc,Other,
+tools/__pycache__/rap_generate.cpython-313.pyc,Other,
+tools/__pycache__/test_checks.cpython-313.pyc,Other,
+tools/__pycache__/usage_checks.cpython-313.pyc,Other,
 tools/tests/test_abapgit_serialize.py,Other,
 tools/tests/test_auth_checks.py,Other,
 tools/tests/test_cds_abap_parity.py,Other,
@@ -1527,6 +1557,16 @@ tools/tests/test_pattern_dao_fields.py,Other,
 tools/tests/test_rap_generate.py,Other,
 tools/tests/test_test_checks.py,Other,
 tools/tests/test_usage_checks.py,Other,
+tools/tests/__pycache__/test_abapgit_serialize.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_auth_checks.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_cds_abap_parity.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_modernize.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_no_framework_writes.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_param_definitions.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_pattern_dao_fields.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_rap_generate.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_test_checks.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_usage_checks.cpython-313.pyc,Other,
 ui/cards/processflow/Component.js,Other,
 ui/cards/processflow/ProcessFlow.controller.js,Other,
 ui/cards/processflow/ProcessFlow.fragment.xml,abapGit,

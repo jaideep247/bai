@@ -5,7 +5,8 @@
 
 Nothing of ZCA_OPS has been activated or run in an SAP system. Each item is confirmed in DV1 / QA1 and
 recorded in the release pack. Numbers are never reused: V44 / V45 are items of the first consumer, so the
-process onboarding (2026-11-10) continues at V46.
+process onboarding (2026-11-10) continues at V46; the SAP job monitor (2026-11-11) uses V58-V66 (V67-V69 are
+items of the first consumer).
 
 | ID | Where | What to confirm |
 |---|---|---|
@@ -62,6 +63,15 @@ process onboarding (2026-11-10) continues at V46.
 | V53 | Runtime (DV1) | Area dashboard: a check without a completed run is stale; a run older than `CHECK_STALE_MIN_<area>` (else `CHECK_STALE_MIN_DEFAULT`, 1500) minutes is stale; open exceptions and status per check equal the exceptions app; users A (BUKRS 1000) and B (2000) see the area-level rows and their own company-code rows only (as V40) |
 | V54 | Runtime (DV1) | `ZCL_CA_OPS_CHK_ONBOARD` (registry row `CA_OPS` / `ONBOARDING`, or a consumer's adapter): an active process reports each missing piece once (no check E; no control, alert rule, owner, purge target, role or inactive area W); after the gap is closed the next run resolves the exception |
 | V57 | ABAP Unit + VERIFY-ADT | Overview card counters of the area dashboard (2026-11-10): `ZCL_CA_OPS_DASH_CDS_TEST` (`one_check_per_area_slice`, `stale_on_area_slice_only`, `attention_flag`) on CDS doubles of `ZR_CA_OpsCheckStatus`; in a consumer's OVP V4 the KPI card sums `CheckCount` / `FlaggedCount` / `StaleCount` / `OpenExceptions` after the DCL (`@Aggregation.default: #SUM` on the projection) and the list card renders selection / presentation variant `Attention` (suite QA case OVP-16) |
+| V58 | VERIFY-SE11 | SAP job monitor (2026-11-11, `docs/JOB_MONITORING.md`): TBTCO fields `AUTHCKMAN`, `STATUS` (values A, F, R, Y, S, P, Z on 7.58), `SDLSTRTDT` / `SDLSTRTTM`, `SDLDATE` / `SDLTIME`, `SDLUNAME`, `STRTDATE` / `STRTTIME`, `ENDDATE` / `ENDTIME`, `REAXSERVER`, `EVENTID` / `EVENTPARM`; TBTCP `AUTHCKNAM`, `LISTIDENT`; the indexes the windows use (STATUS + ENDDATE, STRTDATE, EVENTID, SDLDATE) - ST05 / PlanViz of one run of the fast group at peak volume; runtime well below a minute |
+| V59 | VERIFY-SE11 | BALHDR `ALUSER`, `ALPROG`, `MSG_CNT_E`, `MSG_CNT_A` and an index on `ALDATE`; the link of an application log to a job by step user, program and run time is probable (P) - no BALHDR field names the job |
+| V60 | VERIFY-SE37 | `BP_JOBLOG_READ` on 7.58: parameters `CLIENT`, `JOBCOUNT`, `JOBNAME`, table `JOBLOGTBL` (structure `TBTC5`: `ENTERDATE`, `ENTERTIME`, `TEXT`, `MSGID`, `MSGNO`, `MSGTYPE`), exceptions 1-7 as in `ZCL_CA_OPS_JOB_LOG` (3 does not exist / 4 empty = empty result); correct the TEST-SEAM test only if it differs |
+| V61 | VERIFY-SE11 | Start after another job: event `SAP_END_OF_JOB` and `EVENTPARM` = predecessor job name (32) + job count (8) of the successor's TBTCO row, also after the successor started (resolver EVENT, quality C) |
+| V62 | VERIFY-SE11 / SE91 | Whether TBTCO of 7.58 has parent job fields (`JOB_PARENT_FIELDS`, resolver FIELD) and which job log message announces a released job with name and count (`JOB_CHILD_MSG_IDS`, `JOB_CHILD_MSG_PCRE`, resolver JOBLOG) - both resolvers stay out of `JOB_RESOLVERS` until confirmed |
+| V63 | VERIFY-ADT | Dynamic SQL of `ZCL_CA_OPS_JOB_DAO=>PARENTS_BY_FIELDS` / `CHILDREN_BY_FIELDS` on 7.58 strict mode: select list with aliases, FOR ALL ENTRIES with a dynamic WHERE naming `@IT_KEYS-JOBNAME`; a field name other than letters, digits and underscore refused (127) |
+| V64 | VERIFY-SU24 | Job user of the monitor: `S_BTCH_JOB` JOBACTION `PROT`, JOBGROUP `*` is enough for `BP_JOBLOG_READ` of other users' jobs (no `S_BTCH_ADM`, no release / delete / plan / move) |
+| V65 | VERIFY-SE11 + ABAP Unit | Tables `ZCA_OPS_JOB` (indexes DET, PAR, ROL), `_JOBSTEP`, `_JOBMSG`, `_JOBALOG`, `_JOBBO`, `_JOBWM` (A) and `ZCA_OPS_JOBSCH` (C) with its draft table `ZCA_D_JOBSCH` and entity *Scheduler jobs* of `ZUI_CA_OPS_CFG` (pattern checked on save, 418); message rows 110-129; ABAP Unit of the classes of `docs/JOB_MONITORING.md` §9 |
+| V66 | VERIFY-ADT | Board `ZUI_CA_OPS_JOBS`: `ZR_CA_OpsJobFailure` (left outer join to the cross-client TBTCO, self associations `_Children` / `_Parent` redirected in the projection, `$session.system_date` in CASE), `ZI_CA_OpsJobExc`, facet views `ZC_CA_OpsJobStep` / `_Msg` / `_Alog` / `_Bo`, DCL `ZC_CA_OPSJOBFAILURE` (five grants, rule of `auth_zca_ops.md` §3c), metadata extensions (facets, intent navigation `ZCAOpsException-manage`), binding `ZUI_CA_OPS_JOBS_O4`; a consumer's OVP V4 KPI card on the summed counters and list card variant `Today`; `ZCL_CA_OPS_JOB_CDS_TEST` (doubles of TBTCO and the CDS dependencies) |
 
 ### 2026-11-11 - service health, process flow, missing-volume checks, payment model (product layer + first customer mapping)
 

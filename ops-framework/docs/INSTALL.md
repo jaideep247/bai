@@ -149,6 +149,19 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
 4. Optional: `CHECK_STALE_MIN_DEFAULT` (1500 minutes) or a definition `CHECK_STALE_MIN_<area>` per area
    (`docs/PARAMETERS.md`).
 
+## 6b. SAP job monitor (2026-11-11, `docs/JOB_MONITORING.md`)
+
+1. After the pull: tables `ZCA_OPS_JOB`, `_JOBSTEP`, `_JOBMSG`, `_JOBALOG`, `_JOBBO`, `_JOBWM`, `_JOBSCH` (entity
+   *Scheduler jobs* of the regenerated `ZUI_CA_OPS_CFG`); create the binding **`ZUI_CA_OPS_JOBS_O4`** (OData V4 - UI)
+   and a list report / object page app on entity `JobFailure` (semantic object / action `ZCAJobFailure-display`).
+2. The consumer registers the monitor in an area of its own (`JOB_MONITORING.md` §10): process with the checks
+   `ZCL_CA_OPS_CHK_JOB_FAIL` / `ZCL_CA_OPS_CHK_JOB_STATE` in a fast schedule group, purge target row `JOB_EVIDENCE`
+   (class `ZCL_CA_OPS_JOB_PURGE`, parameter `RETENTION_DAYS_JOB_EVIDENCE` of `CA_OPS`), value rows of the `JOB_`
+   parameters (`docs/PARAMETERS.md`), scheduler rows.
+3. Job user: `ZCA_OPS` 16 for the area and `S_BTCH_JOB` JOBACTION `PROT`, JOBGROUP `*` (job logs, V64) - nothing else
+   of the batch authorisations. Readers: `ZCA_OPS` 03 for the area and `S_SERVICE` of the binding.
+4. Schedule `ZCA_OPS_CHECK_RUN` with the area and the fast group every 5 minutes, test mode first; then V58-V66.
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

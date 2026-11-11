@@ -5,7 +5,8 @@ the message class of its first consumer (ZCD_OPS) are kept (ZCD_OPS nnn = ZCA_OP
 numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock, authorisation, version
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
-process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
+monitor (2026-11-11) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -84,6 +85,27 @@ texts <= 73 characters).
 | 101 | Process &1 of area &2: no role named or area not active (&3) |
 | 102 | Area &1 group &2: &3 check(s) run, &4 finding(s) |
 | 103 | Aggregate &1: company-code field required (check &2 is per company) |
+| 110 | Job &1 (&2) cancelled at &3 &4 |
+| 111 | Job &1 (&2) failed under root job &3 (&4) - the root did not abort |
+| 112 | Job &1 (&2) finished with &3 error line(s) in its job log |
+| 113 | Job &1 (&2) active for &3 minutes (limit &4) |
+| 114 | Job &1 (&2) not started &3 minutes after its planned start (limit &4) |
+| 115 | Job &1 (&2): failure reported by &3 - kept as evidence only |
+| 116 | Parent job: &1 (&2), status &3, link &4 |
+| 117 | Root job: &1 (&2), status &3, &4 level(s) above |
+| 118 | Scheduler job: &1 / &2, criticality &3 |
+| 119 | Step &1: program &2, variant &3, user &4 |
+| 120 | Job monitor &1: &2 read, cap &3 - the next run continues at &4 |
+| 121 | Job monitor parameter &1 is not usable (&2) |
+| 122 | Job monitor plug-in &1 failed - its links or objects are missing: |
+| 123 | Job log of &1 (&2) not read: BP_JOBLOG_READ return code &3 |
+| 124 | Failed jobs in this run under the same check: &1 |
+| 125 | Application logs: &1 linked (&2 with errors), first &3 / &4 |
+| 126 | Business object &1 &2: &3 (quality &4) |
+| 127 | &1 is not a field of the job table or not a valid field name |
+| 128 | Root job &1 (&2) still active - its scheduler has not seen the failure |
+| 129 | Job evidence of area &1 / check &2 could not be saved |
+| 130 | SM37: job &1 count &2, system &3, server &4 |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

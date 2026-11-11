@@ -109,10 +109,10 @@ ZCL_CD_HCK_C_PRQ_NOT_PAID,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_C_PRQ_SPE,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_QUEUES,own test include,,10,90,,Not run in target SAP
 ZCL_CD_HCK_C_RECON3,own test include,,17,90,,Not run in target SAP
-ZCL_CD_HCK_C_TECH_JOBS,own test include,,9,90,,Not run in target SAP
+ZCL_CD_HCK_C_TECH_JOBS,own test include,,10,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_SYS,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_C_VOLUME,own test include,,2,90,,Not run in target SAP
-ZCL_CD_HCK_DAO,own test include,,30,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
+ZCL_CD_HCK_DAO,own test include,,31,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
 ZCL_CD_HCK_DASH_CDS_TEST,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
 ZCL_CD_HCK_ENGINE,own test include,,31,90,,Not run in target SAP
@@ -129,6 +129,7 @@ ZCL_CD_HCK_EV_SUPPORT,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_EXPORT,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (construction only: every engine test resolves through it)
 ZCL_CD_HCK_INJECTOR,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (test seam: injected and reset by every engine test)
+ZCL_CD_HCK_JOB_CLAIM,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_PARAM,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_PAYREQ_RULES,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_PAY_AGEING,own test include,,7,90,,Not run in target SAP
@@ -142,6 +143,10 @@ ZCL_CD_HCK_STATS,own test include,,12,90,,Not run in target SAP
 ZCL_CD_HCK_SUPPRESSION,own test include,,15,90,,Not run in target SAP
 ZCL_CD_HCK_THRESHOLD,own test include,,19,90,,Not run in target SAP
 ZCL_CD_HCK_VALUE_QUERY,own test include,,6,90,,Not run in target SAP
+ZCL_CD_JOB_DAO,own test include,,2,90,,Not run in target SAP
+ZCL_CD_JOB_ENR_MASSACT,own test include,,4,90,,Not run in target SAP
+ZCL_CD_JOB_ENR_PAYRUN,own test include,,4,90,,Not run in target SAP
+ZCL_CD_JOB_RES_MASSACT,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_ACK_MAIL,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CHECKS,own test include,,18,90,,Not run in target SAP
 ZCL_CD_OPS_CHEQUE_LINK,own test include,,5,90,,Not run in target SAP
