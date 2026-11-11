@@ -44,6 +44,8 @@
 *& 2026-11-10 | Alert status C (claimed) and HCK_ALERT_CLAIM_MIN: claims never completed (alert health).
 *& 2026-11-10 | HCK_MAIL_TEMPLATE (morning report e-mail template); message 839 (check line of a finding).
 *& 2026-11-10 | Company-code isolation: TY_METRIC-COMPANY_CODE / TY_METRIC_HIST-BUKRS, GC_COMPANY_CODE_FIELD.
+*& 2026-11-11 | Missing-volume checks: baseline season of a threshold (TY_THRESHOLD-SEASON, GC_SEASON: history of
+*&            | the previous days or of the same weekday of a day series, ZCD_HCK_THRESH-SEASON).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -77,6 +79,9 @@ INTERFACE zif_cd_hck_types
   TYPES ty_value         TYPE decfloat34.
   TYPES tt_value         TYPE STANDARD TABLE OF ty_value WITH EMPTY KEY.
   TYPES ty_baseline_mode TYPE c LENGTH 6.
+  "! Baseline season (ZCD_HCK_THRESH-SEASON): blank = the last runs of the series, DY / WD = day series
+  TYPES ty_season        TYPE c LENGTH 2.
+  TYPES tt_dim           TYPE STANDARD TABLE OF ty_dim WITH EMPTY KEY.
   "! Version of the drift-hash serialization (ZCL_CD_HCK_CANONICAL=>GC_HASH_VERSION)
   TYPES ty_hash_version  TYPE c LENGTH 2.
   TYPES ty_tabname       TYPE c LENGTH 30.
@@ -137,6 +142,16 @@ INTERFACE zif_cd_hck_types
       zscore TYPE ty_baseline_mode VALUE 'ZSCORE',
       iqr    TYPE ty_baseline_mode VALUE 'IQR',
     END OF gc_baseline.
+
+  "! Baseline season of a day series (DIM2 = the counted day, DAY mode; 2026-11-11, missing-volume checks):
+  "! the history is the value of each previous day (DY) or of the same weekday of the previous weeks (WD),
+  "! the latest measurement of each day - "below the usual Monday", not below the average of all days
+  CONSTANTS:
+    BEGIN OF gc_season,
+      runs    TYPE ty_season VALUE '  ',
+      days    TYPE ty_season VALUE 'DY',
+      weekday TYPE ty_season VALUE 'WD',
+    END OF gc_season.
 
   CONSTANTS:
     BEGIN OF gc_agg_func,
@@ -302,6 +317,7 @@ INTERFACE zif_cd_hck_types
       baseline_mode   TYPE ty_baseline_mode,
       z_limit         TYPE ty_value,
       lookback_runs   TYPE i,
+      season          TYPE ty_season,
     END OF ty_threshold.
   TYPES tt_threshold TYPE STANDARD TABLE OF ty_threshold WITH EMPTY KEY.
 

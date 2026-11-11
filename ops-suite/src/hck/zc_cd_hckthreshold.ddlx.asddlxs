@@ -43,6 +43,9 @@ annotate entity ZC_CD_HckThreshold with
   @UI.identification: [{ position: 90 }]
   LookbackRuns;
 
+  @UI.identification: [{ position: 100 }]
+  Season;
+
   @UI.hidden: true
   ChangedBy;
 

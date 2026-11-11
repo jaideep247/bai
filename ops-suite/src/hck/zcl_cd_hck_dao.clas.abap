@@ -43,6 +43,8 @@
 *& 2026-11-10 | save_metrics: company code of the metric (ZCD_HCK_METRIC-BUKRS, company-code isolation).
 *& 2026-11-10 | get_overdue_exceptions per area and company code (company-code isolation); AREA read AS PE_AREA (the
 *&            | target component - CORRESPONDING left the area blank before).
+*& 2026-11-11 | get_metric_history with a day list: the latest point of each listed day (seasonal baseline).
+*&            | get_thresholds reads SEASON.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -70,6 +72,7 @@ CLASS zcl_cd_hck_dao DEFINITION
     "! Table read by the PCRE job-name filter (message 747)
     CONSTANTS gc_table_tbtco TYPE string VALUE `TBTCO`.
     TYPES tt_jobname TYPE STANDARD TABLE OF zif_cd_hck_types=>ty_jobname WITH EMPTY KEY.
+
 
     "! Names that match one of the PCRE patterns; raises message 747 when the name read
     "! reached GC_MAX_JOB_NAMES (the selection could be incomplete)
@@ -115,7 +118,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_thresholds.
-    SELECT check_id, metric, bukrs, amber, red, higher_is_worse, baseline_mode, z_limit, lookback_runs
+    SELECT check_id, metric, bukrs, amber, red, higher_is_worse, baseline_mode, z_limit, lookback_runs, season
       FROM zcd_hck_thresh
       WHERE check_id = @iv_check_id
       ORDER BY check_id, metric, bukrs
@@ -250,8 +253,40 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_metric_history.
     DATA lv_as_of TYPE timestampl.
+    DATA lt_days TYPE RANGE OF zif_cd_hck_types=>ty_dim.
     CHECK iv_max_rows > 0.
     lv_as_of = COND #( WHEN iv_as_of IS INITIAL THEN gc_max_timestamp ELSE iv_as_of ).
+    IF it_days IS NOT INITIAL.
+      lt_days = VALUE #( FOR lv_day IN it_days ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                 option = zif_ca_ops_types=>gc_range-option_equal
+                                                 low    = lv_day ) ).
+      " index ZCD_HCK_METRIC~HST (CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT): one point per listed day - the
+      " latest of the completed, non-test runs that measured it (a day backfilled by several runs counts once)
+      WITH +points AS (
+        SELECT m~dim2, m~value, m~measured_at,
+               row_number( ) OVER( PARTITION BY m~dim2 ORDER BY m~measured_at DESCENDING ) AS rn
+          FROM zcd_hck_metric AS m
+            INNER JOIN zca_ops_run AS r ON r~run_id = m~run_id
+          WHERE m~check_id    = @iv_check_id
+            AND m~metric      = @iv_metric
+            AND m~dim1        = @iv_dim1
+            AND m~dim2        IN @lt_days
+            AND m~measured_at <= @lv_as_of
+            AND r~test_mode   = @abap_false
+            AND r~status IN ( @zif_ca_ops_types=>gc_run_status-success,
+                              @zif_ca_ops_types=>gc_run_status-warning,
+                              @zif_ca_ops_types=>gc_run_status-error ) )
+      SELECT dim2, value
+        FROM +points
+        WHERE rn = 1
+        ORDER BY dim2 DESCENDING
+        INTO TABLE @DATA(lt_day_points)
+        UP TO @iv_max_rows ROWS.
+      LOOP AT lt_day_points ASSIGNING FIELD-SYMBOL(<ls_day_point>).
+        INSERT <ls_day_point>-value INTO TABLE rt_values.
+      ENDLOOP.
+      RETURN.
+    ENDIF.
     " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT. One series = the
     " persisted grain incl. DIM2 (A101); several points of one run (job instances, backfilled
     " days) count as one run: its latest point (A58).

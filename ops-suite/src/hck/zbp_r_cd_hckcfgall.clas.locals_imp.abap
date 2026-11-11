@@ -47,6 +47,7 @@ INTERFACE lif_c.
       red                            TYPE string VALUE `RED`,
       regstate                       TYPE string VALUE `REGSTATE`,
       required                       TYPE string VALUE `REQUIRED`,
+      season                         TYPE string VALUE `SEASON`,
       seqpattern                     TYPE string VALUE `SEQPATTERN`,
       severity                       TYPE string VALUE `SEVERITY`,
       side                           TYPE string VALUE `SIDE`,
@@ -96,6 +97,7 @@ INTERFACE lif_c.
       hckseqoutcome_flow             TYPE string VALUE `D,C`,
       hckseqoutcome_severity         TYPE string VALUE `,B,E,W,I`,
       hckthreshold_baselinemode      TYPE string VALUE `,NONE,ZSCORE`,
+      hckthreshold_season            TYPE string VALUE `,DY,WD`,
     END OF gc_val.
 ENDINTERFACE.
 
@@ -413,6 +415,12 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-BaselineMode
                         v2 = lif_c=>gc_el-baselinemode v3 = lif_c=>gc_val-hckthreshold_baselinemode
                         element = lif_c=>gc_el-baselinemode ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Season )
+                                        iv_list  = lif_c=>gc_val-hckthreshold_season ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Season
+                        v2 = lif_c=>gc_el-season v3 = lif_c=>gc_val-hckthreshold_season
+                        element = lif_c=>gc_el-season ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

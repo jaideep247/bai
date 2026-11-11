@@ -23,6 +23,7 @@
 *&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
 *& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
 *&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
+*& 2026-11-11 | get_metric_history: optional day list (seasonal baseline of a day series, ZCD_HCK_THRESH-SEASON).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -95,6 +96,10 @@ INTERFACE zif_cd_hck_dao
       iv_dim1          TYPE zif_cd_hck_types=>ty_dim
       "! Second dimension of the series (audit A101: history at the persisted grain)
       iv_dim2          TYPE zif_cd_hck_types=>ty_dim OPTIONAL
+      "! Seasonal baseline (2026-11-11): the series is CHECK_ID + METRIC + DIM1 and DIM2 one of these days
+      "! (ZCL_CD_HCK_THRESHOLD=>SEASON_DAYS); one value per day - its latest point of a completed run -,
+      "! newest day first. Initial = the last runs of the series (iv_dim2), as before
+      it_days          TYPE zif_cd_hck_types=>tt_dim OPTIONAL
       iv_max_rows      TYPE i
       iv_as_of         TYPE timestampl OPTIONAL
     RETURNING

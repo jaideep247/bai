@@ -20,6 +20,10 @@ define table zcd_hck_thresh {
   z_limit         : abap.dec(5,2);
   // history points read for the baseline (0 = HCK_LOOKBACK_RUNS, default 8)
   lookback_runs   : abap.int4;
+  // baseline season of a day series (DIM2 = the counted day, DAY mode; 2026-11-11, missing-volume checks):
+  // blank = the last LOOKBACK_RUNS runs of the series; DY = the previous LOOKBACK_RUNS days; WD = the same
+  // weekday of the previous LOOKBACK_RUNS weeks ("below the usual Monday"). Ignored when DIM2 is not a day
+  season          : abap.char(2);
   changed_by      : syuname;
   changed_at      : timestampl;
   // RAP configuration apps (design 5): set by the framework, ignored by engines

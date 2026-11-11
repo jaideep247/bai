@@ -195,6 +195,9 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
     "! Verdict rows saved (ZCD_HCK_RESULT)
     DATA mt_results TYPE zif_cd_hck_types=>tt_result_row.
+    "! History served to every baseline read and the day list of the last read (seasonal baseline)
+    DATA mt_history TYPE zif_cd_hck_types=>tt_value.
+    DATA mt_days_asked TYPE zif_cd_hck_types=>tt_dim.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -214,7 +217,8 @@ CLASS ltd_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~get_metric_history.
-    CLEAR rt_values.
+    mt_days_asked = it_days.
+    rt_values = mt_history.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~save_metrics.
@@ -266,7 +270,10 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
       gc_green      TYPE zif_ca_ops_types=>ty_rag VALUE 'G',
       gc_amber      TYPE zif_ca_ops_types=>ty_rag VALUE 'A',
       gc_red        TYPE zif_ca_ops_types=>ty_rag VALUE 'R',
-      gc_grey       TYPE zif_ca_ops_types=>ty_rag VALUE ' '.
+      gc_grey       TYPE zif_ca_ops_types=>ty_rag VALUE ' ',
+      gc_volume_check  TYPE zif_cd_hck_types=>ty_check_id VALUE 'B_VOL_TEST',
+      gc_volume_metric TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_RUNS',
+      gc_volume_day    TYPE zif_cd_hck_types=>ty_dim VALUE '20261110'.
 
     TYPES:
       BEGIN OF ty_flags,
@@ -291,6 +298,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         filter_red      TYPE abap_bool,
         "! A check without findings that read no evidence at all (evidence NONE)
         no_evidence     TYPE abap_bool,
+        "! Missing-volume check: a day count compared with the same weekday of the previous weeks
+        weekday_volume  TYPE abap_bool,
       END OF ty_flags.
 
     CONSTANTS gc_two_hours_sec TYPE i VALUE 7200.
@@ -332,6 +341,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS self_check_alone_not_green FOR TESTING.
     METHODS check_receives_time_budget FOR TESTING.
     METHODS warmup_check_is_not_green FOR TESTING.
+    METHODS volume_below_same_weekday FOR TESTING.
     METHODS result_green_without_metric FOR TESTING.
     METHODS result_filtered_run_scope FOR TESTING.
     METHODS result_warmup_fixed_limit FOR TESTING.
@@ -446,6 +456,24 @@ CLASS ltc_engine IMPLEMENTATION.
       ls_threshold-higher_is_worse = abap_true.
       ls_threshold-baseline_mode   = zif_cd_hck_types=>gc_baseline-zscore.
       INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
+    ENDIF.
+
+    " Day count of yesterday (DIM2 = Tuesday 10.11.) far below the three previous Tuesdays, lower is worse
+    IF is_flags-weekday_volume = abap_true.
+      DATA(lo_volume) = add_check( iv_check_id = gc_volume_check iv_category = 'B' iv_priority = 'H' ).
+      lo_volume->ms_result-rag = gc_green.
+      INSERT VALUE #( metric = gc_volume_metric dim1 = gc_dim dim2 = gc_volume_day value = 40 )
+             INTO TABLE lo_volume->ms_result-metrics.
+      CLEAR ls_threshold.
+      ls_threshold-check_id      = gc_volume_check.
+      ls_threshold-metric        = gc_volume_metric.
+      ls_threshold-bukrs         = zif_cd_hck_types=>gc_default_key.
+      ls_threshold-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
+      ls_threshold-z_limit       = 3.
+      ls_threshold-lookback_runs = 3.
+      ls_threshold-season        = zif_cd_hck_types=>gc_season-weekday.
+      INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
+      mo_dao->mt_history = VALUE #( ( 1000 ) ( 1040 ) ( 980 ) ).
     ENDIF.
 
     IF is_flags-no_evidence = abap_true.
@@ -779,6 +807,27 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_report-categories exp = lt_exp msg = 'RAG per category A-E' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-score exp = 40 msg = '(2*100 + 3*0) / 5 = 40' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-overall_rag exp = gc_red msg = 'Red H check forces RED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-11, missing-volume checks): a day count is compared with the same weekday of the previous
+  " weeks (season WD) - the engine asks for exactly those days and a silent day is a baseline outlier (AMBER)
+  METHOD volume_below_same_weekday.
+    DATA lt_days TYPE zif_cd_hck_types=>tt_dim.
+    TRY.
+        configure_scenario( VALUE #( weekday_volume = abap_true ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_result) = ls_report-results[ check_id = gc_volume_check ].
+        lt_days = VALUE #( ( '20261103' ) ( '20261027' ) ( '20261020' ) ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_days_asked exp = lt_days
+                                            msg = 'History of the three previous Tuesdays' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-rag exp = gc_amber msg = 'Below the usual Tuesday: AMBER' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-check_code
+                                            exp = zif_cd_hck_types=>gc_code-baseline_outlier
+                                            msg = 'Finding BASELINE_OUTLIER' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

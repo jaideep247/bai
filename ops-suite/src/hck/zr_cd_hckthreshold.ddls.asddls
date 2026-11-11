@@ -24,6 +24,8 @@ define view entity ZR_CD_HckThreshold
       z_limit as ZLimit,
       @EndUserText.label: 'Lookback runs'
       lookback_runs as LookbackRuns,
+      @EndUserText.label: 'Season'
+      season as Season,
       @EndUserText.label: 'Changed by (SM30)'
       changed_by as ChangedBy,
       @EndUserText.label: 'Changed at (SM30)'

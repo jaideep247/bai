@@ -16,6 +16,7 @@ define view entity ZC_CD_HckThreshold
       BaselineMode,
       ZLimit,
       LookbackRuns,
+      Season,
       ChangedBy,
       ChangedAt,
       LastChangedBy,

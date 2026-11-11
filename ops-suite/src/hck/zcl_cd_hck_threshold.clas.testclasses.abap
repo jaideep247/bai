@@ -35,6 +35,9 @@ CLASS ltc_threshold DEFINITION FINAL FOR TESTING
     METHODS flat_unchanged_passes FOR TESTING.
     METHODS flat_adverse_change_flagged FOR TESTING.
     METHODS flat_favourable_change_ok FOR TESTING.
+    METHODS weekday_season_steps_weeks FOR TESTING.
+    METHODS day_season_steps_days FOR TESTING.
+    METHODS season_needs_a_day_series FOR TESTING.
 
     METHODS threshold_row
       IMPORTING
@@ -424,6 +427,64 @@ CLASS ltc_threshold IMPLEMENTATION.
                                                 it_history   = history_246( ) )
           exp = ls_exp
           msg = '20 is above Q3 5 + 1.5 * IQR 2 = 8' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-11, missing-volume checks): WD = the same weekday of the previous weeks, newest first
+  METHOD weekday_season_steps_weeks.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_dim.
+    TRY.
+        lt_exp = VALUE #( ( '20261103' ) ( '20261027' ) ( '20261020' ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_hck_threshold=>season_days( iv_season = zif_cd_hck_types=>gc_season-weekday
+                                                   iv_dim2   = '20261110'
+                                                   iv_points = 3 )
+          exp = lt_exp
+          msg = 'Tuesday 10.11. is compared with the three previous Tuesdays' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: DY = the previous days (across a month end), newest first
+  METHOD day_season_steps_days.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_dim.
+    TRY.
+        lt_exp = VALUE #( ( '20261031' ) ( '20261030' ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_hck_threshold=>season_days( iv_season = zif_cd_hck_types=>gc_season-days
+                                                   iv_dim2   = '20261101'
+                                                   iv_points = 2 )
+          exp = lt_exp
+          msg = 'The two days before 01.11.' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: no season, or DIM2 not a day (job name, company code, impossible date) - history of the last runs
+  METHOD season_needs_a_day_series.
+    TRY.
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_hck_threshold=>season_days( iv_season = zif_cd_hck_types=>gc_season-runs
+                                                   iv_dim2   = '20261110'
+                                                   iv_points = 3 )
+          msg = 'Blank season: no day list' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_hck_threshold=>season_days( iv_season = zif_cd_hck_types=>gc_season-weekday
+                                                   iv_dim2   = 'US01'
+                                                   iv_points = 3 )
+          msg = 'DIM2 is not a day: no day list' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_hck_threshold=>season_days( iv_season = zif_cd_hck_types=>gc_season-weekday
+                                                   iv_dim2   = '20261340'
+                                                   iv_points = 3 )
+          msg = 'Impossible date: no day list' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

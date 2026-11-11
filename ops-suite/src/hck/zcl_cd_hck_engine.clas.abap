@@ -47,6 +47,8 @@
 *&            | 839, context line); the morning report goes out in its e-mail template (HCK_MAIL_TEMPLATE).
 *& 2026-11-10 | Company-code isolation: a threshold finding of a metric and the stored metric carry the metric's
 *&            | company code (blank = area-level).
+*& 2026-11-11 | Seasonal baseline: a threshold with SEASON DY / WD reads the history of the previous days /
+*&            | the same weekday of a day series (missing-volume checks); warm-up rule unchanged.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -587,13 +589,19 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                         ELSE lt_modes[ 1 ] ).
       CLEAR lt_history.
       IF ls_threshold-baseline_mode IS NOT INITIAL AND ls_threshold-baseline_mode <> zif_cd_hck_types=>gc_baseline-none.
+        DATA(lv_points) = COND i( WHEN ls_threshold-lookback_runs > 0 THEN ls_threshold-lookback_runs
+                                  ELSE lv_default_lookback ).
+        " 2026-11-11: seasonal baseline of a day series - the previous days / the same weekday (empty list =
+        " no season or DIM2 not a day: the last runs of the series, as before)
         lt_history = mo_dao->get_metric_history(
           iv_check_id = cs_result-check_id
           iv_metric   = <ls_metric>-metric
           iv_dim1     = <ls_metric>-dim1
           iv_dim2     = <ls_metric>-dim2
-          iv_max_rows = COND #( WHEN ls_threshold-lookback_runs > 0 THEN ls_threshold-lookback_runs
-                                ELSE lv_default_lookback )
+          it_days     = zcl_cd_hck_threshold=>season_days( iv_season = ls_threshold-season
+                                                           iv_dim2   = <ls_metric>-dim2
+                                                           iv_points = lv_points )
+          iv_max_rows = lv_points
           iv_as_of    = mv_as_of ).
       ENDIF.
       DATA(ls_evaluation) = zcl_cd_hck_threshold=>evaluate( iv_value        = <ls_metric>-value

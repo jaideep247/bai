@@ -94,7 +94,7 @@ SPEC = {
              [('class', 'class_name', 'ZIF_CD_HCK_CHECK'), ('enum', 'category', 'A,B,C,D,E'),
               ('enum', 'priority', 'H,M,L')]),
             ('zcd_hck_thresh', 'HckThreshold', 'zcd_d_hckthr', 'Threshold', 'Thresholds', [],
-             [('thresholds',), ('enum', 'baseline_mode', ',NONE,ZSCORE')]),
+             [('thresholds',), ('enum', 'baseline_mode', ',NONE,ZSCORE'), ('enum', 'season', ',DY,WD')]),
             ('zcd_hck_agg', 'HckAggregate', 'zcd_d_hckagg', 'Aggregate', 'Generic aggregates', [],
              [('table', 'tabname'), ('field', 'sum_field', 'tabname'), ('field', 'date_field', 'tabname'),
               ('field', 'group_field', 'tabname'), ('field', 'cond1_field', 'tabname'),

@@ -208,6 +208,65 @@ finding and measures nothing — it never reads as zero volume. When a grouped r
 
 Maintained in the health check configuration app (entity *Generic aggregates*, field *Expected groups*), table logging on.
 
+### 4b. Missing-volume (silent failure) checks — `B_VOL_*` (2026-11-11)
+
+> **First principle:** a feed that stops makes no error - the only evidence is a count that is lower than it usually is *on that kind of day*.
+> **Analogy:** a shop that is quiet on a Sunday is normal; the same quiet on a Monday means the door is locked.
+
+Four checks of the existing volume class `ZCL_CD_HCK_C_VOLUME` (DAY mode: `DATE_FIELD` = report date - PARAM1,
+DIM1 = `GROUP_FIELD` value, DIM2 = the counted day) compared with a **seasonal baseline** (`ZCD_HCK_THRESH-SEASON`,
+new 2026-11-11): `WD` = the same weekday of the previous `LOOKBACK_RUNS` weeks, `DY` = the previous days. The
+history is the latest measurement of each of those days (`ZIF_CD_HCK_DAO=>GET_METRIC_HISTORY` with a day list),
+so a quiet Sunday is compared with Sundays and a silent Monday with Mondays. Why an extension was needed: before,
+the baseline series included DIM2 = the day itself, so a day series never had history (each day is a new
+series) and stayed in warm-up for ever; the generic aggregate could not say "below the usual Monday". Warm-up
+is **unchanged**: fewer than 3 days with a value = `BASELINE_WARMUP` (information) and a baseline-only metric
+is grey, never GREEN. A below-baseline value is `BASELINE_OUTLIER` (AMBER, warning); RED only where a static
+limit is maintained. Planned downtime (bank holiday, maintenance window - build A) will suppress the alerts of
+these checks later; until then a holiday is an AMBER the reviewer classifies (no dependency on that code).
+
+**Check catalog (`ZCD_HCK_DEF`)** - class `ZCL_CD_HCK_C_VOLUME`, category B, PARAM1 `1` (yesterday), PARAM2 `1`
+(one day; `7` once to backfill a week of history - every backfilled day is a point of its own weekday):
+
+| CHECK_ID | DESCRIPTION | PRIO | ACTIVE | SEQ | TIMEOUT_SEC |
+|---|---|---|---|---|---|
+| B_VOL_PAYRUN | Payments per payment method of yesterday's payment runs vs the same weekday | H | X | 51 | 300 |
+| B_VOL_STMT | Bank statement lines / statements per house bank of yesterday vs the same weekday | H | X | 52 | 300 |
+| B_VOL_FILES | Inbound files per interface (FMON) of yesterday vs the same weekday | M | X | 53 | 120 |
+| B_VOL_PRQ | Payment requests per source (and hour band) vs the same weekday - **inactive** until the received date / time fields of `ZCD_PAYM_REQ_LOG` are confirmed (VERIFY-SE11, V85) | H | (blank) | 54 | 300 |
+
+**Aggregates (`ZCD_HCK_AGG`)** - DATE_MODE `DAY`, AGE_DAYS_MIN set by the check:
+
+| CHECK_ID | AGG_ID | TABNAME | AGG_FUNC | DATE_FIELD | GROUP_FIELD | EXPECTED_GROUPS | COND1 | COND2 | Note |
+|---|---|---|---|---|---|---|---|---|---|
+| B_VOL_PAYRUN | PAYMENTS | DPAYH | COUNT | LAUFD (confirmed) | PYMET (VERIFY-SE11, as `ZI_CD_PayLifeRun`) | `<payment methods paid every business day, confirm>` | XVORL EQ `''` (no proposal run) | DOC1R NE `''` | One row per payment of the run date. Day-part: one more row per part, e.g. `PAY_AM` / `PAY_PM` with COND3 `LAUFI IN <run IDs of that Control-M cycle>` - **only once the run-ID convention is confirmed** (VERIFY, V86); the generic aggregate has one group field, so method × day-part = one row per day-part grouped by method |
+| B_VOL_STMT | LINES | FEBEP | COUNT | BUDAT (confirmed: always populated) | (blank) | | | | All statement lines of the posting day (FEBEP carries no house bank) |
+| B_VOL_STMT | STMT_HB | FEBKO | COUNT | AZDAT (VERIFY-DDIC, as `B_VOLUME` FEB_STMT) | HBKID (VERIFY-SE11) | `<house banks with a daily statement, e.g. the JPMC / BOA / PNC house bank IDs, confirm>` | | | Statements per house bank; a bank that sent nothing measures 0 (A103) |
+| B_VOL_STMT | `ACC_<hbkid>` (one per house bank) | FEBKO | COUNT | AZDAT | HKTID (VERIFY-SE11) | `<account IDs of that bank>` | HBKID EQ `<house bank>` | | Statements per account of one house bank (account ID, never the bank account number) |
+| B_VOL_FILES | FILES | ZCD_FMON_FILE | COUNT | BUSINESS_DATE | IFACE_ID | `<inbound interfaces expected every business day>` | DIRECTION EQ `I` (`ZIF_CD_FMON_TYPES=>GC_DIRECTION-INBOUND`) | | Registered inbound files per interface; FMON's own `F_MISSING` judges the calendar, this check the volume |
+| B_VOL_PRQ | REQUESTS | ZCD_PAYM_REQ_LOG | COUNT | `<received date (DATS), VERIFY-SE11>` | SOURCE (confirmed) | `<sources, e.g. PCLM, BASE, ORCI, confirm>` | ZZ_STATUS EQ `SUCCESS` (confirmed: the SUCCESS row, never the highest COUNTER) | | Requests per source; hour bands: one row per band `REQ_H08` ... with COND2 / COND3 `<received time (TIMS), VERIFY-SE11>` GE `080000` / LT `090000` |
+
+**Thresholds (`ZCD_HCK_THRESH`)** - lower is worse (`HIGHER_IS_WORSE` blank), baseline only (AMBER / RED 0):
+
+| CHECK_ID | METRIC | BUKRS | AMBER | RED | HIGHER_IS_WORSE | BASELINE_MODE | Z_LIMIT | LOOKBACK_RUNS | SEASON |
+|---|---|---|---|---|---|---|---|---|---|
+| B_VOL_PAYRUN | * | * | 0 | 0 | ' ' | ZSCORE | 3 | 6 | WD |
+| B_VOL_STMT | * | * | 0 | 0 | ' ' | ZSCORE | 3 | 6 | WD |
+| B_VOL_FILES | * | * | 0 | 0 | ' ' | IQR | 1.5 | 6 | WD |
+| B_VOL_PRQ | * | * | 0 | 0 | ' ' | ZSCORE | 3 | 6 | WD |
+
+Six weeks of the same weekday = at least 3 points after three weeks (warm-up before). Peak days (2 million
+payments on two days a month, `Performance_Review.md`) are above the baseline - lower is worse, so a peak never
+alerts; a peak day that falls short of its weekday's normal does. IQR for files (few, integer counts). Existing
+`B_VOLUME` keeps blank SEASON (behaviour unchanged); switching it to `DY` gives it a history for the first time.
+
+**Approved tables (`ZCD_OPS_TABWL` HCK / READ, §5):** `DPAYH`, `FEBEP`, `ZCD_FMON_FILE` (new rows, reviewer);
+`FEBKO`, `ZCD_PAYM_REQ_LOG` exist. **Alert rule** (`config/alert_rules.csv`, framework `ZCA_OPS_ALRULE`):
+`HCK_VOLUME` - area `CD_HCK`, minimum severity W, CHECK_PATTERN `BASELINE_OUTLIER`, GROUP2_PATTERN `B_VOL_.*`,
+e-mail digest to `<RTB SO23 list>` (delivered inactive: destination to confirm). **Covered checks**
+(`config/control_checks.csv`): `PAYMENT_FILES` ← `B_VOL_PAYRUN`, `B_VOL_FILES`; `BAI_EXCEPTIONS` ← `B_VOL_STMT`
+(CHECK_AREA `CD_HCK`, GROUP2). Drift control: `ZCD_HCK_THRESH` / `ZCD_HCK_AGG` are already under §6.
+
 ## 5. Table whitelist — `ZCD_OPS_TABWL`, area HCK, purpose READ
 
 Since the table consolidation of 2026-11-08 the HCK whitelist (was `ZCD_HCK_TABWL`), the drift list (was `ZCD_HCK_DRIFT`, §6) and the FMON approved tables (was `ZCD_FMON_TABWL`, `config/fmon_seed.md`) are one core table, `ZCD_OPS_TABWL`, maintained in the core configuration app (*Approved tables per reader*). Every HCK read of a configured table (generic aggregates, value queries `C_*`, the bgRFC queue source of `E_QUEUES`, the Stripe evidence of `A_INFLIGHT`) needs an active row `HCK` / `READ` of the whole table (`FIELD_NAME` blank - the app refuses a field on an HCK row, message 423); a row of another purpose (`DRIFT`) or area (`FMON` / `SOURCE`) never approves an HCK read.

@@ -112,10 +112,10 @@ ZCL_CD_HCK_C_RECON3,own test include,,17,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_JOBS,own test include,,9,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_SYS,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_C_VOLUME,own test include,,2,90,,Not run in target SAP
-ZCL_CD_HCK_DAO,own test include,,29,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
+ZCL_CD_HCK_DAO,own test include,,30,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
 ZCL_CD_HCK_DASH_CDS_TEST,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
-ZCL_CD_HCK_ENGINE,own test include,,30,90,,Not run in target SAP
+ZCL_CD_HCK_ENGINE,own test include,,31,90,,Not run in target SAP
 ZCL_CD_HCK_EV_BTC_SEQ,own test include,,31,90,,Not run in target SAP
 ZCL_CD_HCK_EV_CHQ_STATUS,own test include,,7,90,,Not run in target SAP
 ZCL_CD_HCK_EV_GL_XREF2,own test include,,3,90,,Not run in target SAP
@@ -140,7 +140,7 @@ ZCL_CD_HCK_RUNTIME_DAO,own test include,,16,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_STATS,own test include,,12,90,,Not run in target SAP
 ZCL_CD_HCK_SUPPRESSION,own test include,,15,90,,Not run in target SAP
-ZCL_CD_HCK_THRESHOLD,own test include,,16,90,,Not run in target SAP
+ZCL_CD_HCK_THRESHOLD,own test include,,19,90,,Not run in target SAP
 ZCL_CD_HCK_VALUE_QUERY,own test include,,6,90,,Not run in target SAP
 ZCL_CD_OPS_ACK_MAIL,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CHECKS,own test include,,18,90,,Not run in target SAP

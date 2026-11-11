@@ -68,6 +68,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS history_newest_first_capped FOR TESTING.
     METHODS history_only_same_dimension FOR TESTING.
     METHODS history_only_same_dim2 FOR TESTING.
+    METHODS season_latest_point_per_day FOR TESTING.
     METHODS saved_metric_is_read_back FOR TESTING.
     METHODS metric_kind_and_weight_saved FOR TESTING.
     METHODS check_result_saved_by_key FOR TESTING.
@@ -250,6 +251,32 @@ CLASS ltc_dao IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
+
+
+  " Rule (2026-11-11, seasonal baseline): one value per listed day - the latest measurement of that day
+  " (a backfilled day measured twice counts once) - newest day first; days not listed never contribute
+  METHOD season_latest_point_per_day.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_value.
+    DATA lt_days TYPE zif_cd_hck_types=>tt_dim.
+    TRY.
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_dim2 = '20261103' iv_value = 900 iv_at = '20261104070000.0000000' ).
+        add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_dim2 = '20261103' iv_value = 1000 iv_at = '20261105070000.0000000' ).
+        add_metric( iv_run_no = 3 iv_dim1 = gc_job iv_dim2 = '20261027' iv_value = 1040 iv_at = '20261028070000.0000000' ).
+        add_metric( iv_run_no = 4 iv_dim1 = gc_job iv_dim2 = '20261102' iv_value = 5 iv_at = '20261103070000.0000000' ).
+        insert_history( ).
+        lt_days = VALUE #( ( '20261103' ) ( '20261027' ) ( '20261020' ) ).
+        lt_exp = VALUE #( ( 1000 ) ( 1040 ) ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
+                                                                              iv_metric   = gc_metric
+                                                                              iv_dim1     = gc_job
+                                                                              it_days     = lt_days
+                                                                              iv_max_rows = 3 )
+                                            exp = lt_exp
+                                            msg = 'Latest value of each listed Tuesday, newest first; Monday left out' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
 
 
   " Rule: one verdict row per run and check; a repeated save of the same key replaces the row

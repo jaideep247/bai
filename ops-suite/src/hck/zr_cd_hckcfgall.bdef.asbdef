@@ -120,6 +120,7 @@ etag master LocalLastChangedAt
     BaselineMode = baseline_mode;
     ZLimit = z_limit;
     LookbackRuns = lookback_runs;
+    Season = season;
     ChangedBy = changed_by;
     ChangedAt = changed_at;
     LastChangedBy = last_changed_by;

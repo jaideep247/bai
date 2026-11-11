@@ -7,6 +7,8 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Flat baseline: adverse deviation beyond a tolerance is an outlier (audit A59).
 *& 2026-11-06 | Too little history is BASELINE_WARMUP, never an inherited GREEN (audit A102).
+*& 2026-11-11 | SEASON_DAYS: the days of a seasonal baseline (previous days / same weekday) of a day series
+*&            | (missing-volume checks; the warm-up rule is unchanged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - threshold resolution and evaluation</p>
 "! Static limits: higher is worse -> a zero limit is "not set";
@@ -47,7 +49,22 @@ CLASS zcl_cd_hck_threshold DEFINITION
       RETURNING
         VALUE(rs_evaluation) TYPE zif_cd_hck_types=>ty_evaluation.
 
+    "! Days whose values form the seasonal baseline of a day series (DIM2 = the counted day YYYYMMDD):
+    "! season DY = the iv_points previous days, WD = the same weekday of the iv_points previous weeks,
+    "! newest first. Empty when the season is blank / unknown or DIM2 is not a valid date - the
+    "! history is then the last runs of the series, as before (2026-11-11, missing-volume checks)
+    CLASS-METHODS season_days
+      IMPORTING
+        iv_season      TYPE zif_cd_hck_types=>ty_season
+        iv_dim2        TYPE zif_cd_hck_types=>ty_dim
+        iv_points      TYPE i
+      RETURNING
+        VALUE(rt_days) TYPE zif_cd_hck_types=>tt_dim.
+
   PRIVATE SECTION.
+    "! A day of a day series: eight digits (DIM2 of the DAY mode, ZCL_CD_HCK_AGG_QUERY=>TO_METRICS)
+    CONSTANTS gc_day_pattern TYPE string VALUE `[0-9]{8}`.
+    CONSTANTS gc_days_per_week TYPE i VALUE 7.
 
     "! Static AMBER or RED limit maintained (both zero = baseline only)
     CLASS-METHODS has_static_limit
@@ -217,6 +234,25 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
       RETURN.
     ENDIF.
     rv_outlier = xsdbool( lv_adverse > abs( iv_mean ) * iv_flat_tol_pct / gc_percent ).
+  ENDMETHOD.
+
+
+  METHOD season_days.
+    DATA lv_day TYPE d.
+    DATA(lv_step) = SWITCH i( iv_season
+                              WHEN zif_cd_hck_types=>gc_season-days    THEN 1
+                              WHEN zif_cd_hck_types=>gc_season-weekday THEN gc_days_per_week ).
+    IF lv_step = 0 OR iv_points <= 0 OR NOT matches( val = condense( iv_dim2 ) pcre = gc_day_pattern ).
+      RETURN.
+    ENDIF.
+    lv_day = condense( iv_dim2 ).
+    " an impossible date (e.g. month 13) converts to day number 0
+    IF CONV i( lv_day ) <= 0.
+      RETURN.
+    ENDIF.
+    DO iv_points TIMES.
+      INSERT CONV zif_cd_hck_types=>ty_dim( lv_day - lv_step * sy-index ) INTO TABLE rt_days.
+    ENDDO.
   ENDMETHOD.
 
 ENDCLASS.

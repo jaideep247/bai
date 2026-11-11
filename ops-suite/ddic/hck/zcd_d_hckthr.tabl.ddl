@@ -15,6 +15,7 @@ define table zcd_d_hckthr {
   baselinemode : abap.char(6);
   zlimit : abap.dec(5,2);
   lookbackruns : abap.int4;
+  season : abap.char(2);
   changedby : syuname;
   changedat : timestampl;
   lastchangedby : abp_lastchange_user;
