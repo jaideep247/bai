@@ -6,9 +6,13 @@
 Nothing of ZCA_OPS has been activated or run in an SAP system. Each item is confirmed in DV1 / QA1 and
 recorded in the release pack. Numbers are never reused: V44 / V45 are items of the first consumer, so the
 process onboarding (2026-11-10) continues at V46; the SAP job monitor (2026-11-11) uses V58-V66 (V67-V69 are
-items of the first consumer).
-process onboarding (2026-11-10) continues at V46; the operations response features (2026-11-11,
-`docs/OPERATIONS_FEATURES.md`) use V70-V79 (V80 / V81: the first consumer's).
+items of the first consumer); the operations response features (2026-11-11, `docs/OPERATIONS_FEATURES.md`)
+use V70-V79 (V80 / V81: the first consumer's).
+
+**Customer items are not kept here (2026-11-11).** This list names only the product's objects and SAP standard
+objects. V44 / V45, V55 / V56, V67-V69, V80 / V81, V82-V93 and V100-V109 are the first consumer's items,
+indexed in its own list `docs/VERIFY_Suite.md` of the consumer (V82-V93 moved there from this file on
+2026-11-11, IDs unchanged); a new consumer keeps its items in its own list the same way.
 
 | ID | Where | What to confirm |
 |---|---|---|
@@ -87,34 +91,22 @@ process onboarding (2026-11-10) continues at V46; the operations response featur
 
 V80 and V81 are items of the first consumer (its configuration rows and overview cards of the response features).
 
-### 2026-11-11 - service health, process flow, missing-volume checks, payment model (product layer + first customer mapping)
+### 2026-11-11 - payment model (product layer)
 
-V82-V93 belong to the suite (build B of 2026-11-11), V94-V99 to the framework's payment model product layer. Nothing activated; every row is open.
+V94-V99 belong to the framework's payment model product layer (V82-V93: the first consumer's own list, see above). Nothing activated; every row is open.
 
 | ID | Kind | Item |
 |---|---|---|
-| V82 | VERIFY-SE11 | `ZCD_PAYM_REQ_LOG`: FIN-number field, received date / time stamp, company code, currency and amount fields - names for the pending request / attempt adapters of the payment model (the suite's `config/payment_model/mapping.json`, sections `request`, `request_attempt`); then status `active` and regenerate |
-| V83 | VERIFY-SE11 | `ZCD_PAYM_REQ_LOG` transaction field (the field exists - user 2026-11-11; name and values / texts): mapping `TransactionType`, dimension texts `TRANSACTION` in `ZCA_OPS_PMDIM`, volume rows grouped by it |
-| V84 | VERIFY-SE11 | Business request lifecycle status (PENDING / SCHEDULED / SRCPOSTED / source reject): table and field (control_seed.md section 2a P2) - mapping `RequestStatus` stays blank until named |
-| V85 | VERIFY-SE11 | Received date (DATS) and time (TIMS) of `ZCD_PAYM_REQ_LOG` for `B_VOL_PRQ` (inactive) and its hour bands; index for the day read (with pre-check 0.8) |
-| V86 | VERIFY (Control-M) | Payment run ID convention per day-part (LAUFI) for the day-part rows of `B_VOL_PAYRUN` |
-| V87 | VERIFY-SE11 | DPAYH-HKTID (house bank account ID) - mapping `HouseBankAccount` blank until confirmed; FEBKO-HBKID / HKTID for `B_VOL_STMT` |
-| V88 | VERIFY-SE11 / PlanViz | DFKKOP secondary index on AUGBL (payment -> requests of the payment page) and the index of pre-check 0.8 on ZZ_FIN_TRANS_NUM (request -> payments); DFKKOP-BUKRS |
-| V89 | VERIFY-SE11 / business | Feeder business reference field (claim / policy / invoice) of the request log, its sensitivity (masked by default) and the feeder URL templates (`ZCA_OPS_FEEDER`) |
-| V90 | VERIFY-SE11 | Timeline hops of a request: link request -> PRISM file / message (FMON event), `ZCD_SPE_EXCP_LOG` fields of the status sent back - union view `ZI_CD_PaymHops` before the `request_event` section can be active |
-| V91 | VERIFY-ADT | Service health CDS (`ZI_CD_SvcRule` UNION ALL, `ZI_CD_SvcFind` OR in the ON condition, `ZI_CD_SvcSlice` CROSS JOIN + UNION, `ZR_CD_SvcHealth` arithmetic in CASE) and process flow CDS (`>=` / `<` in ON conditions, `dats_days_between` with the session date); ABAP Unit `ZCL_CD_OPS_SVC_CDS_TEST` (4 methods) |
-| V92 | ABAP Unit | Seasonal baseline: `ZCL_CD_HCK_THRESHOLD` (`weekday_season_steps_weeks`, `day_season_steps_days`, `season_needs_a_day_series`), `ZCL_CD_HCK_DAO` (`season_latest_point_per_day`: range on DIM2 inside a CTE with ROW_NUMBER, 7.58), `ZCL_CD_HCK_ENGINE` (`volume_below_same_weekday`) |
-| V93 | VERIFY-ADT / PlanViz | Payment model of the suite: `ZI_CD_PayMethodCls` over TFK033D with the parameter tables (`ZI_CD_PostAreaCfg`, MAX of CASE), `ZI_CD_PaymFact` on a 2 million payment day (DPAYH key range LAUFD + worklist by AUGBL), `ZR_CD_PaymCube` / `ZR_CD_PaymTrend` response time < 5 s; ABAP Unit `ZCL_CD_PAYM_CDS_TEST` |
 | V94 | VERIFY-SE11 | Framework tables `ZCA_OPS_PMDIM`, `ZCA_OPS_FEEDER` and drafts `ZCA_D_PMDIM`, `ZCA_D_FEEDER`; entities `PaymDimText`, `PaymFeeder` of `ZUI_CA_OPS_CFG` |
 | V95 | VERIFY-ADT | Product templates on 7.58: text joins in a GROUP BY view, `@Semantics.amount.currencyCode` on SUM, `replace( )` / `right( )` / `concat( )` with fields (masked feeder reference, deep link), associations from a view with joins, redirected associations between root projections |
 | V96 | VERIFY-ADT | OData V4 `$apply` on `PaymentCategory` / `PaymentTrend`: an amount is aggregated per currency (currency in the group-by of every amount card); the mixed-currency behaviour of RAP analytics when a card omits the currency |
-| V97 | VERIFY-ADT | OVP V4 cards of the persona pages (two-dimension charts, HEATMAP, data point with PROGRESS, selection variants with NE) and the custom process-flow card (the suite's `ui/cards/processflow`, sap.suite.ui.commons.ProcessFlow on the UI5 release of the landscape) |
-| V98 | Runtime (DV1) | Intents of the payment object page: payment trace transaction (`ZCDPaymentTrace-display`), exceptions app, the job app of build J (`ZCDJobFailure-display`, placeholder until merged) |
-| V99 | Runtime (DV1) | Generator round trip: `tools/payment_model.py` output imported by abapGit, activated in dependency order (framework texts -> adapters -> cube / trend / payment -> DCL -> service), binding `ZUI_CD_PAYM_O4` published |
+| V97 | VERIFY-ADT | OVP V4 cards of the persona pages (two-dimension charts, HEATMAP, data point with PROGRESS, selection variants with NE) and the custom process-flow card of the consumer (sap.suite.ui.commons.ProcessFlow on the UI5 release of the landscape) |
+| V98 | Runtime (DV1) | Intents of the payment object page (`model.intents` of the consumer's mapping spec): payment trace transaction, exceptions app, job app (placeholder until the consumer deploys it) |
+| V99 | Runtime (DV1) | Generator round trip: `tools/payment_model.py` output imported by abapGit, activated in dependency order (framework texts -> adapters -> cube / trend / payment -> DCL -> service), the consumer's binding of `ZUI_<P>_PAYM` published |
 
 ### 2026-11-11 - ledger and document-change model (product layer)
 
-V100-V109 belong to the first consumer (its own documentation); V110-V114 to the product templates of the ledger and document-change model. Nothing activated; every row open.
+V100-V109 belong to the first consumer (its own list, see above); V110-V114 to the product templates of the ledger and document-change model. Nothing activated; every row open.
 
 | ID | Kind | Item |
 |---|---|---|

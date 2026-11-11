@@ -166,7 +166,7 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 
 ## 8. Service health, process flow and the persona pages (2026-11-11)
 
-Status: CDS, configuration seeds and annotations written, checked offline (abaplint 0 issues); **not activated**; ABAP Unit not executed (VERIFY V91-V93, V97 of `ops-framework/docs/VERIFY.md`).
+Status: CDS, configuration seeds and annotations written, checked offline (abaplint 0 issues); **not activated**; ABAP Unit not executed (VERIFY V91-V93 of `docs/VERIFY_Suite.md`, V97 of `ops-framework/docs/VERIFY.md`).
 
 ### 8a. Service health (entities `ServiceHealth`, `ServiceContributor` of `ZUI_CD_OPS_OVERVIEW`)
 

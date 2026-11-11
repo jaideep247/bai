@@ -249,7 +249,7 @@ Daily controls with sign-off (framework `ZCA_OPS`: control register, review app 
 
 ## Service health, process flow, missing volume, payment model (2026-11-11)
 
-Built offline (abaplint 0 issues, portable checks, generator tests); **nothing activated, no ABAP Unit run**. VERIFY V82-V99 (`ops-framework/docs/VERIFY.md`).
+Built offline (abaplint 0 issues, portable checks, generator tests); **nothing activated, no ABAP Unit run**. VERIFY V82-V93 (the suite's, `docs/VERIFY_Suite.md` - moved from the framework's list 2026-11-11, IDs unchanged) and V94-V99 (the payment model product layer, `ops-framework/docs/VERIFY.md`).
 
 | Gate | Evidence |
 |---|---|
