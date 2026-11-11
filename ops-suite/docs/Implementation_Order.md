@@ -319,6 +319,19 @@ Readers: one generic reader `ZCL_CD_OPS_POSTAREA` (TFK033D, one set-based read p
 4. Nothing else changes in this step: the payment model views are byte-identical, the trace and the file monitor keep
    their own definitions until V122.
 
+## Process catalogue customer layer (2026-11-11, `docs/Process_Catalogue_Overlay.md`)
+
+1. After the framework's process catalogue is installed (`ops-framework/docs/INSTALL.md` §6d, **product seed rows
+   first**): create the layer's rows of `config/catalogue/seed/*.csv` in `ZUI_CA_OPS_CFG` (DV1, customizing request -
+   package, process, steps, tables, dependencies, activation) and enter the business approver of each activation row
+   (another user than the one who saves).
+2. Only then transport the `CAT_PROCESS` values of `config/process_register.csv` (`CD_COLL` / `BASE_REQ_LIFE` ->
+   `CD_COLL_REQ_LIFE`, `CD_JOBS` / `SAP_JOBS` -> `S4_BATCH_JOBS`); `SAP_JOBS` keeps running (`S4_BATCH_JOBS` active by
+   the product default).
+3. Republish `ZUI_CA_OPS_DASH_O4` (new entities `ProcessStatus`, `Catalogue`); add the *Active business processes*
+   cards to the overview page if the business wants them (D-CAT5 area decision first).
+4. Nothing else changes in this step: the morning report, EBS validation, FMON and the payment trace run as before.
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |

@@ -283,6 +283,16 @@ and confirm the next morning that the onboarding check reports nothing for `PORT
 - Freshness is per area and schedule group (one run variant); a process that needs another threshold gets its own
   `CHECK_STALE_MIN_<area>` - or its own area.
 
+## Related: the process catalogue (2026-11-11)
+
+A business process that monitors a **SAP standard process** names it in `CAT_PROCESS` (specification key
+`cat_process` of the scaffold): the process and its checks are then in effect only while the catalogue process is
+active for the customer - the runner skips its checks with an information finding, the dashboard and the review hide
+it, the onboarding check does not expect it (`docs/PROCESS_CATALOGUE.md`). The catalogue delivers monitoring
+templates of every standard process (`config/catalogue/monitoring`, inactive). Aggregate rows gained a window
+(`MAX_AGE_DAYS`: only rows at most n days old), a time field (`TIME_FIELD`, for the outage check) and the operator
+`NI` (none of a list) - specification keys `max_age_days`, `time_field`, `status_op` / `cond_op` `NI`.
+
 ## Related: a customer's payment model (2026-11-11)
 
 A business process registers checks; the **payment model** gives the same customer a categorised, drillable view of

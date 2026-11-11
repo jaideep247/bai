@@ -41,6 +41,11 @@ Role (PFCG, ZCA_OPS for the area): `Z_CD_OPS_COLL`
 - `SLA_DAYS_CD_COLL_E`, `SLA_DAYS_CD_COLL_W` - due date of the exceptions (else `SLA_DAYS_DEFAULT`)
 - `CHECK_STALE_MIN_CD_COLL` - freshness of the dashboard (else `CHECK_STALE_MIN_DEFAULT`)
 
+## Process catalogue (2026-11-11)
+
+The process monitors the customer process `CD_COLL_REQ_LIFE` of the suite's catalogue layer (`CAT_PROCESS`,
+`docs/Process_Catalogue_Overlay.md`): its checks run only while that catalogue process is active (proposal: active).
+
 ## VERIFY before activation
 
 - VERIFY-SE11: the table and field that hold the request status (PENDING, SCHEDULED, SRCPOSTED) and the value of a source reject; one row per request or per status change (one row per change: R1, R4 and the R2 class need the latest row of a request - a check class, not an aggregate); the date of the request and of the status change; the company-code field (config/control_seed.md section 2a, question 1).

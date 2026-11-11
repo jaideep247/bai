@@ -286,6 +286,21 @@ Built offline (abaplint 0 issues, portable checks, generator tests); **nothing a
 columns of `ZCD_FMON_SRC`; their registry rows are pending or inactive. `ZCD_FMON_SRCMAP` and `ZCD_HCK_AGG` encode no
 table-to-table link. Decisions for the user: `Link_Registry_Overlay.md` §6.
 
+## Process catalogue with activation (2026-11-11)
+
+`docs/Process_Catalogue_Overlay.md`; product: `ops-framework/docs/PROCESS_CATALOGUE.md` (VERIFY V124-V129); generated
+`docs/catalogue/activation.md` (proposal and decision list). Built offline (abaplint 0 issues, house and portable
+checks, tool tests); **nothing activated, no ABAP Unit run, no activation approved**.
+
+| Gate | Evidence |
+|---|---|
+| Offline (done) | `tools/process_catalogue.py --check` valid and current (portable check `process_catalogue`): the customer layer on the product packages, `CAT_PROCESS` of `config/process_register.csv` mapped both ways |
+| Gate 1 (DV1) | Framework tables, app entities and CDS activated (V124, V125); product seed rows first, then the layer's rows; approver of each activation row entered (another user, 240); `D_PROC_ONBOARD` shows only the expected catalogue findings (D-CAT3) and no `CAT_REF_UNKNOWN` |
+| Gate 2 (QA1) | Area dashboard *Active business processes* lists exactly the six active processes; switch `FICA_RETURNS` off with a future-dated row and on again: the review and the cards follow on the effective date; `CD_JOBS` / `SAP_JOBS` keeps running (runner note `PROCESS_INACTIVE` absent) |
+| Business | V131: the 19 decisions of `docs/catalogue/activation.md` taken; each answer one activation row |
+
+**Decisions for the user:** D-CAT1 ... D-CAT5 (`Process_Catalogue_Overlay.md` §3).
+
 ## Released views for every G/L / company code read of the suite (D-C8 extended, 2026-11-11)
 
 Built offline (abaplint 0 issues, portable checks); **nothing activated, no ABAP Unit run, no plan measured**. Moved: EBS R19 FI lines and R18 bank G/L balance, the A_GL_TRANSFER / A_DOC_CHANGE gap read, the payment trace's G/L documents / clearing lines / method kind, every T001 lookup of the morning report and payment worklist DAOs, `ZI_CD_PayWorkItem`, `ZI_CD_TrxItem` - through the helper views `ZI_CD_EbsGlLine`, `ZI_CD_OpsJrnlEntry`, `ZI_CD_OpsGlItem`, `ZI_CD_OpsCompanyCode` (no DCL) or, in CDS, `I_CompanyCode` directly. Kept on tables with reason: XREF2 search (A_INFLIGHT), the snapshot's G/L watermark and clearing-document search, the three reconciliation assignment reads (`Performance_Review.md` §14, `Dashboard_Production_Support.md` §9b).

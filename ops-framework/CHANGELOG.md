@@ -2,6 +2,49 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (process catalogue with activation)
+
+Goal (user, 2026-11-11): choose which SAP standard processes are active at a customer (some use dunning or invoicing,
+some skip standard processes) and fill the dashboard dynamically with the active processes only; SAP standard
+processes and tables only, no customer-specific object in the framework (`docs/PROCESS_CATALOGUE.md`).
+
+### Added
+- Tables `ZCA_OPS_CATPKG` (packages S / I / C, rank, prefix, monitoring area), `ZCA_OPS_CATPRC` (processes: component,
+  dashboard card, owner role, schedule, default, evidence), `ZCA_OPS_CATSTP` (steps: transactions, programs, mass
+  activity types), `ZCA_OPS_CATTAB` (standard tables with their link registry object), `ZCA_OPS_CATDEP`
+  (dependencies hard / soft), `ZCA_OPS_CATACT` (activation per customer, effective from a date, reason, approver);
+  entities of `ZUI_CA_OPS_CFG` (generated) with checks on save, approver four-eyes (240,
+  `ZCL_CA_OPS_CFG_CHECKS=>APPROVER_VALID`).
+- `ZIF_CA_OPS_CAT_TYPES`, `ZIF_CA_OPS_CAT_DAO` / `ZCL_CA_OPS_CAT_DAO`, API `ZIF_CA_OPS_CATALOG` /
+  `ZCL_CA_OPS_CATALOG` (effective state, definition, active processes, business processes not in effect, rule check;
+  factory `GET_CATALOG` / `GET_CAT_DAO`, injector); generic risk check `ZCL_CA_OPS_CHK_OUTAGE` (accounting around an
+  approved planned downtime, `ZIF_CA_OPS_DOWNTIME`); ABAP Unit for each, CDS tests `ZCL_CA_OPS_CAT_CDS_TEST`.
+- CDS: `ZI_CA_OpsCatActLast`, `ZI_CA_OpsCatProcEff`, `ZI_CA_OpsProcEff`, `ZI_CA_OpsChkEff`, `ZI_CA_OpsChkProcOff`,
+  `ZI_CA_OpsCtlProcOff`, `ZI_CA_OpsCatMon`, `ZI_CA_OpsProcKpi`, `ZI_CA_OpsProcAgg`; active business processes with
+  their own KPIs `ZR_CA_OpsProcStatus` / `ZC_CA_OpsProcStatus` (DCL, OVP annotations) and the catalogue list
+  `ZR_CA_OpsCatalogue` / `ZC_CA_OpsCatalogue` (DCL) in `ZUI_CA_OPS_DASH`.
+- Product content: `config/catalogue/s4core.json`, `packages/fica.json`, `packages/fscd.json` (23 SAP standard
+  processes, VERIFY V127-V129, monitoring templates inactive), worked example `examples/xx_layer.json`; generated
+  seed rows `config/catalogue/seed`, monitoring rows `config/catalogue/monitoring`, `docs/catalogue/catalogue.md`.
+- Shared engine `tools/abaptools/process_catalogue.py`, wrapper `tools/process_catalogue.py`, house check
+  `process_catalogue`, tests `tools/tests/test_process_catalogue.py` of the repository.
+- Parameters `CAT_OUTAGE_DAYS`, `CAT_OUTAGE_MARGIN_DAYS` (prefix `CAT_` read in area `CA_OPS`); messages 240-255.
+
+### Changed
+- `ZCA_OPS_PROC-CAT_PROCESS`: a business process names the catalogue process it monitors; it is in effect only while
+  that process is active (an unknown name does not stop it - fail-open, onboarding error `CAT_REF_UNKNOWN`).
+- Runner `ZCL_CA_OPS_CHECK_RUNNER`: checks of a business process not in effect are not run (information finding
+  `PROCESS_INACTIVE`, 241); their open exceptions stay open.
+- Onboarding check `ZCL_CA_OPS_CHK_ONBOARD`: only processes in effect are checked; catalogue findings
+  `CAT_NO_CHECK`, `CHECK_PROC_INACTIVE`, `CAT_REF_UNKNOWN`, `CAT_DEP_INACTIVE`, `CAT_INVALID`.
+- Area dashboard `ZI_CA_OpsChkSlice` (checks in effect only), `ZR_CA_OpsCheckStatus` / `ZC_` (+ catalogue process,
+  dashboard card); daily review `ZI_CA_OpsCtlSlice` (a control of switched-off checks only is not expected).
+- Aggregate rows (`ZCA_OPS_AGG`, `ZCL_CA_OPS_AGG_QUERY`): window `MAX_AGE_DAYS`, `TIME_FIELD`, operator `NI`, a date /
+  time window for the outage check (255); scaffold `new_process.py` and offline check `onboarding.py` follow
+  (`CAT_PROCESS`, `MAX_AGE_DAYS`, `TIME_FIELD`, a class that reads its aggregate rows).
+- `docs/VERIFY.md` V124-V129; `docs/INSTALL.md` §6d, `docs/auth_zca_ops.md` (activation: no 85, four-eyes on save),
+  `docs/PARAMETERS.md`, `docs/ADDING_A_BUSINESS_PROCESS.md`, `README.md`.
+
 ## [Unreleased] - 2026-11-11 (SAP component names, FICA layer)
 
 User decision 2026-11-11: FI-CA, FS-CD, FICA, FSCD and EBS are SAP standard component names, not words of a

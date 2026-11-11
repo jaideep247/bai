@@ -204,6 +204,26 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
    consumer's folder (offline validation and generated outputs current).
 7. VERIFY V116-V120.
 
+## 6d. Process catalogue with activation (2026-11-11, `docs/PROCESS_CATALOGUE.md`)
+
+1. After the pull: tables `ZCA_OPS_CATPKG`, `_CATPRC`, `_CATSTP`, `_CATTAB`, `_CATDEP`, `_CATACT`, the new fields
+   `ZCA_OPS_PROC-CAT_PROCESS` and `ZCA_OPS_AGG-MAX_AGE_DAYS` / `TIME_FIELD` (table adjustment in every system); the
+   configuration app `ZUI_CA_OPS_CFG` comes regenerated with *Process catalogue packages*, *processes*, *steps*,
+   *tables*, *dependencies* and *activation*; the dashboard service `ZUI_CA_OPS_DASH` exposes `ProcessStatus` and
+   `Catalogue` (republish the binding `ZUI_CA_OPS_DASH_O4`).
+2. DV1, customizing request: create the product rows of `config/catalogue/seed/*.csv` (packages S4CORE, FICA, FSCD -
+   packages, processes, steps, tables, dependencies), then the consumer's own seed rows (its customer layer and its
+   activation rows). Enter the **approver** of every activation row in DV1 (another user than the one who saves).
+   **Before** a consumer's business process names a catalogue process (`CAT_PROCESS`), the catalogue rows must be in
+   the system: a business process whose catalogue process is inactive does not run its checks.
+3. Monitoring of a standard process: only after its activation and its VERIFY items - take its rows of
+   `config/catalogue/monitoring` (area of the package, all inactive) or copy them into the consumer's area, then the
+   area, role, control and alert rule as for any business process (`docs/ADDING_A_BUSINESS_PROCESS.md`).
+4. Parameters `CAT_OUTAGE_DAYS`, `CAT_OUTAGE_MARGIN_DAYS` - value rows only where the defaults do not fit.
+5. Before every transport of catalogue rows: `python3 tools/process_catalogue.py --check` in the framework and in the
+   consumer's folder.
+6. VERIFY V124-V129.
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run
