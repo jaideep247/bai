@@ -120,7 +120,10 @@ Cost: the distinct-name read scans the date window of TBTCO instead of a name pr
 | DFKKOP | AUGBL; ZZ_FIN_TRANS_NUM (**blocking pre-check 0.8 of `Implementation_Order.md`**, 2026-11-10: read by every snapshot package at 200 000-400 000 payments a day) | trace, HCK payment request rules, payment worklist snapshot (FIN items) |
 | BKPF | AWTYP + AWKEY | HCK G/L transfer gaps |
 | DFKKKO | BUDAT | HCK G/L transfer gaps |
-| DFKKSUMC | FIKEY | HCK G/L transfer gaps |
+| DFKKSUMC | FIKEY | HCK G/L transfer gaps; ledger model batch key level (build C, §13) |
+| DFKKKO | FIKEY (**V102**) | ledger model: items of a batch key (build C, §13) |
+| ACDOCA | primary key (RCLNT, RLDNR, RBUKRS, GJAHR, BELNR, DOCLN); RLDNR + RBUKRS + RACCT + BUDAT (aggregates of the reconciled accounts) | ledger model journal lines and account / day legs (build C, §13); A_RECON_3WAY |
+| BSEG | BUKRS + XREF2 (**V106**, not created) | the G/L clearing line of a bank line - not mapped until the index exists |
 | BUT000 | BPEXT | payment request → partner |
 | FEBKO | (BUKRS, HBKID, HKTID, AZDAT) | R22 history (fix 2), S01 / S03 prior header |
 | ZCD_ACH_RTRV_LOG | AUGBL | R07L |
@@ -263,3 +266,24 @@ No bank, G/L or payment engine line is read for the variance card (results of `A
 | Service health (`ZI_CD_SvcFind`) | runs of the date (`ZI_CA_OpsCtlRunDay`, 31 days) -> findings by RUN_ID (primary key), as the daily control review (CTL-08) | findings of 31 days | Same plan as `ZI_CA_OpsCtlFind` |
 | Process flow (`ZR_CD_PayFlow`) | the payment lifecycle counts (§11) joined with themselves per stage (reached) - aggregated rows only | stages x days x company codes | - |
 | Missing-volume checks `B_VOL_*` | generic aggregate, one COUNT per day and group: DPAYH by LAUFD (key), FEBEP by BUDAT (index VERIFY-SE11), FEBKO by AZDAT, ZCD_FMON_FILE by BUSINESS_DATE (index to add if the table grows: VERIFY); history: ZCD_HCK_METRIC index HST with DIM2 IN (6 days) | one aggregate row per group | `HCK_MAX_AGG_ROWS`; a failed query measures nothing (never 0) |
+
+## 13. Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
+
+> **First principle:** the universal journal is read only by its primary key from keys in hand, or aggregated by company code, account and posting date for a few configured accounts - never searched by a reference or a text.
+
+| Read | Access path | Volume | Bound / pre-check |
+|---|---|---|---|
+| Payment -> its ledger (`ZR_CD_PaymLedger`, navigation from one payment) | DFKKOP by AUGBL (index V88) -> DFKKKO by OPBEL (primary key) -> DFKKSUMC by FIKEY (index, §8) -> BKPF by AWTYP + AWKEY + BUKRS (index, §8) -> ACDOCA by RCLNT / RLDNR / RBUKRS / GJAHR / BELNR (primary key prefix) | a few items, one to three summary rows, one G/L document with its lines | navigation only (key filter); PlanViz **LDG-PV1** |
+| Batch key level (`ZR_CD_LedgBatch`, list with a posting date) | DFKKSUMC grouped by FIKEY / BUKRS / HKONT / WAERS with the BUDAT predicate (column scan of a day on HANA, VERIFY index), BKPF by AWTYP + AWKEY, ACDOCA by key | keys of a day (hundreds to thousands) x accounts | posting date mandatory; PlanViz **LDG-PV2** on the largest day |
+| Items of a batch key (`_Items`) | DFKKKO by FIKEY (index **V102**) -> DFKKOP by AUGBL | items of one key (up to the payments of a run) | navigation, paged |
+| Journal lines of a batch key / payment (`_Journal`) | BKPF by AWTYP + AWKEY (+ BUKRS), then ACDOCA by its key | lines of one or two G/L documents | navigation only |
+| Group reconciliation journal leg (`ZI_CD_LedgAcctDay`) | ACDOCA aggregated by RLDNR + RBUKRS + RACCT + BUDAT (+ RWCUR) for the accounts of the active `ZCD_HCK_RCSET` sets (inner join, a handful) - the same predicate as A_RECON_3WAY's `GET_GL_DAYS` | one aggregate row per account / currency / day | business date mandatory; **LDG-PV3** (compare with `GET_GL_DAYS` ST05) |
+| Lines of an account and day (`_Journal` of a reconciliation row) | the same ACDOCA predicate (RBUKRS, RACCT, BUDAT, RLDNR), paged (`$top`) | the clearing account's lines of a day (tens of thousands on a peak day) | paged list only; never without the row's keys |
+| Subledger leg (`ZI_CD_LedgSubDay`) | DFKKSUMC grouped per account and posting day for the RCSET accounts | aggregate rows | business date mandatory |
+| Stored results (`ZI_CD_LedgRcDay`) | ZCD_HCK_METRIC by METRIC (RC_BANK / RC_GL / RC_FICA) and DIM1 / DIM2 (index HST), findings by RUN_ID + AREA + OBJECT_KEY (index OBJ) | group-days of the reconciliation window | results only, no line |
+| Bank lines of an account and day (`ZI_CD_LedgBankLn`) | FEBEP / FEBKO of the account of the set (XBLNR account derived per line of the bounded statement set, as `ZI_CD_HckRcBankLine`), DFKKKO by OPBEL = CHECT (primary key) | lines of a statement day | business date mandatory; the BSEG-XREF2 clearing line is **not** joined (no index, V106) |
+| Change timeline (`ZR_CD_PaymChange`, one payment) | DFKKKO by OPBEL (key) and STBEL -> DFKKKO by OPBEL; BKPF of the batch's G/L documents by key | a few rows | navigation only |
+| Change volumes (`ZR_CD_DocEvtCube`) | `ZI_CD_PayLifeRun` (DPAYH by LAUFD, 45-day key range) joined to DFKKKO by OPBEL (key) where STBEL is set | reversals of the window | event-date filter on the cards (Last30) |
+| Risk check `A_DOC_CHANGE` | one statement: DFKKKO by CPUDT (reversal documents of the window; index VERIFY as the snapshot source REVERSALS) joined to the reversed document by STBEL and DPAYH by DOC1R; then FEBEP by CHECT, DFKKCR by DOC1R (FOR ALL ENTRIES over the reversed payments, capped) and the A_GL_TRANSFER gap read | reversed payments of 7 days (hundreds), not the payment volume | PARAM3 cap; no SELECT per payment |
+
+**Pre-check list (PlanViz, before the ledger entities are published - `Implementation_Order.md` build C):** LDG-PV1 payment ledger of a payment in a FIKEY with 50 000 payments; LDG-PV2 batch key list of the largest posting day; LDG-PV3 reconciliation of all RCSET accounts for one day and for a 30-day range; LDG-PV4 lines of the busiest clearing account and day (first page < 2 s); LDG-PV5 `A_DOC_CHANGE` on a 7-day window with the peak-day reversals. Record the plan (index or column scan) and runtime in the release pack; a full scan of ACDOCA, BSEG or DFKKOP fails the pre-check.

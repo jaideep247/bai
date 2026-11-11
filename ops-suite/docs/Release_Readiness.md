@@ -188,3 +188,15 @@ Built offline (abaplint 0 issues, portable checks, generator tests); **nothing a
 | Configuration | Service weights / bands and map rows confirmed by the support lead; expected days per stage confirmed by the payments team; `B_VOL_*` expected groups (methods, house banks, interfaces) filled; dimension texts and feeder rows maintained |
 
 **Decisions for the user:** D-B1 PCRE patterns in the service map (exact values delivered; AMDP alternative); D-B2 reporting-currency view (rate type / date); D-TL1 ... D-TL5 (`Tool_Landscape.md`); feeder references masked by default (shown in full per feeder row).
+
+## Ledger drill-down, group reconciliation, document changes (build C, 2026-11-11)
+
+| Gate | Evidence |
+|---|---|
+| Gate 1 (DV1) | Activation in the order of `Implementation_Order.md` (build C section); ABAP Unit `ZCL_CD_PAYM_CDS_TEST` (ltc_ledger, ltc_gl_total, ltc_batch_key, ltc_acct_day, ltc_change), `ZCL_CD_HCK_C_DOCCHG`, `ZCL_CD_HCK_DOCCHG_DAO`; SE11 of V100-V110 recorded |
+| Gate 2 (QA1) | LDG-01 ... LDG-12 (`Test_and_Validation_Document.md`), PlanViz LDG-PV1 ... LDG-PV5 (`Performance_Review.md` §13), stored results equal the morning report (V109) |
+| Configuration | `EBS_GL_LEDGER` confirmed as the leading ledger; RCSET accounts complete; `A_DOC_CHANGE` activated after V108 with `HCK_REVERSAL` and the `DAILY_RECON` covered-check row |
+
+**Decisions for the user (build C):** D-C1 ledger = `EBS_GL_LEDGER` (no separate `LEDG_` parameter); D-C2 share basis = cleared items (DFKKOPK G/L items as the alternative); D-C3 group reconciliation shows the stored A_RECON_3WAY result and adds only the live journal leg for drill-down and "changed since measured"; D-C4 per-day bucket from the finding (a stored per-day bucket metric would change A_RECON_3WAY); D-C6 user IDs on the payment's change timeline only; D-C8 ACDOCA directly (classic track) vs `I_JournalEntryItem` for a Clean-Core customer; `A_DOC_CHANGE` delivered inactive until V108; STOPPED payments not counted as "left SAP" when reversed (stop and reissue).
+
+**Open (build C):** clearing reset / re-clearing / reissue link and the rule "reset without re-clearing after N days" wait for the clearing-reset history (V100); G/L clearing line of a bank line waits for the BSEG-XREF2 index (V106); reconciliation key status field (V102); transaction texts (V103).

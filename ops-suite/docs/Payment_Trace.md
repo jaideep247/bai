@@ -130,7 +130,11 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 
 - **Handover / support notes:** the core exception store (`ZCA_OPS_FINDING` / `ZCA_OPS_EXC_HIST`, owned-exceptions app) records dispositions of *findings*; a trace is not a finding, so storing a note would need a new finding type or note table. Proposed: an action "Record trace finding" that writes one finding (check code `PAYMENT_TRACE_GAP`, object = FIN / clearing ref, masked summary) through `ZIF_CA_OPS_STORE`, so the existing assign / resolve / handover flow applies. Today the copyable summary is message 700 plus the ALV export.
 - **File reference as input:** cheap via `ZCD_FMON_FILE` (reference → events) but the reverse link file → payments needs the ZCDT_REGUT link confirmed first.
-- **PENDING status** from FMON SLA rows; **XRAGL** reset indicator (§4.2).
+- **PENDING status** from FMON SLA rows; **XRAGL** reset indicator (§4.2; V100 of build C, §8a).
+
+## 8a. Ledger and changes of a payment (build C, 2026-11-11)
+
+The trace proves one payment's evidence chain; the **payment object page** of the payment model (`Dashboard_Production_Support.md` §9) now carries the two views the trace does not: the facet **Ledger** (entity `PaymentLedger`: the payment's share of its FIKEY summary per account and currency, the G/L document of the FIKEY by the GL-stage rule of §2 stage 11 - AWTYP `TRACE_GL_AWTYP`, same BUKRS, STBLG blank - and its ACDOCA lines by the journal key, never a 1:1 G/L line) and the facet **Changes** (entity `PaymentChange`: reversal by DFKKKO-STBEL, stopped cheque, G/L reversal of the FIKEY's document, with the OLD -> NEW document link). The clearing-reset history of §4.2 (`TRACE_SRC_HISTORY`, DFKKRAPT candidate, XRAGL) is the same open item for both (V100, `USAA_Known_Tables.md` §4): until it is confirmed a reset / re-clearing is visible here only as the trace's REVERSAL_HISTORY_MISSING. Risk findings on reversed payments: `A_DOC_CHANGE` (`HCK_MORNING_REPORT.md` §7e).
 
 ## 9. VERIFY-SE11 / target QA list
 

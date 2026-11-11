@@ -3152,6 +3152,30 @@
      <MSGNR>840</MSGNR>
      <TEXT>No authorisation for company code &amp;1 (ZCA_OPS, area CD_HCK)</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>860</MSGNR>
+     <TEXT>Payment &amp;1 reversed by &amp;2 on &amp;3 after it left SAP (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>861</MSGNR>
+     <TEXT>Reversal &amp;1 of payment &amp;2: reconciliation key &amp;3 has no G/L transfer</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>862</MSGNR>
+     <TEXT>Bank line &amp;1 references payment &amp;2, reversed by &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>863</MSGNR>
+     <TEXT>Document changes: read capped at &amp;1 rows (window &amp;2 to &amp;3)</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

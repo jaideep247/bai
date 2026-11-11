@@ -504,3 +504,26 @@ The unit tests of the moved classes moved with them to `ops-framework/src` (stor
 | UI-01 ... UI-10 | OPA5 | `ui/tests/integration` | green after the apps are generated | no |
 | PT-01 ... PT-13 | manual / Tosca | `ui/tests/Payment_Trace_Test_Cases.md` | as listed | no (QA1) |
 | OVP-17 ... OVP-20, PM-01 ... PM-05 | QA1 | `Dashboard_Production_Support.md` §8h | as listed | no |
+
+## Ledger drill-down, group reconciliation, document changes (build C, 2026-11-11)
+
+| ID | Case | Expected |
+|---|---|---|
+| LDG-01 | Payment object page of a payment whose FIKEY holds three payments (30 / 50 / 40 USD on the payable account) | Ledger facet: one row per FIKEY x account x currency, payment amount 30, batch total 120, share 25 %, G/L total 120 = FAGLL03H of the transfer document; the journal lines are the batch's (consolidated), labelled so |
+| LDG-02 | FIKEY with USD and CAD records | Two rows, never one total; share per currency |
+| LDG-03 | FIKEY whose first G/L transfer document was reversed (FB08) and posted again | Reversed document listed with *Reversed*, left out of the G/L total; status TRANSFERRED with the new document |
+| LDG-04 | Closed FIKEY without G/L document older than the lag | Batch key level NOT_TRANSFERRED; the same key listed by `A_GL_TRANSFER` (GL_TRANSFER_GAP) - no second finding |
+| LDG-05 | Group reconciliation of an RCSET clearing account for one day | Journal transfer total = ACDOCA (ledger 0L, AWTYP FKKSU) on the account and day; other postings apart; subledger = DFKKSUMC of the day; batch key count opens the keys of the day |
+| LDG-06 | Same day after the morning report measured it | Stored legs, differences, tolerance and verdict equal the morning report (`ZI_CD_HckRecon`, findings); a posting after the run sets *Changed since measured* |
+| LDG-07 | Day with a RECON_TIMING finding | Result TIMING, bucket RECON_TIMING; the bucket names in the finding (exceptions app) |
+| LDG-08 | Bank line whose payment document was reversed after the line arrived | Reconciliation row: bucket reset / reversal amount and lines; bank line red *Clearing document reversed / reset since*; `A_DOC_CHANGE` REV_BANK_LINE (E) |
+| LDG-09 | Payment with status ISSUED reversed in FP08 | `A_DOC_CHANGE` REV_AFTER_LEFT_SAP (E, evidence ISSUED, company code, amount); exception owned with SLA |
+| LDG-10 | Reversed payment (and a stopped cheque) on the payment object page | Changes facet: REVERSAL with reversal document, date / time, user; VOID for the stopped cheque; OLD -> NEW document columns |
+| LDG-11 | User authorised for company code 1000 only | Every ledger entity (payment ledger, batch keys, items, journal lines, reconciliation, bank lines, changes, change volumes, cube) shows 1000 only |
+| LDG-12 | Journal lines of the busiest clearing account and day | First page < 2 s, paged; no full scan in PlanViz (LDG-PV4) |
+
+| ID | Kind | Where | Expected | Run |
+|---|---|---|---|---|
+| GEN-UT-C | Python | `tools/tests/test_payment_model.py` (15 tests incl. 7 of build C: ledger views, ledger parameter and reference type, payment facets, optional stored result / bank lines, model keys, `#else`, customer-neutral product layer) | green | **yes** (run 2026-11-11) |
+| CDS-C | ABAP Unit | `ZCL_CD_PAYM_CDS_TEST`: share_of_the_summary, currencies_kept_apart, reversed_doc_excluded, transfer_status_per_key, aggregated_per_account_day, old_and_new_linked | green | no (DV1) |
+| HCK-C | ABAP Unit | `ZCL_CD_HCK_C_DOCCHG` (8), `ZCL_CD_HCK_DOCCHG_DAO` (2) | green | no (DV1) |
