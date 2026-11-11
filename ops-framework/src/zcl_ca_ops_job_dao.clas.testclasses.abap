@@ -250,10 +250,16 @@ CLASS ltc_job_dao IMPLEMENTATION.
   " Rule: a job kept with a failure code is reported; a long-running row counts only for "any finding"
   METHOD reported_failure_codes.
     DATA lt_rows TYPE STANDARD TABLE OF zca_ops_job WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_job.
     TRY.
-        lt_rows = VALUE #( job_role = zif_ca_ops_job_types=>gc_role-failed
-                           ( jobname = 'ZT_ABORTED' jobcount = gc-count check_code = zif_ca_ops_job_types=>gc_code-aborted )
-                           ( jobname = 'ZT_LONG' jobcount = gc-count check_code = zif_ca_ops_job_types=>gc_code-long_running ) ).
+        ls_row-job_role   = zif_ca_ops_job_types=>gc_role-failed.
+        ls_row-jobname    = 'ZT_ABORTED'.
+        ls_row-jobcount   = gc-count.
+        ls_row-check_code = zif_ca_ops_job_types=>gc_code-aborted.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-jobname    = 'ZT_LONG'.
+        ls_row-check_code = zif_ca_ops_job_types=>gc_code-long_running.
+        INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_keys) = VALUE zif_ca_ops_job_types=>tt_job_key( ( jobname = 'ZT_ABORTED' jobcount = gc-count )
                                                                 ( jobname = 'ZT_LONG' jobcount = gc-count ) ).
@@ -269,10 +275,23 @@ CLASS ltc_job_dao IMPLEMENTATION.
   " Rule: active scheduler rows in sequence
   METHOD scheduler_rows_active.
     DATA lt_rows TYPE STANDARD TABLE OF zca_ops_jobsch WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_jobsch.
     TRY.
-        lt_rows = VALUE #( ( sched_folder = 'ZT_F' sched_job = 'ZT_B' sap_pattern = 'ZT_B.*' active = abap_true seq = 20 )
-                           ( sched_folder = 'ZT_F' sched_job = 'ZT_A' sap_pattern = 'ZT_A.*' active = abap_true seq = 10 )
-                           ( sched_folder = 'ZT_F' sched_job = 'ZT_C' sap_pattern = 'ZT_C.*' seq = 5 ) ).
+        ls_row-sched_folder = 'ZT_F'.
+        ls_row-sched_job    = 'ZT_B'.
+        ls_row-sap_pattern  = 'ZT_B.*'.
+        ls_row-active       = abap_true.
+        ls_row-seq          = 20.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-sched_job    = 'ZT_A'.
+        ls_row-sap_pattern  = 'ZT_A.*'.
+        ls_row-seq          = 10.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-sched_job    = 'ZT_C'.
+        ls_row-sap_pattern  = 'ZT_C.*'.
+        ls_row-active       = abap_false.
+        ls_row-seq          = 5.
+        INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_sched) = mo_cut->scheduler_jobs( ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_sched ) exp = 2 msg = 'Active rows' ).

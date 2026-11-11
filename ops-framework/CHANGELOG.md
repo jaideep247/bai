@@ -2,6 +2,29 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-11 (SAP job monitor)
+
+Goal: every job failure of the client on the board - also a child job that failed while the job an external scheduler
+started ended *finished* - tracked, linked to its parent and root and traceable to the most granular evidence.
+
+### Added
+- SAP job monitor (`docs/JOB_MONITORING.md`): registered checks `ZCL_CA_OPS_CHK_JOB_FAIL` (incremental after a
+  watermark with overlap and caps: `JOB_ABORTED`, `JOB_LOG_ERROR`, `JOB_CHILD_FAILED` when the root did not abort) and
+  `ZCL_CA_OPS_CHK_JOB_STATE` (`JOB_LONG_RUNNING`, `JOB_NOT_STARTED`); engine `ZCL_CA_OPS_JOB_MONITOR`, data access
+  `ZIF_CA_OPS_JOB_DAO` / `ZCL_CA_OPS_JOB_DAO` (TBTCO, TBTCP, BALHDR read only), job log seam `ZIF_CA_OPS_JOB_LOG` /
+  `ZCL_CA_OPS_JOB_LOG` (BP_JOBLOG_READ, TEST-SEAM) with budget `ZCL_CA_OPS_JOB_LOG_CACHE`, time points
+  `ZCL_CA_OPS_JOB_TIME`, types `ZIF_CA_OPS_JOB_TYPES`.
+- Parent / child resolvers `ZIF_CA_OPS_JOB_RESOLVER` with evidence quality (C confirmed, P probable): FIELD (TBTCO
+  fields checked by RTTI, off), EVENT (start after job), JOBLOG (announcing message, off), HEURISTIC (scheduling user
+  and run time, unique candidate only); recursive to `JOB_MAX_DEPTH`. Plug-ins for a consumer's business context
+  (`ZIF_CA_OPS_JOB_ENRICHER`) and for de-duplication with another monitor (`ZIF_CA_OPS_JOB_CLAIM`).
+- Evidence tables `ZCA_OPS_JOB`, `_JOBSTEP`, `_JOBMSG`, `_JOBALOG`, `_JOBBO`, watermark `ZCA_OPS_JOBWM`, external
+  scheduler mapping `ZCA_OPS_JOBSCH` (entity *Scheduler jobs* of `ZUI_CA_OPS_CFG`), purge target class
+  `ZCL_CA_OPS_JOB_PURGE` (`RETENTION_DAYS_JOB_EVIDENCE`).
+- Board `ZUI_CA_OPS_JOBS` (read only): `ZR_CA_OpsJobFailure` / `ZC_CA_OpsJobFailure` with facet views, DCL
+  `ZC_CA_OPSJOBFAILURE`, overview card counters; CDS tests `ZCL_CA_OPS_JOB_CDS_TEST`.
+- Parameters `JOB_*` (prefix `JOB_` read in area `CA_OPS`), messages 110-129, VERIFY V58-V66.
+
 ## [Unreleased] - 2026-11-10 (process onboarding)
 
 Goal (user, 2026-11-10): a new business process is added and integrated end to end - from Fiori to backend -

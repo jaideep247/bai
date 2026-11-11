@@ -105,6 +105,7 @@ texts <= 73 characters).
 | 127 | &1 is not a field of the job table or not a valid field name |
 | 128 | Root job &1 (&2) still active - its scheduler has not seen the failure |
 | 129 | Job evidence of area &1 / check &2 could not be saved |
+| 130 | SM37: job &1 count &2, system &3, server &4 |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

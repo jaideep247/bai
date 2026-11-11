@@ -113,6 +113,8 @@ INTERFACE zif_ca_ops_job_types
       config        TYPE zif_ca_ops_types=>ty_check_code VALUE 'JOB_CONFIG_INVALID',
       "! A resolver, enricher or claim plug-in raised: its links / objects are missing
       plugin_failed TYPE zif_ca_ops_types=>ty_check_code VALUE 'JOB_PLUGIN_FAILED',
+      "! A job log could not be read (BP_JOBLOG_READ): that job is not judged on its log
+      log_unreadable TYPE zif_ca_ops_types=>ty_check_code VALUE 'JOB_LOG_UNREADABLE',
     END OF gc_code.
 
   "! Parameters of the job monitor (area CA_OPS, prefix JOB_; docs/PARAMETERS.md)
@@ -233,6 +235,7 @@ INTERFACE zif_ca_ops_job_types
       field_unknown  TYPE zif_ca_ops_types=>ty_msgno VALUE '127',
       root_active    TYPE zif_ca_ops_types=>ty_msgno VALUE '128',
       save_failed    TYPE zif_ca_ops_types=>ty_msgno VALUE '129',
+      ctx_link       TYPE zif_ca_ops_types=>ty_msgno VALUE '130',
     END OF gc_msg.
 
   "! Identity of a job (TBTCO key)
@@ -324,7 +327,7 @@ INTERFACE zif_ca_ops_job_types
     END OF ty_link.
   TYPES tt_link TYPE STANDARD TABLE OF ty_link WITH EMPTY KEY.
 
-  "! A business object a consumer's enricher links to a job (payment run, mass activity run, ...)
+  "! A business object a consumer's enricher links to a job (a business run, a parallel processing run, ...)
   TYPES:
     BEGIN OF ty_bus_object,
       jobname     TYPE btcjob,

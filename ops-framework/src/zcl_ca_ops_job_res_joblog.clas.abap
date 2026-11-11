@@ -15,7 +15,7 @@
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - job resolver JOBLOG</p>
 "! VERIFY-SE91 V62: message class / number of the job log line that names a released child (e.g. of
-"! the mass activity scheduler) and its text layout; delivered off (blank parameters).
+"! a parallel processing scheduler) and its text layout; delivered off (blank parameters).
 CLASS zcl_ca_ops_job_res_joblog DEFINITION
   PUBLIC
   FINAL
@@ -138,7 +138,7 @@ CLASS zcl_ca_ops_job_res_joblog IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       CLEAR: lv_name, lv_count.
-      FIND FIRST OCCURRENCE OF PCRE mv_pcre IN <ls_line>-text SUBMATCHES lv_name lv_count IGNORING CASE.
+      FIND FIRST OCCURRENCE OF PCRE mv_pcre IN <ls_line>-text IGNORING CASE SUBMATCHES lv_name lv_count.
       IF sy-subrc <> 0 OR lv_name IS INITIAL OR lv_count IS INITIAL.
         CONTINUE.
       ENDIF.

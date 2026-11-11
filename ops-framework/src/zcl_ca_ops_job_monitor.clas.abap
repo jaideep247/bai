@@ -18,7 +18,8 @@
 *& towards SAP; the evidence is written without commit in the runner's
 *& LUW and never in test mode.
 *& Modification log:
-*& 2026-11-11 | Initial version (SAP job monitor).
+*& 2026-11-11 | Initial version (SAP job monitor). An unreadable job log is its own finding
+*&            | JOB_LOG_UNREADABLE (message 123 of the reader); context line SM37 link (130).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - SAP job monitor engine</p>
 "! FAILURES is incremental: a run sees only the jobs of its window, so its result is always partial
@@ -635,8 +636,13 @@ CLASS zcl_ca_ops_job_monitor IMPLEMENTATION.
         DATA(lt_lines) = mo_cache->zif_ca_ops_job_log~read( iv_jobname  = is_job-jobname
                                                             iv_jobcount = is_job-jobcount ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
-        plugin_failed( iv_plugin = object_key( iv_jobname = is_job-jobname iv_jobcount = is_job-jobcount )
-                       ix_error  = lx_error ).
+        " its own cause (123 of the reader), never the generic plug-in message
+        own_finding( iv_code = zif_ca_ops_job_types=>gc_code-log_unreadable
+                     iv_key  = object_key( iv_jobname = is_job-jobname iv_jobcount = is_job-jobcount )
+                     iv_text = lx_error->get_text( ) ).
+        ASSIGN mt_own[ lines( mt_own ) ] TO FIELD-SYMBOL(<ls_own>).
+        <ls_own>-details     = zcl_ca_ops_util=>exception_trace( lx_error ).
+        <ls_own>-error_class = zcl_ca_ops_util=>error_class( lx_error ).
         RETURN.
     ENDTRY.
     LOOP AT lt_lines ASSIGNING FIELD-SYMBOL(<ls_line>) WHERE msgtype IN ms_config-log_error_types.
@@ -1106,6 +1112,12 @@ CLASS zcl_ca_ops_job_monitor IMPLEMENTATION.
                                     iv_v3    = COND zif_ca_ops_job_types=>ty_status( WHEN sy-subrc = 0 THEN <ls_root>-status )
                                     iv_v4    = is_root-depth ) INTO TABLE lt_lines.
     ENDIF.
+    " one-click evidence: SM37 job name / count, system and server of the run
+    INSERT zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_job_types=>gc_msg-ctx_link
+                                  iv_v1    = is_job-jobname
+                                  iv_v2    = is_job-jobcount
+                                  iv_v3    = sy-sysid
+                                  iv_v4    = is_job-reaxserver ) INTO TABLE lt_lines.
     DATA(ls_sched) = scheduler_of( is_root-root-jobname ).
     IF ls_sched-sched_job IS NOT INITIAL.
       INSERT zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_job_types=>gc_msg-ctx_sched

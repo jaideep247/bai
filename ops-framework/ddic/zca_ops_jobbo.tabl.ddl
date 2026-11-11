@@ -8,7 +8,7 @@ define table zca_ops_jobbo {
   key jobname   : btcjob not null;
   key jobcount  : btcjobcnt not null;
   key object_no : abap.int4 not null;
-  // Enricher (ZIF_CA_OPS_JOB_ENRICHER) that linked the object, its type and key (e.g. payment run)
+  // Enricher (ZIF_CA_OPS_JOB_ENRICHER) that linked the object, its type and key (e.g. a business run)
   enricher      : seoclsname;
   object_type   : abap.char(20);
   object_key    : abap.char(70);

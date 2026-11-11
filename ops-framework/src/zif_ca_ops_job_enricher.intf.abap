@@ -4,11 +4,11 @@
 *& Plug-in contract of an enricher of the SAP job monitor (parameter
 *& JOB_ENRICHERS: classes in order, checked by RTTI before creation): the
 *& consumer's business context of failed jobs and their ancestors -
-*& business objects such as a payment run or a mass activity run, with a
+*& business objects such as a business run or a parallel processing run, with a
 *& label (a message of the consumer's class), a company code, a count and
 *& the evidence quality (C confirmed by key, P probable). Set-based: one
 *& call per run. An enricher sees the objects of the enrichers before it
-*& (e.g. a payment run found from a mass activity run). Read only.
+*& (e.g. a business run found from a parallel processing run). Read only.
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor).
 *&---------------------------------------------------------------------*

@@ -10,7 +10,8 @@
 *& _JOBSTEP, _JOBMSG, _JOBALOG, _JOBBO (insert or replace by key),
 *& watermark ZCA_OPS_JOBWM, external scheduler mapping ZCA_OPS_JOBSCH. No commit.
 *& Modification log:
-*& 2026-11-11 | Initial version (SAP job monitor).
+*& 2026-11-11 | Initial version (SAP job monitor). Dynamic field names: PCRE and
+*&            | CL_ABAP_DYN_PRG=>CHECK_COLUMN_NAME before any dynamic SQL.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - SAP job monitor data access</p>
 "! VERIFY-SE11 V58 / V59: fields of TBTCO, TBTCP, BALHDR on 7.58 and the indexes the windows use
@@ -461,10 +462,20 @@ CLASS zcl_ca_ops_job_dao IMPLEMENTATION.
 
 
   METHOD check_field.
-    IF NOT matches( val = condense( CONV string( iv_field ) ) pcre = gc_field_pcre ).
+    DATA(lv_field) = condense( CONV string( iv_field ) ).
+    IF NOT matches( val = lv_field pcre = gc_field_pcre ).
       RAISE EXCEPTION TYPE zcx_ca_ops_error
         MESSAGE e127(zca_ops) WITH iv_field.
     ENDIF.
+    " second gate before dynamic SQL: a valid column name for the database interface
+    TRY.
+        cl_abap_dyn_prg=>check_column_name( val = lv_field strict = abap_true ).
+      CATCH cx_abap_invalid_name INTO DATA(lx_error).
+        RAISE EXCEPTION TYPE zcx_ca_ops_error
+          MESSAGE e127(zca_ops) WITH iv_field
+          EXPORTING
+            previous = lx_error.
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

@@ -9,7 +9,7 @@
 *& by a key (a field, an event parameter, a job log line naming the job),
 *& P probable (heuristic, name pattern, time window). Delivered: FIELD,
 *& EVENT, JOBLOG, HEURISTIC (framework); a consumer adds its own (e.g. the
-*& worker jobs of a mass activity run). Read only; a resolver that cannot
+*& worker jobs of a parallel processing run). Read only; a resolver that cannot
 *& work (parameter blank, field not in the DDIC) returns nothing.
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor).

@@ -50,14 +50,43 @@ CLASS ltc_job_purge IMPLEMENTATION.
     DATA lt_applogs TYPE STANDARD TABLE OF zca_ops_jobalog WITH EMPTY KEY.
     DATA lt_objects TYPE STANDARD TABLE OF zca_ops_jobbo WITH EMPTY KEY.
     DATA lt_marks TYPE STANDARD TABLE OF zca_ops_jobwm WITH EMPTY KEY.
+    DATA ls_job TYPE zca_ops_job.
+    DATA ls_step TYPE zca_ops_jobstep.
+    DATA ls_line TYPE zca_ops_jobmsg.
+    DATA ls_applog TYPE zca_ops_jobalog.
+    DATA ls_object TYPE zca_ops_jobbo.
+    DATA ls_mark TYPE zca_ops_jobwm.
     go_env->clear_doubles( ).
-    lt_jobs = VALUE #( jobcount = gc-count ( jobname = 'ZT_OLD' detected_at = gc-old )
-                                           ( jobname = 'ZT_NEW' detected_at = gc-new ) ).
-    lt_steps = VALUE #( jobcount = gc-count stepcount = 1 ( jobname = 'ZT_OLD' ) ( jobname = 'ZT_NEW' ) ).
-    lt_lines = VALUE #( jobcount = gc-count line_no = 1 ( jobname = 'ZT_OLD' ) ).
-    lt_applogs = VALUE #( jobcount = gc-count lognumber = 'ZT00000001' ( jobname = 'ZT_OLD' ) ).
-    lt_objects = VALUE #( jobcount = gc-count object_no = 1 ( jobname = 'ZT_OLD' ) ).
-    lt_marks = VALUE #( ( area = 'ZT_OPS_A' check_id = 'ZT_JOB_FAIL' wm_date = '20260101' ) ).
+    " field by field (type resolution in the OSQL environment)
+    ls_job-jobcount    = gc-count.
+    ls_job-jobname     = 'ZT_OLD'.
+    ls_job-detected_at = gc-old.
+    INSERT ls_job INTO TABLE lt_jobs.
+    ls_job-jobname     = 'ZT_NEW'.
+    ls_job-detected_at = gc-new.
+    INSERT ls_job INTO TABLE lt_jobs.
+    ls_step-jobcount  = gc-count.
+    ls_step-stepcount = 1.
+    ls_step-jobname   = 'ZT_OLD'.
+    INSERT ls_step INTO TABLE lt_steps.
+    ls_step-jobname   = 'ZT_NEW'.
+    INSERT ls_step INTO TABLE lt_steps.
+    ls_line-jobcount = gc-count.
+    ls_line-line_no  = 1.
+    ls_line-jobname  = 'ZT_OLD'.
+    INSERT ls_line INTO TABLE lt_lines.
+    ls_applog-jobcount  = gc-count.
+    ls_applog-lognumber = 'ZT00000001'.
+    ls_applog-jobname   = 'ZT_OLD'.
+    INSERT ls_applog INTO TABLE lt_applogs.
+    ls_object-jobcount  = gc-count.
+    ls_object-object_no = 1.
+    ls_object-jobname   = 'ZT_OLD'.
+    INSERT ls_object INTO TABLE lt_objects.
+    ls_mark-area     = 'ZT_OPS_A'.
+    ls_mark-check_id = 'ZT_JOB_FAIL'.
+    ls_mark-wm_date  = '20260101'.
+    INSERT ls_mark INTO TABLE lt_marks.
     go_env->insert_test_data( lt_jobs ).
     go_env->insert_test_data( lt_steps ).
     go_env->insert_test_data( lt_lines ).
