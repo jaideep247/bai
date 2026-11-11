@@ -31,6 +31,18 @@ Rules of the product: read-only; amounts always with their currency (currency is
 
 New sources / feeder systems later: a row in `ZCA_OPS_FEEDER` and texts in `ZCA_OPS_PMDIM` - no code. A new feeder with its own request table: a new linkage in the spec (join or helper view) and regenerate.
 
+### 2a. Joins from the link registry (2026-11-11)
+
+A join of a section may name a link of the link registry instead of CDS text (`docs/LINK_REGISTRY.md` §6.2):
+`{"link": "<link ID>", "join": "inner join" | "left outer join", "alias": "<target alias>", "from_alias": "<source
+alias>"}`, with the model key `links` (the customer's overlay layer specs, relative to its folder - the product layers
+are always loaded) and, optionally, the section key `join_layout` {`source`, `alias`, `left`} (column widths of the
+rendered text). The generator renders the ON condition of the effective link: a replacement of an active customer
+layer wins, so a customer that replaces a standard link changes every generated join that names it by regenerating;
+a pending link (a field still a placeholder) stops the generator. The link's evidence and status are visible in the
+customer's `docs/links/lineage.md`; `docs/links/impact.md` lists the sections that read a field. A join over two
+source objects at once stays CDS text.
+
 ## 3. Worked example - a fictitious second customer
 
 Customer "example insurer", prefix `XX`, area `ZXX_OPS`. Payments in `ZXX_PAYMENT` (one row per payment), requests from two feeder systems - a claims system (`CLM`) and a billing system (`BIL`) - in `ZXX_REQUEST`, link in `ZXX_PAY_REQ`. The unit test `tools/tests/test_payment_model.py` uses exactly this shape.
