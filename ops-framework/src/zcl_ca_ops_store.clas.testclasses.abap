@@ -30,6 +30,8 @@
 *& 2026-11-10 | Company-code isolation: the company code of a finding is stored (BUKRS); an earlier exception
 *&            | of another company code with the same object, key and check is neither inherited nor
 *&            | superseded (company code = part of the exception's identity).
+*& 2026-11-11 | planned_downtime_is_marked, correlated_parent_and_child, carry_keeps_correlation (operations
+*&            | response features); ZCA_OPS_CORR and ZCA_OPS_DTWIN doubled (empty: the earlier tests unchanged).
 *&---------------------------------------------------------------------*
 "! Clock double. A user of the exceptions app can act "during" a run: from the hook_from-th to the
 "! hook_to-th call of NOW (the store asks for the write stamp right after its read) the exception
@@ -144,6 +146,9 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS stores_system_and_error_cls  FOR TESTING.
     METHODS stores_company_code          FOR TESTING.
     METHODS carry_other_company_separate FOR TESTING.
+    METHODS planned_downtime_is_marked   FOR TESTING.
+    METHODS correlated_parent_and_child  FOR TESTING.
+    METHODS carry_keeps_correlation      FOR TESTING.
     DATA mo_clock TYPE REF TO ltd_clock.
     "! Fix 5: an earlier exception row with explicit type, owner and creation time (test data)
     METHODS prior_row
@@ -171,7 +176,7 @@ CLASS ltc_store IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCA_OPS_RUN' ) ( 'ZCA_OPS_FINDING' ) ) ).
+      i_dependency_list = VALUE #( ( 'ZCA_OPS_RUN' ) ( 'ZCA_OPS_FINDING' ) ( 'ZCA_OPS_CORR' ) ( 'ZCA_OPS_DTWIN' ) ) ).
   ENDMETHOD.
 
 
@@ -328,6 +333,90 @@ CLASS ltc_store IMPLEMENTATION.
                                             exp = lc_bukrs msg = 'Company code stored on the finding' ).
         cl_abap_unit_assert=>assert_initial( act = read_row( iv_run_id = ls_run-run_id iv_finding_no = 2 )-bukrs
                                              msg = 'Area-level finding keeps a blank company code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (planned downtime): a finding recorded inside an approved window of its area carries the window's ID;
+  " it is recorded as usual (open exception)
+  METHOD planned_downtime_is_marked.
+    CONSTANTS lc_window TYPE zif_ca_ops_resp_types=>ty_uuid VALUE '000000000000000000000000000000DD'.
+    DATA lt_windows TYPE STANDARD TABLE OF zca_ops_dtwin WITH EMPTY KEY.
+    DATA ls_window TYPE zca_ops_dtwin.
+    TRY.
+        ls_window-window_id   = lc_window.
+        ls_window-area        = zcl_ca_ops_param_seed=>gc_test_area-first.
+        ls_window-from_utc    = '20261105070000.0000000'.
+        ls_window-to_utc      = '20261105090000.0000000'.
+        ls_window-approved_by = 'ZT_APPROVER'.
+        INSERT ls_window INTO TABLE lt_windows.
+        go_env->insert_test_data( lt_windows ).
+        DATA(ls_run) = save_again( ).
+        SELECT SINGLE downtime_id, disposition FROM zca_ops_finding
+          WHERE run_id = @ls_run-run_id AND finding_no = 1
+          INTO @DATA(ls_row).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-downtime_id exp = lc_window msg = 'Marked with the window' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-disposition exp = zif_ca_ops_types=>gc_disposition-open
+                                            msg = 'Recorded as an open exception all the same' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (correlation): two new exceptions of one correlation key - the first is the parent, the second its
+  " child in the same group
+  METHOD correlated_parent_and_child.
+    DATA lt_rules TYPE STANDARD TABLE OF zca_ops_corr WITH EMPTY KEY.
+    DATA ls_rule TYPE zca_ops_corr.
+    TRY.
+        ls_rule-area       = zcl_ca_ops_param_seed=>gc_test_area-first.
+        ls_rule-corr_rule  = 'ZT_TYPE'.
+        ls_rule-key_fields = 'OBJECT_TYPE'.
+        ls_rule-window_min = 60.
+        ls_rule-active     = abap_true.
+        INSERT ls_rule INTO TABLE lt_rules.
+        go_env->insert_test_data( lt_rules ).
+        DATA(ls_run) = mo_cut->start_run( iv_area = zcl_ca_ops_param_seed=>gc_test_area-first ).
+        DATA(ls_second) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_second-object_key = gc_cf-other_key.
+        mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_ca_ops_types=>gc_severity-error ) )
+                                                                ( ls_second ) )
+                               CHANGING  cs_run      = ls_run ).
+        SELECT finding_no, corr_id, corr_role FROM zca_ops_finding
+          WHERE run_id = @ls_run-run_id
+          ORDER BY finding_no
+          INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-corr_role exp = zif_ca_ops_resp_types=>gc_corr_role-parent
+                                            msg = 'The first is the parent' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-corr_role exp = zif_ca_ops_resp_types=>gc_corr_role-child
+                                            msg = 'The second is its child' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-corr_id exp = lt_rows[ 1 ]-corr_id msg = 'One group' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (correlation): the carry-forward keeps an exception in its group and role - the parent's row changes
+  " at every run, the correlation ID does not
+  METHOD carry_keeps_correlation.
+    CONSTANTS lc_group TYPE zif_ca_ops_resp_types=>ty_uuid VALUE '000000000000000000000000000000CC'.
+    TRY.
+        prior_exception( iv_object_key = gc_cf-key iv_disposition = zif_ca_ops_types=>gc_disposition-open ).
+        UPDATE zca_ops_finding
+          SET corr_id   = @lc_group,
+              corr_role = @zif_ca_ops_resp_types=>gc_corr_role-parent
+          WHERE run_id = @gc_cf-prior_run AND finding_no = 1.
+        DATA(ls_run) = save_again( ).
+        SELECT SINGLE corr_id, corr_role FROM zca_ops_finding
+          WHERE run_id = @ls_run-run_id AND finding_no = 1
+          INTO @DATA(ls_row).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-corr_id exp = lc_group msg = 'Same group' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-corr_role exp = zif_ca_ops_resp_types=>gc_corr_role-parent
+                                            msg = 'Still the parent' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -863,7 +952,7 @@ CLASS ltc_store_runs IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCA_OPS_RUN' ) ( 'ZCA_OPS_FINDING' ) ) ).
+      i_dependency_list = VALUE #( ( 'ZCA_OPS_RUN' ) ( 'ZCA_OPS_FINDING' ) ( 'ZCA_OPS_CORR' ) ( 'ZCA_OPS_DTWIN' ) ) ).
   ENDMETHOD.
 
 

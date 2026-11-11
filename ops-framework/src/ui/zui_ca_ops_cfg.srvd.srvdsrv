@@ -14,4 +14,7 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_ApprovedTable as ApprovedTable;
   expose ZC_CA_PaymDimText as PaymDimText;
   expose ZC_CA_PaymFeeder as PaymFeeder;
+  expose ZC_CA_SchedulerJob as SchedulerJob;
+  expose ZC_CA_RunbookLink as RunbookLink;
+  expose ZC_CA_CorrelationRule as CorrelationRule;
 }

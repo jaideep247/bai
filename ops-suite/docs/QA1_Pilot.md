@@ -135,6 +135,28 @@ Hold the FMON monitor job for more than 15 minutes (or the morning report beyond
 
 The two-user test CC-01 ... CC-24 of `Test_and_Validation_Document.md` §6.16 with `<pilot company code>` / `<second company code>` on the pilot data. Acceptance: all six criteria of §6.16.
 
+### S7 SAP job failures - parent finished, child aborted (area CD_JOBS, 2026-11-11)
+
+| Item | Content |
+|---|---|
+| Covered by | the framework's SAP job monitor (`ops-framework/docs/JOB_MONITORING.md`) for area `CD_JOBS`: checks `JOB_FAILURES` (`ZCL_CA_OPS_CHK_JOB_FAIL`) and `JOB_STATES` (`ZCL_CA_OPS_CHK_JOB_STATE`), job `ZCA_OPS_CHECK_RUN` (`CD_JOBS`, `FAST`, every 5 minutes); control `SAP_JOB_FAILURES`; rule `JOB_FAIL`; board `ZUI_CA_OPS_JOBS`; overview cards *Job failures today* |
+| Steps | Cases below, each with a test job of the job owner in QA1 (never a production schedule); the provoking step is done by the batch team, the suite only reads. Wait for the next FAST run (≤ 5 minutes) after each case. |
+| Expected SAP evidence | `ZCA_OPS_FINDING` area `CD_JOBS`, object key job name / job count, check code as below; `ZCA_OPS_JOB` row role F with root, parent, resolver and quality, steps, error lines (`ZCA_OPS_JOBMSG`), application logs (`ZCA_OPS_JOBALOG`); board row and object page; one e-mail of rule `JOB_FAIL` per run for E |
+| Acceptance | every case reported once (also after the overlap of the next run); the parent / Control-M job named on the finding; nothing written in a SAP job table (SM37 unchanged - no release, cancel, restart); evidence still shown after the test jobs are deleted with SM36 / RSBTCDEL2 |
+
+| Case | Provoke | Expected |
+|---|---|---|
+| JOB-QA-01 **parent finished, child aborted** | A test scheduler job (program that releases a second job with `JOB_OPEN` / `JOB_CLOSE`, or a test mass activity run of `RFKK_MA_SCHEDULER` with a worker that dumps) ends *finished*, its child is cancelled | `JOB_CHILD_FAILED` (E) on the child, reference = the parent (root); resolver HEURISTIC (P) - or MASSACT / JOBLOG once V67 / V62 are confirmed; parent row role A with failed descendants 1; Control-M job on the board when the parent's name matches a row of `ZCA_OPS_JOBSCH`; card *child failed while the parent finished* = 1 |
+| JOB-QA-02 start after job | Job B scheduled *after job A*; A finishes, B cancels | `JOB_CHILD_FAILED` on B with resolver EVENT (C) - confirms V61 |
+| JOB-QA-03 cancelled job, no parent | A standalone test job cancels | `JOB_ABORTED` (E) |
+| JOB-QA-04 finished with errors | A test job of a watched program (`JOB_LOG_PROGRAMS`) writes an E message into its job log and finishes | `JOB_LOG_ERROR` (W), the line on the board |
+| JOB-QA-05 long-running | A test job waits (e.g. `WAIT UP TO`) beyond `JOB_LONG_RUNNING_MIN` (lowered in QA1) | `JOB_LONG_RUNNING` (W); resolved by the first run after the job ended |
+| JOB-QA-06 not started | A released test job on a server group without free batch work process (or target server stopped) past `JOB_NOT_STARTED_MIN` | `JOB_NOT_STARTED` (W); resolved once it started |
+| JOB-QA-07 no double alert | (a) a cycle step job of `ZCD_JOB_STEP` (pilot cycle) cancels; (b) any other `ZCD_` test job cancels; then run the morning report | (a) `CD_JOBS`: information *failure reported by HCK cycle/step*, no e-mail; HCK: `STEP_FAILED` once. (b) `CD_JOBS`: `JOB_ABORTED` with e-mail; HCK `E_JOBS`: neither `JOB_CANCELLED` nor counted |
+| JOB-QA-08 overlap and outage | Stop job `ZCA_OPS_CHECK_RUN` for 30 minutes, cancel two test jobs meanwhile, restart | both reported by the first run after the restart (watermark), none twice; area dashboard `CD_JOBS` stale during the stop |
+| JOB-QA-09 peak volume | Peak day in QA1 (volume test of 2 million payments) | runtime of one FAST run < 60 s; `JOB_READ_CAPPED` at most for single runs; ST05 of the TBTCO reads (V58) |
+| JOB-QA-10 company-code isolation | With the payment run enricher active (after V68): a failed FPY1 job of `<pilot company code>` | the job carries the company code; user of `<second company code>` does not see it on the board (DCL), area-level failures visible to both |
+
 ### Scenario coverage
 
 | Scenario | Covered by (existing) | Built in this change | Still open |
@@ -145,6 +167,7 @@ The two-user test CC-01 ... CC-24 of `Test_and_Validation_Document.md` §6.16 wi
 | S4 file without confirmed forwarding | `F_PRISM`, `F_PRISMRCV`, `F_PRISMDLV`, `F_PRFILE`, `FMON_SLA` | - | SLA minutes of `<disbursement flow>` confirmed with PRISM |
 | S5 stale monitor | as-of / stale flags, freshness card, `HCK_SELF` | - | - |
 | S6 isolation | DCL rule, slices, write checks | company-code isolation (Part A of this change) | - |
+| S7 SAP job failures (parent finished, child aborted) | job cycle checks, `E_JOBS` (named jobs, morning only) | SAP job monitor of the framework, area `CD_JOBS`, claim of the job cycles, `E_JOBS` de-duplication (2026-11-11) | V58-V69 (TBTCO indexes, event layout, mass activity naming, Control-M export) |
 
 ## 6. Evidence map — the 13 controls of the mockup minus IDoc (12 controls)
 
@@ -186,3 +209,4 @@ The two-user test CC-01 ... CC-24 of `Test_and_Validation_Document.md` §6.16 wi
 
 - **V45 (QA1):** `B_CYCLE_TODAY` / `_PRIOR` with PARAM2 `(?!CLEARING).*` (negative look-ahead in the PCRE list of `ZCL_CD_HCK_PARAM=>PATTERNS`, complete value) still report every other cycle and no longer the clearing step; `B_CLEAR_TODAY` / `_PRIOR` report it once (S1).
 - Framework V26-V43 and suite V44 as listed in §7 step 2.
+- **V58-V69 (SAP job monitor, 2026-11-11):** framework `ops-framework/docs/VERIFY.md` V58-V66; suite V67-V69 (`docs/Release_Readiness.md`) - closed with the cases JOB-QA-01 ... JOB-QA-10 of S7.

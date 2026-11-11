@@ -13,6 +13,7 @@
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | injected_check_dao_returned, real_check_dao_created (check registry, process onboarding).
+*& 2026-11-11 | injected_downtime_returned, real_downtime_created (planned downtime API).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -55,6 +56,15 @@ CLASS ltd_check_dao IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS ltd_downtime DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_downtime PARTIALLY IMPLEMENTED.
+ENDCLASS.
+
+CLASS ltd_downtime IMPLEMENTATION.
+ENDCLASS.
+
+
 CLASS ltc_factory DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -71,6 +81,8 @@ CLASS ltc_factory DEFINITION FINAL FOR TESTING
     METHODS injected_auth_is_returned    FOR TESTING.
     METHODS injected_check_dao_returned  FOR TESTING.
     METHODS real_check_dao_created       FOR TESTING.
+    METHODS injected_downtime_returned   FOR TESTING.
+    METHODS real_downtime_created        FOR TESTING.
     METHODS unrelated_class_not_created  FOR TESTING.
     METHODS matching_interface_creates   FOR TESTING.
     METHODS unknown_interface_refused    FOR TESTING.
@@ -181,6 +193,24 @@ CLASS ltc_factory IMPLEMENTATION.
     zcl_ca_ops_injector=>reset( ).
     cl_abap_unit_assert=>assert_true( act = xsdbool( zcl_ca_ops_factory=>get_check_dao( ) IS INSTANCE OF zcl_ca_ops_check_dao )
                                       msg = 'The real check registry data access after the reset' ).
+  ENDMETHOD.
+
+
+  " The planned downtime API is injectable: the double is returned while injected
+  METHOD injected_downtime_returned.
+    DATA(lo_double) = NEW ltd_downtime( ).
+    zcl_ca_ops_injector=>inject_downtime( lo_double ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_ca_ops_factory=>get_downtime( ) exp = lo_double
+                                        msg = 'Injected downtime double must be returned' ).
+  ENDMETHOD.
+
+
+  " Without a double the real downtime API is returned (and the reset removes the double)
+  METHOD real_downtime_created.
+    zcl_ca_ops_injector=>inject_downtime( NEW ltd_downtime( ) ).
+    zcl_ca_ops_injector=>reset( ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( zcl_ca_ops_factory=>get_downtime( ) IS INSTANCE OF zcl_ca_ops_downtime )
+                                      msg = 'The real downtime API after the reset' ).
   ENDMETHOD.
 
 

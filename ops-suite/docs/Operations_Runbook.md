@@ -16,6 +16,7 @@ Launchpad space **Production Support** → page *Overview* → *Production suppo
 5. **EBS card** (failed / blocked lines, lines not evaluated, POSTING_INCOMPLETE, latest problems) → EBS validation dashboard: statement → lines → findings / returns and NOCs; POSTING_INCOMPLETE → §5c.
 6. **Transactions card** (funnel posted → paid → settled, returned, open) and *errored / stuck* list → transactions dashboard → transaction → payment runs / returns and NOC lot items → payment trace (§4a) with the FIN (or clearing document). Returns are reported by DFKKRP reason, NOCs by DFKKNRP reason.
 7. **Hand off** per area as in §4a / §4b: area, as of, object keys, check code, owner. The page and the dashboards change nothing — recovery stays with the owning team under its runbook.
+8. **Shift handover (2026-11-11).** Card / app *Shift handover* (`ZUI_CA_OPS_HOVR_O4`): per team, area and company code since the start of the previous shift - new, resolved, still open, escalated exceptions, controls awaiting sign-off, planned downtime active now or starting in the next shift. Read it at the start of the shift; *Needs attention* rows first. Free-text notes stay in the team's channel (decision: no note table in SAP, `ops-framework/docs/OPERATIONS_FEATURES.md` §6). Each exception carries its **runbook link and first action** (column / facet *Runbook* of the exceptions app, and in the alert e-mail) once the site's page is entered (`config/runbook_links.csv`).
 
 **QA1 pilot (2026-11-10).** During the pilot the routine above is run as `QA1_Pilot.md` §4 (who, when, what is recorded) and the scenarios S1-S6 are provoked by the owning teams under their own procedures; the suite only reads, reports, routes and records sign-off.
 
@@ -424,6 +425,77 @@ The grace of the bank-evidence case starts at the end of the statement line's po
 
 **Test mode.** `ZCD_OPS_PAY_SNAPSHOT` with *test mode* judges and counts (ALV: documents, evaluated, rows that would be written per source) and writes nothing - no row, no watermark. **Housekeeping (2026-11-08):** `ZCA_OPS_RETENTION` (target PAY_OUTCOME, `RETENTION_DAYS_PAY_OUTCOME` = **90** days, never below 30) deletes the exception history closed before the cutoff (closed rows and the closing version of a finished exception). A current (open) row is never deleted, however old - `A_INFLIGHT` and `A_PRQ_NOT_PAID` count from it. Clean payments need no purge: the snapshot deletes their row when they finish.
 
+
+## 5q. SAP job failure — a job failed in SAP, also when Control-M saw "finished" (area CD_JOBS, 2026-11-11)
+
+> **First principle:** Control-M sees only the job it started; every SAP job of the client is watched in SAP, and a failed child is reported against the job Control-M saw.
+> **Analogy:** a foreman signs off the shift (the parent job ends "finished") while one of his workers had an accident - the site log (job monitor) records the accident, names the foreman, and the safety officer (operator) follows it up.
+
+**What raises it.** Job `ZCA_OPS_CHECK_RUN` (`P_AREA` = `CD_JOBS`, `P_GROUP` = `FAST`, every 5 minutes) runs the framework's SAP job monitor (`ops-framework/docs/JOB_MONITORING.md`) for **every** job of the client (noise excluded by `JOB_EXCLUDE_PCRE`): `JOB_FAILURES` reads the jobs that ended since the last window, `JOB_STATES` the active and waiting jobs. Board: **SAP job failures** (`ZUI_CA_OPS_JOBS`, tile on the *Overview* page; KPI card *Job failures today* on the overview page). Exceptions: `ZUI_CA_OPS_EXC`, area `CD_JOBS`. Alert: rule `JOB_FAIL` (E) to the batch support list `ZCD_BATCHSUP` (proposed name - confirm).
+
+| Check code | Severity | Meaning | What to do (read only in SAP - restarts stay with Control-M) |
+|---|---|---|---|
+| `JOB_CHILD_FAILED` | E | A child / descendant job failed (cancelled, or error lines in its job log) while its **root** - the job Control-M started - finished or still runs. **Control-M shows green.** | Open the job on the board: *Parent, root and scheduler job* shows the Control-M job and the SAP root; *Job log errors* and *Application logs* show why; *Business objects* the mass activity / payment run (when the enrichers are active). Tell the job owner; decide with the owner of the Control-M job whether the **Control-M job** must be rerun (for a mass activity: the run is restarted from FPY1 / the mass activity transaction by its owner, never from the board). Assign the exception to the owner. |
+| `JOB_ABORTED` | E | A job was cancelled (TBTCO status A) and no ancestor that finished was linked - Control-M (or SM37) saw the cancellation of the job it started, or the job runs on its own. | SM37 job log (also on the board until the reorganisation), short dump (ST22) at the end time, the step's program and variant. Rerun from Control-M per its runbook entry. |
+| `JOB_LOG_ERROR` | W | A job of a watched program (`JOB_LOG_PROGRAMS`: `RFKK_MA_SCHEDULER`, `ZICD_CALL_SM69_COMMAND_NEW`) finished with error / abort lines in its job log. | Read the lines on the board; for `ZICD_CALL_SM69_COMMAND_NEW` the OS command's return; for a mass activity the failed intervals in the mass activity's own log. |
+| `JOB_LONG_RUNNING` | W | Active longer than `JOB_LONG_RUNNING_MIN` (240) minutes - long-running or orphaned (work process gone). | SM50 / SM66 for the work process; SM37 *check status* is a Basis action (never from the suite). Resolved by the next run once the job ended. |
+| `JOB_NOT_STARTED` | W | Released (S) or ready (Y) `JOB_NOT_STARTED_MIN` (30) minutes after its planned start - no free batch work process, target server down, or held. | SM37 target server, SM50 batch work processes; Basis. Resolved by the next run once it started. |
+| `JOB_READ_CAPPED` | W (notify) | A read reached its cap (`JOB_MAX_JOBS`, `JOB_MAX_LOG_READS`) - the next run continues where this one stopped (watermark). | Expected on the two peak days a month for a few runs; if it repeats for an hour, raise the cap after a QA1 runtime check. |
+| `JOB_LOG_UNREADABLE` | W | The job log of a job could not be read (deleted, or the job user lacks `S_BTCH_JOB` PROT). | Check the job user's role (`config/auth_zcd_ops.md` §3); the job is not judged on its log. |
+| `JOB_CONFIG_INVALID`, `JOB_PLUGIN_FAILED` | W | A pattern / field / class of the job monitor cannot be used; a resolver, enricher or claim raised (its links / objects are missing, the failures are still reported). | Configuration owner: correct the parameter (`ZUI_CA_PARAM_O4`) or the scheduler row (`ZUI_CA_OPS_CFG`) by transport. |
+| Information finding *failure reported by HCK …* | I | A step of a named job cycle failed: the morning report's `B_CYCLE_*` / `B_CLEAR_*` reports it (no second alert). | Follow the morning report's cycle step (§9 of `HCK_MORNING_REPORT.md`); the board keeps the evidence. |
+
+**Check the effect, not the job status.** After a rerun from Control-M confirm what the job was for - documents posted,
+file written, rows changed (payment worklist, payment trace) - before resolving the exception. A job without a linked
+parent on the board is not proven independent: the Control-M schedule's predecessors (free-text comments of the export)
+still decide what must rerun after it.
+
+**Which monitor alerts which job (no double alert).** Named job cycles (`ZCD_JOB_STEP` of the active cycles of `B_CYCLE_*` / `B_CLEAR_*`) stay with the morning report: their own failure is information in `CD_JOBS` (claim `ZCL_CD_HCK_JOB_CLAIM`). Every other failure - and every failed **child** of a cycle step - comes from `CD_JOBS`; the morning report's `E_JOBS` neither counts nor reports a job that `CD_JOBS` reports with an exception (`HCK_MORNING_REPORT.md` §9b). If `CD_JOBS` is not running, `E_JOBS` reports as before.
+
+**Evidence.** The board keeps what the standard reorganisation (SM65 / RSBTCDEL2, SP01 spool, SLG2 application logs) will delete: job header, steps, error lines of the job log, application log headers, parent / child links with their quality (C confirmed by key, P probable by heuristic) - `RETENTION_DAYS_JOB_EVIDENCE` (180 days). *Status now* blank = the job is reorganised; the evidence stays.
+
+**Monitor itself.** No run for `CHECK_STALE_MIN_CD_JOBS` (30) minutes = stale on the area dashboard (`ZUI_CA_OPS_DASH`, area `CD_JOBS`); the runner's `CHECK_FAILED` (E) alerts through rule `JOB_FAIL`. First run after an outage: the watermark makes the run read from where the last one stopped (overlap `JOB_OVERLAP_MIN`); nothing is lost, a long outage may take several capped runs.
+## 5r. Planned downtime windows — bank or system maintenance (2026-11-11, L2 / team lead)
+
+When a bank or a sender announces maintenance, plan the window **before** it starts so its findings are recorded but
+not alerted: app *Planned downtime* (`ZUI_CA_OPS_DTW_O4`, role `Z_CD_OPS_DOWNTIME_PLANNER`) → *Create*: area
+(`CD_FMON` for files and ACKs, `CD_EBS` for statements), optional scope - check code pattern, object key pattern,
+interface / bank pattern (PCRE, complete value; blank = the whole area), start and end in local time (CST,
+`DOWNTIME_TIME_ZONE`), reason (the bank's announcement). Rules: at most `DOWNTIME_MAX_HOURS` (24) hours, start at most
+15 minutes in the past, no second window of the same scope over the same time. **A second person approves it**
+(`Z_CD_OPS_APPROVER`, *Approve*; the planner cannot). Only approved windows act.
+
+During the window the findings appear in the exceptions app with *In planned downtime*, the daily control review and
+the area dashboard show the mark, and the alert log has a row D instead of an e-mail. The window ends by itself; if
+the bank is back early, *End now*. The next run after the window alerts what is still open - so check the exceptions
+of the window afterwards. A missing-volume / SLA check may ask the framework whether a period was planned
+(`ZIF_CA_OPS_DOWNTIME=>PLANNED`) and record information instead of an error. Not for unplanned outages: an
+unannounced bank problem is exactly what the alerts are for.
+
+## 5s. Escalation until acknowledged and correlated alerts (2026-11-11, L1 / L2)
+
+- **Acknowledge = assign.** An open exception of a rule with time-based escalation (`config/alert_seed.md`,
+  *Escalation until acknowledged*) that nobody assigns goes to `ZCD_RTBLEAD` after the rule's minutes, then again,
+  up to the limit. Assign it (or resolve / request a waiver) to stop the escalation; the e-mail says which step
+  (*Escalation 1 / 3*) and how long the exception has been open. Each step is in the alert log (`ESC_STEP`). Jobs
+  `ZCD_OPS_ESCALATE_*` every 10 minutes (`Implementation_Order.md` step 4); a stopped job means no escalation - the
+  morning report's job checks show it.
+- **Correlated alerts.** With a correlation rule (`config/correlation_rules.csv`) the first exception of a key (e.g.
+  the interface of a bank without ACKs) is the **parent**: one e-mail names how many correlated exceptions it has; the
+  others are its **children** (not e-mailed, alert log K). In the exceptions app open the parent → facet *Correlated
+  exceptions*; select the children and use *Resolve* once the cause is fixed (each child is checked on its own). A
+  child shows its parent in the facet *Parent exception*.
+- **Response times.** App *Exception response times* (`ZUI_CA_OPS_MET_O4`): minutes to assign / resolve per area,
+  team, check and month, open exceptions by age, exceptions raised again after a resolution - for the monthly
+  service review, not for the shift.
+
+## 5t. Ledger drill-down and reversed payments (build C, 2026-11-11, L2 / reconciliation)
+
+- **Where is my payment in the G/L?** Payment object page -> facet *Ledger*: per reconciliation key (FIKEY), account and currency the payment's amount, its **share** of the key's summary, the key's G/L total and document - the G/L line is the key's consolidated line, never the payment's own. *G/L journal lines* opens the lines (ledger `EBS_GL_LEDGER`); *Subledger items* the cleared items. Status NOT_TRANSFERRED = the key has no G/L document yet - the same key is in `A_GL_TRANSFER` (§5m).
+- **An account does not tie out on a day.** App / card *Ledger reconciliation* (business date mandatory): the stored result of `A_RECON_3WAY` (legs, difference, verdict, bucket - as the morning report measured it) next to the live journal transfer / other postings and the subledger total. *Changed since measured* = a posting or G/L reversal after the morning report: re-run the check or wait for the next morning. Open the batch keys of the day, the journal lines (paged) or the bank lines.
+- **Bucket reset / reversal.** Bank lines whose payment document was reversed since the line arrived keep the OLD AUGBL; they cannot clear against the new document. Open the bank line -> *Changes of the clearing document* (timeline OLD -> NEW) and hand over to GL accounting / Treasury with the line key; the suite posts, clears and resets nothing.
+- **`REV_AFTER_LEFT_SAP` (E).** A payment was reversed after its file was sent, the bank acknowledged it, a statement line exists or the cheque was cashed: possible double payment. Check the reissue (new payment document on the Changes timeline), the bank status and the return; escalate to the payments team the same day. `REV_GL_NOT_REVERSED`: the reversal's reconciliation key has no G/L transfer - as `A_GL_TRANSFER`. `REV_BANK_LINE`: as the bucket above.
+- **Not available yet:** clearing reset / re-clearing events and "reset without re-clearing after N days" (clearing-reset history V100); use the payment trace (§4.2 of `Payment_Trace.md`) for one item.
 
 ## Object names after the framework extraction (2026-11-10)
 

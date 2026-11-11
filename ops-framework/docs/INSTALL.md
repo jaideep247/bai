@@ -23,10 +23,10 @@ Names to look up in `TADIR` before the first pull (C3) - patterns, `*` = any cha
 |---|---|---|
 | Packages (DEVC) | `ZCA_OPS`, `ZCA_OPS_UI`, `ZCA_OPS_DEMO` | `ZCA_PARAM`, `ZCA_PARAM_UI` |
 | Classes, interfaces | `ZCL_CA_OPS*`, `ZIF_CA_OPS*`, `ZCX_CA_OPS*`, `ZBP_R_CA_OPS*` | `ZCL_CA_PARAM*`, `ZIF_CA_PARAM*`, `ZCX_CA_PARAM*`, `ZBP_R_CA_PARAM*` |
-| Programs | `ZCA_OPS_RETENTION`, `ZCA_OPS_DEMO` | - |
+| Programs | `ZCA_OPS_RETENTION`, `ZCA_OPS_CHECK_RUN`, `ZCA_OPS_ESCALATE`, `ZCA_OPS_DEMO` | - |
 | Tables | `ZCA_OPS_*` (8), draft tables `ZCA_D_ALCHN`, `ZCA_D_ALRULE`, `ZCA_D_OPSCFG`, `ZCA_D_PURGE` | `ZCA_PARAM_*` (3), draft tables `ZCA_D_PARAREA`, `ZCA_D_PARDEF`, `ZCA_D_PARVAL` |
 | Domains, data elements | - | `ZCA_PARAM_*` |
-| CDS, behaviour, service, access control | `ZR_CA_*`, `ZC_CA_*`, `ZI_CA_*`, `ZA_CA_*` (e.g. `ZR_CA_ALERTRULE`, `ZA_CA_EXCWAIVER`), `ZUI_CA_OPS_CFG`, `ZUI_CA_OPS_EXC`, `ZUI_CA_OPS_REV` (+ bindings `*_O4`); tables `ZCA_OPS_CONTROL`, `ZCA_OPS_CTLT`, `ZCA_OPS_CTLCHK`, `ZCA_OPS_REVIEW`, domain `ZCA_OPS_CTL_STATUS` | `ZR_CA_PARAM*`, `ZC_CA_PARAM*`, `ZI_CA_PARAM*`, `ZUI_CA_PARAM` (+ binding `*_O4`) |
+| CDS, behaviour, service, access control | `ZR_CA_*`, `ZC_CA_*`, `ZI_CA_*`, `ZA_CA_*` (e.g. `ZR_CA_ALERTRULE`, `ZA_CA_EXCWAIVER`), `ZUI_CA_OPS_CFG`, `ZUI_CA_OPS_EXC`, `ZUI_CA_OPS_REV`, `ZUI_CA_OPS_DTW`, `ZUI_CA_OPS_MET`, `ZUI_CA_OPS_HOVR` (+ bindings `*_O4`); tables `ZCA_OPS_CONTROL`, `ZCA_OPS_CTLT`, `ZCA_OPS_CTLCHK`, `ZCA_OPS_REVIEW`, `ZCA_OPS_RUNBOOK`, `ZCA_OPS_CORR`, `ZCA_OPS_DTWIN`, drafts `ZCA_D_RUNBOOK`, `ZCA_D_CORR`, domains `ZCA_OPS_CTL_STATUS`, `ZCA_OPS_DTW_STATUS` | `ZR_CA_PARAM*`, `ZC_CA_PARAM*`, `ZI_CA_PARAM*`, `ZUI_CA_PARAM` (+ binding `*_O4`) |
 | Authorisation (SU21 / SU20) | object `ZCA_OPS` | object class `ZCA`, object `ZCA_PARAM`, field `ZCA_PARAR` |
 | Message classes (SE91) | `ZCA_OPS` | `ZCA_PARAM` |
 | Application log (SLG0) | object `ZCA_OPS`, sub-object `ALERT` | - |
@@ -94,10 +94,14 @@ Users who maintain parameters also need the parameter framework's object `ZCA_PA
 In the parameter app (`ZUI_CA_PARAM_O4`), in the customizing client on a customizing request:
 
 1. Area **`CA_OPS`** (`config/param_areas.csv`, 1 row).
-2. The **15 definitions** of `config/param_definitions.csv` (`ALERT_DEFAULT`, `ALERT_ESCALATION_WINDOW_H`,
+2. The **47 definitions** of `config/param_definitions.csv` (`ALERT_DEFAULT`, `ALERT_ESCALATION_WINDOW_H`,
    `ALERT_EXC_APP_LINK`, `ALERT_MAIL_RENDERER`, `ALERT_SECTION_CLASS`, `ALERT_TEMPLATE_DEFAULT`,
-   `ALERT_TIME_ZONE`, `CONTROL_TEAMS`, `CONTROL_TIME_ZONE`, `EXC_REASON_CODES`, `PURGE_PACKAGE_SIZE`,
-   `RETENTION_DAYS_ALERT_LOG`, `RETENTION_DAYS_REVIEW`, `RETENTION_DAYS_RUN`, `SLA_DAYS_DEFAULT`) exactly as listed - meaning and defaults in `docs/PARAMETERS.md`.
+   `ALERT_TIME_ZONE`, `CHECK_STALE_MIN_DEFAULT`, `CONTROL_TEAMS`, `CONTROL_TIME_ZONE`, `DOWNTIME_MAX_HOURS`,
+   `DOWNTIME_PAST_TOL_MIN`, `DOWNTIME_RETENTION_DAYS`, `DOWNTIME_TIME_ZONE`, `ESC_MAX_DEFAULT`, `EXC_REASON_CODES`,
+   `METRIC_TIME_ZONE`, `PURGE_PACKAGE_SIZE`, `RETENTION_DAYS_ALERT_LOG`, `RETENTION_DAYS_REVIEW`, `RETENTION_DAYS_RUN`,
+   `SHIFT_TIMES_DEFAULT` (kind S), `SHIFT_TIME_ZONE`, `SLA_DAYS_DEFAULT`, the 22 `JOB_*` definitions of the SAP job
+   monitor and `RETENTION_DAYS_JOB_EVIDENCE`) exactly as listed - meaning and defaults in
+   `docs/PARAMETERS.md`.
 3. Value rows only where the default does not fit (e.g. `ALERT_DEFAULT` = the SO23 list of the support team,
    `CONTROL_TIME_ZONE` = the time zone of the business date of the daily control review, e.g. `CST`).
 
@@ -148,6 +152,40 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
    rows in `ZUI_CA_OPS_CFG`, one job `ZCA_OPS_CHECK_RUN` per area and schedule group).
 4. Optional: `CHECK_STALE_MIN_DEFAULT` (1500 minutes) or a definition `CHECK_STALE_MIN_<area>` per area
    (`docs/PARAMETERS.md`).
+
+## 6b. SAP job monitor (2026-11-11, `docs/JOB_MONITORING.md`)
+
+1. After the pull: tables `ZCA_OPS_JOB`, `_JOBSTEP`, `_JOBMSG`, `_JOBALOG`, `_JOBBO`, `_JOBWM`, `_JOBSCH` (entity
+   *Scheduler jobs* of the regenerated `ZUI_CA_OPS_CFG`); create the binding **`ZUI_CA_OPS_JOBS_O4`** (OData V4 - UI)
+   and a list report / object page app on entity `JobFailure` (semantic object / action `ZCAJobFailure-display`).
+2. The consumer registers the monitor in an area of its own (`JOB_MONITORING.md` §10): process with the checks
+   `ZCL_CA_OPS_CHK_JOB_FAIL` / `ZCL_CA_OPS_CHK_JOB_STATE` in a fast schedule group, purge target row `JOB_EVIDENCE`
+   (class `ZCL_CA_OPS_JOB_PURGE`, parameter `RETENTION_DAYS_JOB_EVIDENCE` of `CA_OPS`), value rows of the `JOB_`
+   parameters (`docs/PARAMETERS.md`), scheduler rows.
+3. Job user: `ZCA_OPS` 16 for the area and `S_BTCH_JOB` JOBACTION `PROT`, JOBGROUP `*` (job logs, V64) - nothing else
+   of the batch authorisations. Readers: `ZCA_OPS` 03 for the area and `S_SERVICE` of the binding.
+4. Schedule `ZCA_OPS_CHECK_RUN` with the area and the fast group every 5 minutes, test mode first; then V58-V66.
+## 6b. Operations response features (2026-11-11, `docs/OPERATIONS_FEATURES.md`)
+
+1. After the pull: the configuration app `ZUI_CA_OPS_CFG` comes regenerated with *Runbook links per check* and *Alert
+   correlation rules* and the escalation fields of alert rules; create the service bindings **`ZUI_CA_OPS_DTW_O4`**
+   (planned downtime, list report with create / change / *Approve* / *End now*), **`ZUI_CA_OPS_MET_O4`** (response-time
+   metrics, analytical list page) and **`ZUI_CA_OPS_HOVR_O4`** (shift handover, list report) (OData V4 - UI) and
+   publish them.
+2. Roles: `Z_CA_OPS_DOWNTIME_PLANNER` (01, 02, 03, 06) and `Z_CA_OPS_DOWNTIME_APPROVER` (03, 85) per area - two
+   different users (`docs/auth_zca_ops.md` §2-3); readers of the metrics and the handover need 03 for their areas.
+3. Escalation until acknowledged: for every area whose rules use `ESC_AFTER_MIN`, schedule **`ZCA_OPS_ESCALATE`** with
+   `P_AREA` = the area every 5-15 minutes (job user ZCA_OPS 16 for the area). Without the job nothing escalates by
+   time (the run-based `ESCALATE_AFTER` of other rules is unchanged).
+4. Parameters: `DOWNTIME_TIME_ZONE`, `METRIC_TIME_ZONE`, `SHIFT_TIME_ZONE` (value rows where UTC does not fit); a
+   consumer delivers `SHIFT_TIMES_<team>` definitions (kind S, TIME) for its teams; `SHIFT_TIMES_DEFAULT` (000000)
+   applies to the others.
+5. Runbook rows and correlation rules of a consumer's areas: rows in `ZUI_CA_OPS_CFG` (DV1, transport); runbook rows
+   whose link is not known stay inactive.
+6. Generic template: add the four rows of `RUNBOOK_URL`, `FIRST_ACTION`, `CORRELATED_COUNT`, `ESCALATION` to
+   `ZCA_OPS_ALERT_DEFAULT` in DV1 (`templates/zca_ops_alert_default.md`); the built-in layout shows them already.
+7. Retention: `ZCA_OPS_RETENTION` test mode lists the new built-in target DOWNTIME (`DOWNTIME_RETENTION_DAYS`).
+8. VERIFY V70-V79.
 
 ## 7. Verify the installation (demo report)
 

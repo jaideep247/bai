@@ -62,3 +62,18 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_jobsch
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_runbook
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_corr
+  {
+    last_changed_at as LastChangedAt
+  }

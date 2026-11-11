@@ -9,9 +9,40 @@ CA_OPS,ALERT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,,,Time zone of the times i
 CA_OPS,CHECK_STALE_MIN_DEFAULT,P,INT,1,,1500,,,,,Area dashboard: a run older than this is stale (minutes),OPS FRAMEWORK
 CA_OPS,CONTROL_TEAMS,P,LIST,,,"ONSITE,OFFSHORE",,,X,,Teams a control may name (control register; comma list),OPS FRAMEWORK
 CA_OPS,CONTROL_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of business date and review cut-off (TTZZ),OPS FRAMEWORK
+CA_OPS,DOWNTIME_MAX_HOURS,P,INT,1,,24,,,,,Longest planned downtime window (hours),OPS FRAMEWORK
+CA_OPS,DOWNTIME_PAST_TOL_MIN,P,INT,0,,15,,,,,Minutes a downtime window may start in the past on save,OPS FRAMEWORK
+CA_OPS,DOWNTIME_RETENTION_DAYS,P,INT,,,400,,,,,Retention of ended downtime windows (days; >= 30),OPS FRAMEWORK
+CA_OPS,DOWNTIME_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone in which downtime windows are entered (TTZZ),OPS FRAMEWORK
+CA_OPS,ESC_MAX_DEFAULT,P,INT,1,20,3,,,,,Escalations of one exception when the rule names none,OPS FRAMEWORK
 CA_OPS,EXC_REASON_CODES,P,LIST,,,"TIMING,INVESTIGATING",,,X,,Reason codes of an open exception (classification),OPS FRAMEWORK
+CA_OPS,JOB_CHILD_MSG_IDS,P,LIST,,,,,,,,Job log messages naming a released job (MSGID/MSGNO list),OPS FRAMEWORK
+CA_OPS,JOB_CHILD_MSG_PCRE,P,CHAR,,,,,,,,"PCRE of such a line: group 1 job name, group 2 job count",OPS FRAMEWORK
+CA_OPS,JOB_CLAIMS,P,LIST,,,,,,,,Claim classes of other monitors (ZIF_CA_OPS_JOB_CLAIM),OPS FRAMEWORK
+CA_OPS,JOB_ENRICHERS,P,LIST,,,,,,,,Enricher classes in order (ZIF_CA_OPS_JOB_ENRICHER),OPS FRAMEWORK
+CA_OPS,JOB_EVENT_IDS,P,LIST,,,SAP_END_OF_JOB,,,,,Events whose parameter names the predecessor job,OPS FRAMEWORK
+CA_OPS,JOB_EXCLUDE_PCRE,P,LIST,,,,,,,,"Job names never reported (PCRE list, complete name)",OPS FRAMEWORK
+CA_OPS,JOB_LOG_ERROR_TYPES,P,LIST,,,"E,A,X",,,,,Job log message types that count as an error,OPS FRAMEWORK
+CA_OPS,JOB_LOG_PROGRAMS,P,LIST,,,,,,,,Programs whose finished jobs get their job log checked,OPS FRAMEWORK
+CA_OPS,JOB_LONG_RUNNING_MIN,P,INT,1,,240,,,,,Minutes active before a job is long-running,OPS FRAMEWORK
+CA_OPS,JOB_LOOKBACK_MIN,P,INT,1,,60,,,,,Minutes read back by the first run (no watermark),OPS FRAMEWORK
+CA_OPS,JOB_MAX_APPLOGS,P,INT,0,,20,,,,,Application logs linked per failed job,OPS FRAMEWORK
+CA_OPS,JOB_MAX_CHILDREN,P,INT,0,,50,,,,,Children of a failing job's parent kept as context,OPS FRAMEWORK
+CA_OPS,JOB_MAX_DEPTH,P,INT,1,,3,,,,,Ancestors followed upwards from a failed job,OPS FRAMEWORK
+CA_OPS,JOB_MAX_JOBS,P,INT,1,,2000,,,,,Jobs read per run and kind (cap),OPS FRAMEWORK
+CA_OPS,JOB_MAX_LOG_READS,P,INT,0,,50,,,,,"Job logs read per run (detection, links, evidence)",OPS FRAMEWORK
+CA_OPS,JOB_MAX_MESSAGES,P,INT,0,,20,,,,,Error lines of a job log kept per job,OPS FRAMEWORK
+CA_OPS,JOB_NOT_STARTED_MIN,P,INT,1,,30,,,,,Minutes after the planned start a released job may wait,OPS FRAMEWORK
+CA_OPS,JOB_OVERLAP_MIN,P,INT,0,,10,,,,,Minutes re-read before the watermark,OPS FRAMEWORK
+CA_OPS,JOB_PARENT_FIELDS,P,LIST,,,,,,,X,TBTCO fields of parent job name and count (two names),OPS FRAMEWORK
+CA_OPS,JOB_PARENT_PROGRAMS,P,LIST,,,,,,,,Programs of jobs that may start children (blank = any),OPS FRAMEWORK
+CA_OPS,JOB_RESOLVERS,P,LIST,,,"ZCL_CA_OPS_JOB_RES_EVENT,ZCL_CA_OPS_JOB_RES_HEUR",,,X,,Parent / child resolvers in order (ZIF_CA_OPS_JOB_RESOLVER),OPS FRAMEWORK
+CA_OPS,JOB_WAITING_STATUSES,P,LIST,,,"S,Y",,,,,Job statuses of a job waiting to start,OPS FRAMEWORK
+CA_OPS,METRIC_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of month / week of the response-time metrics,OPS FRAMEWORK
 CA_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),OPS FRAMEWORK
+CA_OPS,RETENTION_DAYS_JOB_EVIDENCE,P,INT,,,180,,,,,Retention of SAP job evidence (days; >= 30),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_REVIEW,P,INT,,,400,,,,,Retention of daily control sign-offs (days; >= 30),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),OPS FRAMEWORK
+CA_OPS,SHIFT_TIMES_DEFAULT,S,TIME,,,000000,,,X,,Shift start times (HHMMSS rows) of teams without own times,OPS FRAMEWORK
+CA_OPS,SHIFT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of the shift start times (TTZZ),OPS FRAMEWORK
 CA_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,OPS FRAMEWORK

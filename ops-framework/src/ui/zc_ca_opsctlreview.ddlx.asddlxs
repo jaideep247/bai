@@ -93,6 +93,14 @@ annotate entity ZC_CA_OpsCtlReview with
   @EndUserText.label: 'Latest finding (UTC)'
   @UI.fieldGroup: [ { qualifier: 'Status', position: 30 } ]
   LastFindingAt;
+  // Planned downtime (2026-11-11): findings of the date recorded in an approved window (alerts held back)
+  @EndUserText.label: 'Findings in planned downtime'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 35 } ]
+  DowntimeFindings;
+  @EndUserText.label: 'Planned downtime'
+  @UI.lineItem: [ { position: 65, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 90 } ]
+  IsPlannedDowntime;
   @EndUserText.label: 'Open exceptions'
   @UI.lineItem: [ { position: 60, importance: #HIGH } ]
   @UI.fieldGroup: [ { qualifier: 'Status', position: 40 } ]

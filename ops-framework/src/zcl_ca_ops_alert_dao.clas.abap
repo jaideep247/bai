@@ -18,6 +18,9 @@
 *&            | intent is a 40-character SHA-1, so the two never meet); rows the database refuses raise 081;
 *&            | COMPLETE's fallback insert is checked as well.
 *& 2026-11-10 | Rules: company-code pattern BUKRS_PATTERN (company-code isolation).
+*& 2026-11-11 | Operations response features: escalation fields of rules (ESC_*), log fields ESC_STEP /
+*&            | FINDING_NO (claim, decisions, reads); GET_MARKS, GET_CHILD_COUNTS (index CRI), GET_RUNBOOKS,
+*&            | GET_ESCALATION_CANDIDATES (index OPN), GET_INTENT_LOG (index INT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert repository</p>
 CLASS zcl_ca_ops_alert_dao DEFINITION
@@ -40,7 +43,7 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
     SELECT rule_id, area, min_severity, rule_pattern, check_pattern, group1_pattern,
            group2_pattern, min_rag, on_abort, channel, destination, digest, max_items,
            throttle_min, quiet_from, quiet_to, escalate_after, escalation_dest, esc_override, active,
-           template_id, show_amounts, bukrs_pattern
+           template_id, show_amounts, bukrs_pattern, esc_after_min, esc_repeat_min, esc_max_count, esc_severity
       FROM zca_ops_alrule
       WHERE ( area = @iv_area OR area = @zif_ca_ops_types=>gc_area_any )
         AND active = @abap_true
@@ -59,7 +62,7 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
 
   METHOD zif_ca_ops_alert_dao~get_log.
     SELECT alert_id, rule_id, channel, run_id, area, sent_at, status, destination, subject, error,
-           intent_key, attempt, template_id, renderer, render_info
+           intent_key, attempt, template_id, renderer, render_info, esc_step, finding_no
       FROM zca_ops_allog
       WHERE rule_id  = @iv_rule_id
         AND sent_at >= @iv_since
@@ -96,6 +99,8 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
       ls_db-template_id = <ls_log>-template_id.
       ls_db-renderer    = <ls_log>-renderer.
       ls_db-render_info = <ls_log>-render_info.
+      ls_db-esc_step    = <ls_log>-esc_step.
+      ls_db-finding_no  = <ls_log>-finding_no.
       ls_db-created_by  = sy-uname.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
@@ -136,6 +141,8 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
     ls_db-intent_key  = is_log-intent_key.
     ls_db-attempt     = lines( lt_attempts ) + 1.
     ls_db-template_id = is_log-template_id.
+    ls_db-esc_step    = is_log-esc_step.
+    ls_db-finding_no  = is_log-finding_no.
     ls_db-created_by  = sy-uname.
     " the unique index INT (MANDT, INTENT_KEY, ATTEMPT) rejects a parallel dispatcher
     INSERT zca_ops_allog FROM @ls_db.
@@ -190,6 +197,97 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
       " a duplicate key (same object and check twice in one run) keeps the first row
       INSERT CORRESPONDING #( <ls_row> ) INTO TABLE rt_facts.
     ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_ca_ops_alert_dao~get_marks.
+    " one read by the key of the run (primary key prefix RUN_ID): only rows with a mark
+    SELECT object_type, object_key, check_code, bukrs AS company_code, downtime_id, corr_id, corr_role
+      FROM zca_ops_finding
+      WHERE run_id = @iv_run_id
+        AND ( downtime_id <> @( VALUE zif_ca_ops_resp_types=>ty_uuid( ) )
+           OR corr_id     <> @( VALUE zif_ca_ops_resp_types=>ty_uuid( ) ) )
+      ORDER BY object_type, object_key, check_code, company_code
+      INTO TABLE @DATA(lt_rows).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      " the same object and check twice in one run keeps the first row
+      INSERT CORRESPONDING #( <ls_row> ) INTO TABLE rt_marks.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_dao~get_child_counts.
+    DATA lt_ids TYPE RANGE OF zif_ca_ops_resp_types=>ty_uuid.
+    IF it_corr_ids IS INITIAL.
+      RETURN.
+    ENDIF.
+    " the parents of one message: a short list, counted in one aggregate (GROUP BY - no FOR ALL ENTRIES)
+    lt_ids = VALUE #( FOR lv_id IN it_corr_ids ( sign   = zif_ca_ops_types=>gc_range-sign_include
+                                                 option = zif_ca_ops_types=>gc_range-option_equal
+                                                 low    = lv_id ) ).
+    " index CRI (MANDT, CORR_ID)
+    SELECT corr_id, COUNT(*) AS children
+      FROM zca_ops_finding
+      WHERE corr_id   IN @lt_ids
+        AND corr_role = @zif_ca_ops_resp_types=>gc_corr_role-child
+        AND ( disposition = @zif_ca_ops_types=>gc_disposition-open
+           OR disposition = @zif_ca_ops_types=>gc_disposition-assigned )
+      GROUP BY corr_id
+      INTO CORRESPONDING FIELDS OF TABLE @rt_counts.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_dao~get_runbooks.
+    SELECT area, match_field, match_value, runbook_url, first_action
+      FROM zca_ops_runbook
+      WHERE area   = @iv_area
+        AND active = @abap_true
+      ORDER BY match_field, match_value
+      INTO CORRESPONDING FIELDS OF TABLE @rt_runbooks.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_dao~get_escalation_candidates.
+    " index OPN (MANDT, AREA, DISPOSITION): the open queue of the area; assigned (A), waived and resolved
+    " exceptions are never candidates - the escalation stops as soon as someone acknowledges
+    SELECT run_id, finding_no, first_seen_at, corr_role, object_type, object_key, group1, group2, rule_id,
+           check_code, severity, message, bukrs
+      FROM zca_ops_finding
+      WHERE area          = @iv_area
+        AND disposition   = @zif_ca_ops_types=>gc_disposition-open
+        AND first_seen_at <= @iv_seen_before
+        AND ( severity = @zif_ca_ops_types=>gc_severity-block
+           OR severity = @zif_ca_ops_types=>gc_severity-error
+           OR severity = @zif_ca_ops_types=>gc_severity-warning )
+      ORDER BY first_seen_at, run_id, finding_no
+      INTO TABLE @DATA(lt_rows).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      INSERT VALUE #( run_id        = <ls_row>-run_id
+                      finding_no    = <ls_row>-finding_no
+                      first_seen_at = <ls_row>-first_seen_at
+                      corr_role     = <ls_row>-corr_role
+                      finding       = VALUE #( object_type  = <ls_row>-object_type
+                                               object_key   = <ls_row>-object_key
+                                               group1       = <ls_row>-group1
+                                               group2       = <ls_row>-group2
+                                               rule_id      = <ls_row>-rule_id
+                                               check_code   = <ls_row>-check_code
+                                               severity     = <ls_row>-severity
+                                               message      = <ls_row>-message
+                                               company_code = <ls_row>-bukrs ) ) INTO TABLE rt_candidates.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_dao~get_intent_log.
+    IF it_intent_keys IS INITIAL.
+      RETURN.
+    ENDIF.
+    " index INT (MANDT, INTENT_KEY, ATTEMPT)
+    SELECT alert_id, rule_id, channel, run_id, area, sent_at, status, intent_key, attempt, esc_step, finding_no
+      FROM zca_ops_allog
+      FOR ALL ENTRIES IN @it_intent_keys
+      WHERE intent_key = @it_intent_keys-table_line
+      INTO CORRESPONDING FIELDS OF TABLE @rt_log.
   ENDMETHOD.
 
 ENDCLASS.

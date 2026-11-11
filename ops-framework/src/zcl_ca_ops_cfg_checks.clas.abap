@@ -18,6 +18,8 @@
 *& 2026-11-10 | TEMPLATE_VALID: e-mail template ID of a rule / channel (syntax, existence where the SMTG API
 *&            | is available; message 436).
 *& 2026-11-10 | USER_VALID, TEAM_VALID, URL_VALID: control register of the daily review (messages 437-439).
+*& 2026-11-11 | LINK_VALID (runbook link of an active runbook row, required), KEY_FIELDS_VALID and
+*&            | WINDOW_MIN_VALID (alert correlation rules; messages 153 / 154) - operations response features.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - config apps: field checks</p>
 CLASS zcl_ca_ops_cfg_checks DEFINITION
@@ -139,6 +141,28 @@ CLASS zcl_ca_ops_cfg_checks DEFINITION
     CLASS-METHODS url_valid
       IMPORTING
         iv_url          TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Runbook link of an active runbook row (ZCA_OPS_RUNBOOK): required, http(s):// without blanks - a row
+    "! with a placeholder link is saved inactive
+    CLASS-METHODS link_valid
+      IMPORTING
+        iv_url          TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Key fields of a correlation rule: a comma list of finding fields of ZIF_CA_OPS_RESP_TYPES=>GC_KEY_FIELD
+    CLASS-METHODS key_fields_valid
+      IMPORTING
+        iv_fields       TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Window of a correlation rule: at least one minute
+    CLASS-METHODS window_min_valid
+      IMPORTING
+        iv_minutes      TYPE i
       RETURNING
         VALUE(rv_valid) TYPE abap_bool.
 
@@ -336,6 +360,28 @@ CLASS zcl_ca_ops_cfg_checks IMPLEMENTATION.
     rv_valid = xsdbool( iv_url IS INITIAL
                         OR zcl_ca_ops_util=>pcre_match( iv_value   = iv_url
                                                         iv_pattern = zif_ca_ops_ctl_types=>gc_url_pattern ) = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD link_valid.
+    rv_valid = xsdbool( iv_url IS NOT INITIAL AND url_valid( iv_url ) = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD key_fields_valid.
+    DATA(lt_fields) = zcl_ca_ops_util=>split_list( iv_fields ).
+    rv_valid = xsdbool( lt_fields IS NOT INITIAL ).
+    LOOP AT lt_fields ASSIGNING FIELD-SYMBOL(<lv_field>).
+      IF zcl_ca_ops_correlator=>is_key_field( <lv_field> ) = abap_false.
+        rv_valid = abap_false.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD window_min_valid.
+    rv_valid = xsdbool( iv_minutes >= 1 ).
   ENDMETHOD.
 
 

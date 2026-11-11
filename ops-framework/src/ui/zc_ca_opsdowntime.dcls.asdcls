@@ -1,0 +1,14 @@
+// Artifact: zc_ca_opsdowntime.dcls.asdcls
+// Purpose: Read access to the downtime app (service ZUI_CA_OPS_DTW): authorization object ZCA_OPS with
+//          ZCA_PARAR = the area of the window and ACTVT 03. A window is area-level - it has no company code
+//          (it covers the findings of the area that its scope selects); the findings it marks keep their own
+//          company code and the company-code rule of their apps (docs/auth_zca_ops.md section 3c). Plan (01),
+//          change / delete / End now (02) and approve (85) keep their own checks in the behaviour pool.
+// Modification log: 2026-11-11 | Initial version (operations response features: planned downtime).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58), as ZC_CA_OPSCHECKSTATUS.
+@EndUserText.label: 'Planned downtime - read access'
+@MappingRole: true
+define role ZC_CA_OpsDowntime {
+  grant select on ZC_CA_OpsDowntime
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+}

@@ -8,6 +8,7 @@
 //          ZCL_CA_OPS_REVIEW_POLICY=>STATUS_OF_SEVERITY. Read-only.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
 //                   2026-11-10 | Company code of the finding (blank = area-level): the slice it counts in.
+//                   2026-11-11 | Planned downtime mark of the finding (DowntimeFlag; operations response features).
 // VERIFY-ADT: OR of field comparisons in the ON condition of an inner join (7.58); PlanViz: findings read by
 //             RUN_ID (primary key) of the runs of the date (CTL-08).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -35,7 +36,9 @@ define view entity ZI_CA_OpsCtlFind
       Fnd.created_at                                        as CreatedAt,
       cast( case when Fnd.severity = 'B' or Fnd.severity = 'E' then 2
                  when Fnd.severity = 'W' then 1
-                 else 0 end as abap.int4 )                  as StatusRank
+                 else 0 end as abap.int4 )                  as StatusRank,
+      // 1 = recorded inside an approved planned downtime window (its alert was held back)
+      cast( case when Fnd.downtime_id is initial then 0 else 1 end as abap.int4 ) as DowntimeFlag
 }
 where
      Fnd.disposition = 'O'

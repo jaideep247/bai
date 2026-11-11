@@ -99,6 +99,14 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         active        TYPE abap_bool VALUE 'X',
       END OF gc_a04.
     CONSTANTS:
+      BEGIN OF gc_a05,
+        area          TYPE zif_ca_param_types=>ty_area VALUE 'CD_JOBS',
+        description   TYPE zif_ca_param_types=>ty_description VALUE 'Ops suite SAP job failures (job monitor)',
+        owner_team    TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+        prod_editable TYPE abap_bool VALUE 'X',
+        active        TYPE abap_bool VALUE 'X',
+      END OF gc_a05.
+    CONSTANTS:
       BEGIN OF gc_d001,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'MON_STALE_AFTER_MIN_CD_EBS',
@@ -2101,6 +2109,102 @@ CLASS zcl_cd_ops_param_seed DEFINITION
     CONSTANTS:
       BEGIN OF gc_d126,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'CHECK_STALE_MIN_CD_JOBS',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE '1',
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '30',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes after which the job monitor of CD_JOBS is stale',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d126.
+    CONSTANTS:
+      BEGIN OF gc_d127,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MA_PROGRAMS',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE 'RFKK_MA_SCHEDULER',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Programs of the mass activity scheduler step',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d127.
+    CONSTANTS:
+      BEGIN OF gc_d128,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MA_RUN_PCRE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Job name PCRE: activity, run date, run ID (VERIFY)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d128.
+    CONSTANTS:
+      BEGIN OF gc_d129,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MA_SCHED_PCRE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Scheduler job name PCRE, group 1 = run token (VERIFY)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d129.
+    CONSTANTS:
+      BEGIN OF gc_d130,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MA_WORKER_PCRE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Worker job name PCRE, group 1 = run token (VERIFY)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d130.
+    CONSTANTS:
+      BEGIN OF gc_d131,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_PAYRUN_ACTIVITIES',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Mass activity types of the payment run FPY1 (VERIFY)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d131.
+    CONSTANTS:
+      BEGIN OF gc_d132,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_FMON_EVENT',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
         value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
@@ -2113,9 +2217,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of file monitoring events (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d126.
+      END OF gc_d132.
     CONSTANTS:
-      BEGIN OF gc_d127,
+      BEGIN OF gc_d133,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_FMON_FILE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2129,9 +2233,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of the file registry (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d127.
+      END OF gc_d133.
     CONSTANTS:
-      BEGIN OF gc_d128,
+      BEGIN OF gc_d134,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_FMON_PRISM',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2145,9 +2249,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of PRISM status events (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d128.
+      END OF gc_d134.
     CONSTANTS:
-      BEGIN OF gc_d129,
+      BEGIN OF gc_d135,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_HCK_METRIC',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2161,9 +2265,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of health check metrics (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d129.
+      END OF gc_d135.
     CONSTANTS:
-      BEGIN OF gc_d130,
+      BEGIN OF gc_d136,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_HCK_RESULT',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2177,9 +2281,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of health check verdicts per run (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d130.
+      END OF gc_d136.
     CONSTANTS:
-      BEGIN OF gc_d131,
+      BEGIN OF gc_d137,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_PAY_OUTCOME',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2193,9 +2297,41 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of closed / final outcome versions (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d131.
+      END OF gc_d137.
     CONSTANTS:
-      BEGIN OF gc_d132,
+      BEGIN OF gc_d138,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'SHIFT_TIMES_OFFSHORE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'S',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'TIME',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '000000',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Shift start times of team OFFSHORE (HHMMSS rows; confirm)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d138.
+    CONSTANTS:
+      BEGIN OF gc_d139,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'SHIFT_TIMES_ONSITE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'S',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'TIME',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '000000',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Shift start times of team ONSITE (HHMMSS rows; confirm)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d139.
+    CONSTANTS:
+      BEGIN OF gc_d140,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_EBS_B',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2209,9 +2345,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of EBS blocking exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d132.
+      END OF gc_d140.
     CONSTANTS:
-      BEGIN OF gc_d133,
+      BEGIN OF gc_d141,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_EBS_E',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2225,9 +2361,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of EBS error exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d133.
+      END OF gc_d141.
     CONSTANTS:
-      BEGIN OF gc_d134,
+      BEGIN OF gc_d142,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_EBS_W',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2241,9 +2377,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of EBS warning exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d134.
+      END OF gc_d142.
     CONSTANTS:
-      BEGIN OF gc_d135,
+      BEGIN OF gc_d143,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_FMON_B',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2257,9 +2393,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of FMON blocking exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d135.
+      END OF gc_d143.
     CONSTANTS:
-      BEGIN OF gc_d136,
+      BEGIN OF gc_d144,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_FMON_E',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2273,9 +2409,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of FMON error exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d136.
+      END OF gc_d144.
     CONSTANTS:
-      BEGIN OF gc_d137,
+      BEGIN OF gc_d145,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_FMON_W',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2289,9 +2425,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of FMON warning exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d137.
+      END OF gc_d145.
     CONSTANTS:
-      BEGIN OF gc_d138,
+      BEGIN OF gc_d146,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_HCK_B',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2305,9 +2441,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of HCK blocking exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d138.
+      END OF gc_d146.
     CONSTANTS:
-      BEGIN OF gc_d139,
+      BEGIN OF gc_d147,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_HCK_E',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2321,9 +2457,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of HCK error exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d139.
+      END OF gc_d147.
     CONSTANTS:
-      BEGIN OF gc_d140,
+      BEGIN OF gc_d148,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_CD_HCK_W',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -2337,13 +2473,13 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of HCK warning exceptions (blank = default)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d140.
+      END OF gc_d148.
     "! Delivered definitions 1-100 (at most 100 per method)
     CLASS-METHODS definitions_part_1
       RETURNING
         VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
 
-    "! Delivered definitions 101-140 (at most 100 per method)
+    "! Delivered definitions 101-148 (at most 100 per method)
     CLASS-METHODS definitions_part_2
       RETURNING
         VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
@@ -2363,6 +2499,7 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_a02 ) INTO TABLE rt_areas.
     INSERT CORRESPONDING #( gc_a03 ) INTO TABLE rt_areas.
     INSERT CORRESPONDING #( gc_a04 ) INTO TABLE rt_areas.
+    INSERT CORRESPONDING #( gc_a05 ) INTO TABLE rt_areas.
   ENDMETHOD.
 
 
@@ -2517,6 +2654,14 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_d138 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d139 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d140 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d141 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d142 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d143 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d144 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d145 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d146 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d147 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d148 ) INTO TABLE rt_definitions.
   ENDMETHOD.
 
 

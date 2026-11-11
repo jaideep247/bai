@@ -12,6 +12,7 @@
 *&            | RUN and ALERT_LOG (ZIF_CA_OPS_PURGE_TARGET) and the registry of consumer targets
 *&            | (GET_TARGETS, table ZCA_OPS_PURGE); the consumer targets left with their owner.
 *& 2026-11-10 | Target REVIEW: sign-offs of the daily control review (ZCA_OPS_REVIEW) by sign-off time.
+*& 2026-11-11 | Target DOWNTIME (planned downtime windows, operations response features).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge repository</p>
 INTERFACE zif_ca_ops_purge_dao
@@ -29,6 +30,8 @@ INTERFACE zif_ca_ops_purge_dao
       alert_log TYPE zif_ca_ops_purge_target=>ty_target VALUE 'ALERT_LOG',
       "! ZCA_OPS_REVIEW by sign-off time (daily control review)
       review    TYPE zif_ca_ops_purge_target=>ty_target VALUE 'REVIEW',
+      "! ZCA_OPS_DTWIN by the end of the window (planned downtime, 2026-11-11; DOWNTIME_RETENTION_DAYS)
+      downtime  TYPE zif_ca_ops_purge_target=>ty_target VALUE 'DOWNTIME',
     END OF gc_target.
 
   "! A consumer's purge target (ZCA_OPS_PURGE)

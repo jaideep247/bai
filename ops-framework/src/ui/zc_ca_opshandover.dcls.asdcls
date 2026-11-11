@@ -1,0 +1,16 @@
+// Artifact: zc_ca_opshandover.dcls.asdcls
+// Purpose: Read access to the shift handover (service ZUI_CA_OPS_HOVR and a consumer's overview card):
+//          authorization object ZCA_OPS with ZCA_PARAR = the area and ACTVT 03 - and, for a row of a company code,
+//          BUKRS = that company code (company-code isolation, rule of docs/auth_zca_ops.md section 3c). The company
+//          code is a key of every row (exceptions, escalations and control slices of one company code; planned
+//          downtime area-level), so the sums a card computes after this filter never mix company codes.
+// Modification log: 2026-11-11 | Initial version (operations response features: shift handover).
+// VERIFY-ADT: as ZC_CA_OPSEXCEPTION (V36).
+@EndUserText.label: 'Shift handover - read access'
+@MappingRole: true
+define role ZC_CA_OpsHandover {
+  grant select on ZC_CA_OpsHandover
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

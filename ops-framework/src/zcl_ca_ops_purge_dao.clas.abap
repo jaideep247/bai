@@ -18,6 +18,7 @@
 *&            | (registry ZCA_OPS_PURGE).
 *& 2026-11-10 | Target REVIEW (ZCA_OPS_REVIEW by REVIEWED_AT, daily control review).
 *& 2026-11-10 | Target REVIEW: key field BUKRS read (company-code slices of the review).
+*& 2026-11-11 | Target DOWNTIME (ZCA_OPS_DTWIN by TO_UTC, planned downtime windows).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge SQL</p>
 CLASS zcl_ca_ops_purge_dao DEFINITION
@@ -65,6 +66,9 @@ CLASS zcl_ca_ops_purge_dao IMPLEMENTATION.
         SELECT COUNT(*) FROM zca_ops_allog WHERE sent_at < @iv_cutoff INTO @rv_count.
       WHEN zif_ca_ops_purge_dao=>gc_target-review.
         SELECT COUNT(*) FROM zca_ops_review WHERE reviewed_at < @iv_cutoff INTO @rv_count.
+      WHEN zif_ca_ops_purge_dao=>gc_target-downtime.
+        " a window is purged by its end: never one that has not ended
+        SELECT COUNT(*) FROM zca_ops_dtwin WHERE to_utc < @iv_cutoff INTO @rv_count.
     ENDCASE.
   ENDMETHOD.
 
@@ -103,6 +107,17 @@ CLASS zcl_ca_ops_purge_dao IMPLEMENTATION.
           UP TO @iv_max ROWS.
         CHECK lt_reviews IS NOT INITIAL.
         DELETE zca_ops_review FROM TABLE @lt_reviews.
+        rv_count = sy-dbcnt.
+
+      WHEN zif_ca_ops_purge_dao=>gc_target-downtime.
+        SELECT window_id
+          FROM zca_ops_dtwin
+          WHERE to_utc < @iv_cutoff
+          ORDER BY window_id
+          INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_windows)
+          UP TO @iv_max ROWS.
+        CHECK lt_windows IS NOT INITIAL.
+        DELETE zca_ops_dtwin FROM TABLE @lt_windows.
         rv_count = sy-dbcnt.
     ENDCASE.
   ENDMETHOD.

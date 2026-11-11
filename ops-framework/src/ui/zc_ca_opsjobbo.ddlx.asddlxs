@@ -1,0 +1,38 @@
+// UI annotations: SAP job failures board - business objects of a job (object page table; consumer enrichers)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Business object', typeNamePlural: 'Business objects',
+                  title: { type: #STANDARD, value: 'Label' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'ObjectNo', direction: #ASC } ] } ]
+annotate entity ZC_CA_OpsJobBo with
+{
+  @UI.hidden: true
+  JobName;
+  @UI.hidden: true
+  JobCount;
+  @UI.hidden: true
+  ObjectNo;
+  @EndUserText.label: 'Linked by (enricher)'
+  Enricher;
+  @EndUserText.label: 'Object type'
+  @UI.lineItem: [ { position: 10 } ]
+  ObjectType;
+  @EndUserText.label: 'Object key'
+  @UI.lineItem: [ { position: 20 } ]
+  ObjectKey;
+  @EndUserText.label: 'Description'
+  @UI.lineItem: [ { position: 30 } ]
+  Label;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 40 } ]
+  ObjectCompanyCode;
+  @EndUserText.label: 'Count'
+  @UI.lineItem: [ { position: 50 } ]
+  ItemCount;
+  @EndUserText.label: 'Quality (C confirmed, P probable)'
+  @UI.lineItem: [ { position: 60 } ]
+  Quality;
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  CompanyCode;
+}

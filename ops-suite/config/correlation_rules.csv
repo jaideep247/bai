@@ -1,0 +1,4 @@
+AREA,CORR_RULE,DESCRIPTION,CHECK_PATTERN,KEY_FIELDS,KEY_PATTERN,WINDOW_MIN,ACTIVE
+CD_FMON,FMON_ACK,Missing or late bank ACKs of one interface,(NO_)?BANK_ACK(_LATE)?,GROUP1,,120,
+CD_FMON,FMON_FILE,Missing or failed files of one interface,FILE_(MISSING|FAILED)|NACK,GROUP1,,60,
+CD_EBS,EBS_BTC,Unmapped bank transaction code: all lines of one code,UNMAPPED_BTC,GROUP1,,1440,

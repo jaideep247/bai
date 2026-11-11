@@ -45,6 +45,11 @@ define view entity ZI_CA_OPS_ALERTMAILCTX
       cast( ' ' as abap.char(255) )           as EXCEPTIONS_LINK,
       cast( ' ' as abap.char(255) )           as REFERENCE_LINE,
       cast( ' ' as abap.char(255) )           as AMOUNT_TOTAL,
+      // Operations response features (2026-11-11): runbook of the check, correlated children, escalation step
+      cast( ' ' as abap.char(255) )           as RUNBOOK_URL,
+      cast( ' ' as abap.char(120) )           as FIRST_ACTION,
+      cast( ' ' as abap.char(10) )            as CORRELATED_COUNT,
+      cast( ' ' as abap.char(20) )            as ESCALATION,
       cast( ' ' as abap.char(80) )            as TABLE_MAIN,
       cast( ' ' as abap.char(80) )            as TABLE_SECTION,
       Log.template_id                         as TEMPLATE_ID

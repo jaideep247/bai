@@ -23,7 +23,8 @@ etag master LastChangedAt
                      StatusAtReview, ReviewResult, ReviewedEvidenceRun, ReviewedBy, ReviewedAt, ReviewedOnLocal,
                      ReviewedTimeLocal, Observation, NextAction, LastChangedAt, IsReviewed, IsAwaitingReview,
                      IsFlagged, IsReviewOverdue, ControlCount, ReviewedCount, AwaitingCount, OverdueCount,
-                     ActionRequiredCount, WatchCount, FlaggedCount;
+                     ActionRequiredCount, WatchCount, FlaggedCount, DowntimeFindings, IsPlannedDowntime,
+                     DowntimeCount;
 
   action markReviewed parameter ZA_CA_CtlReview result [1] $self;
 }

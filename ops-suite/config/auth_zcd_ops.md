@@ -11,6 +11,12 @@ The areas are parameter areas of ZCA_PARAM (`config/param_areas.csv`, one area r
 
 **Business processes onboarded through the framework (process onboarding, 2026-11-10).** A process monitored by the framework's check registry gets its **own area** (its runs would otherwise be the "last run" of an engine's area, e.g. the morning report's self-check of `CD_HCK`): proposal `CD_COLL` - collections payment request lifecycle (BASE), process `BASE_REQ_LIFE` (`config/process_register.csv`, `docs/processes/CD_COLL_BASE_REQ_LIFE.md`). The area is created in ZCA_PARAM **when the process is activated** (P2 open, `config/control_seed.md` §2a); the roles are defined in §3 (operator `Z_CD_OPS_COLL`, `CD_COLL` in `Z_CD_OPS_BATCH` and `Z_CD_OPS_APPROVER`, display in `ZCD_OPS_PROD_SUPPORT`, 2026-11-10) and created in PFCG on activation.
 
+**SAP job failures (2026-11-11, area `CD_JOBS`, decision D-PO1).** The framework's SAP job monitor
+(`ops-framework/docs/JOB_MONITORING.md`) runs for the suite as process `CD_JOBS` / `SAP_JOBS`
+(`docs/processes/CD_JOBS_SAP_JOBS.md`), **active**: area `CD_JOBS` is delivered in `config/param_areas.csv`. Roles in
+§3: display in `ZCD_OPS_PROD_SUPPORT` and `Z_CD_OPS_DISPLAY`, operator `Z_CD_OPS_OPERATOR` (02 / 03), approver
+`Z_CD_OPS_APPROVER` (85), job user `Z_CD_OPS_BATCH` (16) - details in §3 *SAP job failures*.
+
 ## 2. Activities used by the suite
 
 The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: record a PRISM status event), 02 change, 03 display, 06 delete, 16 execute, 85 approve - see `ops-framework/docs/auth_zca_ops.md` §2. `BUKRS` keeps restricting objects with a company code (statement, open item, threshold row); area-wide checks pass it as `DUMMY`.
@@ -20,9 +26,9 @@ The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: 
 | Role | ZCA_PARAR | ACTVT | BUKRS |
 |---|---|---|---|
 | `Z_CD_OPS_DISPLAY` | * | 03 | * |
-| `Z_CD_OPS_BATCH` (Control-M job user) | CD_EBS, CD_FMON, CD_HCK, CD_OPS, CA_OPS, CD_COLL (check run `ZCA_OPS_CHECK_RUN` of the collections request lifecycle, 2026-11-10) | 16 | * |
-| `Z_CD_OPS_OPERATOR` (RTB operations) | CD_EBS, CD_FMON, CD_HCK | 02, 03 | own company codes |
-| `Z_CD_OPS_APPROVER` (team lead, not the operator) | CD_EBS, CD_FMON, CD_HCK, CD_COLL (waivers of the collections request lifecycle, 2026-11-10) | 03, 85 | own company codes |
+| `Z_CD_OPS_BATCH` (Control-M job user) | CD_EBS, CD_FMON, CD_HCK, CD_OPS, CA_OPS, CD_COLL (check run `ZCA_OPS_CHECK_RUN` of the collections request lifecycle, 2026-11-10), **CD_JOBS** (check run of the SAP job monitor, group `FAST` every 5 minutes, 2026-11-11 - plus `S_BTCH_JOB`, see *SAP job failures* below) | 16 | * |
+| `Z_CD_OPS_OPERATOR` (RTB operations) | CD_EBS, CD_FMON, CD_HCK, **CD_JOBS** (assign / resolve SAP job failures, 2026-11-11) | 02, 03 | own company codes |
+| `Z_CD_OPS_APPROVER` (team lead, not the operator) | CD_EBS, CD_FMON, CD_HCK, CD_COLL (waivers of the collections request lifecycle, 2026-11-10), **CD_JOBS** (waivers of SAP job failures, 2026-11-11) | 03, 85 | own company codes |
 | `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 (create, change, display, delete of configuration rows; each checked on its own) | * |
 | `Z_CD_OPS_PRISM` (PRISM technical user `PRISM_FMON`, type B) | CD_FMON | 01 | DUMMY — plus `S_ICF` ICF_FIELD `SERVICE`, ICF_VALUE `ZCD_PRISM` (the SICF node's authorisation value) |
 | `Z_CD_OPS_COLL` (collections operations - operator of process `BASE_REQ_LIFE`, 2026-11-10; details below) | CD_COLL | 02, 03 | own company codes |
@@ -47,6 +53,21 @@ above when P2 is activated (area `CD_COLL` in `ZCA_PARAM_AREA` first); display o
 `ZCD_OPS_PROD_SUPPORT` (`docs/Dashboard_Production_Support.md` §4). Test: QA1 case OVP-16 plus the two-user script
 (Test_and_Validation §6.16) with a `CD_COLL` exception of company code 1000.
 
+**SAP job failures (area `CD_JOBS`, 2026-11-11).** Process `SAP_JOBS` (`docs/processes/CD_JOBS_SAP_JOBS.md`), board
+`ZUI_CA_OPS_JOBS` of the framework, overview cards on `ZUI_CD_OPS_OVERVIEW`:
+
+| Role | Authorisation | Values | Gives |
+|---|---|---|---|
+| `ZCD_OPS_PROD_SUPPORT`, `Z_CD_OPS_DISPLAY` (display) | `ZCA_OPS` | ZCA_PARAR `CD_JOBS`; ACTVT `03`; BUKRS own company codes (or *) | the board, its facets and the overview cards (DCL `ZC_CA_OPSJOBFAILURE`, rule of §3d: a job carries a company code only when an enricher found one), the exceptions of the area in `ZUI_CA_OPS_EXC`, the area dashboard rows of `CD_JOBS` |
+| | `S_SERVICE` | `ZUI_CA_OPS_JOBS_O4` (board), `ZUI_CA_OPS_EXC_O4`, `ZUI_CA_OPS_DASH_O4`, `ZUI_CD_OPS_OVERVIEW_O4` | the OData services |
+| `Z_CD_OPS_OPERATOR` (operator) | `ZCA_OPS` | ZCA_PARAR `CD_JOBS`; ACTVT `02`, `03` | assign, resolve, classify, request a waiver of a job failure; sign off control `SAP_JOB_FAILURES` (02) |
+| `Z_CD_OPS_APPROVER` (approver) | `ZCA_OPS` | ZCA_PARAR `CD_JOBS`; ACTVT `03`, `85` | approve a waiver (another person than the requester) |
+| `Z_CD_OPS_BATCH` (job user of `ZCA_OPS_CHECK_RUN`, `P_AREA` = `CD_JOBS`, `P_GROUP` = `FAST`) | `ZCA_OPS` | ZCA_PARAR `CD_JOBS`; ACTVT `16` | the check run (runner checks 16 for the area) |
+| | `S_BTCH_JOB` | JOBACTION `PROT` (display job log), JOBGROUP `*` | `BP_JOBLOG_READ` of jobs of other users (failed jobs, watched programs, resolver candidates; at most `JOB_MAX_LOG_READS` per run) - read only; **no** `RELE`, `DELE`, `PLAN`, `MOVE`, no `S_BTCH_ADM` (the monitor never changes, releases, cancels or restarts a job). VERIFY-SU24 V64 |
+
+TBTCO / TBTCP / BALHDR are read with ABAP SQL (no table authorisation is checked for static SQL); restarts stay
+with Control-M and the runbook (`docs/Operations_Runbook.md` §5q).
+
 Segregation of duties: the operator (02) and the approver (85) of a payment engine area and company code are different users; the apps additionally refuse an approval by the requester (four-eyes).
 
 **PRISM status API (2026-11-06, `docs/PRISM_Status_API.md` §9).** The API checks `ZCA_OPS` ACTVT **01** for FMON (it *creates* an evidence record in the suite's own store). Activity 01 / FMON is also in `Z_CD_OPS_CONFIG`; the endpoint is therefore additionally restricted by the SICF authorisation value `ZCD_PRISM` (`S_ICF`), which only `Z_CD_OPS_PRISM` carries — a configuration owner cannot post PRISM events. The role is created in DV1 and assigned in PS4 only at switch S-PRISM (`Implementation_Order.md` step 1e). The bgPF unit runs under the calling user and needs no further authorisation (suite tables only; VERIFY in QA1).
@@ -59,6 +80,7 @@ Segregation of duties: the operator (02) and the approver (85) of a payment engi
 | EBS validation (`ZUI_CD_EBS_DASH`) | CD_EBS | company code of the statement / line / finding; run and KPI rows per company-code slice (rule of §3d); as-of: — | 03 | `ZC_CD_EBSDASH` |
 | Health checks (`ZUI_CD_HCK_DASH`) | CD_HCK | company code of the finding / metric; check, category, run, KPI, red-amber rows per company-code slice (rule of §3d); as-of: — | 03 | `ZC_CD_HCKDASH` |
 | Transactions (`ZUI_CD_TRX_DASH`, `cds/ZUI_CD_TRX_REQ`) | **CD_OPS** | **company code of the open item** (payment run rows: area only) | 03 | `ZC_CD_TRXDASH`, `ZC_CD_TRXREQ` |
+| SAP job failures board (`ZUI_CA_OPS_JOBS`, framework; 2026-11-11) | CD_JOBS | company code of an enricher's business object (blank = area-level, the rule of §3d) | 03 | `ZC_CA_OPSJOBFAILURE` |
 | Production-support overview (`ZUI_CD_OPS_OVERVIEW`) | the area of each card / row | as the area dashboard; critical exceptions, daily controls (slice) and variances by the rule of §3d; payment lifecycle by company code; freshness: — | 03 | the area DCLs + `ZC_CD_OPSOVERVIEW` |
 
 **Why CD_OPS for transactions (no new value):** the transactions dashboard shows the same evidence as the 360° payment trace (request, open item, payment run, bank line, return), which is guarded by CORE 03 plus the company code of each item (`Payment_Trace.md` §6). One area keeps one rule for "may see payment evidence"; a new value (e.g. TRX) would need a domain change and a second grant for the same data. CORE 03 already covers the read-only alert / parameter apps — a user who should see neither gets no CORE. Company code is mapped in the DCL, so `Z_CD_OPS_OPERATOR` (own company codes) sees only its own transactions.
@@ -78,9 +100,11 @@ Every `AUTHORITY-CHECK` on `ZCA_OPS` is in one class, `ZCL_CA_OPS_AUTH` (`ZIF_CA
 | `ZCD_OPS_PAY_SNAPSHOT` (job `ZCD_FMON_MONITOR_ALL` step 2) | CD_OPS | 16 | At start |
 | `ZCD_MORNING_REPORT` | CD_HCK | 16 | At start; the CSV export takes a file name only, resolved in logical path `ZCD_OPS_HCK_OUT` (FILE) and checked with `S_DATASET` activity WRITE (`ZCL_CA_OPS_FILE_PATH`, 2026-11-10) |
 | `ZCA_OPS_RETENTION` | CD_OPS | 16 | At start |
+| `ZCA_OPS_CHECK_RUN` (job, `P_AREA` = `CD_JOBS`, `P_GROUP` = `FAST`, every 5 minutes; 2026-11-11) | CD_JOBS | 16 | At start (framework runner); `BP_JOBLOG_READ` needs `S_BTCH_JOB` PROT of the job user |
 | `ZCD_OPS_PAYMENT_TRACE` | CD_OPS | 03, plus company code per item | At start; a step on an item of a company code without 03 is shown as not authorised |
 | `ZCD_OPS_PATTERN_CHECK` | each area | 03 | Per area read |
 | `ZCD_OPS_PATTERN_MIGRATE` | each area | 02 | Per area, before anything is written (DV1, customizing request) |
+| `ZCA_OPS_ESCALATE` (framework job per area, escalation until acknowledged, 2026-11-11) | CD_EBS, CD_FMON, CD_HCK (one job each) | 16 | At start (041); the deliveries are logged in `ZCA_OPS_ALLOG` |
 | HCK checks reading a configured table (aggregates, value queries, queue and reference sources, drift hash) | — | `S_TABU_NAM` 03 | Before every dynamic read (`ZCL_CD_HCK_DAO=>GET_TABLE_FIELDS`, `ZIF_CA_OPS_AUTH=>MAY_READ_TABLE`, 2026-11-10), in addition to the approved-table list; refused = message 813 |
 | EBS lookup rule R21 (`ZCD_EBS_LOOKUP`) | — | `S_TABU_NAM` 03 | Per lookup table at run time (`ZCL_CD_EBS_SAP_DAO=>GET_LOOKUP_ROWS`), after the field-level approval in `ZCD_OPS_TABWL` (area EBS, purpose LOOKUP; message 812); the approval is also checked when the lookup is saved |
 | FMON dynamic reader (`ZCD_FMON_SRC` / `_LOTCFG` tables) | — | `S_TABU_NAM` 03 | Per table (`ZCL_CD_FMON_DDIC=>MAY_READ`, now the shared `ZIF_CA_OPS_AUTH=>MAY_READ_TABLE`) |
@@ -162,3 +186,23 @@ Three business roles on the one payment model service `ZUI_CD_PAYM` (binding `ZU
 | `ZCD_OPS_IT_SUPPORT` (L1 / L2) | *Payments - IT support* (`ZCD_OPS_PG_PAYM_IT`, app `ZCD_PAYM_IT`) + the existing control center page | `ZCD_OPS_BC_PAYM_IT` + `ZCD_OPS_BC_OVW` | `ZUI_CD_PAYM_O4`, `ZUI_CD_OPS_OVERVIEW_O4`, the area bindings of §3a | all suite areas; own company codes |
 
 The existing `ZCD_OPS_PROD_SUPPORT` keeps the control center page (support lead persona) and gets the new entities of `ZUI_CD_OPS_OVERVIEW` without a role change (same binding). Configuration of the services (`ZCD_OPS_SVC`, `ZCD_OPS_SVCMAP`) and of the payment model texts / feeder systems (`ZCA_OPS_PMDIM`, `ZCA_OPS_FEEDER`) follows the configuration roles of the core app and the framework app (§3). Feeder references are masked to the last four characters unless the feeder row marks them visible; user names appear only where the exceptions app already shows them.
+## Operations response features (framework, 2026-11-11)
+
+The framework's runbook links, planned downtime windows, escalation until acknowledged, alert correlation,
+response-time metrics and shift handover (`ops-framework/docs/OPERATIONS_FEATURES.md`; activities:
+`ops-framework/docs/auth_zca_ops.md` §2) use the existing activities of `ZCA_OPS` - no new activity, no new field.
+
+| Role | Change | ZCA_PARAR | ACTVT | BUKRS |
+|---|---|---|---|---|
+| `Z_CD_OPS_DOWNTIME_PLANNER` (new: RTB support lead plans a bank or system maintenance window) | downtime app `ZUI_CA_OPS_DTW`: plan, change / delete while awaiting approval, *End now* | CD_EBS, CD_FMON, CD_HCK, CD_OPS | 01, 02, 03, 06 | DUMMY (a window has no company code) |
+| `Z_CD_OPS_APPROVER` (existing, team lead) | also approves downtime windows (85) - the same second-person activity as waivers; never the planner (the app refuses it, 147) | CD_EBS, CD_FMON, CD_HCK (+ CD_OPS for windows of that area) | 03, 85 | unchanged |
+| `Z_CD_OPS_BATCH` (existing job user) | runs `ZCA_OPS_ESCALATE` for CD_EBS, CD_FMON, CD_HCK (16, already in the role) | unchanged | 16 | unchanged |
+| `Z_CD_OPS_CONFIG` (existing) | rows of *Runbook links per check* and *Alert correlation rules* and the escalation fields of alert rules in `ZUI_CA_OPS_CFG` (area `CA_OPS`, DV1) | `CA_OPS` | 01, 02, 03, 06 | * |
+| `ZCD_OPS_PROD_SUPPORT` (business role) | `S_SERVICE` `ZUI_CA_OPS_DTW_O4` (display of windows), `ZUI_CA_OPS_MET_O4`, `ZUI_CA_OPS_HOVR_O4`; the overview cards *Response times* / *Shift handover* come with `ZUI_CD_OPS_OVERVIEW_O4` | as today | 03 | own company codes |
+
+Segregation: the planner and the approver of a window are two users (four-eyes enforced by the app whatever the
+roles); a user with both roles may plan or approve, never both for the same window. Read access: DCLs of the
+framework (`ZC_CA_OPSDOWNTIME` area only - a window is area-level; `ZC_CA_OPSEXCMETRIC`, `ZC_CA_OPSHANDOVER` with the
+company-code rule of §3d, so the overview cards sum only the slices of the user's company codes). Entry point in §3b: `ZCA_OPS_ESCALATE` - area of the job, 16, at start (041). VERIFY: framework V70-V79, suite V80 / V81
+(`docs/Release_Readiness.md`).
+

@@ -57,7 +57,7 @@ flowchart LR
 |---|---|
 | `ZIF_CA_OPS_MAIL_TEMPLATE` | Renderer port: `IS_AVAILABLE`, `EXISTS`, `RENDER` (subject, HTML, text; blocks as tokens) |
 | `ZCL_CA_OPS_MAIL_TPL_SMTG` | The only caller of `CL_SMTG_EMAIL_API` - dynamic calls, names as constants (VERIFY-ADT), test seams `SMTG_DESCRIBE`, `SMTG_INSTANCE`, `SMTG_RENDER_DATA`, `SMTG_RENDER_KEY` |
-| `ZCL_CA_OPS_MAIL_TPL_BUILTIN` | Built-in layout: the content of `ZCA_OPS_ALERT_DEFAULT` without SMTG (labels: text symbols L01-L15) |
+| `ZCL_CA_OPS_MAIL_TPL_BUILTIN` | Built-in layout: the content of `ZCA_OPS_ALERT_DEFAULT` without SMTG (labels: text symbols L01-L19) |
 | `ZCL_CA_OPS_MAIL_COMPOSER` | Template order, tokens, tables in after rendering, missing placeholder, fallback note |
 | `ZCL_CA_OPS_FACTORY=>GET_MAIL_TEMPLATE` / `ZCL_CA_OPS_INJECTOR=>INJECT_MAIL_TEMPLATE` | Renderer slot (tests inject a double; no test calls the API) |
 | `ZI_CA_OPS_ALERTMAILCTX` | CDS data source of the templates: the placeholder catalogue (elements = context keys), key `ALERT_ID` for rendering by key |
@@ -88,6 +88,9 @@ not known for the message (with rendering by key: blank unless stored, see secti
 | `EXCEPTIONS_LINK` | `ALERT_EXC_APP_LINK`, else the app's name |
 | `REFERENCE_LINE` | Run, job and exceptions app (message 803) |
 | `AMOUNT_TOTAL` | Totals per currency - only with `SHOW_AMOUNTS` |
+| `RUNBOOK_URL`, `FIRST_ACTION` | Runbook link and first action of the check of the message (2026-11-11, `ZCA_OPS_RUNBOOK`: the most severe finding with a row; CHECK_CODE before GROUP2 before RULE_ID) |
+| `CORRELATED_COUNT` | Open correlated children of the parents in the message - alerted with them only (2026-11-11, `ZCA_OPS_CORR`) |
+| `ESCALATION` | Step of an escalation until acknowledged, `n / m` (2026-11-11, job `ZCA_OPS_ESCALATE`); blank on ordinary alerts |
 | `TABLE_SECTION`, `TABLE_MAIN` | Tokens of the consumer section and of the findings table |
 
 **Per finding** (columns of `TABLE_MAIN`, a column shown when a finding has a value): severity, rule,

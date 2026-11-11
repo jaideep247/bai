@@ -2,9 +2,20 @@
 @EndUserText.label: 'Owned exceptions'
 @Metadata.ignorePropagatedAnnotations: true
 // Exceptions app (design 6.1): findings of rank >= 2 (B, E, W) that are not superseded
+// 2026-11-11 (operations response features): planned downtime mark, correlation group and role, the parent and
+// the correlated children of a group (same view: their own DCL rule applies to every row shown), the open
+// children of a parent, the runbook link of the check (ZI_CA_OpsFindRunbook)
+// VERIFY-ADT: self-associations of the root entity redirected in the projection; IS INITIAL on a RAW element
 define root view entity ZR_CA_OpsException
   as select from zca_ops_finding
   composition [0..*] of ZR_CA_OpsExcHist as _History
+  association [0..*] to ZR_CA_OpsException  as _CorrChildren on  $projection.CorrelationId = _CorrChildren.CorrelationId
+                                                            and _CorrChildren.CorrelationRole = 'C'
+  association [0..1] to ZR_CA_OpsException  as _CorrParent   on  $projection.CorrelationId = _CorrParent.CorrelationId
+                                                            and _CorrParent.CorrelationRole = 'P'
+  association [0..1] to ZI_CA_OpsCorrCount  as _CorrCount    on  $projection.CorrelationId = _CorrCount.CorrelationId
+  association [0..1] to ZI_CA_OpsFindRunbook as _Runbook     on  $projection.RunId     = _Runbook.RunId
+                                                            and $projection.FindingNo = _Runbook.FindingNo
 {
       @EndUserText.label: 'Run'
   key run_id        as RunId,
@@ -72,7 +83,21 @@ define root view entity ZR_CA_OpsException
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       @EndUserText.label: 'Changed at'
       last_changed_at as LastChangedAt,
-      _History
+      // Planned downtime window that covered the finding when recorded (alert held back; blank = none)
+      @EndUserText.label: 'Planned downtime window'
+      downtime_id   as DowntimeId,
+      @EndUserText.label: 'In planned downtime'
+      cast( case when downtime_id is initial then ' ' else 'X' end as abap_boolean ) as IsPlannedDowntime,
+      // Correlation group and role: P parent (alerted with its children's count), C child (not alerted alone)
+      @EndUserText.label: 'Correlation group'
+      corr_id       as CorrelationId,
+      @EndUserText.label: 'Correlation role'
+      corr_role     as CorrelationRole,
+      _History,
+      _CorrChildren,
+      _CorrParent,
+      _CorrCount,
+      _Runbook
 }
 where
   (

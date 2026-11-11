@@ -33,6 +33,13 @@
 *&            | context; template of the message, else the channel's, else ALERT_TEMPLATE_DEFAULT; rendered
 *&            | after the claim by the SMTG adapter (ALERT_MAIL_RENDERER), built-in layout as fallback; the
 *&            | template, renderer and fallback note on the alert log row. SEND: optional template.
+*& 2026-11-11 | Operations response features (docs/OPERATIONS_FEATURES.md): findings recorded inside an
+*&            | approved planned downtime window are not alerted (log D, message 140; a run-level trigger
+*&            | inside an area-wide window: 157); correlated children are not alerted on their own (log K,
+*&            | message 141) - the parent's message names their number; the message carries the runbook link
+*&            | and first action of its check (ZCA_OPS_RUNBOOK); ESCALATE: escalation until acknowledged
+*&            | (time-based, per exception and step, ESC_STEP / FINDING_NO on the log row, one intent per
+*&            | step); the run-based escalation series and the throttle ignore D / K / escalation rows.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configurable alert router</p>
 CLASS zcl_ca_ops_alert_router DEFINITION
@@ -56,6 +63,54 @@ CLASS zcl_ca_ops_alert_router DEFINITION
     DATA mt_facts TYPE zif_ca_ops_types=>tt_exception_fact.
     "! Renderer of SAP e-mail templates, created once per router (ZCL_CA_OPS_FACTORY=>GET_MAIL_TEMPLATE)
     DATA mo_template TYPE REF TO zif_ca_ops_mail_template.
+    "! Runbooks of the area, planned downtime / correlation marks of the run's findings and the open children
+    "! of its parents (2026-11-11)
+    DATA ms_extra TYPE zcl_ca_ops_alert_policy=>ty_extra.
+
+    "! An escalation delivery: step, the exception's finding number and the intent of the step
+    TYPES:
+      BEGIN OF ty_escalation,
+        step       TYPE i,
+        finding_no TYPE i,
+        intent_key TYPE zif_ca_ops_types=>ty_intent_key,
+      END OF ty_escalation.
+
+    "! Findings of a selection without the ones in planned downtime (logged D) and the correlated children
+    "! (logged K); a run-level selection inside an area-wide window is dropped (logged D)
+    METHODS without_suppressed
+      IMPORTING
+        is_selection        TYPE zcl_ca_ops_alert_policy=>ty_selection
+        is_run              TYPE zif_ca_ops_types=>ty_run
+        iv_now              TYPE timestampl
+      RETURNING
+        VALUE(rs_selection) TYPE zcl_ca_ops_alert_policy=>ty_selection
+      RAISING
+        zcx_ca_ops_error.
+
+    "! Marks of the run's findings, runbooks of the area and the open children of the run's parents
+    METHODS read_extra
+      IMPORTING
+        is_run TYPE zif_ca_ops_types=>ty_run
+        io_dao TYPE REF TO zif_ca_ops_alert_dao.
+
+    "! Intent of one escalation step of one exception (SHA-1; prefix ESC): stable over the carry-forward
+    "! (first time seen), so a step is claimed once whatever row the exception is on
+    METHODS escalation_intent
+      IMPORTING
+        is_rule       TYPE zif_ca_ops_types=>ty_alert_rule
+        is_candidate  TYPE zif_ca_ops_resp_types=>ty_esc_candidate
+        iv_area       TYPE zif_ca_ops_types=>ty_area
+        iv_step       TYPE i
+      RETURNING
+        VALUE(rv_key) TYPE zif_ca_ops_types=>ty_intent_key.
+
+    "! Highest escalation step of the intents already claimed, sent or partly sent
+    METHODS steps_done
+      IMPORTING
+        it_log         TYPE zif_ca_ops_types=>tt_alert_log
+        it_keys        TYPE zif_ca_ops_resp_types=>tt_intent_key
+      RETURNING
+        VALUE(rv_step) TYPE i.
 
     METHODS route_selection
       IMPORTING
@@ -66,12 +121,14 @@ CLASS zcl_ca_ops_alert_router DEFINITION
       RAISING
         zcx_ca_ops_error.
 
+    "! @parameter is_escalation | an escalation step: its intent, step and exception on the claim (2026-11-11)
     METHODS deliver_messages
       IMPORTING
-        it_messages TYPE zif_ca_ops_types=>tt_alert_message
-        is_channel  TYPE zif_ca_ops_types=>ty_alert_channel
-        is_run      TYPE zif_ca_ops_types=>ty_run
-        io_dao      TYPE REF TO zif_ca_ops_alert_dao
+        it_messages   TYPE zif_ca_ops_types=>tt_alert_message
+        is_channel    TYPE zif_ca_ops_types=>ty_alert_channel
+        is_run        TYPE zif_ca_ops_types=>ty_run
+        io_dao        TYPE REF TO zif_ca_ops_alert_dao
+        is_escalation TYPE ty_escalation OPTIONAL
       RAISING
         zcx_ca_ops_error.
     "! Consecutive runs of the area (newest first, current included) in
@@ -142,7 +199,7 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     IF is_run-test_mode = abap_true.
       RETURN.
     ENDIF.
-    CLEAR: mt_log, mt_facts.
+    CLEAR: mt_log, mt_facts, ms_extra.
     mo_policy = NEW #( io_section = section( is_run )
                        is_mail    = mail_settings( ) ).
 
@@ -173,6 +230,8 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
         IF lt_selection IS NOT INITIAL.
           " one read by the run key: the business context of the e-mail (new / repeated / overdue)
           mt_facts = lo_dao->get_exception_facts( is_run-run_id ).
+          " planned downtime and correlation marks, runbooks, children of the parents (2026-11-11)
+          read_extra( is_run = is_run io_dao = lo_dao ).
         ENDIF.
         LOOP AT lt_selection ASSIGNING FIELD-SYMBOL(<ls_selection>).
           route_selection( is_selection = <ls_selection>
@@ -295,7 +354,15 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     DATA(lv_now) = lo_clock->now( ).
     DATA(ls_rule) = is_selection-rule.
 
-    DATA(lv_worst) = zcl_ca_ops_util=>worst_severity( is_selection-findings ).
+    " planned downtime and correlated children: recorded, logged (D / K), not alerted (2026-11-11)
+    DATA(ls_selection) = without_suppressed( is_selection = is_selection
+                                             is_run       = is_run
+                                             iv_now       = lv_now ).
+    IF ls_selection-findings IS INITIAL AND ls_selection-run_level = abap_false.
+      RETURN.
+    ENDIF.
+
+    DATA(lv_worst) = zcl_ca_ops_util=>worst_severity( ls_selection-findings ).
     IF lv_worst IS INITIAL.
       lv_worst = zif_ca_ops_types=>gc_severity-error.
     ENDIF.
@@ -321,10 +388,12 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
       is_rule        = ls_rule
       iv_consecutive = count_consecutive( it_log = lt_log is_run = is_run iv_since = lv_since ) ).
     DATA(lv_last_sent) = VALUE timestampl( ).
-    " A17: a claim in delivery counts like a sent alert for throttling
-    LOOP AT lt_log ASSIGNING FIELD-SYMBOL(<ls_log>) WHERE status = zif_ca_ops_types=>gc_alert_status-sent
-                                        OR status = zif_ca_ops_types=>gc_alert_status-claimed
-                                        OR status = zif_ca_ops_types=>gc_alert_status-partial.
+    " A17: a claim in delivery counts like a sent alert for throttling; an escalation of the escalation job
+    " is no alert of the rule's run (2026-11-11)
+    LOOP AT lt_log ASSIGNING FIELD-SYMBOL(<ls_log>) WHERE esc_step = 0
+                                                      AND (    status = zif_ca_ops_types=>gc_alert_status-sent
+                                                            OR status = zif_ca_ops_types=>gc_alert_status-claimed
+                                                            OR status = zif_ca_ops_types=>gc_alert_status-partial ).
       IF <ls_log>-sent_at > lv_last_sent.
         lv_last_sent = <ls_log>-sent_at.
       ENDIF.
@@ -344,10 +413,10 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
       RETURN.
     ENDIF.
     " A17: findings raised again only by carry-forward are not re-alerted (unless escalating)
-    DATA(ls_selection) = is_selection.
     IF lv_escalate = abap_false AND mt_repeat IS NOT INITIAL AND ls_selection-findings IS NOT INITIAL.
+      DATA(lt_candidates) = ls_selection-findings.
       CLEAR ls_selection-findings.
-      LOOP AT is_selection-findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      LOOP AT lt_candidates ASSIGNING FIELD-SYMBOL(<ls_finding>).
         IF NOT line_exists( mt_repeat[ object_type = <ls_finding>-object_type
                                        object_key  = <ls_finding>-object_key
                                        check_code  = <ls_finding>-check_code ] ).
@@ -369,7 +438,8 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     deliver_messages( it_messages = mo_policy->build_messages( is_selection   = ls_selection
                                                               is_run         = is_run
                                                               iv_destination = lv_destination
-                                                              it_facts       = mt_facts )
+                                                              it_facts       = mt_facts
+                                                              is_extra       = ms_extra )
                       is_channel  = ls_channel
                       is_run      = is_run
                       io_dao      = io_dao ).
@@ -415,8 +485,12 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
                                                             status      = zif_ca_ops_types=>gc_alert_status-claimed
                                                             destination = ls_message-destination
                                                             subject     = ls_message-subject
-                                                            intent_key  = intent_key( ls_message )
-                                                            template_id = ls_message-template_id ).
+                                                            intent_key  = COND #( WHEN is_escalation-intent_key IS NOT INITIAL
+                                                                                  THEN is_escalation-intent_key
+                                                                                  ELSE intent_key( ls_message ) )
+                                                            template_id = ls_message-template_id
+                                                            esc_step    = is_escalation-step
+                                                            finding_no  = is_escalation-finding_no ).
       IF io_dao->claim( ls_claim ) = abap_true.
         CONTINUE.
       ENDIF.
@@ -451,8 +525,12 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
 
   METHOD count_consecutive.
     DATA lt_fired TYPE SORTED TABLE OF zif_ca_ops_types=>ty_run_id WITH UNIQUE KEY table_line.
-    " every logged decision (sent, throttled, quiet, repeat, failed, claimed) means the rule fired
-    LOOP AT it_log ASSIGNING FIELD-SYMBOL(<ls_log>) WHERE run_id IS NOT INITIAL.
+    " every logged decision (sent, throttled, quiet, repeat, failed, claimed) means the rule fired - not a
+    " run whose findings were all in planned downtime or correlated children, nor an escalation (2026-11-11)
+    LOOP AT it_log ASSIGNING FIELD-SYMBOL(<ls_log>) WHERE run_id IS NOT INITIAL
+                                                      AND esc_step = 0
+                                                      AND status <> zif_ca_ops_types=>gc_alert_status-downtime
+                                                      AND status <> zif_ca_ops_types=>gc_alert_status-correlated.
       INSERT <ls_log>-run_id INTO TABLE lt_fired.
     ENDLOOP.
     DATA(lt_runs) = zcl_ca_ops_factory=>get_store( )->get_runs_since( iv_area = is_run-area
@@ -466,6 +544,294 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
         EXIT.
       ENDIF.
       rv_count = rv_count + 1.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert~escalate.
+    TYPES:
+      BEGIN OF ty_due,
+        rule      TYPE zif_ca_ops_types=>ty_alert_rule,
+        candidate TYPE zif_ca_ops_resp_types=>ty_esc_candidate,
+        step      TYPE i,
+        max       TYPE i,
+        keys      TYPE zif_ca_ops_resp_types=>tt_intent_key,
+      END OF ty_due.
+    DATA lt_due TYPE STANDARD TABLE OF ty_due WITH EMPTY KEY.
+    DATA lt_all_keys TYPE zif_ca_ops_resp_types=>tt_intent_key.
+    DATA lv_seen_before TYPE timestampl.
+    DATA lv_minutes TYPE i.
+
+    zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
+                                            iv_area     = iv_area ).
+    CLEAR: mt_log, mt_facts, ms_extra.
+    DATA(ls_run) = VALUE zif_ca_ops_types=>ty_run( area = iv_area sysid = sy-sysid ).
+    mo_policy = NEW #( io_section = section( ls_run )
+                       is_mail    = mail_settings( ) ).
+    DATA(lo_dao) = zcl_ca_ops_factory=>get_alert_dao( ).
+    DATA(lo_clock) = zcl_ca_ops_factory=>get_clock( ).
+    DATA(lv_now) = lo_clock->now( ).
+
+    " time-based rules only: ESC_AFTER_MIN and an escalation destination; an invalid pattern is logged F
+    DATA(lt_rules) = lo_dao->get_rules( iv_area ).
+    DELETE lt_rules WHERE active = abap_false OR esc_after_min <= 0 OR escalation_dest IS INITIAL.
+    LOOP AT lt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>).
+      DATA(lv_invalid) = mo_policy->invalid_pattern( <ls_rule> ).
+      IF lv_invalid IS NOT INITIAL.
+        add_log( iv_rule_id = <ls_rule>-rule_id iv_channel = <ls_rule>-channel is_run = ls_run
+                 iv_status  = zif_ca_ops_types=>gc_alert_status-failed
+                 iv_error   = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_types=>gc_msg-alert_pattern_invalid
+                                                     iv_v1    = <ls_rule>-rule_id
+                                                     iv_v2    = lv_invalid ) ).
+        DELETE lt_rules.
+      ENDIF.
+    ENDLOOP.
+
+    " the open queue of the area that is old enough for the earliest escalation of any rule
+    DATA(lt_candidates) = VALUE zif_ca_ops_resp_types=>tt_esc_candidate( ).
+    IF lt_rules IS NOT INITIAL.
+      SORT lt_rules BY esc_after_min.
+      TRY.
+          lv_seen_before = cl_abap_tstmp=>add( tstmp = lv_now
+                                               secs  = - lt_rules[ 1 ]-esc_after_min
+                                                       * zif_ca_ops_resp_types=>gc_seconds_per_minute ).
+        CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
+          lv_seen_before = lv_now.
+      ENDTRY.
+      SORT lt_rules BY rule_id.
+      lt_candidates = lo_dao->get_escalation_candidates( iv_area = iv_area iv_seen_before = lv_seen_before ).
+    ENDIF.
+    DATA(lv_max_default) = zcl_ca_ops_util=>param_int(
+                             io_params  = zcl_ca_ops_factory=>get_params( )
+                             iv_name    = zif_ca_ops_resp_types=>gc_param-esc_max_default
+                             iv_default = zif_ca_ops_resp_types=>gc_param_default-esc_max_default ).
+    DATA(lt_windows) = COND zif_ca_ops_resp_types=>tt_window(
+                         WHEN lt_candidates IS NOT INITIAL
+                         THEN zcl_ca_ops_factory=>get_downtime( )->windows( iv_area = iv_area
+                                                                            iv_from = lv_now
+                                                                            iv_to   = lv_now ) ).
+
+    " the step due per rule and exception; children escalate with their parent, planned downtime and quiet
+    " hours hold an escalation back (the next job sends it once they are over)
+    LOOP AT lt_rules ASSIGNING <ls_rule>.
+      DATA(ls_floor) = mo_policy->escalation_rule( <ls_rule> ).
+      LOOP AT lt_candidates ASSIGNING FIELD-SYMBOL(<ls_candidate>).
+        IF mo_policy->matches( is_rule = ls_floor is_finding = <ls_candidate>-finding ) = abap_false.
+          CONTINUE.
+        ENDIF.
+        DATA(lv_step) = mo_policy->escalation_step( is_rule        = <ls_rule>
+                                                    iv_first_seen  = <ls_candidate>-first_seen_at
+                                                    iv_now         = lv_now
+                                                    iv_max_default = lv_max_default ).
+        IF lv_step = 0.
+          CONTINUE.
+        ENDIF.
+        IF <ls_candidate>-corr_role = zif_ca_ops_resp_types=>gc_corr_role-child
+           OR zcl_ca_ops_downtime_policy=>covering( it_windows = lt_windows
+                                                    iv_area    = iv_area
+                                                    is_finding = <ls_candidate>-finding
+                                                    iv_from    = lv_now ) IS NOT INITIAL
+           OR mo_policy->is_quiet( is_rule           = <ls_rule>
+                                   iv_time           = lo_clock->time( )
+                                   iv_worst_severity = <ls_candidate>-finding-severity ) = abap_true.
+          rs_result-skipped += 1.
+          CONTINUE.
+        ENDIF.
+        DATA(ls_due) = VALUE ty_due( rule      = <ls_rule>
+                                     candidate = <ls_candidate>
+                                     step      = lv_step
+                                     max       = mo_policy->escalation_max( is_rule        = <ls_rule>
+                                                                            iv_max_default = lv_max_default ) ).
+        DO lv_step TIMES.
+          DATA(lv_key) = escalation_intent( is_rule = <ls_rule> is_candidate = <ls_candidate>
+                                            iv_area = iv_area iv_step = sy-index ).
+          INSERT lv_key INTO TABLE ls_due-keys.
+          INSERT lv_key INTO TABLE lt_all_keys.
+        ENDDO.
+        INSERT ls_due INTO TABLE lt_due.
+      ENDLOOP.
+    ENDLOOP.
+
+    IF lt_due IS NOT INITIAL.
+      " one read of the steps already escalated (index INT) and of the channels and runbooks
+      DATA(lt_done_log) = lo_dao->get_intent_log( lt_all_keys ).
+      DATA(lt_channels) = lo_dao->get_channels( ).
+      ms_extra-runbooks = lo_dao->get_runbooks( iv_area ).
+    ENDIF.
+    LOOP AT lt_due ASSIGNING FIELD-SYMBOL(<ls_due>).
+      IF steps_done( it_log = lt_done_log it_keys = <ls_due>-keys ) >= <ls_due>-step.
+        CONTINUE.
+      ENDIF.
+      DATA(ls_channel) = VALUE #( lt_channels[ channel = <ls_due>-rule-channel ] OPTIONAL ).
+      ls_run-run_id = <ls_due>-candidate-run_id.
+      IF ls_channel IS INITIAL OR ls_channel-active = abap_false.
+        add_log( iv_rule_id = <ls_due>-rule-rule_id iv_channel = <ls_due>-rule-channel is_run = ls_run
+                 iv_status  = zif_ca_ops_types=>gc_alert_status-failed
+                 iv_error   = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_types=>gc_msg-channel_inactive
+                                                     iv_v1    = <ls_due>-rule-channel ) ).
+        rs_result-failed += 1.
+        CONTINUE.
+      ENDIF.
+      TRY.
+          lv_minutes = cl_abap_tstmp=>subtract( tstmp1 = lv_now tstmp2 = <ls_due>-candidate-first_seen_at )
+                       DIV zif_ca_ops_resp_types=>gc_seconds_per_minute.
+        CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
+          CLEAR lv_minutes.
+      ENDTRY.
+      " without the intent key the step done is not recognised and every job would send it again
+      DATA(lv_intent) = escalation_intent( is_rule      = <ls_due>-rule
+                                           is_candidate = <ls_due>-candidate
+                                           iv_area      = iv_area
+                                           iv_step      = <ls_due>-step ).
+      IF lv_intent IS INITIAL.
+        add_log( iv_rule_id = <ls_due>-rule-rule_id iv_channel = <ls_due>-rule-channel is_run = ls_run
+                 iv_status  = zif_ca_ops_types=>gc_alert_status-failed
+                 iv_error   = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_resp_types=>gc_msg-esc_no_intent
+                                                     iv_v1    = <ls_due>-step
+                                                     iv_v2    = <ls_due>-rule-rule_id ) ).
+        rs_result-failed += 1.
+        CONTINUE.
+      ENDIF.
+      ms_extra-escalation = |{ <ls_due>-step } / { <ls_due>-max }|.
+      " one message per exception and step, to the escalation destination of the rule
+      DATA(ls_rule_single) = <ls_due>-rule.
+      ls_rule_single-digest = abap_true.
+      DATA(lt_messages) = mo_policy->build_messages(
+                            is_selection   = VALUE #( rule     = ls_rule_single
+                                                      findings = VALUE #( ( <ls_due>-candidate-finding ) ) )
+                            is_run         = ls_run
+                            iv_destination = <ls_due>-rule-escalation_dest
+                            is_extra       = ms_extra ).
+      LOOP AT lt_messages ASSIGNING FIELD-SYMBOL(<ls_message>).
+        <ls_message>-subject = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_resp_types=>gc_msg-esc_subject
+                                                      iv_v1    = <ls_due>-step
+                                                      iv_v2    = <ls_due>-max
+                                                      iv_v3    = lv_minutes
+                                                      iv_tail  = |{ <ls_message>-subject }| ).
+        <ls_message>-context-header-subject = <ls_message>-subject.
+      ENDLOOP.
+      deliver_messages( it_messages   = lt_messages
+                        is_channel    = ls_channel
+                        is_run        = ls_run
+                        io_dao        = lo_dao
+                        is_escalation = VALUE #( step       = <ls_due>-step
+                                                 finding_no = <ls_due>-candidate-finding_no
+                                                 intent_key = lv_intent ) ).
+      rs_result-escalated += 1.
+    ENDLOOP.
+    IF mt_log IS NOT INITIAL.
+      lo_dao->insert_log( mt_log ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD without_suppressed.
+    DATA lv_downtime TYPE i.
+    DATA lv_children TYPE i.
+    DATA lv_first_window TYPE zif_ca_ops_resp_types=>ty_uuid.
+    rs_selection = is_selection.
+    DATA(lv_rule) = is_selection-rule-rule_id.
+    IF is_selection-findings IS INITIAL.
+      " a run-level trigger (RAG, abort) inside an area-wide window of the area
+      DATA(lv_window) = zcl_ca_ops_factory=>get_downtime( )->area_planned( iv_area = is_run-area iv_at = iv_now ).
+      IF lv_window IS NOT INITIAL.
+        add_log( iv_rule_id = lv_rule iv_channel = is_selection-rule-channel is_run = is_run
+                 iv_status  = zif_ca_ops_types=>gc_alert_status-downtime
+                 iv_error   = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_resp_types=>gc_msg-downtime_run_level
+                                                     iv_v1    = lv_rule
+                                                     iv_v2    = lv_window ) ).
+        CLEAR rs_selection.
+      ENDIF.
+      RETURN.
+    ENDIF.
+    IF ms_extra-marks IS INITIAL.
+      RETURN.
+    ENDIF.
+    CLEAR rs_selection-findings.
+    LOOP AT is_selection-findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      READ TABLE ms_extra-marks ASSIGNING FIELD-SYMBOL(<ls_mark>)
+           WITH TABLE KEY object_type  = <ls_finding>-object_type
+                          object_key   = <ls_finding>-object_key
+                          check_code   = <ls_finding>-check_code
+                          company_code = <ls_finding>-company_code.
+      IF sy-subrc <> 0.
+        INSERT <ls_finding> INTO TABLE rs_selection-findings.
+      ELSEIF <ls_mark>-downtime_id IS NOT INITIAL.
+        lv_downtime += 1.
+        IF lv_first_window IS INITIAL.
+          lv_first_window = <ls_mark>-downtime_id.
+        ENDIF.
+      ELSEIF <ls_mark>-corr_role = zif_ca_ops_resp_types=>gc_corr_role-child.
+        lv_children += 1.
+      ELSE.
+        INSERT <ls_finding> INTO TABLE rs_selection-findings.
+      ENDIF.
+    ENDLOOP.
+    IF lv_downtime > 0.
+      add_log( iv_rule_id = lv_rule iv_channel = is_selection-rule-channel is_run = is_run
+               iv_status  = zif_ca_ops_types=>gc_alert_status-downtime
+               iv_error   = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_resp_types=>gc_msg-downtime_suppressed
+                                                   iv_v1    = lv_downtime
+                                                   iv_v2    = lv_first_window ) ).
+    ENDIF.
+    IF lv_children > 0.
+      add_log( iv_rule_id = lv_rule iv_channel = is_selection-rule-channel is_run = is_run
+               iv_status  = zif_ca_ops_types=>gc_alert_status-correlated
+               iv_error   = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_resp_types=>gc_msg-corr_suppressed
+                                                   iv_v1    = lv_children ) ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD read_extra.
+    DATA lt_parents TYPE zif_ca_ops_resp_types=>tt_uuid.
+    ms_extra-marks    = io_dao->get_marks( is_run-run_id ).
+    ms_extra-runbooks = io_dao->get_runbooks( is_run-area ).
+    LOOP AT ms_extra-marks ASSIGNING FIELD-SYMBOL(<ls_mark>)
+         WHERE corr_role = zif_ca_ops_resp_types=>gc_corr_role-parent.
+      INSERT <ls_mark>-corr_id INTO TABLE lt_parents.
+    ENDLOOP.
+    IF lt_parents IS NOT INITIAL.
+      ms_extra-children = io_dao->get_child_counts( lt_parents ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD escalation_intent.
+    DATA lv_hash TYPE string.
+    TRY.
+        cl_abap_message_digest=>calculate_hash_for_char(
+          EXPORTING
+            if_algorithm  = gc_intent_algorithm
+            if_data       = concat_lines_of(
+                              table = VALUE string_table( ( zif_ca_ops_resp_types=>gc_esc_intent_prefix )
+                                                          ( CONV #( is_rule-rule_id ) )
+                                                          ( CONV #( iv_area ) )
+                                                          ( CONV #( is_candidate-finding-object_type ) )
+                                                          ( CONV #( is_candidate-finding-object_key ) )
+                                                          ( CONV #( is_candidate-finding-check_code ) )
+                                                          ( CONV #( is_candidate-finding-company_code ) )
+                                                          ( |{ is_candidate-first_seen_at }| )
+                                                          ( |{ iv_step }| ) )
+                              sep   = zif_ca_ops_resp_types=>gc_key_separator )
+          IMPORTING
+            ef_hashstring = lv_hash ).
+      CATCH cx_abap_message_digest.
+        " without a key the claim still records the attempt; only the duplicate guard is lost
+        CLEAR lv_hash.
+    ENDTRY.
+    rv_key = lv_hash.
+  ENDMETHOD.
+
+
+  METHOD steps_done.
+    LOOP AT it_log ASSIGNING FIELD-SYMBOL(<ls_log>)
+         WHERE status = zif_ca_ops_types=>gc_alert_status-sent
+            OR status = zif_ca_ops_types=>gc_alert_status-claimed
+            OR status = zif_ca_ops_types=>gc_alert_status-partial.
+      IF line_exists( it_keys[ table_line = <ls_log>-intent_key ] ) AND <ls_log>-esc_step > rv_step.
+        rv_step = <ls_log>-esc_step.
+      ENDIF.
     ENDLOOP.
   ENDMETHOD.
 

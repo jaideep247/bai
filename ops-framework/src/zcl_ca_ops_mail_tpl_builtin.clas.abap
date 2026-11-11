@@ -12,6 +12,7 @@
 *& labels are text symbols. Pure logic: no database, no delivery.
 *& Modification log:
 *& 2026-11-10 | Initial version (alert e-mail templates, user decisions 2026-11-10).
+*& 2026-11-11 | Keys RUNBOOK_URL, FIRST_ACTION, CORRELATED_COUNT, ESCALATION shown when known (L16-L19).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - built-in alert e-mail layout</p>
 CLASS zcl_ca_ops_mail_tpl_builtin DEFINITION
@@ -128,7 +129,12 @@ CLASS zcl_ca_ops_mail_tpl_builtin IMPLEMENTATION.
       ( label = TEXT-l12 value = is_header-started_at )
       ( label = TEXT-l13 value = is_header-ended_at )
       ( label = TEXT-l14 value = is_header-amount_total )
-      ( label = TEXT-l15 value = is_header-exceptions_link ) ).
+      ( label = TEXT-l15 value = is_header-exceptions_link )
+      " operations response features (2026-11-11): runbook, correlated exceptions, escalation step
+      ( label = TEXT-l16 value = is_header-runbook_url )
+      ( label = TEXT-l17 value = is_header-first_action )
+      ( label = TEXT-l18 value = is_header-correlated_count )
+      ( label = TEXT-l19 value = is_header-escalation ) ).
     LOOP AT lt_all ASSIGNING FIELD-SYMBOL(<ls_pair>).
       DATA(lv_value) = condense( <ls_pair>-value ).
       IF lv_value IS NOT INITIAL.

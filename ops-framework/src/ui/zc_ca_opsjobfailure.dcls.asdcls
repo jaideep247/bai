@@ -1,0 +1,34 @@
+// Artifact: zc_ca_opsjobfailure.dcls.asdcls
+// Purpose: Read access to the SAP job failures board (service ZUI_CA_OPS_JOBS): authorization object ZCA_OPS with
+//          ZCA_PARAR = the area of the monitor run that kept the job and ACTVT 03 - and, for a job with a company
+//          code (from an enricher), the same object with BUKRS = that company code (company-code isolation,
+//          docs/auth_zca_ops.md section 3c): area authorised AND ( company code blank OR ( area, company code )
+//          authorised ). The steps, job log errors, application logs and business objects carry the area and
+//          company code of their job, so the same rule applies to every facet of the object page.
+// Modification log: 2026-11-11 | Initial version (SAP job monitor).
+// VERIFY-ADT V66: aspect pfcg_auth on a projection view and on select views (7.58); BUKRS not mapped in the first
+//                 condition = not checked; IS INITIAL in an access condition (fallback: CompanyCode = ' ').
+@EndUserText.label: 'SAP job failures - read access'
+@MappingRole: true
+define role ZC_CA_OpsJobFailure {
+  grant select on ZC_CA_OpsJobFailure
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_CA_OpsJobStep
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_CA_OpsJobMsg
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_CA_OpsJobAlog
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_CA_OpsJobBo
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

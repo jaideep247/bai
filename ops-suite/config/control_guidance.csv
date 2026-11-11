@@ -11,3 +11,4 @@ E,CD_HCK,MISSING_CHECK_IDS,Review cheque payments without a cheque number; recor
 E,CD_FMON,PENDING_ACKS,Confirm the bank acknowledged every file and payment sent; record any acknowledgement still missing after its SLA.
 E,CD_FMON,RETURNS_NOTIF,"Review returns and NOC lots not processed or ageing; record the lot, the count and the next action."
 E,CD_HCK,DAILY_RECON,"Review the open reconciliation variances of the day (bank, G/L, subledger); classify timing differences and record the next action for breaks."
+E,CD_JOBS,SAP_JOB_FAILURES,"Confirm every SAP job failure since the last review is assigned or resolved - above all a child that failed while the Control-M job finished; record the job, the root job and whether a restart from Control-M is safe."

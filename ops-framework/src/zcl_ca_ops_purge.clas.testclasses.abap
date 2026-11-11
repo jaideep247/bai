@@ -18,6 +18,8 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE to the reusable framework ZCA_OPS: built-in targets RUN and
 *&            | ALERT_LOG; registered_target_purged (registry row: plug-in double and its own retention
 *&            | parameter); wrong_target_class_stops (nothing deleted when a registry class is no target).
+*& 2026-11-11 | deletes_in_packages: one commit per built-in target - REVIEW (was not counted) and DOWNTIME
+*&            | (planned downtime windows) are empty targets of the DAO double: 6 commits.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -212,8 +214,8 @@ CLASS ltc_purge IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_run-history exp = 5
                                             msg = 'Exception history purged with the findings is counted' ).
         cl_abap_unit_assert=>assert_equals( act = ls_run-dependent exp = 10 msg = 'Deleted findings must be counted' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_commits exp = 4
-                                            msg = 'One commit per package of every target (3 + ALERT_LOG empty)' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_commits exp = 6
+                                            msg = 'One commit per package of every target (3 + ALERT_LOG, REVIEW, DOWNTIME empty)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

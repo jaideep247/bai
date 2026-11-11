@@ -17,6 +17,8 @@
 *& 2026-11-10 | Messages 437-439: control register (owner / backup user, team, runbook link).
 *& 2026-11-10 | TABLE_INVALID / FIELD_INVALID (082 / 083): table and field checks of the aggregate rows
 *&            | and approved tables of the check registry (process onboarding).
+*& 2026-11-11 | CORR_FIELDS_INVALID / CORR_WINDOW_INVALID (153 / 154): correlation rules (operations response
+*&            | features).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configuration apps: types</p>
 INTERFACE zif_ca_ops_cfg_types
@@ -152,6 +154,10 @@ INTERFACE zif_ca_ops_cfg_types
       table_invalid     TYPE ty_msg_number VALUE '082',
       "! Aggregate check: the field is not a field of the row's table
       field_invalid     TYPE ty_msg_number VALUE '083',
+      "! Correlation rule: the key field list names no / an unknown finding field (2026-11-11)
+      corr_fields_invalid TYPE ty_msg_number VALUE '153',
+      "! Correlation rule: the window is shorter than one minute (2026-11-11)
+      corr_window_invalid TYPE ty_msg_number VALUE '154',
     END OF gc_msg.
 
 ENDINTERFACE.

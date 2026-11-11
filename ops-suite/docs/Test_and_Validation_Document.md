@@ -416,6 +416,31 @@ Rule under test: area authorised AND ( company code blank OR ( area, company cod
 5. CC-24: no alert e-mail of a list scoped to 1000 contains a finding of 2000.
 6. Offline evidence before DV1: `ZCL_CA_OPS_DCL_TEST`, `ZCL_CD_OPS_DCL_TEST`, `ZCL_CA_OPS_EXC_POLICY` `ltc_isolation`, `ZCL_CD_HCK_SUPPRESSION` `ltc_company_code`, `ZCL_CA_OPS_CTL_CDS_TEST` `ltc_slice` / `ltc_day`, `ZCL_CD_EBS_DASH_CDS_TEST` `run_sliced_by_company_code` green (VERIFY V38, V39).
 
+### 6.17 Operations response features of the framework (2026-11-11, `ops-framework/docs/OPERATIONS_FEATURES.md`)
+
+ABAP Unit in ZCA_OPS (no suite class changed): `ZCL_CA_OPS_DOWNTIME_POLICY` (14), `ZCL_CA_OPS_DOWNTIME` (4, OSQL),
+`ZCL_CA_OPS_CORRELATOR` (9), `ZCL_CA_OPS_ALERT_ROUTER` `ltc_response` (9: downtime held back and logged D, area-wide
+window holds back the run-level alert, child held back and logged K with the parent naming it, runbook link in the
+message, due escalation sent once, a sent step not resent, child and downtime skipped, not yet due, authorisation 16),
+`ZCL_CA_OPS_ALERT_POLICY` `ltc_response` (9), `ZCL_CA_OPS_STORE` (3), CDS tests `ZCL_CA_OPS_MET_CDS_TEST` and
+`ZCL_CA_OPS_HOVR_CDS_TEST`. QA1 with the suite's configuration (`config/runbook_links.csv`, `config/correlation_rules.csv`,
+`config/alert_seed.md` *Operations response features*):
+
+| ID | Case | Expected | Result |
+|---|---|---|---|
+| RSP-01 | Runbook row `CD_FMON` / `CHECK_CODE` / `NO_BANK_ACK` saved active with the placeholder link | Refused (439); saved inactive; once the site link is entered and the row activated, the exceptions app shows the link and the first action of a `NO_BANK_ACK` exception, the `FMON_ACK` e-mail shows them | pending |
+| RSP-02 | Planner plans a window for a JPMC maintenance (area `CD_FMON`, interface pattern), tries to approve it | Approve disabled / refused (147); the team lead (`Z_CD_OPS_APPROVER`) approves | pending |
+| RSP-03 | Window longer than `DOWNTIME_MAX_HOURS`, starting an hour ago, overlapping an approved window of the same scope | Refused on save (144, 145, 146) | pending |
+| RSP-04 | FMON run inside the approved window with missing JPMC ACKs | Findings recorded with the downtime mark (exceptions app *In planned downtime*); no `FMON_ACK` e-mail, one `ZCA_OPS_ALLOG` row D; after the window (or *End now*) the next run alerts the ACKs still missing | pending |
+| RSP-05 | Missing-volume question of a check during the window | `ZIF_CA_OPS_DOWNTIME=>PLANNED` returns the window for the bank's finding | pending |
+| RSP-06 | `FMON_BAIDL` with `ESC_AFTER_MIN` 30, `STAGE_DEADLINE_MISSED` raised at 10:05 and not assigned | `ZCD_RTBLEAD` receives escalation 1 / 2 at about 10:35, 2 / 2 at about 11:35, then nothing; one `ZCA_OPS_ALLOG` row per step (`ESC_STEP`) | pending |
+| RSP-07 | Same, the exception assigned at 10:20 | No escalation | pending |
+| RSP-08 | Correlation rule `FMON_ACK` active, five files of one interface without ACK in one run | One exception parent, four children (facet *Correlated exceptions*); one e-mail naming 4 correlated exceptions; one row K; resolving the four children from the facet table with one *Resolve* | pending |
+| RSP-09 | Two users of company codes 1000 / 2000 (§6.16), EBS lines of one unmapped BTC in both company codes with rule `EBS_BTC` | Two groups (one per company code); each user sees only the own group and its count | pending |
+| RSP-10 | Response times app (`ZUI_CA_OPS_MET_O4`) for last month, area `CD_FMON` | Raised / resolved per month equal the exceptions app's counts; MTTA averages only assigned exceptions; open by age matches the overdue list | pending |
+| RSP-11 | Shift handover at 15:00 CST with ONSITE shifts 06:00 / 14:00 / 22:00 | "Since 06:00"; new / resolved / still open / escalated / awaiting sign-off per team equal the exceptions app, the alert log and the review app | pending |
+| RSP-12 | Overview cards *Response times* and *Shift handover* for a user of company code 1000 | Sums of the area-level and 1000 rows only (DCL before the card's aggregation) | pending |
+
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 
 Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–D11 of that document.

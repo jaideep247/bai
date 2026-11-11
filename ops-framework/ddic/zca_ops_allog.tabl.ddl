@@ -11,7 +11,8 @@ define table zca_ops_allog {
   run_id        : sysuuid_x16;
   area       : zca_param_area_id;
   sent_at       : timestampl;
-  // S submitted (accepted by the channel), F failed, T throttled, Q quiet hours, C claimed, R repeat, P partial
+  // S submitted (accepted by the channel), F failed, T throttled, Q quiet hours, C claimed, R repeat, P partial,
+  // D planned downtime (suppressed), K correlated children (suppressed, alerted with their parent) (2026-11-11)
   status        : abap.char(1);
   destination   : abap.char(255);
   subject       : abap.char(255);
@@ -24,10 +25,15 @@ define table zca_ops_allog {
   template_id   : abap.char(30);
   renderer      : abap.char(10);
   render_info   : abap.char(255);
+  // Escalation until acknowledged (2026-11-11): the n-th escalation of one exception (0 = an ordinary alert);
+  // RUN_ID / FINDING_NO = the exception row escalated (one row per attempt, intent per exception and step)
+  esc_step      : abap.int4;
+  finding_no    : abap.int4;
 }
 // Secondary index RUL: throttling / escalation
 // @index RUL: MANDT, RULE_ID, SENT_AT
 // Secondary index INT (UNIQUE): one dispatcher per alert intent and attempt (audit A17)
 // @index INT UNIQUE: MANDT, INTENT_KEY, ATTEMPT
 // Status: S submitted (channel accepted; e-mail delivery is in SOST), F failed, T throttled, Q quiet hours, C claimed (in delivery), R repeat
-//   (carried-forward exception, not re-alerted), P partially delivered
+//   (carried-forward exception, not re-alerted), P partially delivered, D planned downtime (findings in an
+//   approved window, not alerted), K correlated children (alerted with their parent only) - 2026-11-11

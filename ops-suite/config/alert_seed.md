@@ -29,6 +29,7 @@ and the channel refuses the route before anything is sent if a list was deleted 
 | ZCD_RETOPS | Returns / NOC operations | FMON_PART |
 | ZCD_COMPL | Compliance | NOC_AGING |
 | ZCD_RTBSUP | RTB support | HCK_RED, HCK_RECON, ALL_ABORT, RUN_LOCKED, morning report |
+| ZCD_BATCHSUP | Batch support (SAP job failures) - proposed name, confirm (V69) | JOB_FAIL |
 | ZCD_RTBLEAD | RTB lead (escalation) | ESCALATION_DEST of EBS_BLOCK, FMON_PART, FMON_SLA, FMON_BAIDL, FMON_REGEN, HCK_RED, HCK_RECON |
 
 ## ZCA_OPS_ALRULE
@@ -36,7 +37,7 @@ and the channel refuses the route before anything is sent if a list was deleted 
 **Rules of business processes (process onboarding, 2026-11-10)** are seed rows of `config/alert_rules.csv` (the
 columns of `ZCA_OPS_ALRULE`, written by `tools/abaptools/new_process.py`): one rule per process, area of the process,
 `GROUP1_PATTERN` = the process ID (the framework's runner stamps GROUP1 = process). Delivered: `COLL_LIFE`
-(process `CD_COLL` / `BASE_REQ_LIFE`, inactive, ‹SO23 list›; `config/control_seed.md` §2b).
+(process `CD_COLL` / `BASE_REQ_LIFE`, inactive, ‹SO23 list›; `config/control_seed.md` §2b). `JOB_FAIL` (process `CD_JOBS` / `SAP_JOBS`, SAP job failures, **active**, 2026-11-11): severity E - cancelled jobs and children that failed under a root that did not abort - to `ZCD_BATCHSUP`, digest per run, **throttle 0** (the job monitor runs every 5 minutes; a throttle would hold back the next failure), on abort; job log errors, long-running and not started jobs (W) are on the board and in the exceptions app only.
 
 RULE / CHECK / GROUP1 / GROUP2 patterns are **PCRE matched to the complete value, case ignored** (blank = any;
 user decision 2026-11-06): `.*SLA.*` = any check code containing SLA, `RUN_LOCKED` = exactly that code. The
@@ -128,7 +129,9 @@ the series).
 
 ZCA_OPS_ALLOG needs the **unique** secondary index `INT` (MANDT, INTENT_KEY, ATTEMPT) — create it in SE11
 before go-live; it is what stops two dispatchers sending the same alert (A17). Status values: S sent, F failed,
-T throttled, Q quiet, C claimed (in delivery), R repeat (carried-forward exception, not re-alerted), P partial.
+T throttled, Q quiet, C claimed (in delivery), R repeat (carried-forward exception, not re-alerted), P partial;
+since 2026-11-11 also D planned downtime (findings in an approved window, not alerted) and K correlated children
+(alerted with their parent only) - see *Operations response features* below.
 
 Parameters (ZCA_PARAM area `CD_OPS`) for reports sent with `send( )`: `ALERT_MORNING` (morning report SO23 list, LIST, proposed `ZCD_RTBSUP`; a route other than MORNING in `HCK_MAIL_ROUTE` needs its own definition `ALERT_<route>`), `ALERT_DEFAULT` (fallback), `ALERT_ESCALATION_WINDOW_H` (default 24).
 
@@ -140,6 +143,67 @@ Rules of behaviour (proved by `ZCL_CA_OPS_ALERT_POLICY` / `ZCL_CA_OPS_ALERT_ROUT
 - An e-mail destination that is not a shared SO23 list is refused before BCS is called (027, logged F).
 - MAX_ITEMS keeps the most severe findings (B > E > W > I); the message names how many were held back (A63).
 - Test-mode runs never alert.
+
+## Operations response features (framework, 2026-11-11) — proposed rows, confirm before transport
+
+The framework's runbook links, planned downtime, escalation until acknowledged and alert correlation
+(`ops-framework/docs/OPERATIONS_FEATURES.md`) are configuration of the suite's areas. Everything below is a
+**proposal**: rows are entered in DV1 on a customizing request in `ZUI_CA_OPS_CFG` after RTB operations confirmed
+them (`Implementation_Order.md` step 1i); nothing is delivered active.
+
+**Runbook link per check (`ZCA_OPS_RUNBOOK`, seed file `config/runbook_links.csv`).** One row per main check code
+of the suite (FMON 15, EBS 3, HCK 5) with the first action taken from `docs/Operations_Runbook.md`. The link is the
+placeholder `<Site runbook URL>` and the row is **inactive** until the site's runbook page exists: the app refuses
+an active row without an http(s) link (439), and an inactive row is shown nowhere. When the page exists: enter the
+link, set ACTIVE = X (production may edit existing rows; new rows only by transport).
+
+| AREA | MATCH_FIELD | MATCH_VALUE (examples) | FIRST_ACTION (shown in the exceptions app and the alert e-mail) |
+|---|---|---|---|
+| CD_FMON | CHECK_CODE | `NO_BANK_ACK`, `BANK_ACK_LATE`, `ACK_COUNT_MISMATCH`, `ACK_AMOUNT_MISMATCH` | open the file in the file monitoring dashboard; ask the bank file desk / compare the totals |
+| CD_FMON | CHECK_CODE | `STAGE_DEADLINE_MISSED` | check in SM37 whether the BAI import job ran today (`Operations_Runbook.md` §4d) |
+| CD_FMON | CHECK_CODE | `FILE_REGENERATED_NOT_FAILED`, `PRISM_DUPLICATE_NAME`, `REGENERATION_MISSING` | possible duplicate payment file / regenerated files (§4e) |
+| CD_FMON | CHECK_CODE | `FILE_MISSING`, `NACK`, `FILE_FAILED`, `DUPLICATE_FILE`, `LOT_UNPROCESSED`, `LOT_NOT_FOUND`, `NOC_AGING` | file monitoring dashboard (§4b), returns team, compliance |
+| CD_EBS | CHECK_CODE | `UNMAPPED_BTC`, `POSTING_INCOMPLETE`, `PLUGIN_ERROR` | posting area ZBTM (FQC0), posting job FEBP (§5c), RTB support |
+| CD_HCK | CHECK_CODE | `RECON_BREAK`, `RECON_SUBLEDGER_BREAK`, `STRIPE_GROUP_BREAK`, `PARAM_INVALID`, `PLUGIN_ERROR` | control center variance card and classification (§5m), parameter app (§5f), RTB support |
+
+**Escalation until acknowledged (`ZCA_OPS_ALRULE-ESC_*`, job `ZCA_OPS_ESCALATE`).** Proposal derived from the
+acknowledgement targets of the priority table above (P1 15 min 24×7, P2 1 h): an open exception that nobody has
+assigned is escalated to `ZCD_RTBLEAD` when the target has passed, then repeated, at most `ESC_MAX_COUNT` times;
+assignment, waiver or resolution stops it. A rule with `ESC_AFTER_MIN` escalates **by time only** - its
+`ESCALATE_AFTER` (consecutive runs) no longer applies (framework precedence); the other rules keep their run-based
+escalation unchanged.
+
+| RULE_ID | Priority | ESC_AFTER_MIN | ESC_REPEAT_MIN | ESC_MAX_COUNT | ESC_SEVERITY | ESCALATION_DEST | Replaces ESCALATE_AFTER |
+|---|---|---|---|---|---|---|---|
+| EBS_BLOCK | P1 | 15 | 30 | 3 | *(blank = B)* | ZCD_RTBLEAD | 3 runs |
+| FMON_REGEN | P1 | 15 | 30 | 3 | *(blank = E)* | ZCD_RTBLEAD | 2 runs |
+| FMON_BAIDL | P2 | 30 | 60 | 2 | *(blank)* | ZCD_RTBLEAD | 6 runs (30 minutes of the 5-minute job) |
+| FMON_ACK, FMON_SLA, FMON_FILE | P2 | 60 | 120 | 2 | E | ZCD_RTBLEAD | 3 runs |
+| HCK_RED, HCK_RECON | P2 | 60 | 120 | 2 | E | ZCD_RTBLEAD | 2 runs (once a day: time-based escalates the same morning) |
+
+`ALL_ABORT` and `RUN_LOCKED` are run-level / technical and keep no escalation. Job: `ZCA_OPS_ESCALATE` for each of
+`CD_EBS`, `CD_FMON`, `CD_HCK` every 10 minutes (job user `Z_CD_OPS_BATCH`, ZCA_OPS 16; `Implementation_Order.md`
+step 4). Quiet hours of a rule also hold its escalation back (B excepted). The escalation e-mail names the step
+(`ESCALATION`, n / m) and the minutes the exception has been open; every step is a row of `ZCA_OPS_ALLOG` with
+`ESC_STEP`.
+
+**Alert correlation (`ZCA_OPS_CORR`, seed file `config/correlation_rules.csv`, all inactive).**
+
+| AREA | CORR_RULE | CHECK_PATTERN | KEY_FIELDS | WINDOW_MIN | Why |
+|---|---|---|---|---|---|
+| CD_FMON | FMON_ACK | `(NO_)?BANK_ACK(_LATE)?` | GROUP1 (interface) | 120 | A bank that sends no ACKs at all raises one finding per file; one alert per interface, the files as its children |
+| CD_FMON | FMON_FILE | `FILE_(MISSING\|FAILED)\|NACK` | GROUP1 (interface) | 60 | An interface outage raises several file findings in the same hour |
+| CD_EBS | EBS_BTC | `UNMAPPED_BTC` | GROUP1 (`scheme:BTC code`) | 1440 | One missing ZBTM entry raises one finding per statement line; one exception per code is worked, the lines are its children |
+
+The company code is part of every correlation key (framework rule): EBS lines of two company codes are two groups.
+Rules with `DIGEST` = X already send one e-mail per run; correlation also groups the exceptions in the exceptions
+app (facet *Correlated exceptions*) and keeps later runs' children silent.
+
+**Planned downtime (`ZUI_CA_OPS_DTW`).** Windows are application data, planned in each client by the planner and
+approved by a second user (`Z_CD_OPS_APPROVER`, ZCA_OPS 85; `config/auth_zcd_ops.md`); no seed rows. Typical use: a
+bank's announced maintenance (scope: area `CD_FMON`, interface or bank pattern on GROUP1 / GROUP2, e.g. `.*JPMC.*` for every interface of that bank; checked as PCRE on save) - the
+ACK and file findings of that bank are recorded and marked, their alerts held back (log D), and the next run after
+the window alerts what is still open. `Operations_Runbook.md` §5r.
 
 ## Core parameters — framework `ZCA_PARAM`, area `CD_OPS` (retention purge, `ZCA_OPS_RETENTION`)
 

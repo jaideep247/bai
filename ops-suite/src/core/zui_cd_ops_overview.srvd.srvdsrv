@@ -12,6 +12,9 @@
 // same DCL ZC_CA_OPSCHECKSTATUS; card annotations in its metadata extension); opens app ZUI_CA_OPS_DASH.
 // 2026-11-11: service health per business service (score, worst contributors) and the process flow of the payment
 // lifecycle (stuck per stage, drop) - build B block at the end.
+// 2026-11-11: SAP job failures of the framework's SAP job monitor (area CD_JOBS) - KPI card "Job failures today" and
+// list card on the framework's board projection ZC_CA_OpsJobFailure (DCL ZC_CA_OPSJOBFAILURE, card annotations in its
+// metadata extension); opens app ZUI_CA_OPS_JOBS.
 // 2026-11-11: ledger reconciliation (group-days of the clearing accounts), batch keys not transferred and document-
 // change volumes - build C block at the end.
 define service ZUI_CD_OPS_OVERVIEW {
@@ -46,6 +49,15 @@ define service ZUI_CD_OPS_OVERVIEW {
   expose ZC_CD_SvcContrib as ServiceContributor;
   expose ZC_CD_PayFlow    as PaymentFlow;
   // <<< 2026-11-11 service health and process flow (build B)
+  // SAP job failures (2026-11-11, area CD_JOBS): job failures today - cancelled, child failed while the parent
+  // finished, not started, long-running - and the list of today's failures (framework projection, same DCL)
+  expose ZC_CA_OpsJobFailure as JobFailure;
+  // ---- Operations response features of the framework (2026-11-11; ops-framework/docs/OPERATIONS_FEATURES.md)
+  // Cards "Response times" (MTTA / MTTR, raised, open, re-opened) and "Shift handover" (since the previous shift);
+  // framework projections with their own DCL and card annotations (as ProcessCheck); read-only here.
+  expose ZC_CA_OpsExcMetric as ExceptionMetric;
+  expose ZC_CA_OpsHandover  as ShiftHandover;
+  // ---- end of the operations response features
   // >>> build C - 2026-11-11 ledger reconciliation and document changes - keep this block together at merge
   // Group reconciliation per business date x company code x clearing account x currency (stored A_RECON_3WAY result,
   // live journal / subledger legs, reset / reversal bucket) and document-change volumes; same projections and DCL

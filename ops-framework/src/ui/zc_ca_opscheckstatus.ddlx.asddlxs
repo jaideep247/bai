@@ -3,6 +3,7 @@
 // points ProcessChecks, ChecksFlagged, ChecksStale, OpenExceptions; sums over the slices the user may read) and
 // list "Process checks - attention" (selection variant Attention, presentation variant Attention: worst status
 // first, then stale, then most open exceptions). VERIFY-ADT: card rendering (OVP V4).
+// 2026-11-11: planned downtime of the area now (column, filter, run group).
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Check', typeNamePlural: 'Checks by area',
                   title: { type: #STANDARD, value: 'CheckName' },
@@ -104,6 +105,15 @@ annotate entity ZC_CA_OpsCheckStatus with
   IsStale;
   @UI.hidden: true
   StaleCriticality;
+  // Planned downtime of the area now (2026-11-11): findings are recorded, alerts held back
+  @EndUserText.label: 'Planned downtime (area, now)'
+  @UI.lineItem: [ { position: 85, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 70 } ]
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 70 } ]
+  IsPlannedDowntime;
+  @EndUserText.label: 'Active downtime windows'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 80 } ]
+  PlannedDowntimeWindows;
   @UI.hidden: true
   SliceCount;
   @EndUserText.label: 'Flagged (check and company code)'

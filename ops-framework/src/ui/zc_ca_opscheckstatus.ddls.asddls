@@ -6,6 +6,7 @@
 //          slice, its BUKRS). Read-only.
 // Modification log: 2026-11-10 | Initial version (process onboarding: area dashboard and freshness).
 //                   2026-11-10 | Overview card counters (CheckCount, StaleCount, IsAttention), summed by default.
+//                   2026-11-11 | Planned downtime mark of the area (operations response features).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Area dashboard: status per check'
 @Metadata.allowExtensions: true
@@ -39,6 +40,8 @@ define root view entity ZC_CA_OpsCheckStatus
       AgeMinutes,
       IsStale,
       StaleCriticality,
+      PlannedDowntimeWindows,
+      IsPlannedDowntime,
       @Aggregation.default: #SUM
       SliceCount,
       @Aggregation.default: #SUM

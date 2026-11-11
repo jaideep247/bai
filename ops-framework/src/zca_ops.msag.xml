@@ -419,6 +419,258 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>110</MSGNR>
+     <TEXT>Job &amp;1 (&amp;2) cancelled at &amp;3 &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>111</MSGNR>
+     <TEXT>Job &amp;1 (&amp;2) failed under root job &amp;3 (&amp;4) - the root did not abort</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>112</MSGNR>
+     <TEXT>Job &amp;1 (&amp;2) finished with &amp;3 error line(s) in its job log</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>113</MSGNR>
+     <TEXT>Job &amp;1 (&amp;2) active for &amp;3 minutes (limit &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>114</MSGNR>
+     <TEXT>Job &amp;1 (&amp;2) not started &amp;3 minutes after its planned start (limit &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>115</MSGNR>
+     <TEXT>Job &amp;1 (&amp;2): failure reported by &amp;3 - kept as evidence only</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>116</MSGNR>
+     <TEXT>Parent job: &amp;1 (&amp;2), status &amp;3, link &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>117</MSGNR>
+     <TEXT>Root job: &amp;1 (&amp;2), status &amp;3, &amp;4 level(s) above</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>118</MSGNR>
+     <TEXT>Scheduler job: &amp;1 / &amp;2, criticality &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>119</MSGNR>
+     <TEXT>Step &amp;1: program &amp;2, variant &amp;3, user &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>120</MSGNR>
+     <TEXT>Job monitor &amp;1: &amp;2 read, cap &amp;3 - the next run continues at &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>121</MSGNR>
+     <TEXT>Job monitor parameter &amp;1 is not usable (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>122</MSGNR>
+     <TEXT>Job monitor plug-in &amp;1 failed - its links or objects are missing:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>123</MSGNR>
+     <TEXT>Job log of &amp;1 (&amp;2) not read: BP_JOBLOG_READ return code &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>124</MSGNR>
+     <TEXT>Failed jobs in this run under the same check: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>125</MSGNR>
+     <TEXT>Application logs: &amp;1 linked (&amp;2 with errors), first &amp;3 / &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>126</MSGNR>
+     <TEXT>Business object &amp;1 &amp;2: &amp;3 (quality &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>127</MSGNR>
+     <TEXT>&amp;1 is not a field of the job table or not a valid field name</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>128</MSGNR>
+     <TEXT>Root job &amp;1 (&amp;2) still active - its scheduler has not seen the failure</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>129</MSGNR>
+     <TEXT>Job evidence of area &amp;1 / check &amp;2 could not be saved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>130</MSGNR>
+     <TEXT>SM37: job &amp;1 count &amp;2, system &amp;3, server &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>140</MSGNR>
+     <TEXT>&amp;1 finding(s) in planned downtime &amp;2: recorded, not alerted</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>141</MSGNR>
+     <TEXT>&amp;1 correlated exception(s) alerted with their parent only</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>142</MSGNR>
+     <TEXT>Escalation &amp;1 of &amp;2 (open and unassigned for &amp;3 min):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>143</MSGNR>
+     <TEXT>Downtime window: the end &amp;1 is not after the start &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>144</MSGNR>
+     <TEXT>Downtime window of &amp;1 hour(s) is longer than &amp;2 (DOWNTIME_MAX_HOURS)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>145</MSGNR>
+     <TEXT>Downtime window starts &amp;1 minute(s) in the past (allowed: &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>146</MSGNR>
+     <TEXT>Downtime window overlaps window &amp;1 of the same scope</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>147</MSGNR>
+     <TEXT>Four-eyes: &amp;1 planned this window and cannot approve it</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>148</MSGNR>
+     <TEXT>Downtime window is approved: only End now is possible</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>149</MSGNR>
+     <TEXT>Downtime window has ended: no further change</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>150</MSGNR>
+     <TEXT>Scope pattern &amp;1 is not valid PCRE (complete value, any case)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>151</MSGNR>
+     <TEXT>Enter the reason of the planned downtime</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>152</MSGNR>
+     <TEXT>No authorisation for area &amp;1, activity &amp;2 (ZCA_OPS)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>153</MSGNR>
+     <TEXT>Key field list &amp;1 invalid (finding fields, comma separated)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>154</MSGNR>
+     <TEXT>Correlation window &amp;1 must be at least 1 minute</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>155</MSGNR>
+     <TEXT>Correlation ID could not be generated - findings not saved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>156</MSGNR>
+     <TEXT>Escalation of area &amp;1: &amp;2 escalated, &amp;3 skipped, &amp;4 failed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>157</MSGNR>
+     <TEXT>Run-level alert of rule &amp;1 suppressed: planned downtime &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>158</MSGNR>
+     <TEXT>Enter the start and the end of the window (date and time)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>159</MSGNR>
+     <TEXT>Downtime window awaits approval: change or delete it instead</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>160</MSGNR>
+     <TEXT>Escalation step &amp;1 of rule &amp;2 not sent: no intent key (duplicate guard)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>
