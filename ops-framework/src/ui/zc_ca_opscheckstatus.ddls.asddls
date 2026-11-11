@@ -7,6 +7,7 @@
 // Modification log: 2026-11-10 | Initial version (process onboarding: area dashboard and freshness).
 //                   2026-11-10 | Overview card counters (CheckCount, StaleCount, IsAttention), summed by default.
 //                   2026-11-11 | Planned downtime mark of the area (operations response features).
+//                   2026-11-11 | Process catalogue: catalogue process and dashboard card of the check's process.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Area dashboard: status per check'
 @Metadata.allowExtensions: true
@@ -23,6 +24,8 @@ define root view entity ZC_CA_OpsCheckStatus
       @Search.defaultSearchElement: true
       ProcessId,
       ProcessName,
+      CatalogueProcess,
+      DashboardCard,
       CheckName,
       ScheduleGroup,
       ClassName,

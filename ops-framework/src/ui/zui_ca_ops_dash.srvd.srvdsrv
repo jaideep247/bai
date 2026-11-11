@@ -5,4 +5,8 @@
 // and freshness per area, registered check and company-code slice.
 define service ZUI_CA_OPS_DASH {
   expose ZC_CA_OpsCheckStatus as CheckStatus;
+  // Process catalogue (2026-11-11): the active business processes with their own KPIs, and the catalogue with
+  // today's activation
+  expose ZC_CA_OpsProcStatus  as ProcessStatus;
+  expose ZC_CA_OpsCatalogue   as Catalogue;
 }

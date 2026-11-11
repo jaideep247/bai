@@ -23,6 +23,9 @@ define table zca_ops_proc {
   // Purge target of the own tables (ZCA_OPS_PURGE); blank with OWN_DATA blank = findings only, purged with
   // their runs (built-in target RUN)
   purge_target  : abap.char(12);
+  // Process of the process catalogue this business process monitors (ZCA_OPS_CATPRC, 2026-11-11); blank = not
+  // in the catalogue. The process and its checks are in effect only while that catalogue process is active
+  cat_process   : abap.char(20);
   active        : abap_boolean;
   seq           : abap.int4;
   // RAP configuration app: set by the framework, ignored by engines

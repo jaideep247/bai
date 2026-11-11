@@ -23,4 +23,10 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_Link as Link;
   expose ZC_CA_LinkCondition as LinkCondition;
   expose ZC_CA_LinkActivation as LinkActivation;
+  expose ZC_CA_CatalogPackage as CatalogPackage;
+  expose ZC_CA_CatalogProcess as CatalogProcess;
+  expose ZC_CA_CatalogStep as CatalogStep;
+  expose ZC_CA_CatalogTable as CatalogTable;
+  expose ZC_CA_CatalogDependency as CatalogDependency;
+  expose ZC_CA_CatalogActivation as CatalogActivation;
 }

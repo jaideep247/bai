@@ -494,6 +494,7 @@ CLASS ltc_control_check DEFINITION FINAL FOR TESTING
     METHODS teardown.
     METHODS known_user_is_valid          FOR TESTING.
     METHODS unknown_user_is_refused      FOR TESTING.
+    METHODS approver_four_eyes           FOR TESTING.
     METHODS team_from_parameter          FOR TESTING.
     METHODS maintained_teams_replace     FOR TESTING.
     METHODS http_link_is_valid           FOR TESTING.
@@ -525,6 +526,18 @@ CLASS ltc_control_check IMPLEMENTATION.
   METHOD unknown_user_is_refused.
     cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>user_valid( 'ZT_NOBODY' )
                                        msg = 'A user that does not exist is refused (437)' ).
+  ENDMETHOD.
+
+
+  METHOD approver_four_eyes.
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>approver_valid( ltd_users=>gc_known )
+                                      msg = 'Another existing user approves the activation' ).
+    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>approver_valid( space )
+                                      msg = 'Blank is left to the required check (235)' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>approver_valid( sy-uname )
+                                       msg = 'Nobody approves their own activation change (240)' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>approver_valid( 'ZT_NOBODY' )
+                                       msg = 'A user that does not exist is refused (240)' ).
   ENDMETHOD.
 
 

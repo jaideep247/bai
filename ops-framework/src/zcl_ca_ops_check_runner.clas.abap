@@ -15,6 +15,9 @@
 *& re-raised. Test mode: nothing is written, no alert is sent.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Process catalogue: a check of a business process that is not in effect (the process row is
+*&            | inactive or its catalogue process is not active today) is not run - one information finding
+*&            | PROCESS_INACTIVE (message 241) instead; its open exceptions stay open (a switch-off is not a fix).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - generic check runner</p>
 "! Report ZCA_OPS_CHECK_RUN (one job per area and schedule group). No check, no business table
@@ -62,6 +65,13 @@ CLASS zcl_ca_ops_check_runner DEFINITION
       IMPORTING
         is_check          TYPE zif_ca_ops_chk_types=>ty_check
         ix_error          TYPE REF TO cx_root
+      RETURNING
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
+
+    "! Information finding of a check that is not run because its business process is not in effect
+    METHODS skipped
+      IMPORTING
+        is_check          TYPE zif_ca_ops_chk_types=>ty_check
       RETURNING
         VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
@@ -156,7 +166,15 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
                  INTO TABLE rs_result-findings.
         ENDIF.
 
+        " Activation (process catalogue): the business processes of the area not in effect today
+        DATA(lt_off) = zcl_ca_ops_factory=>get_catalog( )->inactive_onboarded( iv_area = iv_area
+                                                                               iv_date = ls_context-today ).
         LOOP AT lt_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+          IF <ls_check>-process_id IS NOT INITIAL AND line_exists( lt_off[ table_line = <ls_check>-process_id ] ).
+            " not run, not reconciled: its earlier exceptions stay open
+            INSERT skipped( <ls_check> ) INTO TABLE rs_result-findings.
+            CONTINUE.
+          ENDIF.
           DATA(ls_one) = run_check( is_check   = <ls_check>
                                     is_context = ls_context ).
           INSERT LINES OF ls_one-findings INTO TABLE rs_result-findings.
@@ -208,6 +226,24 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
     ENDTRY.
     stamp( EXPORTING is_check    = is_check
            CHANGING  ct_findings = rs_result-findings ).
+  ENDMETHOD.
+
+
+  METHOD skipped.
+    DATA lt_one TYPE zif_ca_ops_types=>tt_finding.
+    INSERT VALUE #( object_type = zif_ca_ops_chk_types=>gc_object_type-check
+                    object_key  = is_check-check_id
+                    rule_id     = zif_ca_ops_chk_types=>gc_rule_id-runner
+                    check_code  = zif_ca_ops_cat_types=>gc_code-process_inactive
+                    severity    = zif_ca_ops_types=>gc_severity-info
+                    action      = zif_ca_ops_types=>gc_action-notify
+                    message     = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_cat_types=>gc_msg-skipped
+                                                         iv_v1    = is_check-check_id
+                                                         iv_v2    = is_check-process_id
+                                                         iv_v3    = is_check-area ) ) INTO TABLE lt_one.
+    stamp( EXPORTING is_check    = is_check
+           CHANGING  ct_findings = lt_one ).
+    rs_finding = lt_one[ 1 ].
   ENDMETHOD.
 
 

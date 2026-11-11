@@ -36,6 +36,12 @@ authorization master ( global )
   association _Link { create ( features : global ); with draft; }
   association _LinkCondition { create ( features : global ); with draft; }
   association _LinkActivation { create ( features : global ); with draft; }
+  association _CatalogPackage { create ( features : global ); with draft; }
+  association _CatalogProcess { create ( features : global ); with draft; }
+  association _CatalogStep { create ( features : global ); with draft; }
+  association _CatalogTable { create ( features : global ); with draft; }
+  association _CatalogDependency { create ( features : global ); with draft; }
+  association _CatalogActivation { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -85,6 +91,18 @@ authorization master ( global )
     validation LinkCondition ~ validateTransport;
     validation LinkActivation ~ validateFields;
     validation LinkActivation ~ validateTransport;
+    validation CatalogPackage ~ validateFields;
+    validation CatalogPackage ~ validateTransport;
+    validation CatalogProcess ~ validateFields;
+    validation CatalogProcess ~ validateTransport;
+    validation CatalogStep ~ validateFields;
+    validation CatalogStep ~ validateTransport;
+    validation CatalogTable ~ validateFields;
+    validation CatalogTable ~ validateTransport;
+    validation CatalogDependency ~ validateFields;
+    validation CatalogDependency ~ validateTransport;
+    validation CatalogActivation ~ validateFields;
+    validation CatalogActivation ~ validateTransport;
   }
 }
 
@@ -341,6 +359,7 @@ etag master LocalLastChangedAt
     AuthRole = auth_role;
     OwnData = own_data;
     PurgeTarget = purge_target;
+    CatProcess = cat_process;
     Active = active;
     Seq = seq;
     LastChangedBy = last_changed_by;
@@ -414,6 +433,8 @@ etag master LocalLastChangedAt
     AggFunc = agg_func;
     DateField = date_field;
     MinAgeDays = min_age_days;
+    MaxAgeDays = max_age_days;
+    TimeField = time_field;
     BukrsField = bukrs_field;
     StatusField = status_field;
     StatusOp = status_op;
@@ -834,6 +855,212 @@ etag master LocalLastChangedAt
     Active = active;
     Reason = reason;
     Owner = owner;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_CatalogPackage alias CatalogPackage
+persistent table zca_ops_catpkg
+with additional save
+draft table zca_d_catpkg
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) PkgId;
+  field ( mandatory : create ) PkgId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_catpkg
+  {
+    PkgId = pkg_id;
+    PkgKind = pkg_kind;
+    PkgRank = pkg_rank;
+    IdPrefix = id_prefix;
+    MonArea = mon_area;
+    Description = description;
+    Owner = owner;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_CatalogProcess alias CatalogProcess
+persistent table zca_ops_catprc
+with additional save
+draft table zca_d_catprc
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ProcessId;
+  field ( mandatory : create ) ProcessId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_catprc
+  {
+    ProcessId = process_id;
+    PkgId = pkg_id;
+    Description = description;
+    Component = component;
+    DashCard = dash_card;
+    OwnerRole = owner_role;
+    Schedule = schedule;
+    DfltActive = dflt_active;
+    Evidence = evidence;
+    VerifyRef = verify_ref;
+    Seq = seq;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_CatalogStep alias CatalogStep
+persistent table zca_ops_catstp
+with additional save
+draft table zca_d_catstp
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ProcessId, StepNo;
+  field ( mandatory : create ) ProcessId, StepNo;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_catstp
+  {
+    ProcessId = process_id;
+    StepNo = step_no;
+    StepKind = step_kind;
+    ObjName = obj_name;
+    Description = description;
+    Evidence = evidence;
+    VerifyRef = verify_ref;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_CatalogTable alias CatalogTable
+persistent table zca_ops_cattab
+with additional save
+draft table zca_d_cattab
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ProcessId, Tabname;
+  field ( mandatory : create ) ProcessId, Tabname;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_cattab
+  {
+    ProcessId = process_id;
+    Tabname = tabname;
+    TabRole = tab_role;
+    LinkObject = link_object;
+    Description = description;
+    Evidence = evidence;
+    VerifyRef = verify_ref;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_CatalogDependency alias CatalogDependency
+persistent table zca_ops_catdep
+with additional save
+draft table zca_d_catdep
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ProcessId, PredId;
+  field ( mandatory : create ) ProcessId, PredId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_catdep
+  {
+    ProcessId = process_id;
+    PredId = pred_id;
+    DepKind = dep_kind;
+    Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_CatalogActivation alias CatalogActivation
+persistent table zca_ops_catact
+with additional save
+draft table zca_d_catact
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ProcessId, ValidFrom;
+  field ( mandatory : create ) ProcessId, ValidFrom;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_catact
+  {
+    ProcessId = process_id;
+    ValidFrom = valid_from;
+    Active = active;
+    PkgId = pkg_id;
+    Reason = reason;
+    ApprovedBy = approved_by;
+    ApprovedOn = approved_on;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

@@ -21,6 +21,8 @@
 *& 2026-11-11 | LINK_VALID (runbook link of an active runbook row, required), KEY_FIELDS_VALID and
 *&            | WINDOW_MIN_VALID (alert correlation rules; messages 153 / 154) - operations response features.
 *& 2026-11-11 | FIELD_REF_VALID: TABLE-FIELD reference of a link condition of the link registry (message 225).
+*& 2026-11-11 | APPROVER_VALID: approver of a process catalogue activation - a user of the client other than
+*&            | the user saving the row (four-eyes, message 240).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - config apps: field checks</p>
 CLASS zcl_ca_ops_cfg_checks DEFINITION
@@ -172,6 +174,14 @@ CLASS zcl_ca_ops_cfg_checks DEFINITION
     CLASS-METHODS field_ref_valid
       IMPORTING
         iv_ref          TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Approver of a process catalogue activation: blank (the required check reports it), or a user of this
+    "! client who is not the user saving the row (four-eyes: nobody approves their own activation change)
+    CLASS-METHODS approver_valid
+      IMPORTING
+        iv_user         TYPE syuname
       RETURNING
         VALUE(rv_valid) TYPE abap_bool.
 
@@ -374,6 +384,15 @@ CLASS zcl_ca_ops_cfg_checks IMPLEMENTATION.
 
   METHOD link_valid.
     rv_valid = xsdbool( iv_url IS NOT INITIAL AND url_valid( iv_url ) = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD approver_valid.
+    IF iv_user IS INITIAL.
+      rv_valid = abap_true.
+      RETURN.
+    ENDIF.
+    rv_valid = xsdbool( iv_user <> sy-uname AND zcl_ca_ops_factory=>get_auth( )->user_exists( iv_user ) = abap_true ).
   ENDMETHOD.
 
 

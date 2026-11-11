@@ -13,6 +13,12 @@
 *& ZIF_CA_OPS_CHECK_DAO, the purge registry and the authorisation service.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Process catalogue: only business processes in effect today are checked (a process whose
+*&            | catalogue process is switched off is not expected); catalogue gaps - an active catalogue
+*&            | process no check in effect monitors (CAT_NO_CHECK), an active check of a process not in
+*&            | effect (CHECK_PROC_INACTIVE), an unknown catalogue reference (CAT_REF_UNKNOWN, error), an
+*&            | active process with an inactive hard predecessor (CAT_DEP_INACTIVE) and the rule check of the
+*&            | catalogue rows (CAT_INVALID).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - process onboarding check</p>
 "! Registered in the check registry (area CA_OPS, schedule group MORNING) or run by a
@@ -33,6 +39,26 @@ CLASS zcl_ca_ops_chk_onboard DEFINITION
     DATA mt_covered TYPE zif_ca_ops_chk_types=>tt_covered.
     DATA mt_alert_areas TYPE zif_ca_ops_chk_types=>tt_area.
     DATA mt_targets TYPE tt_target.
+
+    "! Catalogue findings: unknown references, processes and checks out of step with the activation
+    METHODS catalogue_gaps
+      IMPORTING
+        io_catalog         TYPE REF TO zif_ca_ops_catalog
+        iv_today           TYPE d
+      RETURNING
+        VALUE(rt_findings) TYPE zif_ca_ops_types=>tt_finding.
+
+    METHODS cat_finding
+      IMPORTING
+        iv_key            TYPE clike
+        iv_code           TYPE zif_ca_ops_types=>ty_check_code
+        iv_msgno          TYPE zif_ca_ops_types=>ty_msgno
+        iv_severity       TYPE zif_ca_ops_types=>ty_severity DEFAULT zif_ca_ops_types=>gc_severity-warning
+        iv_v1             TYPE clike
+        iv_v2             TYPE clike OPTIONAL
+        iv_v3             TYPE clike OPTIONAL
+      RETURNING
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! The gaps of one process
     METHODS gaps
@@ -69,11 +95,117 @@ CLASS zcl_ca_ops_chk_onboard IMPLEMENTATION.
       INSERT CONV zif_ca_ops_chk_types=>ty_purge_target( <ls_target>-target ) INTO TABLE mt_targets.
     ENDLOOP.
 
+    DATA(lo_catalog) = zcl_ca_ops_factory=>get_catalog( ).
+    DATA(lv_today) = zcl_ca_ops_factory=>get_clock( )->today( ).
+
     LOOP AT lt_processes ASSIGNING FIELD-SYMBOL(<ls_process>).
+      " A business process whose catalogue process is switched off is not expected (no gaps of it)
+      IF <ls_process>-cat_process IS NOT INITIAL
+         AND lo_catalog->state( iv_process_id = <ls_process>-cat_process
+                                iv_date       = lv_today )-active = abap_false.
+        CONTINUE.
+      ENDIF.
       INSERT LINES OF gaps( is_process = <ls_process>
                             io_dao     = lo_dao ) INTO TABLE rs_result-findings.
       rs_result-item_count += 1.
     ENDLOOP.
+    INSERT LINES OF catalogue_gaps( io_catalog = lo_catalog
+                                    iv_today   = lv_today ) INTO TABLE rs_result-findings.
+  ENDMETHOD.
+
+
+  METHOD catalogue_gaps.
+    DATA lt_off TYPE SORTED TABLE OF zif_ca_ops_cat_types=>ty_onboarded WITH UNIQUE KEY area process_id.
+    DATA lt_on TYPE SORTED TABLE OF zif_ca_ops_cat_types=>ty_onboarded WITH UNIQUE KEY area process_id.
+
+    " Business processes in effect today or not (row inactive, or its catalogue process off / unknown)
+    LOOP AT io_catalog->onboarded( ) ASSIGNING FIELD-SYMBOL(<ls_onb>).
+      DATA(ls_state) = COND zif_ca_ops_cat_types=>ty_state(
+                         WHEN <ls_onb>-cat_process IS NOT INITIAL
+                         THEN io_catalog->state( iv_process_id = <ls_onb>-cat_process
+                                                 iv_date       = iv_today ) ).
+      IF <ls_onb>-active = abap_true AND ls_state-source = zif_ca_ops_cat_types=>gc_source-unknown.
+        INSERT cat_finding( iv_key      = |{ <ls_onb>-area }/{ <ls_onb>-process_id }|
+                            iv_code     = zif_ca_ops_cat_types=>gc_code-cat_ref_unknown
+                            iv_msgno    = zif_ca_ops_cat_types=>gc_msg-cat_ref_unknown
+                            iv_severity = zif_ca_ops_types=>gc_severity-error
+                            iv_v1       = <ls_onb>-process_id
+                            iv_v2       = <ls_onb>-area
+                            iv_v3       = <ls_onb>-cat_process ) INTO TABLE rt_findings.
+      ENDIF.
+      IF <ls_onb>-active = abap_true AND ( <ls_onb>-cat_process IS INITIAL OR ls_state-active = abap_true ).
+        INSERT <ls_onb> INTO TABLE lt_on.
+      ELSE.
+        INSERT <ls_onb> INTO TABLE lt_off.
+      ENDIF.
+    ENDLOOP.
+
+    " An active check of a process that is not in effect does not run: switch it off or activate the process
+    LOOP AT mt_checks ASSIGNING FIELD-SYMBOL(<ls_check>) WHERE process_id IS NOT INITIAL.
+      IF line_exists( lt_off[ area = <ls_check>-area process_id = <ls_check>-process_id ] ).
+        INSERT cat_finding( iv_key   = |{ <ls_check>-area }/{ <ls_check>-check_id }|
+                            iv_code  = zif_ca_ops_cat_types=>gc_code-check_proc_off
+                            iv_msgno = zif_ca_ops_cat_types=>gc_msg-check_proc_off
+                            iv_v1    = <ls_check>-check_id
+                            iv_v2    = <ls_check>-area
+                            iv_v3    = <ls_check>-process_id ) INTO TABLE rt_findings.
+      ENDIF.
+    ENDLOOP.
+
+    " Every active catalogue process: monitored by a check in effect; its hard predecessors active
+    LOOP AT io_catalog->active_processes( iv_today ) ASSIGNING FIELD-SYMBOL(<ls_cat>).
+      DATA(lv_monitored) = abap_false.
+      LOOP AT lt_on ASSIGNING FIELD-SYMBOL(<ls_on>) WHERE cat_process = <ls_cat>-process_id.
+        IF line_exists( mt_checks[ area = <ls_on>-area process_id = <ls_on>-process_id ] ).
+          lv_monitored = abap_true.
+        ENDIF.
+      ENDLOOP.
+      IF lv_monitored = abap_false.
+        INSERT cat_finding( iv_key   = <ls_cat>-process_id
+                            iv_code  = zif_ca_ops_cat_types=>gc_code-cat_no_check
+                            iv_msgno = zif_ca_ops_cat_types=>gc_msg-cat_no_check
+                            iv_v1    = <ls_cat>-process_id ) INTO TABLE rt_findings.
+      ENDIF.
+      LOOP AT io_catalog->definition( iv_process_id = <ls_cat>-process_id
+                                      iv_date       = iv_today )-dependencies ASSIGNING FIELD-SYMBOL(<ls_dep>)
+           WHERE dep_kind = zif_ca_ops_cat_types=>gc_dep_kind-hard.
+        IF io_catalog->state( iv_process_id = <ls_dep>-pred_id
+                              iv_date       = iv_today )-active = abap_false.
+          INSERT cat_finding( iv_key   = |{ <ls_cat>-process_id }/{ <ls_dep>-pred_id }|
+                              iv_code  = zif_ca_ops_cat_types=>gc_code-cat_dep_inactive
+                              iv_msgno = zif_ca_ops_cat_types=>gc_msg-cat_dep_off
+                              iv_v1    = <ls_cat>-process_id
+                              iv_v2    = <ls_dep>-pred_id ) INTO TABLE rt_findings.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+
+    " The rules of the catalogue rows (the same as the offline validator)
+    LOOP AT io_catalog->validate( ) ASSIGNING FIELD-SYMBOL(<ls_problem>).
+      DATA(ls_finding) = cat_finding( iv_key   = <ls_problem>-object_key
+                                      iv_code  = zif_ca_ops_cat_types=>gc_code-cat_invalid
+                                      iv_msgno = <ls_problem>-msgno
+                                      iv_v1    = <ls_problem>-v1
+                                      iv_v2    = <ls_problem>-v2
+                                      iv_v3    = <ls_problem>-v3 ).
+      ls_finding-object_key = |{ <ls_problem>-object_key }/{ <ls_problem>-msgno }|.
+      INSERT ls_finding INTO TABLE rt_findings.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD cat_finding.
+    rs_finding-object_type = zif_ca_ops_cat_types=>gc_object_type-catalogue.
+    rs_finding-object_key  = iv_key.
+    rs_finding-rule_id     = zif_ca_ops_chk_types=>gc_rule_id-onboard.
+    rs_finding-check_code  = iv_code.
+    rs_finding-severity    = iv_severity.
+    rs_finding-action      = zif_ca_ops_types=>gc_action-exception.
+    rs_finding-reference   = iv_v1.
+    rs_finding-message     = zcl_ca_ops_util=>text( iv_msgno = iv_msgno
+                                                    iv_v1    = iv_v1
+                                                    iv_v2    = iv_v2
+                                                    iv_v3    = iv_v3 ).
   ENDMETHOD.
 
 

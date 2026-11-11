@@ -30,5 +30,11 @@ define root view entity ZC_CA_OpsCfgAll
       _LinkField : redirected to composition child ZC_CA_LinkField,
       _Link : redirected to composition child ZC_CA_Link,
       _LinkCondition : redirected to composition child ZC_CA_LinkCondition,
-      _LinkActivation : redirected to composition child ZC_CA_LinkActivation
+      _LinkActivation : redirected to composition child ZC_CA_LinkActivation,
+      _CatalogPackage : redirected to composition child ZC_CA_CatalogPackage,
+      _CatalogProcess : redirected to composition child ZC_CA_CatalogProcess,
+      _CatalogStep : redirected to composition child ZC_CA_CatalogStep,
+      _CatalogTable : redirected to composition child ZC_CA_CatalogTable,
+      _CatalogDependency : redirected to composition child ZC_CA_CatalogDependency,
+      _CatalogActivation : redirected to composition child ZC_CA_CatalogActivation
 }

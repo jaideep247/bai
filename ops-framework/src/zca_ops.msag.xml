@@ -833,6 +833,90 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>240</MSGNR>
+     <TEXT>Approver &amp;1 is not another user of this client (four-eyes)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>241</MSGNR>
+     <TEXT>Check &amp;1 not run: business process &amp;2 of area &amp;3 is not active</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>242</MSGNR>
+     <TEXT>Catalogue process &amp;1 is active, but no check in effect monitors it</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>243</MSGNR>
+     <TEXT>Check &amp;1 of area &amp;2 is active, but its process &amp;3 is not active</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>244</MSGNR>
+     <TEXT>Process &amp;1 (area &amp;2) names catalogue process &amp;3, which is not defined</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>245</MSGNR>
+     <TEXT>Catalogue process &amp;1 is active, but its predecessor &amp;2 is not</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>247</MSGNR>
+     <TEXT>Catalogue process &amp;1 does not start with the prefix &amp;2 of package &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>248</MSGNR>
+     <TEXT>Catalogue process &amp;1: package &amp;2 is not defined</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>249</MSGNR>
+     <TEXT>Catalogue process &amp;1: dependency &amp;2 is unknown or of a higher package</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>250</MSGNR>
+     <TEXT>Catalogue process &amp;1 depends on itself (dependency cycle)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>252</MSGNR>
+     <TEXT>Activation of &amp;1 from &amp;2: the process is not in the catalogue</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>253</MSGNR>
+     <TEXT>Activation of &amp;1 from &amp;2: reason and approver are required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>254</MSGNR>
+     <TEXT>Planned downtime &amp;1 - &amp;2: &amp;3 row(s) of rule &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>255</MSGNR>
+     <TEXT>Aggregate &amp;1: time field or window &amp;2 not valid for &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

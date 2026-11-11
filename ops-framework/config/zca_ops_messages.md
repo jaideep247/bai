@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -154,6 +154,20 @@ texts <= 73 characters).
 | 234 | Link &1: &2 is not a field of &3 (source &4) |
 | 235 | &1 is required when &2 is '&3' |
 | 236 | &1 must be blank when &2 is '&3' |
+| 240 | Approver &1 is not another user of this client (four-eyes) |
+| 241 | Check &1 not run: business process &2 of area &3 is not active |
+| 242 | Catalogue process &1 is active, but no check in effect monitors it |
+| 243 | Check &1 of area &2 is active, but its process &3 is not active |
+| 244 | Process &1 (area &2) names catalogue process &3, which is not defined |
+| 245 | Catalogue process &1 is active, but its predecessor &2 is not |
+| 247 | Catalogue process &1 does not start with the prefix &2 of package &3 |
+| 248 | Catalogue process &1: package &2 is not defined |
+| 249 | Catalogue process &1: dependency &2 is unknown or of a higher package |
+| 250 | Catalogue process &1 depends on itself (dependency cycle) |
+| 252 | Activation of &1 from &2: the process is not in the catalogue |
+| 253 | Activation of &1 from &2: reason and approver are required |
+| 254 | Planned downtime &1 - &2: &3 row(s) of rule &4 |
+| 255 | Aggregate &1: time field or window &2 not valid for &3 |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

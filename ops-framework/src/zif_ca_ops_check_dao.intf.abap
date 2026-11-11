@@ -8,6 +8,7 @@
 *& cover a check, areas with an active alert rule, active areas). Read only.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | AGGREGATE: optional date / time window (outage check of the process catalogue).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check registry data access</p>
 INTERFACE zif_ca_ops_check_dao
@@ -59,12 +60,14 @@ INTERFACE zif_ca_ops_check_dao
 
   "! Validate one aggregate row (approval, DDIC, operators, literals) and run it on the database:
   "! one row, or one row per company code (at most ZIF_CA_OPS_CHK_TYPES=>GC_MAX_GROUPS)
-  "! @raising zcx_ca_ops_error | 082-093 / 103 the row cannot be measured
+  "! @parameter is_window | measured in this date / time window instead of the row's age limits (outage check)
+  "! @raising zcx_ca_ops_error | 082-093 / 103 / 255 the row cannot be measured
   METHODS aggregate
     IMPORTING
       is_agg         TYPE zif_ca_ops_chk_types=>ty_agg
       iv_bukrs_aware TYPE abap_bool
       iv_today       TYPE d
+      is_window      TYPE zif_ca_ops_chk_types=>ty_window OPTIONAL
     RETURNING
       VALUE(rt_rows) TYPE zif_ca_ops_chk_types=>tt_agg_row
     RAISING

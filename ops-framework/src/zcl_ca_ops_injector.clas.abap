@@ -14,6 +14,7 @@
 *& 2026-11-10 | INJECT_REVIEW_DAO (daily control review).
 *& 2026-11-10 | INJECT_CHECK_DAO (check registry, process onboarding).
 *& 2026-11-11 | INJECT_DOWNTIME (planned downtime API, operations response features).
+*& 2026-11-11 | INJECT_CATALOG, INJECT_CAT_DAO (process catalogue).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - test injector for the factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -70,6 +71,12 @@ CLASS zcl_ca_ops_injector DEFINITION
     CLASS-METHODS inject_downtime
       IMPORTING
         io_downtime TYPE REF TO zif_ca_ops_downtime.
+    CLASS-METHODS inject_catalog
+      IMPORTING
+        io_catalog TYPE REF TO zif_ca_ops_catalog.
+    CLASS-METHODS inject_cat_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_ca_ops_cat_dao.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -149,6 +156,16 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_catalog.
+    zcl_ca_ops_factory=>go_catalog_double = io_catalog.
+  ENDMETHOD.
+
+
+  METHOD inject_cat_dao.
+    zcl_ca_ops_factory=>go_cat_dao_double = io_dao.
+  ENDMETHOD.
+
+
   METHOD inject_plugin.
     DATA(lv_name) = CONV zif_ca_ops_types=>ty_class_name( to_upper( condense( CONV string( iv_class_name ) ) ) ).
     DELETE zcl_ca_ops_factory=>gt_plugin_double
@@ -177,6 +194,8 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
            zcl_ca_ops_factory=>go_review_dao_double,
            zcl_ca_ops_factory=>go_check_dao_double,
            zcl_ca_ops_factory=>go_downtime_double,
+           zcl_ca_ops_factory=>go_catalog_double,
+           zcl_ca_ops_factory=>go_cat_dao_double,
            zcl_ca_ops_factory=>gt_plugin_double,
            zcl_ca_ops_factory=>gv_param_version_double,
            zcl_ca_ops_factory=>gv_version_ok,

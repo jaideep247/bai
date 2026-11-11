@@ -10,6 +10,9 @@
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework; the framework's equivalent of a
 *&            | consumer's generic aggregate: COUNT / AGE with a status condition per company code).
+*& 2026-11-11 | Process catalogue: window MAX_AGE_DAYS (rows at most n days old), operator NI (none of a
+*&            | list, status and condition), a date / time window instead of the age limits (outage check;
+*&            | TIME_FIELD bounds the first and last day; message 255).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - aggregate check builder (pure)</p>
 "! Security: the table must be approved for the area (ZCA_OPS_TABWL); every field name must
@@ -23,8 +26,9 @@ CLASS zcl_ca_ops_agg_query DEFINITION
 
   PUBLIC SECTION.
     "! Validated SQL of one aggregate row
+    "! @parameter is_window | measured in this date / time window instead of MIN_AGE_DAYS / MAX_AGE_DAYS
     "! @raising zcx_ca_ops_error | 086 not approved, 082 no fields, 083 unknown field, 088 operator,
-    "! 089 not a number, 090 function, 091 not a date, 103 company-code field required
+    "! 089 not a number, 090 function, 091 not a date, 103 company-code field required, 255 time field / window
     CLASS-METHODS build
       IMPORTING
         is_agg          TYPE zif_ca_ops_chk_types=>ty_agg
@@ -32,6 +36,7 @@ CLASS zcl_ca_ops_agg_query DEFINITION
         iv_approved     TYPE abap_bool
         iv_bukrs_aware  TYPE abap_bool
         iv_today        TYPE d
+        is_window       TYPE zif_ca_ops_chk_types=>ty_window OPTIONAL
       RETURNING
         VALUE(rs_query) TYPE zif_ca_ops_chk_types=>ty_agg_query
       RAISING
@@ -59,6 +64,12 @@ CLASS zcl_ca_ops_agg_query DEFINITION
   PRIVATE SECTION.
     "! A decimal number literal accepted as a condition value
     CONSTANTS gc_number_pattern TYPE string VALUE `[-+]?[0-9]+(\.[0-9]+)?`.
+    "! SQL set operators of IN / NI
+    CONSTANTS:
+      BEGIN OF gc_sql_set,
+        in_set TYPE string VALUE `IN`,
+        not_in TYPE string VALUE `NOT IN`,
+      END OF gc_sql_set.
     "! Names of the result columns (components of ZIF_CA_OPS_CHK_TYPES=>TY_AGG_ROW)
     CONSTANTS:
       BEGIN OF gc_column,
@@ -113,6 +124,21 @@ CLASS zcl_ca_ops_agg_query DEFINITION
       RETURNING
         VALUE(rv_literal) TYPE string.
 
+    CLASS-METHODS time_literal
+      IMPORTING
+        iv_time           TYPE t
+      RETURNING
+        VALUE(rv_literal) TYPE string.
+
+    "! Conditions of the date / time window (outage check); the time bounds only the first and last day
+    CLASS-METHODS window_conditions
+      IMPORTING
+        iv_date_field   TYPE zif_ca_ops_chk_types=>ty_fieldname
+        iv_time_field   TYPE zif_ca_ops_chk_types=>ty_fieldname
+        is_window       TYPE zif_ca_ops_chk_types=>ty_window
+      RETURNING
+        VALUE(rt_where) TYPE string_table.
+
 ENDCLASS.
 
 
@@ -158,11 +184,37 @@ CLASS zcl_ca_ops_agg_query IMPLEMENTATION.
           MESSAGE e091(zca_ops) WITH is_agg-agg_id lv_date_field rs_query-tabname.
       ENDIF.
       INSERT |{ lv_date_field } > { date_literal( zif_ca_ops_chk_types=>gc_initial_date ) }| INTO TABLE lt_where.
-      DATA(lv_latest) = CONV d( iv_today - is_agg-min_age_days ).
-      INSERT |{ lv_date_field } <= { date_literal( lv_latest ) }| INTO TABLE lt_where.
-    ELSEIF lv_func = zif_ca_ops_chk_types=>gc_agg_func-age.
+    ELSEIF lv_func = zif_ca_ops_chk_types=>gc_agg_func-age OR is_window IS NOT INITIAL.
       RAISE EXCEPTION TYPE zcx_ca_ops_error
         MESSAGE e091(zca_ops) WITH is_agg-agg_id lv_date_field rs_query-tabname.
+    ENDIF.
+    " The time field goes with the date field (a TIMS field of the table)
+    DATA(lv_time_field) = CONV zif_ca_ops_chk_types=>ty_fieldname( to_upper( condense( is_agg-time_field ) ) ).
+    IF lv_time_field IS NOT INITIAL
+       AND ( lv_date_field IS INITIAL
+             OR field_kind( iv_field   = lv_time_field
+                            iv_tabname = rs_query-tabname
+                            it_fields  = it_fields ) <> cl_abap_typedescr=>typekind_time ).
+      RAISE EXCEPTION TYPE zcx_ca_ops_error
+        MESSAGE e255(zca_ops) WITH is_agg-agg_id lv_time_field rs_query-tabname.
+    ENDIF.
+    IF is_window IS NOT INITIAL.
+      " Outage check: the rows of the window, whatever their age
+      IF is_window-from_date IS INITIAL OR is_window-to_date < is_window-from_date.
+        RAISE EXCEPTION TYPE zcx_ca_ops_error
+          MESSAGE e255(zca_ops) WITH is_agg-agg_id is_window-from_date rs_query-tabname.
+      ENDIF.
+      INSERT LINES OF window_conditions( iv_date_field = lv_date_field
+                                         iv_time_field = lv_time_field
+                                         is_window     = is_window ) INTO TABLE lt_where.
+    ELSEIF lv_date_field IS NOT INITIAL.
+      " Only rows at least MIN_AGE_DAYS old (future dates never) and, with a window, at most MAX_AGE_DAYS old
+      DATA(lv_latest) = CONV d( iv_today - is_agg-min_age_days ).
+      INSERT |{ lv_date_field } <= { date_literal( lv_latest ) }| INTO TABLE lt_where.
+      IF is_agg-max_age_days > 0.
+        DATA(lv_earliest) = CONV d( iv_today - is_agg-max_age_days ).
+        INSERT |{ lv_date_field } >= { date_literal( lv_earliest ) }| INTO TABLE lt_where.
+      ENDIF.
     ENDIF.
 
     INSERT condition( iv_field    = is_agg-status_field
@@ -285,7 +337,7 @@ CLASS zcl_ca_ops_agg_query IMPLEMENTATION.
                                 it_fields  = it_fields ).
     DATA(lv_operator) = CONV zif_ca_ops_chk_types=>ty_operator( to_upper( iv_operator ) ).
 
-    IF lv_operator = zif_ca_ops_chk_types=>gc_operator-in_set.
+    IF lv_operator = zif_ca_ops_chk_types=>gc_operator-in_set OR lv_operator = zif_ca_ops_chk_types=>gc_operator-not_in.
       LOOP AT zcl_ca_ops_util=>split_list( iv_value ) ASSIGNING FIELD-SYMBOL(<lv_token>).
         INSERT literal( iv_value = <lv_token> iv_field = lv_field iv_kind = lv_kind ) INTO TABLE lt_literals.
       ENDLOOP.
@@ -293,7 +345,9 @@ CLASS zcl_ca_ops_agg_query IMPLEMENTATION.
         RAISE EXCEPTION TYPE zcx_ca_ops_error
           MESSAGE e089(zca_ops) WITH iv_value lv_field.
       ENDIF.
-      rv_sql = |{ lv_field } IN ( { concat_lines_of( table = lt_literals sep = `, ` ) } )|.
+      rv_sql = |{ lv_field } { COND string( WHEN lv_operator = zif_ca_ops_chk_types=>gc_operator-not_in
+                                            THEN gc_sql_set-not_in ELSE gc_sql_set-in_set ) } | &&
+               |( { concat_lines_of( table = lt_literals sep = `, ` ) } )|.
       RETURN.
     ENDIF.
 
@@ -318,6 +372,26 @@ CLASS zcl_ca_ops_agg_query IMPLEMENTATION.
 
   METHOD date_literal.
     rv_literal = cl_abap_dyn_prg=>quote( CONV string( iv_date ) ).
+  ENDMETHOD.
+
+
+  METHOD time_literal.
+    rv_literal = cl_abap_dyn_prg=>quote( CONV string( iv_time ) ).
+  ENDMETHOD.
+
+
+  METHOD window_conditions.
+    DATA(lv_from) = date_literal( is_window-from_date ).
+    DATA(lv_to) = date_literal( is_window-to_date ).
+    IF iv_time_field IS INITIAL.
+      INSERT |{ iv_date_field } >= { lv_from }| INTO TABLE rt_where.
+      INSERT |{ iv_date_field } <= { lv_to }| INTO TABLE rt_where.
+      RETURN.
+    ENDIF.
+    INSERT |( { iv_date_field } > { lv_from } OR ( { iv_date_field } = { lv_from } | &&
+           |AND { iv_time_field } >= { time_literal( is_window-from_time ) } ) )| INTO TABLE rt_where.
+    INSERT |( { iv_date_field } < { lv_to } OR ( { iv_date_field } = { lv_to } | &&
+           |AND { iv_time_field } <= { time_literal( is_window-to_time ) } ) )| INTO TABLE rt_where.
   ENDMETHOD.
 
 ENDCLASS.

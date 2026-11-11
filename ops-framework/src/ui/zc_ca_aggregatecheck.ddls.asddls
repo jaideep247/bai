@@ -15,6 +15,8 @@ define view entity ZC_CA_AggregateCheck
       AggFunc,
       DateField,
       MinAgeDays,
+      MaxAgeDays,
+      TimeField,
       BukrsField,
       StatusField,
       StatusOp,

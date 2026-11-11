@@ -24,6 +24,12 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_Link as _Link
   composition [0..*] of ZR_CA_LinkCondition as _LinkCondition
   composition [0..*] of ZR_CA_LinkActivation as _LinkActivation
+  composition [0..*] of ZR_CA_CatalogPackage as _CatalogPackage
+  composition [0..*] of ZR_CA_CatalogProcess as _CatalogProcess
+  composition [0..*] of ZR_CA_CatalogStep as _CatalogStep
+  composition [0..*] of ZR_CA_CatalogTable as _CatalogTable
+  composition [0..*] of ZR_CA_CatalogDependency as _CatalogDependency
+  composition [0..*] of ZR_CA_CatalogActivation as _CatalogActivation
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -49,7 +55,13 @@ define root view entity ZR_CA_OpsCfgAll
       _LinkField,
       _Link,
       _LinkCondition,
-      _LinkActivation
+      _LinkActivation,
+      _CatalogPackage,
+      _CatalogProcess,
+      _CatalogStep,
+      _CatalogTable,
+      _CatalogDependency,
+      _CatalogActivation
 }
 where
   I_Language.Language = $session.system_language

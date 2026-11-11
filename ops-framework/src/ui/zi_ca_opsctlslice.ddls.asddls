@@ -8,6 +8,8 @@
 //          signs off only the findings of that company code (and the area-level ones). Union of keys only,
 //          nothing stored. Read-only.
 // Modification log: 2026-11-10 | Initial version (company-code isolation of the daily control review).
+//                   2026-11-11 | Process catalogue: a control that covers only checks of switched-off business
+//                              | processes (ZI_CA_OpsCtlProcOff) is not expected in the review - no slice.
 // VERIFY-ADT: UNION (distinct) of four branches with identical key elements in a CDS view entity and the cast
 //             of a literal to the data element BUKRS (7.58); PlanViz: the business-date filter of the review app
 //             reaches every branch (CTL-08).
@@ -16,8 +18,10 @@
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #M, dataClass: #MIXED }
 define view entity ZI_CA_OpsCtlSlice
-  as select from zca_ops_control as Ctl
-    cross join   ZI_CA_OpsBusDay as Day
+  as select from    zca_ops_control     as Ctl
+    cross join      ZI_CA_OpsBusDay     as Day
+    left outer join ZI_CA_OpsCtlProcOff as Off on  Off.Area      = Ctl.area
+                                               and Off.ControlId = Ctl.control_id
 {
   key Ctl.area                                              as Area,
   key Ctl.control_id                                        as ControlId,
@@ -25,7 +29,8 @@ define view entity ZI_CA_OpsCtlSlice
   key cast( ' ' as bukrs )                                  as CompanyCode
 }
 where
-  Ctl.active = 'X'
+      Ctl.active    = 'X'
+  and Off.ControlId is null
 
 union
 
@@ -33,6 +38,8 @@ select from  ZI_CA_OpsCtlFindDay as Fd
   inner join zca_ops_control     as Ctl on  Ctl.area       = Fd.Area
                                         and Ctl.control_id = Fd.ControlId
   inner join ZI_CA_OpsBusDay     as Day on  Day.BusinessDate = Fd.BusinessDate
+  left outer join ZI_CA_OpsCtlProcOff as Off on  Off.Area      = Ctl.area
+                                             and Off.ControlId = Ctl.control_id
 {
   key Fd.Area                                               as Area,
   key Fd.ControlId                                          as ControlId,
@@ -42,6 +49,7 @@ select from  ZI_CA_OpsCtlFindDay as Fd
 where
       Ctl.active     =  'X'
   and Fd.CompanyCode <> ' '
+  and Off.ControlId  is null
 
 union
 
@@ -49,6 +57,8 @@ select from  ZI_CA_OpsCtlOpen as Op
   inner join zca_ops_control  as Ctl on  Ctl.area       = Op.Area
                                      and Ctl.control_id = Op.ControlId
   cross join ZI_CA_OpsBusDay  as Day
+  left outer join ZI_CA_OpsCtlProcOff as Off on  Off.Area      = Ctl.area
+                                             and Off.ControlId = Ctl.control_id
 {
   key Op.Area                                               as Area,
   key Op.ControlId                                          as ControlId,
@@ -58,6 +68,7 @@ select from  ZI_CA_OpsCtlOpen as Op
 where
       Ctl.active     =  'X'
   and Op.CompanyCode <> ' '
+  and Off.ControlId  is null
 
 union
 
@@ -65,6 +76,8 @@ select from  zca_ops_review  as Rev
   inner join zca_ops_control as Ctl on  Ctl.area       = Rev.area
                                     and Ctl.control_id = Rev.control_id
   inner join ZI_CA_OpsBusDay as Day on  Day.BusinessDate = Rev.business_date
+  left outer join ZI_CA_OpsCtlProcOff as Off on  Off.Area      = Ctl.area
+                                             and Off.ControlId = Ctl.control_id
 {
   key Rev.area                                              as Area,
   key Rev.control_id                                        as ControlId,
@@ -72,5 +85,6 @@ select from  zca_ops_review  as Rev
   key Rev.bukrs                                             as CompanyCode
 }
 where
-      Ctl.active =  'X'
-  and Rev.bukrs  <> ' '
+      Ctl.active    =  'X'
+  and Rev.bukrs     <> ' '
+  and Off.ControlId is null

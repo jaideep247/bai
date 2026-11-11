@@ -9,6 +9,8 @@
 *& code and value). No database; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Process catalogue: window MAX_AGE_DAYS, operator NI, the date / time window of the outage
+*&            | check and its refusals (255).
 *&---------------------------------------------------------------------*
 CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -25,6 +27,7 @@ CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
         bukrs    TYPE zif_ca_ops_chk_types=>ty_fieldname VALUE 'BUKRS',
         date     TYPE zif_ca_ops_chk_types=>ty_fieldname VALUE 'REQ_DATE',
         amount   TYPE zif_ca_ops_chk_types=>ty_fieldname VALUE 'AMOUNT',
+        time     TYPE zif_ca_ops_chk_types=>ty_fieldname VALUE 'REQ_TIME',
         pending  TYPE zif_ca_ops_chk_types=>ty_cond_value VALUE 'PENDING',
         today    TYPE d VALUE '20261110',
         company  TYPE bukrs VALUE '1000',
@@ -55,6 +58,10 @@ CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
     METHODS red_is_error_amber_warning  FOR TESTING.
     METHODS below_limits_no_finding     FOR TESTING.
     METHODS age_value_in_days           FOR TESTING.
+    METHODS max_age_bounds_the_window   FOR TESTING.
+    METHODS not_in_list_is_quoted       FOR TESTING.
+    METHODS time_window_bounds_days     FOR TESTING.
+    METHODS time_field_needs_tims       FOR TESTING.
 ENDCLASS.
 
 
@@ -66,6 +73,7 @@ CLASS ltc_agg_query IMPLEMENTATION.
     INSERT VALUE #( fieldname = gc-bukrs type_kind = cl_abap_typedescr=>typekind_char ) INTO TABLE mt_fields.
     INSERT VALUE #( fieldname = gc-date type_kind = cl_abap_typedescr=>typekind_date ) INTO TABLE mt_fields.
     INSERT VALUE #( fieldname = gc-amount type_kind = cl_abap_typedescr=>typekind_packed ) INTO TABLE mt_fields.
+    INSERT VALUE #( fieldname = gc-time type_kind = cl_abap_typedescr=>typekind_time ) INTO TABLE mt_fields.
     ms_agg-area         = gc-area.
     ms_agg-check_id     = gc-check_id.
     ms_agg-agg_id       = gc-agg_id.
@@ -266,6 +274,86 @@ CLASS ltc_agg_query IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+  " Rule: MAX_AGE_DAYS keeps only rows of the last n days (e.g. the write-offs of yesterday and today)
+  METHOD max_age_bounds_the_window.
+    TRY.
+        ms_agg-date_field   = gc-date.
+        ms_agg-max_age_days = 1.
+        DATA(ls_query) = zcl_ca_ops_agg_query=>build( is_agg         = ms_agg
+                                                      it_fields      = mt_fields
+                                                      iv_approved    = abap_true
+                                                      iv_bukrs_aware = abap_false
+                                                      iv_today       = gc-today ).
+        cl_abap_unit_assert=>assert_equals(
+          act = ls_query-where_clause
+          exp = `REQ_DATE > '00000000' AND REQ_DATE <= '20261110' AND REQ_DATE >= '20261109' AND STATUS = 'PENDING'`
+          msg = 'Rows of the window only' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: NI = none of the list (a write-off outside the approved reasons); every value quoted
+  METHOD not_in_list_is_quoted.
+    TRY.
+        ms_agg-cond_field = gc-status.
+        ms_agg-cond_op    = zif_ca_ops_chk_types=>gc_operator-not_in.
+        ms_agg-cond_value = `01,O'X`.
+        CLEAR ms_agg-status_field.
+        DATA(ls_query) = zcl_ca_ops_agg_query=>build( is_agg         = ms_agg
+                                                      it_fields      = mt_fields
+                                                      iv_approved    = abap_true
+                                                      iv_bukrs_aware = abap_false
+                                                      iv_today       = gc-today ).
+        cl_abap_unit_assert=>assert_equals( act = ls_query-where_clause exp = `STATUS NOT IN ( '01', 'O''X' )`
+                                            msg = 'None of the quoted values' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a date / time window replaces the age limits; the time bounds only the first and the last day
+  METHOD time_window_bounds_days.
+    TRY.
+        ms_agg-date_field   = gc-date.
+        ms_agg-time_field   = gc-time.
+        ms_agg-min_age_days = 5.
+        DATA(ls_query) = zcl_ca_ops_agg_query=>build(
+                           is_agg         = ms_agg
+                           it_fields      = mt_fields
+                           iv_approved    = abap_true
+                           iv_bukrs_aware = abap_false
+                           iv_today       = gc-today
+                           is_window      = VALUE #( from_date = '20261108' from_time = '220000'
+                                                     to_date   = '20261109' to_time   = '020000' ) ).
+        DATA(lv_expected) = concat_lines_of(
+                              sep   = ` AND `
+                              table = VALUE string_table(
+                                ( `REQ_DATE > '00000000'` )
+                                ( `( REQ_DATE > '20261108' OR ( REQ_DATE = '20261108' AND REQ_TIME >= '220000' ) )` )
+                                ( `( REQ_DATE < '20261109' OR ( REQ_DATE = '20261109' AND REQ_TIME <= '020000' ) )` )
+                                ( `STATUS = 'PENDING'` ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_query-where_clause
+                                            exp = lv_expected
+                                            msg = 'Rows inside the window, the age limits not applied' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the time field is a TIMS field next to a date field (255)
+  METHOD time_field_needs_tims.
+    ms_agg-date_field = gc-date.
+    ms_agg-time_field = gc-status.
+    cl_abap_unit_assert=>assert_equals( act = build_refusal( ) exp = '255' msg = 'A text field is no time field' ).
+    CLEAR ms_agg-date_field.
+    ms_agg-time_field = gc-time.
+    cl_abap_unit_assert=>assert_equals( act = build_refusal( ) exp = '255' msg = 'A time field needs the date field' ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -47,6 +47,13 @@ annotate entity ZC_CA_OpsCheckStatus with
   @EndUserText.label: 'Process name'
   @UI.identification: [ { position: 25 } ]
   ProcessName;
+  @EndUserText.label: 'Catalogue process'
+  @UI.identification: [ { position: 26 } ]
+  CatalogueProcess;
+  @EndUserText.label: 'Dashboard card'
+  @UI.selectionField: [ { position: 25 } ]
+  @UI.identification: [ { position: 27 } ]
+  DashboardCard;
   @EndUserText.label: 'Check'
   @UI.lineItem: [ { position: 35, importance: #HIGH },
                   { qualifier: 'Attention', position: 20, importance: #HIGH } ]

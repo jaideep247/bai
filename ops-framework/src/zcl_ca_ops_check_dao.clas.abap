@@ -10,6 +10,8 @@
 *& an active alert rule, active parameter areas). Read only: writes nothing.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Process catalogue: CAT_PROCESS of the business processes; aggregate rows with MAX_AGE_DAYS and
+*&            | TIME_FIELD; AGGREGATE measures a row in a date / time window (outage check).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check registry data access</p>
 CLASS zcl_ca_ops_check_dao DEFINITION
@@ -48,7 +50,7 @@ CLASS zcl_ca_ops_check_dao IMPLEMENTATION.
 
   METHOD zif_ca_ops_check_dao~get_processes.
     SELECT area, process_id, description, owner, backup, runbook_url, auth_role, own_data, purge_target,
-           active, seq
+           cat_process, active, seq
       FROM zca_ops_proc
       WHERE active = @abap_true
       ORDER BY area, process_id
@@ -57,7 +59,8 @@ CLASS zcl_ca_ops_check_dao IMPLEMENTATION.
 
 
   METHOD zif_ca_ops_check_dao~get_aggregates.
-    SELECT area, check_id, agg_id, description, tabname, agg_func, date_field, min_age_days, bukrs_field,
+    SELECT area, check_id, agg_id, description, tabname, agg_func, date_field, min_age_days, max_age_days,
+           time_field, bukrs_field,
            status_field, status_op, status_value, cond_field, cond_op, cond_value, amber, red, check_code, active
       FROM zca_ops_agg
       WHERE area     = @iv_area
@@ -143,7 +146,8 @@ CLASS zcl_ca_ops_check_dao IMPLEMENTATION.
                                                   it_fields      = lt_fields
                                                   iv_approved    = lv_approved
                                                   iv_bukrs_aware = iv_bukrs_aware
-                                                  iv_today       = iv_today ).
+                                                  iv_today       = iv_today
+                                                  is_window      = is_window ).
     DATA(lv_select) = ls_query-select_list.
     DATA(lv_from) = CONV string( ls_query-tabname ).
     DATA(lv_where) = ls_query-where_clause.

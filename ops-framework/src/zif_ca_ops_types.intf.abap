@@ -44,6 +44,7 @@
 *&            | ESC_REPEAT_MIN, ESC_MAX_COUNT, ESC_SEVERITY); log fields ESC_STEP / FINDING_NO; context keys
 *&            | RUNBOOK_URL, FIRST_ACTION, CORRELATED_COUNT, ESCALATION of the alert e-mail.
 *& 2026-11-11 | Name prefix LINK_ read in area CA_OPS (link registry walker).
+*& 2026-11-11 | Name prefix CAT_ read in area CA_OPS (process catalogue: outage check window).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -156,6 +157,8 @@ INTERFACE zif_ca_ops_types
       shift       TYPE ty_param_name VALUE 'SHIFT_',
       "! Link registry walker (ZIF_CA_OPS_LINK_TYPES=>GC_PARAM, 2026-11-11)
       link        TYPE ty_param_name VALUE 'LINK_',
+      "! Process catalogue and its risk checks (ZIF_CA_OPS_CAT_TYPES=>GC_PARAM, 2026-11-11)
+      catalogue   TYPE ty_param_name VALUE 'CAT_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters

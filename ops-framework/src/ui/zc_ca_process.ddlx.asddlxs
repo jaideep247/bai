@@ -44,9 +44,12 @@ annotate entity ZC_CA_Process with
   PurgeTarget;
 
   @UI.identification: [{ position: 100 }]
-  Active;
+  CatProcess;
 
   @UI.identification: [{ position: 110 }]
+  Active;
+
+  @UI.identification: [{ position: 120 }]
   Seq;
 
   @UI.hidden: true

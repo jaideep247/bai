@@ -14,6 +14,8 @@
 //                              | overview page KPI and list cards (summed after the DCL).
 //                   2026-11-11 | Planned downtime mark of the area (ZI_CA_OpsDtwActive, area-level slice only):
 //                              | IsPlannedDowntime and the active windows (operations response features).
+//                   2026-11-11 | Process catalogue: rows of checks in effect only (ZI_CA_OpsChkSlice); the
+//                              | catalogue process of the business process and its dashboard card.
 // VERIFY-ADT: cross join with left outer joins, a literal in the ON condition of a left outer join, the
 //             TIMESTAMPL -> TIMESTAMP cast and tstmp_seconds_between (as the consumers' "as of" views), coalesce
 //             over a LEFT OUTER JOIN column (7.58).
@@ -28,6 +30,7 @@ define root view entity ZR_CA_OpsCheckStatus
                                                and Chk.check_id = Sl.CheckId
     left outer join zca_ops_proc       as Proc on  Proc.area       = Chk.area
                                                and Proc.process_id = Chk.process_id
+    left outer join zca_ops_catprc     as Cat  on  Cat.process_id  = Proc.cat_process
     left outer join ZI_CA_OpsChkOpen   as Op   on  Op.Area        = Sl.Area
                                                and Op.CheckId     = Sl.CheckId
                                                and Op.CompanyCode = Sl.CompanyCode
@@ -47,6 +50,8 @@ define root view entity ZR_CA_OpsCheckStatus
   key Sl.CompanyCode                                        as CompanyCode,
       Chk.process_id                                        as ProcessId,
       Proc.description                                      as ProcessName,
+      Proc.cat_process                                      as CatalogueProcess,
+      Cat.dash_card                                         as DashboardCard,
       Chk.description                                       as CheckName,
       Chk.sched_group                                       as ScheduleGroup,
       Chk.class_name                                        as ClassName,

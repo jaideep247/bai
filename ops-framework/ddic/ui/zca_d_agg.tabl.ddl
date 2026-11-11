@@ -14,6 +14,8 @@ define table zca_d_agg {
   aggfunc : abap.char(5);
   datefield : abap.char(30);
   minagedays : abap.int4;
+  maxagedays : abap.int4;
+  timefield : abap.char(30);
   bukrsfield : abap.char(30);
   statusfield : abap.char(30);
   statusop : abap.char(2);

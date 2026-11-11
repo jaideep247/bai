@@ -12,6 +12,8 @@
 *& the database. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Process catalogue: a check of a process that is not in effect is not run (information
+*&            | finding PROCESS_INACTIVE, not reconciled); the catalogue is a local double.
 *&---------------------------------------------------------------------*
 CLASS ltd_check DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -48,6 +50,21 @@ CLASS ltd_dao IMPLEMENTATION.
   METHOD zif_ca_ops_check_dao~get_checks.
     mv_group = iv_sched_group.
     rt_checks = mt_checks.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_catalog DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_catalog PARTIALLY IMPLEMENTED.
+    DATA mt_off TYPE zif_ca_ops_cat_types=>tt_process_ids.
+    DATA mv_date TYPE d.
+ENDCLASS.
+
+CLASS ltd_catalog IMPLEMENTATION.
+  METHOD zif_ca_ops_catalog~inactive_onboarded.
+    mv_date = iv_date.
+    rt_processes = mt_off.
   ENDMETHOD.
 ENDCLASS.
 
@@ -196,6 +213,7 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
         not_allowed  TYPE abap_bool,
         alert_fails  TYPE abap_bool,
         partial      TYPE abap_bool,
+        process_off  TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_ok TYPE REF TO ltd_check.
@@ -205,6 +223,7 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
     DATA mo_alert TYPE REF TO ltd_alert.
     DATA mo_auth TYPE REF TO ltd_auth.
     DATA mo_lock TYPE REF TO ltd_lock.
+    DATA mo_catalog TYPE REF TO ltd_catalog.
 
     METHODS setup.
     METHODS teardown.
@@ -226,6 +245,8 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
     METHODS missing_authority_raises     FOR TESTING.
     METHODS durable_before_notified      FOR TESTING.
     METHODS failed_alert_is_recorded     FOR TESTING.
+    METHODS inactive_process_skipped     FOR TESTING.
+    METHODS active_process_runs          FOR TESTING.
 ENDCLASS.
 
 
@@ -240,7 +261,9 @@ CLASS ltc_runner IMPLEMENTATION.
     mo_alert = NEW #( ).
     mo_auth  = NEW #( ).
     mo_lock  = NEW #( ).
+    mo_catalog = NEW #( ).
     zcl_ca_ops_injector=>inject_check_dao( mo_dao ).
+    zcl_ca_ops_injector=>inject_catalog( mo_catalog ).
     zcl_ca_ops_injector=>inject_store( mo_store ).
     zcl_ca_ops_injector=>inject_alert( mo_alert ).
     zcl_ca_ops_injector=>inject_auth( mo_auth ).
@@ -275,6 +298,9 @@ CLASS ltc_runner IMPLEMENTATION.
     mo_lock->mv_held_by = COND #( WHEN is_flags-lock_held = abap_true THEN gc-holder ).
     mo_auth->mv_allowed = xsdbool( is_flags-not_allowed = abap_false ).
     mo_alert->mv_fail = is_flags-alert_fails.
+    IF is_flags-process_off = abap_true.
+      INSERT gc-process INTO TABLE mo_catalog->mt_off.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -417,6 +443,43 @@ CLASS ltc_runner IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_ca_ops_run_guard=>gc_check_alert_failed ] ) )
           msg = 'ALERT_FAILED stored' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Rule: a check of a business process that is not in effect today is not run - one information finding,
+  " no reconcile of its group (its open exceptions stay open)
+  METHOD inactive_process_skipped.
+    TRY.
+        configure_scenario( VALUE #( process_off = abap_true ) ).
+        DATA(ls_result) = run( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ok->mv_calls exp = 0 msg = 'The check of the inactive process did not run' ).
+        DATA(ls_note) = mo_store->mt_saved[ check_code = zif_ca_ops_cat_types=>gc_code-process_inactive ].
+        cl_abap_unit_assert=>assert_equals( act = ls_note-severity exp = zif_ca_ops_types=>gc_severity-info
+                                            msg = 'The skip is an information finding' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_note-action exp = zif_ca_ops_types=>gc_action-notify
+                                            msg = 'The skip is no owned exception' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_note-group2 exp = gc-check_ok msg = 'The note names its check' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_note-group1 exp = gc-process msg = 'The note names its process' ).
+        cl_abap_unit_assert=>assert_false( act = mo_store->mv_reconciled msg = 'Open exceptions of the skipped check stay open' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_catalog->mv_date exp = '20261110' msg = 'Activation of today (clock)' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-check_count exp = 0 msg = 'No check counted as run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a check of a process in effect runs as before (no note)
+  METHOD active_process_runs.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        run( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ok->mv_calls exp = 1 msg = 'The check ran' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_ca_ops_cat_types=>gc_code-process_inactive ] ) )
+          msg = 'No skip note for a process in effect' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

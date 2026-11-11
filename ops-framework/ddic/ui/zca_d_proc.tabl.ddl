@@ -15,6 +15,7 @@ define table zca_d_proc {
   authrole : abap.char(30);
   owndata : abap_boolean;
   purgetarget : abap.char(12);
+  catprocess : abap.char(20);
   active : abap_boolean;
   seq : abap.int4;
   lastchangedby : abp_lastchange_user;

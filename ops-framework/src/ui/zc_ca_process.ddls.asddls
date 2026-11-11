@@ -16,6 +16,7 @@ define view entity ZC_CA_Process
       AuthRole,
       OwnData,
       PurgeTarget,
+      CatProcess,
       Active,
       Seq,
       LastChangedBy,

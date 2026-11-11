@@ -1,0 +1,110 @@
+// UI annotations: Dashboard - active business processes (service ZUI_CA_OPS_DASH, 2026-11-11)
+// The list shows only the business processes in effect today (activation of the process catalogue), each with its
+// own KPIs. Overview page of a consumer that exposes this projection: KPI card "Active business processes" (data
+// points ActiveProcesses, ProcessesAttention, UnmonitoredProcesses; sums over the slices the user may read) and
+// list card "Business processes - attention" (selection variant Attention). VERIFY-ADT: card rendering (OVP V4).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Business process', typeNamePlural: 'Active business processes',
+                  title: { type: #STANDARD, value: 'ProcessName' },
+                  description: { type: #STANDARD, value: 'ProcessId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'DashboardCard', direction: #ASC }, { by: 'Area', direction: #ASC },
+                                          { by: 'ProcessId', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] },
+                           { qualifier: 'Attention',
+                             sortOrder: [ { by: 'StatusCriticality', direction: #ASC },
+                                          { by: 'OpenExceptions', direction: #DESC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM, qualifier: 'Attention' } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Attention', text: 'Needs attention (exceptions, stale or unmonitored)',
+                          filter: 'IsAttention EQ X' },
+                        { qualifier: 'Unmonitored', text: 'Active but not monitored', filter: 'IsUnmonitored EQ X' } ]
+annotate entity ZC_CA_OpsProcStatus with
+{
+  @UI.facet: [ { id: 'Process', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Process', position: 10 },
+               { id: 'Kpi', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Kpi',
+                 label: 'Checks and exceptions', position: 20 },
+               { id: 'Catalogue', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Catalogue',
+                 label: 'Process catalogue', position: 30 } ]
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Business process'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  ProcessId;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 40, importance: #LOW } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Process'
+  @UI.lineItem: [ { position: 35, importance: #HIGH },
+                  { qualifier: 'Attention', position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  ProcessName;
+  @EndUserText.label: 'Catalogue process'
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 10 } ]
+  CatalogueProcess;
+  @EndUserText.label: 'Catalogue name'
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 20 } ]
+  CatalogueName;
+  @EndUserText.label: 'SAP component'
+  @UI.lineItem: [ { position: 50, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 30 } ]
+  Component;
+  @EndUserText.label: 'Dashboard card'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 40 } ]
+  DashboardCard;
+  @EndUserText.label: 'Business owner role'
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 50 } ]
+  OwnerRole;
+  @EndUserText.label: 'Typical schedule'
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 60 } ]
+  Schedule;
+  @EndUserText.label: 'Active since'
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 70 } ]
+  ActiveFrom;
+  @EndUserText.label: 'Reason of the activation'
+  @UI.fieldGroup: [ { qualifier: 'Catalogue', position: 80 } ]
+  ActivationReason;
+  @EndUserText.label: 'Checks in effect'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Kpi', position: 10 } ]
+  CheckCount;
+  @EndUserText.label: 'Checks with open exceptions'
+  @UI.lineItem: [ { position: 70, importance: #HIGH },
+                  { qualifier: 'Attention', position: 30, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Kpi', position: 20 } ]
+  FlaggedCount;
+  @EndUserText.label: 'Stale checks'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Kpi', position: 30 } ]
+  StaleCount;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 90, importance: #HIGH },
+                  { qualifier: 'Attention', position: 40, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Kpi', position: 40 } ]
+  @UI.dataPoint: { qualifier: 'OpenExceptions', title: 'Open exceptions' }
+  OpenExceptions;
+  @EndUserText.label: 'Status (H, W, A)'
+  @UI.lineItem: [ { position: 100, importance: #HIGH, criticality: 'StatusCriticality' },
+                  { qualifier: 'Attention', position: 20, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Kpi', position: 50, criticality: 'StatusCriticality' } ]
+  Status;
+  @UI.hidden: true
+  StatusCriticality;
+  @EndUserText.label: 'Active but not monitored'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  @UI.dataPoint: { qualifier: 'UnmonitoredProcesses', title: 'Unmonitored' }
+  IsUnmonitored;
+  @EndUserText.label: 'Needs attention'
+  @UI.selectionField: [ { position: 50 } ]
+  IsAttention;
+  @EndUserText.label: 'Active business processes'
+  @UI.dataPoint: { qualifier: 'ActiveProcesses', title: 'Active business processes' }
+  ProcessCount;
+}

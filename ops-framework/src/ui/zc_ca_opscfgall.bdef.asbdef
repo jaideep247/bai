@@ -33,6 +33,12 @@ define behavior for ZC_CA_OpsCfgAll alias OpsCfgAll
   use association _Link { create; with draft; }
   use association _LinkCondition { create; with draft; }
   use association _LinkActivation { create; with draft; }
+  use association _CatalogPackage { create; with draft; }
+  use association _CatalogProcess { create; with draft; }
+  use association _CatalogStep { create; with draft; }
+  use association _CatalogTable { create; with draft; }
+  use association _CatalogDependency { create; with draft; }
+  use association _CatalogActivation { create; with draft; }
 }
 
 define behavior for ZC_CA_AlertRule alias AlertRule
@@ -216,6 +222,60 @@ use etag
 }
 
 define behavior for ZC_CA_LinkActivation alias LinkActivation
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_CatalogPackage alias CatalogPackage
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_CatalogProcess alias CatalogProcess
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_CatalogStep alias CatalogStep
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_CatalogTable alias CatalogTable
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_CatalogDependency alias CatalogDependency
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_CatalogActivation alias CatalogActivation
 use etag
 {
   use update;

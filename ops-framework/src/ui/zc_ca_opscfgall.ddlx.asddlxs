@@ -49,7 +49,19 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'LinkCondition', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Link registry link conditions', position: 210, targetElement: '_LinkCondition' },
     { id: 'LinkActivation', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Link registry activation overrides', position: 220, targetElement: '_LinkActivation' }
+      label: 'Link registry activation overrides', position: 220, targetElement: '_LinkActivation' },
+    { id: 'CatalogPackage', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Process catalogue packages', position: 230, targetElement: '_CatalogPackage' },
+    { id: 'CatalogProcess', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Process catalogue processes', position: 240, targetElement: '_CatalogProcess' },
+    { id: 'CatalogStep', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Process catalogue steps', position: 250, targetElement: '_CatalogStep' },
+    { id: 'CatalogTable', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Process catalogue tables', position: 260, targetElement: '_CatalogTable' },
+    { id: 'CatalogDependency', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Process catalogue dependencies', position: 270, targetElement: '_CatalogDependency' },
+    { id: 'CatalogActivation', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Process catalogue activation', position: 280, targetElement: '_CatalogActivation' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

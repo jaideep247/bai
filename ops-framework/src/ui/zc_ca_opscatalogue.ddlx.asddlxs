@@ -1,0 +1,90 @@
+// UI annotations: Process catalogue with today's activation (service ZUI_CA_OPS_DASH, 2026-11-11)
+// Every catalogue process of every package with its effective state (active, source A activation row / D default /
+// P package off, since, reason, approver) and the checks in effect that monitor it. Selection variants Active and
+// Inactive for the review of an activation proposal.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Catalogue process', typeNamePlural: 'Process catalogue',
+                  title: { type: #STANDARD, value: 'ProcessName' },
+                  description: { type: #STANDARD, value: 'ProcessId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'PackageId', direction: #ASC }, { by: 'Seq', direction: #ASC },
+                                          { by: 'ProcessId', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Active', text: 'Active processes', filter: 'IsActive EQ X' },
+                        { qualifier: 'Inactive', text: 'Inactive processes', filter: 'IsActive NE X' } ]
+annotate entity ZC_CA_OpsCatalogue with
+{
+  @UI.facet: [ { id: 'Process', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Process', position: 10 },
+               { id: 'Activation', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Activation',
+                 label: 'Activation today', position: 20 } ]
+  @EndUserText.label: 'Catalogue process'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  ProcessId;
+  @EndUserText.label: 'Package'
+  @UI.lineItem: [ { position: 10, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @UI.identification: [ { position: 20 } ]
+  PackageId;
+  @EndUserText.label: 'Package kind (S, I, C)'
+  @UI.identification: [ { position: 30 } ]
+  PackageKind;
+  @EndUserText.label: 'Package name'
+  @UI.identification: [ { position: 40 } ]
+  PackageName;
+  @EndUserText.label: 'Process'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 50 } ]
+  ProcessName;
+  @EndUserText.label: 'SAP component'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 60 } ]
+  Component;
+  @EndUserText.label: 'Dashboard card'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.identification: [ { position: 70 } ]
+  DashboardCard;
+  @EndUserText.label: 'Business owner role'
+  @UI.identification: [ { position: 80 } ]
+  OwnerRole;
+  @EndUserText.label: 'Typical schedule'
+  @UI.identification: [ { position: 90 } ]
+  Schedule;
+  @EndUserText.label: 'Evidence (C confirmed, V VERIFY)'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  @UI.identification: [ { position: 100 } ]
+  Evidence;
+  @EndUserText.label: 'VERIFY item'
+  @UI.identification: [ { position: 110 } ]
+  VerifyRef;
+  @EndUserText.label: 'Active by default'
+  @UI.fieldGroup: [ { qualifier: 'Activation', position: 10 } ]
+  IsDefaultActive;
+  @EndUserText.label: 'Active today'
+  @UI.lineItem: [ { position: 60, importance: #HIGH, criticality: 'ActiveCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  @UI.fieldGroup: [ { qualifier: 'Activation', position: 20, criticality: 'ActiveCriticality' } ]
+  IsActive;
+  @UI.hidden: true
+  ActiveCriticality;
+  @EndUserText.label: 'Decided by (A row, D default, P package off)'
+  @UI.fieldGroup: [ { qualifier: 'Activation', position: 30 } ]
+  ActivationSource;
+  @EndUserText.label: 'Effective from'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Activation', position: 40 } ]
+  ActiveFrom;
+  @EndUserText.label: 'Reason'
+  @UI.fieldGroup: [ { qualifier: 'Activation', position: 50 } ]
+  ActivationReason;
+  @EndUserText.label: 'Approved by'
+  @UI.fieldGroup: [ { qualifier: 'Activation', position: 60 } ]
+  ApprovedBy;
+  @EndUserText.label: 'Checks in effect'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Activation', position: 70 } ]
+  MonitoringChecks;
+  @UI.hidden: true
+  Seq;
+}

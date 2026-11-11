@@ -19,14 +19,19 @@ define table zca_ops_agg {
   // DATS field: AGE counts from it; COUNT with a DATE_FIELD counts only rows at least MIN_AGE_DAYS old
   date_field    : abap.char(30);
   min_age_days  : abap.int4;
+  // Window (2026-11-11): only rows with a DATE_FIELD at most MAX_AGE_DAYS old (0 = no window), e.g. the
+  // write-offs of the last day
+  max_age_days  : abap.int4;
+  // TIMS field next to DATE_FIELD: a check that measures a time window (planned downtime) compares date and time
+  time_field    : abap.char(30);
   // Company-code field of the table: one result (and finding) per company code, finding BUKRS = its value;
   // blank = one area-level result. Required when the check is BUKRS_AWARE
   bukrs_field   : abap.char(30);
-  // Status condition: EQ NE IN (IN: comma list); values are quoted, never concatenated raw
+  // Status condition: EQ NE IN NI (IN / NI: comma list, NI = none of them); values are quoted, never concatenated raw
   status_field  : abap.char(30);
   status_op     : abap.char(2);
   status_value  : abap.char(70);
-  // Optional second condition: EQ NE GT LT GE LE IN
+  // Optional second condition: EQ NE GT LT GE LE IN NI
   cond_field    : abap.char(30);
   cond_op       : abap.char(2);
   cond_value    : abap.char(70);

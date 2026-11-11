@@ -1,0 +1,12 @@
+// Artifact: zc_ca_opscatalogue.dcls.asdcls
+// Purpose: Read access to the process catalogue list (service ZUI_CA_OPS_DASH): authorization object ZCA_OPS with
+//          ZCA_PARAR = CA_OPS (the framework area) and ACTVT 03. The catalogue holds product configuration
+//          (process definitions and their activation), no business data and no company code.
+// Modification log: 2026-11-11 | Initial version (process catalogue with activation).
+// VERIFY-ADT: aspect pfcg_auth with fixed field values and no mapped element ( ) (7.58).
+@EndUserText.label: 'Process catalogue - read access'
+@MappingRole: true
+define role ZC_CA_OpsCatalogue {
+  grant select on ZC_CA_OpsCatalogue
+    where ( ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR = 'CA_OPS', ACTVT = '03' );
+}

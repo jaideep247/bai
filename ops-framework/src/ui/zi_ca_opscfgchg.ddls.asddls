@@ -107,3 +107,33 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_catpkg
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_catprc
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_catstp
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_cattab
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_catdep
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_catact
+  {
+    last_changed_at as LastChangedAt
+  }

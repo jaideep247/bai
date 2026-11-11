@@ -49,7 +49,9 @@ class FrameworkAppTest(unittest.TestCase):
                                   'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl',
                                   'zca_ops_pmdim', 'zca_ops_feeder', 'zca_ops_jobsch',
                                   'zca_ops_runbook', 'zca_ops_corr', 'zca_ops_lnklyr', 'zca_ops_lnkobj',
-                              'zca_ops_lnkfld', 'zca_ops_link', 'zca_ops_lnkcnd', 'zca_ops_lnkact'])
+                              'zca_ops_lnkfld', 'zca_ops_link', 'zca_ops_lnkcnd', 'zca_ops_lnkact',
+                              'zca_ops_catpkg', 'zca_ops_catprc', 'zca_ops_catstp', 'zca_ops_cattab',
+                              'zca_ops_catdep', 'zca_ops_catact'])
 
     def test_payment_model_tables_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
@@ -67,13 +69,23 @@ class FrameworkAppTest(unittest.TestCase):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
         self.assertIn(('class', 'class_name', 'ZIF_CA_OPS_CHECK'), checks['zca_ops_check'])
         self.assertIn(('enum', 'agg_func', 'COUNT,AGE'), checks['zca_ops_agg'])
-        self.assertIn(('enum', 'status_op', ',EQ,NE,IN'), checks['zca_ops_agg'])
+        self.assertIn(('enum', 'status_op', ',EQ,NE,IN,NI'), checks['zca_ops_agg'])
         self.assertIn(('table', 'tabname'), checks['zca_ops_agg'])
         fields = {c[1] for c in checks['zca_ops_agg'] if c[0] == 'field'}
-        self.assertEqual(fields, {'date_field', 'bukrs_field', 'status_field', 'cond_field'})
+        self.assertEqual(fields, {'date_field', 'time_field', 'bukrs_field', 'status_field', 'cond_field'})
         self.assertIn(('table', 'table_name'), checks['zca_ops_tabwl'])
         for table in ('zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl'):
             self.assertIn(('area', 'area', False), checks[table])
+
+    def test_process_catalogue_checked_on_save(self):
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        self.assertIn(('enum', 'pkg_kind', 'S,I,C'), checks['zca_ops_catpkg'])
+        self.assertIn(('enum', 'step_kind', 'T,P,M,J,E'), checks['zca_ops_catstp'])
+        self.assertIn(('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>approver_valid', 'approver_invalid'),
+                      checks['zca_ops_catact'])
+        self.assertIn(('when', 'valid_from', rap_generate.FILLED, [('required', 'reason'), ('required', 'pkg_id'),
+                                                        ('required', 'approved_by')]), checks['zca_ops_catact'])
+        self.assertIn(('when', 'evidence', 'C', [('table', 'tabname')]), checks['zca_ops_cattab'])
 
     def test_control_register_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

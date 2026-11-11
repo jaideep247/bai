@@ -41,36 +41,42 @@ annotate entity ZC_CA_AggregateCheck with
   MinAgeDays;
 
   @UI.identification: [{ position: 90 }]
-  BukrsField;
+  MaxAgeDays;
 
   @UI.identification: [{ position: 100 }]
-  StatusField;
+  TimeField;
 
   @UI.identification: [{ position: 110 }]
-  StatusOp;
+  BukrsField;
 
   @UI.identification: [{ position: 120 }]
-  StatusValue;
+  StatusField;
 
   @UI.identification: [{ position: 130 }]
-  CondField;
+  StatusOp;
 
   @UI.identification: [{ position: 140 }]
-  CondOp;
+  StatusValue;
 
   @UI.identification: [{ position: 150 }]
-  CondValue;
+  CondField;
 
   @UI.identification: [{ position: 160 }]
-  Amber;
+  CondOp;
 
   @UI.identification: [{ position: 170 }]
-  Red;
+  CondValue;
 
   @UI.identification: [{ position: 180 }]
-  CheckCode;
+  Amber;
 
   @UI.identification: [{ position: 190 }]
+  Red;
+
+  @UI.identification: [{ position: 200 }]
+  CheckCode;
+
+  @UI.identification: [{ position: 210 }]
   Active;
 
   @UI.hidden: true

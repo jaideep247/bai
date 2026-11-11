@@ -22,6 +22,10 @@ define view entity ZR_CA_AggregateCheck
       date_field as DateField,
       @EndUserText.label: 'Minimum age (days)'
       min_age_days as MinAgeDays,
+      @EndUserText.label: 'Window (days, 0 = none)'
+      max_age_days as MaxAgeDays,
+      @EndUserText.label: 'Time field (with the date field)'
+      time_field as TimeField,
       @EndUserText.label: 'Company-code field (one result each)'
       bukrs_field as BukrsField,
       @EndUserText.label: 'Status field'

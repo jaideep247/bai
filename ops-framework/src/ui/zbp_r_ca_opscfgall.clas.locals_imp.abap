@@ -38,6 +38,7 @@ INTERFACE lif_c.
       condvalue                      TYPE string VALUE `CONDVALUE`,
       criticality                    TYPE string VALUE `CRITICALITY`,
       datefield                      TYPE string VALUE `DATEFIELD`,
+      depkind                        TYPE string VALUE `DEPKIND`,
       destination                    TYPE string VALUE `DESTINATION`,
       dimension                      TYPE string VALUE `DIMENSION`,
       escseverity                    TYPE string VALUE `ESCSEVERITY`,
@@ -52,9 +53,12 @@ INTERFACE lif_c.
       matchfield                     TYPE string VALUE `MATCHFIELD`,
       minrag                         TYPE string VALUE `MINRAG`,
       minseverity                    TYPE string VALUE `MINSEVERITY`,
+      monarea                        TYPE string VALUE `MONAREA`,
       owner                          TYPE string VALUE `OWNER`,
       paramarea                      TYPE string VALUE `PARAMAREA`,
       paramname                      TYPE string VALUE `PARAMNAME`,
+      pkgid                          TYPE string VALUE `PKGID`,
+      pkgkind                        TYPE string VALUE `PKGKIND`,
       quality                        TYPE string VALUE `QUALITY`,
       quietfrom                      TYPE string VALUE `QUIETFROM`,
       quietto                        TYPE string VALUE `QUIETTO`,
@@ -67,14 +71,18 @@ INTERFACE lif_c.
       sourcename                     TYPE string VALUE `SOURCENAME`,
       statusfield                    TYPE string VALUE `STATUSFIELD`,
       statusop                       TYPE string VALUE `STATUSOP`,
+      stepkind                       TYPE string VALUE `STEPKIND`,
       tablename                      TYPE string VALUE `TABLENAME`,
       tabname                        TYPE string VALUE `TABNAME`,
+      tabrole                        TYPE string VALUE `TABROLE`,
       targetkind                     TYPE string VALUE `TARGETKIND`,
       team                           TYPE string VALUE `TEAM`,
       templateid                     TYPE string VALUE `TEMPLATEID`,
+      timefield                      TYPE string VALUE `TIMEFIELD`,
       toref                          TYPE string VALUE `TOREF`,
       transform                      TYPE string VALUE `TRANSFORM`,
       urltemplate                    TYPE string VALUE `URLTEMPLATE`,
+      validfrom                      TYPE string VALUE `VALIDFROM`,
       verifyref                      TYPE string VALUE `VERIFYREF`,
       windowmin                      TYPE string VALUE `WINDOWMIN`,
     END OF gc_el,
@@ -83,6 +91,12 @@ INTERFACE lif_c.
       alertchannel                   TYPE string VALUE `AlertChannel`,
       alertrule                      TYPE string VALUE `AlertRule`,
       approvedtable                  TYPE string VALUE `ApprovedTable`,
+      catalogactivation              TYPE string VALUE `CatalogActivation`,
+      catalogdependency              TYPE string VALUE `CatalogDependency`,
+      catalogpackage                 TYPE string VALUE `CatalogPackage`,
+      catalogprocess                 TYPE string VALUE `CatalogProcess`,
+      catalogstep                    TYPE string VALUE `CatalogStep`,
+      catalogtable                   TYPE string VALUE `CatalogTable`,
       control                        TYPE string VALUE `Control`,
       controlcheck                   TYPE string VALUE `ControlCheck`,
       controltext                    TYPE string VALUE `ControlText`,
@@ -111,6 +125,12 @@ INTERFACE lif_c.
       alertchannel                   TYPE string VALUE `ZCA_OPS_ALCHN`,
       alertrule                      TYPE string VALUE `ZCA_OPS_ALRULE`,
       approvedtable                  TYPE string VALUE `ZCA_OPS_TABWL`,
+      catalogactivation              TYPE string VALUE `ZCA_OPS_CATACT`,
+      catalogdependency              TYPE string VALUE `ZCA_OPS_CATDEP`,
+      catalogpackage                 TYPE string VALUE `ZCA_OPS_CATPKG`,
+      catalogprocess                 TYPE string VALUE `ZCA_OPS_CATPRC`,
+      catalogstep                    TYPE string VALUE `ZCA_OPS_CATSTP`,
+      catalogtable                   TYPE string VALUE `ZCA_OPS_CATTAB`,
       control                        TYPE string VALUE `ZCA_OPS_CONTROL`,
       controlcheck                   TYPE string VALUE `ZCA_OPS_CTLCHK`,
       controltext                    TYPE string VALUE `ZCA_OPS_CTLT`,
@@ -131,11 +151,18 @@ INTERFACE lif_c.
     END OF gc_tab,
     BEGIN OF gc_val,
       aggregatecheck_aggfunc         TYPE string VALUE `COUNT,AGE`,
-      aggregatecheck_condop          TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
-      aggregatecheck_statusop        TYPE string VALUE `,EQ,NE,IN`,
+      aggregatecheck_condop          TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN,NI`,
+      aggregatecheck_statusop        TYPE string VALUE `,EQ,NE,IN,NI`,
       alertrule_escseverity          TYPE string VALUE `,B,E,W,I`,
       alertrule_minrag               TYPE string VALUE `,R,A,G`,
       alertrule_minseverity          TYPE string VALUE `,B,E,W,I`,
+      catalogdependency_depkind      TYPE string VALUE `H,S`,
+      catalogpackage_pkgkind         TYPE string VALUE `S,I,C`,
+      catalogprocess_evidence        TYPE string VALUE `C,V`,
+      catalogstep_evidence           TYPE string VALUE `C,V`,
+      catalogstep_stepkind           TYPE string VALUE `T,P,M,J,E`,
+      catalogtable_evidence          TYPE string VALUE `C,V`,
+      catalogtable_tabrole           TYPE string VALUE `H,I,L,S,C`,
       controlcheck_matchfield        TYPE string VALUE `RULE_ID,CHECK_CODE,GROUP2`,
       link_cardinality               TYPE string VALUE `11,1N,N1,NM`,
       link_quality                   TYPE string VALUE `C,P`,
@@ -151,6 +178,10 @@ INTERFACE lif_c.
       schedulerjob_criticality       TYPE string VALUE `H,M,L`,
     END OF gc_val,
     BEGIN OF gc_when,
+      catalogprocess_evidence_v      TYPE string VALUE `V`,
+      catalogstep_evidence_v         TYPE string VALUE `V`,
+      catalogtable_evidence_c        TYPE string VALUE `C`,
+      catalogtable_evidence_v        TYPE string VALUE `V`,
       linkactivation_target_kind_lk  TYPE string VALUE `L,K`,
       linkcondition_cond_kind_constp TYPE string VALUE `CONST,PREFER`,
       linkcondition_cond_kind_eq     TYPE string VALUE `EQ`,
@@ -284,6 +315,24 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     IF requested_authorizations-%assoc-_LinkActivation = if_abap_behv=>mk-on.
       result-%assoc-_LinkActivation = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
+    IF requested_authorizations-%assoc-_CatalogPackage = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogPackage = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_CatalogProcess = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogProcess = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_CatalogStep = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogStep = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_CatalogTable = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogTable = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_CatalogDependency = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogDependency = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_CatalogActivation = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogActivation = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -354,6 +403,24 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_LinkActivation = if_abap_behv=>mk-on.
       result-%assoc-_LinkActivation = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_CatalogPackage = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogPackage = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_CatalogProcess = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogProcess = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_CatalogStep = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogStep = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_CatalogTable = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogTable = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_CatalogDependency = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogDependency = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_CatalogActivation = if_abap_behv=>mk-on.
+      result-%assoc-_CatalogActivation = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -1469,6 +1536,12 @@ CLASS lhc_aggregatecheck IMPLEMENTATION.
                                                   iv_field = CONV #( ls_row-DateField ) ) = abap_false.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-DateField v2 = ls_row-Tabname
                         element = lif_c=>gc_el-datefield ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-TimeField IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
+         AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
+                                                  iv_field = CONV #( ls_row-TimeField ) ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-TimeField v2 = ls_row-Tabname
+                        element = lif_c=>gc_el-timefield ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-BukrsField IS NOT INITIAL AND ls_row-Tabname IS NOT INITIAL
          AND zcl_ca_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-Tabname )
@@ -3054,6 +3127,754 @@ CLASS lhc_linkactivation IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_catalogpackage DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR CatalogPackage RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR CatalogPackage RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogPackage~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogPackage~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_catalogpackage IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY CatalogPackage
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-catalogpackage.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-PkgKind )
+                                        iv_list  = lif_c=>gc_val-catalogpackage_pkgkind ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-PkgKind
+                        v2 = lif_c=>gc_el-pkgkind v3 = lif_c=>gc_val-catalogpackage_pkgkind
+                        element = lif_c=>gc_el-pkgkind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-MonArea
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-MonArea
+                        element = lif_c=>gc_el-monarea ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogpackage.
+        INSERT INITIAL LINE INTO TABLE reported-catalogpackage ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-catalogpackage.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-catalogpackage.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-catalogpackage.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_catalogprocess DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR CatalogProcess RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR CatalogProcess RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogProcess~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogProcess~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_catalogprocess IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY CatalogProcess
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-catalogprocess.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Evidence )
+                                        iv_list  = lif_c=>gc_val-catalogprocess_evidence ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Evidence
+                        v2 = lif_c=>gc_el-evidence v3 = lif_c=>gc_val-catalogprocess_evidence
+                        element = lif_c=>gc_el-evidence ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Evidence )
+                                        iv_list  = lif_c=>gc_when-catalogprocess_evidence_v ) = abap_true.
+        IF ls_row-VerifyRef IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-verifyref
+                          v2 = lif_c=>gc_el-evidence v3 = ls_row-Evidence
+                          element = lif_c=>gc_el-verifyref ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogprocess.
+        INSERT INITIAL LINE INTO TABLE reported-catalogprocess ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-catalogprocess.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-catalogprocess.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-catalogprocess.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_catalogstep DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR CatalogStep RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR CatalogStep RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogStep~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogStep~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_catalogstep IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY CatalogStep
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-catalogstep.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-StepKind )
+                                        iv_list  = lif_c=>gc_val-catalogstep_stepkind ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-StepKind
+                        v2 = lif_c=>gc_el-stepkind v3 = lif_c=>gc_val-catalogstep_stepkind
+                        element = lif_c=>gc_el-stepkind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Evidence )
+                                        iv_list  = lif_c=>gc_val-catalogstep_evidence ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Evidence
+                        v2 = lif_c=>gc_el-evidence v3 = lif_c=>gc_val-catalogstep_evidence
+                        element = lif_c=>gc_el-evidence ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Evidence )
+                                        iv_list  = lif_c=>gc_when-catalogstep_evidence_v ) = abap_true.
+        IF ls_row-VerifyRef IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-verifyref
+                          v2 = lif_c=>gc_el-evidence v3 = ls_row-Evidence
+                          element = lif_c=>gc_el-verifyref ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogstep.
+        INSERT INITIAL LINE INTO TABLE reported-catalogstep ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-catalogstep.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-catalogstep.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-catalogstep.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_catalogtable DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR CatalogTable RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR CatalogTable RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogTable~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogTable~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_catalogtable IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY CatalogTable
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-catalogtable.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Evidence )
+                                        iv_list  = lif_c=>gc_when-catalogtable_evidence_c ) = abap_true.
+        IF ls_row-Tabname IS NOT INITIAL
+           AND zcl_ca_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-Tabname
+                          element = lif_c=>gc_el-tabname ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-TabRole )
+                                        iv_list  = lif_c=>gc_val-catalogtable_tabrole ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-TabRole
+                        v2 = lif_c=>gc_el-tabrole v3 = lif_c=>gc_val-catalogtable_tabrole
+                        element = lif_c=>gc_el-tabrole ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Evidence )
+                                        iv_list  = lif_c=>gc_val-catalogtable_evidence ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Evidence
+                        v2 = lif_c=>gc_el-evidence v3 = lif_c=>gc_val-catalogtable_evidence
+                        element = lif_c=>gc_el-evidence ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Evidence )
+                                        iv_list  = lif_c=>gc_when-catalogtable_evidence_v ) = abap_true.
+        IF ls_row-VerifyRef IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-verifyref
+                          v2 = lif_c=>gc_el-evidence v3 = ls_row-Evidence
+                          element = lif_c=>gc_el-verifyref ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogtable.
+        INSERT INITIAL LINE INTO TABLE reported-catalogtable ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-catalogtable.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-catalogtable.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-catalogtable.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_catalogdependency DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR CatalogDependency RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR CatalogDependency RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogDependency~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogDependency~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_catalogdependency IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY CatalogDependency
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-catalogdependency.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DepKind )
+                                        iv_list  = lif_c=>gc_val-catalogdependency_depkind ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DepKind
+                        v2 = lif_c=>gc_el-depkind v3 = lif_c=>gc_val-catalogdependency_depkind
+                        element = lif_c=>gc_el-depkind ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogdependency.
+        INSERT INITIAL LINE INTO TABLE reported-catalogdependency ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-catalogdependency.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-catalogdependency.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-catalogdependency.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_catalogactivation DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR CatalogActivation RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR CatalogActivation RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogActivation~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CatalogActivation~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_catalogactivation IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY CatalogActivation
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-catalogactivation.
+      IF ls_row-ValidFrom IS NOT INITIAL.
+        IF ls_row-Reason IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-reason
+                          v2 = lif_c=>gc_el-validfrom v3 = ls_row-ValidFrom
+                          element = lif_c=>gc_el-reason ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-PkgId IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-pkgid
+                          v2 = lif_c=>gc_el-validfrom v3 = ls_row-ValidFrom
+                          element = lif_c=>gc_el-pkgid ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-ApprovedBy IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-approvedby
+                          v2 = lif_c=>gc_el-validfrom v3 = ls_row-ValidFrom
+                          element = lif_c=>gc_el-approvedby ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>approver_valid( ls_row-ApprovedBy ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-approver_invalid v1 = ls_row-ApprovedBy
+                        element = lif_c=>gc_el-approvedby ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogactivation.
+        INSERT INITIAL LINE INTO TABLE reported-catalogactivation ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-catalogactivation.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-catalogactivation.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-catalogactivation.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_ca_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -3092,7 +3913,13 @@ CLASS lsc_zr_ca_opscfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-linkfield table = lif_c=>gc_tab-linkfield )
             ( entity = lif_c=>gc_ent-link table = lif_c=>gc_tab-link )
             ( entity = lif_c=>gc_ent-linkcondition table = lif_c=>gc_tab-linkcondition )
-            ( entity = lif_c=>gc_ent-linkactivation table = lif_c=>gc_tab-linkactivation ) )
+            ( entity = lif_c=>gc_ent-linkactivation table = lif_c=>gc_tab-linkactivation )
+            ( entity = lif_c=>gc_ent-catalogpackage table = lif_c=>gc_tab-catalogpackage )
+            ( entity = lif_c=>gc_ent-catalogprocess table = lif_c=>gc_tab-catalogprocess )
+            ( entity = lif_c=>gc_ent-catalogstep table = lif_c=>gc_tab-catalogstep )
+            ( entity = lif_c=>gc_ent-catalogtable table = lif_c=>gc_tab-catalogtable )
+            ( entity = lif_c=>gc_ent-catalogdependency table = lif_c=>gc_tab-catalogdependency )
+            ( entity = lif_c=>gc_ent-catalogactivation table = lif_c=>gc_tab-catalogactivation ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

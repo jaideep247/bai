@@ -11,6 +11,9 @@
 *& process ID (the runner stamps them). No logic.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Process catalogue: business process names its catalogue process (CAT_PROCESS); aggregate
+*&            | row window MAX_AGE_DAYS and time field TIME_FIELD; operator NI (none of a list); a date / time
+*&            | window of an aggregate (outage check).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check registry types</p>
 INTERFACE zif_ca_ops_chk_types
@@ -51,6 +54,8 @@ INTERFACE zif_ca_ops_chk_types
       ge     TYPE ty_operator VALUE 'GE',
       le     TYPE ty_operator VALUE 'LE',
       in_set TYPE ty_operator VALUE 'IN',
+      "! None of a comma list (2026-11-11: e.g. a write-off outside the approved reasons)
+      not_in TYPE ty_operator VALUE 'NI',
     END OF gc_operator.
 
   "! Object types of the findings of the runner and of the framework's checks
@@ -154,6 +159,8 @@ INTERFACE zif_ca_ops_chk_types
       auth_role    TYPE ty_role,
       own_data     TYPE abap_bool,
       purge_target TYPE ty_purge_target,
+      "! Catalogue process the business process monitors (ZCA_OPS_CATPRC; blank = not in the catalogue)
+      cat_process  TYPE ty_process_id,
       active       TYPE abap_bool,
       seq          TYPE i,
     END OF ty_process.
@@ -179,6 +186,10 @@ INTERFACE zif_ca_ops_chk_types
       agg_func     TYPE ty_agg_func,
       date_field   TYPE ty_fieldname,
       min_age_days TYPE i,
+      "! Window: only rows at most this many days old (0 = none)
+      max_age_days TYPE i,
+      "! TIMS field next to DATE_FIELD (a time window of the outage check)
+      time_field   TYPE ty_fieldname,
       bukrs_field  TYPE ty_fieldname,
       status_field TYPE ty_fieldname,
       status_op    TYPE ty_operator,
@@ -200,6 +211,16 @@ INTERFACE zif_ca_ops_chk_types
       type_kind TYPE ty_type_kind,
     END OF ty_field.
   TYPES tt_field TYPE SORTED TABLE OF ty_field WITH UNIQUE KEY fieldname.
+
+  "! A date / time window an aggregate row is measured in instead of its age limits (outage check): rows whose
+  "! DATE_FIELD lies from FROM_DATE to TO_DATE; with the row's TIME_FIELD the times bound the first and last day
+  TYPES:
+    BEGIN OF ty_window,
+      from_date TYPE d,
+      from_time TYPE t,
+      to_date   TYPE d,
+      to_time   TYPE t,
+    END OF ty_window.
 
   "! The SQL of an aggregate row, built only from checked names and quoted literals
   TYPES:

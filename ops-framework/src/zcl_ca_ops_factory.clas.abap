@@ -22,6 +22,7 @@
 *& 2026-11-10 | GET_REVIEW_DAO: repository of the daily control review (injectable).
 *& 2026-11-10 | GET_CHECK_DAO: data access of the check registry (process onboarding, injectable).
 *& 2026-11-11 | GET_DOWNTIME: planned downtime API (operations response features, injectable).
+*& 2026-11-11 | GET_CATALOG, GET_CAT_DAO: process catalogue API and its data access (injectable).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven
@@ -86,6 +87,17 @@ CLASS zcl_ca_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_ca_ops_check_dao.
 
+    "! Process catalogue API: effective activation of the catalogue processes (2026-11-11). A new instance per
+    "! call (it reads the catalogue once, on first use)
+    CLASS-METHODS get_catalog
+      RETURNING
+        VALUE(ro_catalog) TYPE REF TO zif_ca_ops_catalog.
+
+    "! Data access of the process catalogue (2026-11-11)
+    CLASS-METHODS get_cat_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_ca_ops_cat_dao.
+
     "! Planned downtime API: the windows of an area and "is this planned?" (2026-11-11)
     CLASS-METHODS get_downtime
       RETURNING
@@ -140,6 +152,8 @@ CLASS zcl_ca_ops_factory DEFINITION
     CLASS-DATA go_review_dao_double TYPE REF TO zif_ca_ops_review_dao.
     CLASS-DATA go_check_dao_double TYPE REF TO zif_ca_ops_check_dao.
     CLASS-DATA go_downtime_double TYPE REF TO zif_ca_ops_downtime.
+    CLASS-DATA go_catalog_double TYPE REF TO zif_ca_ops_catalog.
+    CLASS-DATA go_cat_dao_double TYPE REF TO zif_ca_ops_cat_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
     "! Installed ZCA_PARAM release as seen by CHECK_VERSION (test seam: a double release)
     CLASS-DATA gv_param_version_double TYPE string.
@@ -240,6 +254,18 @@ CLASS zcl_ca_ops_factory IMPLEMENTATION.
   METHOD get_check_dao.
     ro_dao = COND #( WHEN go_check_dao_double IS BOUND THEN go_check_dao_double
                      ELSE NEW zcl_ca_ops_check_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_catalog.
+    ro_catalog = COND #( WHEN go_catalog_double IS BOUND THEN go_catalog_double
+                         ELSE NEW zcl_ca_ops_catalog( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_cat_dao.
+    ro_dao = COND #( WHEN go_cat_dao_double IS BOUND THEN go_cat_dao_double
+                     ELSE NEW zcl_ca_ops_cat_dao( ) ).
   ENDMETHOD.
 
 

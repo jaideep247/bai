@@ -27,6 +27,10 @@ Modification log:
            | (severity floor).
 2026-11-11 | Link registry: layers, objects, fields (table 082 / field 083 checks), links, conditions (field
            | references TABLE-FIELD 225, kind-dependent fields 235 / 236) and activation overrides.
+2026-11-11 | Process catalogue: packages, processes, steps, tables (table 082 check), dependencies and the
+           | activation per customer (reason, approver 240: a user of the client other than the user saving);
+           | business processes name their catalogue process; aggregate rows: window MAX_AGE_DAYS, time field
+           | (083 check), operator NI (none of a list).
 """
 import os
 import sys
@@ -36,6 +40,7 @@ sys.path.insert(0, os.path.join(ROOT, '..', 'tools'))
 import abaptools  # noqa: E402
 
 _engine = abaptools.fresh('rap_generate', 'ops_framework')
+FILLED = _engine.FILLED
 
 SEV = 'B,E,W,I'
 
@@ -81,9 +86,9 @@ SPEC = {
             ('zca_ops_check', 'RegisteredCheck', 'zca_d_check', 'Check', 'Registered checks', [],
              [('area', 'area', False), ('class', 'class_name', 'ZIF_CA_OPS_CHECK')]),
             ('zca_ops_agg', 'AggregateCheck', 'zca_d_agg', 'Aggregate', 'Aggregate checks (no code)', [],
-             [('area', 'area', False), ('enum', 'agg_func', 'COUNT,AGE'), ('enum', 'status_op', ',EQ,NE,IN'),
-              ('enum', 'cond_op', ',EQ,NE,GT,LT,GE,LE,IN'), ('table', 'tabname'),
-              ('field', 'date_field', 'tabname'), ('field', 'bukrs_field', 'tabname'),
+             [('area', 'area', False), ('enum', 'agg_func', 'COUNT,AGE'), ('enum', 'status_op', ',EQ,NE,IN,NI'),
+              ('enum', 'cond_op', ',EQ,NE,GT,LT,GE,LE,IN,NI'), ('table', 'tabname'),
+              ('field', 'date_field', 'tabname'), ('field', 'time_field', 'tabname'), ('field', 'bukrs_field', 'tabname'),
               ('field', 'status_field', 'tabname'), ('field', 'cond_field', 'tabname')]),
             ('zca_ops_tabwl', 'ApprovedTable', 'zca_d_tabwl', 'Approved table', 'Tables approved for aggregate checks', [],
              [('area', 'area', False), ('table', 'table_name'),
@@ -132,6 +137,26 @@ SPEC = {
                                                 ('blank', 'transform')])]),
             ('zca_ops_lnkact', 'LinkActivation', 'zca_d_lnkact', 'Activation', 'Link registry activation overrides', [],
              [('enum', 'target_kind', 'L,K'), ('when', 'target_kind', 'L,K', [('required', 'reason')])]),
+            # Process catalogue (2026-11-11): packages, SAP standard processes with their steps, tables and
+            # dependencies, and the activation per customer (effective from a date, reason, approver - four-eyes);
+            # cross-row rules (prefixes, ranks, dependency cycles, links of the registry) are the catalogue check's
+            # (ZCL_CA_OPS_CHK_ONBOARD) and the offline validator's (tools/process_catalogue.py)
+            ('zca_ops_catpkg', 'CatalogPackage', 'zca_d_catpkg', 'Package', 'Process catalogue packages', [],
+             [('enum', 'pkg_kind', 'S,I,C'), ('area', 'mon_area', False)]),
+            ('zca_ops_catprc', 'CatalogProcess', 'zca_d_catprc', 'Process', 'Process catalogue processes', [],
+             [('enum', 'evidence', 'C,V'), ('when', 'evidence', 'V', [('required', 'verify_ref')])]),
+            ('zca_ops_catstp', 'CatalogStep', 'zca_d_catstp', 'Step', 'Process catalogue steps', [],
+             [('enum', 'step_kind', 'T,P,M,J,E'), ('enum', 'evidence', 'C,V'),
+              ('when', 'evidence', 'V', [('required', 'verify_ref')])]),
+            ('zca_ops_cattab', 'CatalogTable', 'zca_d_cattab', 'Table', 'Process catalogue tables', [],
+             [('when', 'evidence', 'C', [('table', 'tabname')]), ('enum', 'tab_role', 'H,I,L,S,C'),
+              ('enum', 'evidence', 'C,V'), ('when', 'evidence', 'V', [('required', 'verify_ref')])]),
+            ('zca_ops_catdep', 'CatalogDependency', 'zca_d_catdep', 'Dependency', 'Process catalogue dependencies', [],
+             [('enum', 'dep_kind', 'H,S')]),
+            ('zca_ops_catact', 'CatalogActivation', 'zca_d_catact', 'Activation', 'Process catalogue activation', [],
+             [('when', 'valid_from', FILLED, [('required', 'reason'), ('required', 'pkg_id'),
+                                                ('required', 'approved_by')]),
+              ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>approver_valid', 'approver_invalid')]),
         ]),
 }
 
@@ -191,7 +216,17 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'cond_kind': 'Kind (EQ, CONST, NOTINIT, PREFER)', 'from_ref': 'From TABLE-FIELD',
           'to_ref': 'To TABLE-FIELD', 'transform': 'Transform (EQ)',
           'transform_arg': 'Transform argument', 'target_kind': 'Target (L layer, K link)',
-          'target_id': 'Layer or link switched', 'reason': 'Reason'}
+          'target_id': 'Layer or link switched', 'reason': 'Reason',
+          # Process catalogue (2026-11-11)
+          'pkg_id': 'Catalogue package', 'pkg_kind': 'Kind (S baseline, I industry, C customer)',
+          'pkg_rank': 'Rank (higher extends lower)', 'mon_area': 'Area of the delivered monitoring',
+          'component': 'SAP component', 'dash_card': 'Dashboard card', 'owner_role': 'Business owner role',
+          'schedule': 'Typical schedule', 'dflt_active': 'Active by default (no activation row)',
+          'step_no': 'Step', 'step_kind': 'Kind (T, P, M, J, E)', 'obj_name': 'SAP object',
+          'tab_role': 'Role (H, I, L, S, C)', 'link_object': 'Link registry object',
+          'pred_id': 'Depends on process', 'dep_kind': 'Dependency (H hard, S soft)',
+          'valid_from': 'Effective from', 'approved_on': 'Approved on', 'cat_process': 'Catalogue process',
+          'max_age_days': 'Window (days, 0 = none)', 'time_field': 'Time field (with the date field)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

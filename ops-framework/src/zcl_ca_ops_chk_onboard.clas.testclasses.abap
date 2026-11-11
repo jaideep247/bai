@@ -10,6 +10,9 @@
 *& through ZCL_CA_OPS_INJECTOR. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-11 | Process catalogue (local double of ZIF_CA_OPS_CATALOG, clock double): a process whose
+*&            | catalogue process is off is not checked; CAT_NO_CHECK, CHECK_PROC_INACTIVE, CAT_REF_UNKNOWN
+*&            | (error) and CAT_DEP_INACTIVE.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -53,6 +56,54 @@ CLASS ltd_purge_dao IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS ltd_catalog DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_catalog PARTIALLY IMPLEMENTED.
+    DATA mt_states TYPE zif_ca_ops_cat_types=>tt_state.
+    DATA mt_onboarded TYPE zif_ca_ops_cat_types=>tt_onboarded.
+    DATA mt_dependencies TYPE zif_ca_ops_cat_types=>tt_dependency.
+ENDCLASS.
+
+CLASS ltd_catalog IMPLEMENTATION.
+  METHOD zif_ca_ops_catalog~state.
+    rs_state = VALUE #( mt_states[ process_id = iv_process_id ]
+                        DEFAULT VALUE #( process_id = iv_process_id source = zif_ca_ops_cat_types=>gc_source-unknown ) ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_catalog~onboarded.
+    rt_onboarded = mt_onboarded.
+  ENDMETHOD.
+  METHOD zif_ca_ops_catalog~active_processes.
+    LOOP AT mt_states ASSIGNING FIELD-SYMBOL(<ls_state>) WHERE active = abap_true.
+      INSERT VALUE #( process_id = <ls_state>-process_id ) INTO TABLE rt_processes.
+    ENDLOOP.
+  ENDMETHOD.
+  METHOD zif_ca_ops_catalog~definition.
+    rs_definition-dependencies = FILTER #( mt_dependencies WHERE process_id = iv_process_id ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_catalog~validate.
+    CLEAR rt_problems.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_clock DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_clock.
+ENDCLASS.
+
+CLASS ltd_clock IMPLEMENTATION.
+  METHOD zif_ca_ops_clock~now.
+    rv_timestamp = '20261111070000.0000000'.
+  ENDMETHOD.
+  METHOD zif_ca_ops_clock~today.
+    rv_date = '20261111'.
+  ENDMETHOD.
+  METHOD zif_ca_ops_clock~time.
+    rv_time = '070000'.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
@@ -79,6 +130,8 @@ CLASS ltc_onboard DEFINITION FINAL FOR TESTING
         owner   TYPE syuname VALUE 'ZT_OWNER',
         role    TYPE zif_ca_ops_chk_types=>ty_role VALUE 'Z_ZT_OPS_OPERATOR',
         target  TYPE zif_ca_ops_chk_types=>ty_purge_target VALUE 'ZT_EVENT',
+        cat     TYPE zif_ca_ops_cat_types=>ty_process_id VALUE 'XX_PAYRUN',
+        cat_pre TYPE zif_ca_ops_cat_types=>ty_process_id VALUE 'XX_LEDGER',
       END OF gc.
 
     TYPES:
@@ -91,11 +144,18 @@ CLASS ltc_onboard DEFINITION FINAL FOR TESTING
         target_active TYPE abap_bool,
         no_role       TYPE abap_bool,
         area_inactive TYPE abap_bool,
+        "! The process monitors catalogue process XX_PAYRUN; cat_off = it is switched off today
+        in_catalogue  TYPE abap_bool,
+        cat_off       TYPE abap_bool,
+        cat_unknown   TYPE abap_bool,
+        "! XX_PAYRUN depends (hard) on XX_LEDGER, which is not active
+        pred_off      TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_dao TYPE REF TO ltd_dao.
     DATA mo_purge TYPE REF TO ltd_purge_dao.
     DATA mo_auth TYPE REF TO ltd_auth.
+    DATA mo_catalog TYPE REF TO ltd_catalog.
 
     METHODS setup.
     METHODS teardown.
@@ -118,6 +178,11 @@ CLASS ltc_onboard DEFINITION FINAL FOR TESTING
     METHODS active_purge_target_passes  FOR TESTING.
     METHODS no_role_reported            FOR TESTING.
     METHODS inactive_area_reported      FOR TESTING.
+    METHODS switched_off_not_expected   FOR TESTING.
+    METHODS active_catalogue_monitored  FOR TESTING.
+    METHODS unmonitored_catalogue_proc  FOR TESTING.
+    METHODS unknown_catalogue_is_error  FOR TESTING.
+    METHODS inactive_predecessor        FOR TESTING.
 ENDCLASS.
 
 
@@ -127,7 +192,10 @@ CLASS ltc_onboard IMPLEMENTATION.
     mo_dao   = NEW #( ).
     mo_purge = NEW #( ).
     mo_auth  = NEW #( ).
+    mo_catalog = NEW #( ).
     zcl_ca_ops_injector=>inject_check_dao( mo_dao ).
+    zcl_ca_ops_injector=>inject_catalog( mo_catalog ).
+    zcl_ca_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_ca_ops_injector=>inject_purge_dao( mo_purge ).
     zcl_ca_ops_injector=>inject_auth( mo_auth ).
   ENDMETHOD.
@@ -147,7 +215,20 @@ CLASS ltc_onboard IMPLEMENTATION.
     ls_process-own_data     = is_flags-own_data.
     ls_process-purge_target = COND #( WHEN is_flags-target_active = abap_true THEN gc-target ).
     ls_process-active       = abap_true.
+    ls_process-cat_process  = COND #( WHEN is_flags-in_catalogue = abap_true THEN gc-cat ).
     INSERT ls_process INTO TABLE mo_dao->mt_processes.
+    INSERT VALUE #( area = gc-area process_id = gc-process cat_process = ls_process-cat_process
+                    active = abap_true ) INTO TABLE mo_catalog->mt_onboarded.
+    IF is_flags-in_catalogue = abap_true AND is_flags-cat_unknown = abap_false.
+      INSERT VALUE #( process_id = gc-cat active = xsdbool( is_flags-cat_off = abap_false )
+                      source = zif_ca_ops_cat_types=>gc_source-activation ) INTO TABLE mo_catalog->mt_states.
+    ENDIF.
+    IF is_flags-pred_off = abap_true.
+      INSERT VALUE #( process_id = gc-cat_pre source = zif_ca_ops_cat_types=>gc_source-default )
+             INTO TABLE mo_catalog->mt_states.
+      INSERT VALUE #( process_id = gc-cat pred_id = gc-cat_pre dep_kind = zif_ca_ops_cat_types=>gc_dep_kind-hard )
+             INTO TABLE mo_catalog->mt_dependencies.
+    ENDIF.
     IF is_flags-no_check = abap_false.
       INSERT VALUE #( area = gc-area check_id = gc-check process_id = gc-process active = abap_true )
              INTO TABLE mo_dao->mt_checks.
@@ -289,6 +370,78 @@ CLASS ltc_onboard IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = codes( )
                                             exp = VALUE string_table( ( `PROC_NO_AUTH` ) )
                                             msg = 'Inactive area' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Rule: a business process whose catalogue process is switched off is not expected - no gap of it; its
+  " still active check is reported once (it does not run)
+  METHOD switched_off_not_expected.
+    TRY.
+        configure_scenario( VALUE #( in_catalogue = abap_true cat_off = abap_true no_alert_rule = abap_true ) ).
+        DATA(lt_codes) = codes( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( lt_codes[ table_line = CONV string( zif_ca_ops_chk_types=>gc_code-proc_no_alert ) ] ) )
+          msg = 'No onboarding gap of a process that is switched off' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_codes
+                                            exp = VALUE string_table( ( CONV #( zif_ca_ops_cat_types=>gc_code-check_proc_off ) ) )
+                                            msg = 'The active check of the switched-off process is reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an active catalogue process monitored by a check in effect raises nothing
+  METHOD active_catalogue_monitored.
+    TRY.
+        configure_scenario( VALUE #( in_catalogue = abap_true ) ).
+        cl_abap_unit_assert=>assert_initial( act = codes( ) msg = 'Active, monitored, complete: no finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an active catalogue process without a check in effect is reported (CAT_NO_CHECK)
+  METHOD unmonitored_catalogue_proc.
+    TRY.
+        configure_scenario( VALUE #( in_catalogue = abap_true no_check = abap_true ) ).
+        DATA(lt_codes) = codes( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( lt_codes[ table_line = CONV string( zif_ca_ops_cat_types=>gc_code-cat_no_check ) ] ) )
+          msg = 'Active process without a check in effect' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a business process naming a catalogue process that is not defined is an error
+  METHOD unknown_catalogue_is_error.
+    TRY.
+        configure_scenario( VALUE #( in_catalogue = abap_true cat_unknown = abap_true ) ).
+        DATA(ls_result) = NEW zcl_ca_ops_chk_onboard( )->zif_ca_ops_check~run( is_check   = VALUE #( )
+                                                                              is_context = VALUE #( ) ).
+        DATA(ls_finding) = ls_result-findings[ check_code = zif_ca_ops_cat_types=>gc_code-cat_ref_unknown ].
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_ca_ops_types=>gc_severity-error
+                                            msg = 'Unknown catalogue reference is an error' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-reference exp = CONV zif_ca_ops_types=>ty_reference( gc-process )
+                                            msg = 'The finding names the business process' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an active process whose hard predecessor is not active is reported (CAT_DEP_INACTIVE)
+  METHOD inactive_predecessor.
+    TRY.
+        configure_scenario( VALUE #( in_catalogue = abap_true pred_off = abap_true ) ).
+        cl_abap_unit_assert=>assert_equals( act = codes( )
+                                            exp = VALUE string_table( ( CONV #( zif_ca_ops_cat_types=>gc_code-cat_dep_inactive ) ) )
+                                            msg = 'Inactive hard predecessor' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

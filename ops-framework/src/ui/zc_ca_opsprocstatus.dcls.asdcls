@@ -1,0 +1,15 @@
+// Artifact: zc_ca_opsprocstatus.dcls.asdcls
+// Purpose: Read access to the active business processes of the dashboard (service ZUI_CA_OPS_DASH): the rule of
+//          the area dashboard (ZC_CA_OpsCheckStatus) - authorization object ZCA_OPS with ZCA_PARAR = the area and
+//          ACTVT 03, and for a company-code slice the same object with BUKRS = its company code (company-code
+//          isolation, docs/auth_zca_ops.md section 3c).
+// Modification log: 2026-11-11 | Initial version (process catalogue with activation).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); IS INITIAL in an access condition.
+@EndUserText.label: 'Active business processes - read access'
+@MappingRole: true
+define role ZC_CA_OpsProcStatus {
+  grant select on ZC_CA_OpsProcStatus
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

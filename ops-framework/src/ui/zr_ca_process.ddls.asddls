@@ -24,6 +24,8 @@ define view entity ZR_CA_Process
       own_data as OwnData,
       @EndUserText.label: 'Purge target of own tables'
       purge_target as PurgeTarget,
+      @EndUserText.label: 'Catalogue process'
+      cat_process as CatProcess,
       @EndUserText.label: 'Active'
       active as Active,
       @EndUserText.label: 'Display order'
