@@ -184,7 +184,8 @@ activated, no ABAP Unit run.
   (`JOB_MA_WORKER_PCRE`, `JOB_MA_SCHED_PCRE`, `JOB_MA_RUN_PCRE`); which mass activity table holds the run, its jobs and its
   intervals (to make the link C and to add the failed intervals - not built until confirmed).
 - **V68 (VERIFY-SE11, before `ZCL_CD_JOB_ENR_PAYRUN` joins `JOB_ENRICHERS`):** the mass activity type of the payment run
-  FPY1 (`JOB_PAYRUN_ACTIVITIES`); `DPAYH-XVORL` (proposal flag) and a DPAYH index on `LAUFD` / `LAUFI`.
+  FPY1 (`JOB_PAYRUN_ACTIVITIES`) and a DPAYH index on `LAUFD` / `LAUFI` (the payments of a run use the confirmed
+  path DPAYH `LAUFD` + `LAUFI` with `DOC1R` filled - no proposal flag needed).
 - **V69 (business, before the scheduler rows are activated):** Control-M folder and job names (`JQ4SP*`) and the SAP job
   names (PCRE) each starts, from the Control-M export, in `config/scheduler_jobs.csv` (`ZCA_OPS_JOBSCH`, configuration
   app *Scheduler jobs*); the SO23 list `ZCD_BATCHSUP` of rule `JOB_FAIL` (proposed name for the batch support list).

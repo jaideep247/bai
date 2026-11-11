@@ -3,14 +3,15 @@
 *& Purpose:
 *& SQL of the suite's SAP job monitor plug-ins (read only): payments of
 *& payment runs per company code from DPAYH by run date and run ID (the
-*& confirmed cumulation key LAUFD + LAUFI), proposals left out; open
+*& confirmed path: LAUFD + LAUFI with DOC1R filled - rows without a payment
+*& document, e.g. of a proposal, are not payments); open
 *& exceptions of the runs in the payment worklist ZCD_PAY_OUTCOME (current
 *& rows with a finding). One grouped read each for all runs of a call.
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor adoption, area CD_JOBS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - SAP job monitor plug-in data access</p>
-"! VERIFY-SE11 V68: DPAYH-XVORL (proposal flag) and an index of DPAYH starting with LAUFD / LAUFI.
+"! VERIFY-SE11 V68: an index of DPAYH starting with LAUFD / LAUFI (the run key itself is confirmed).
 CLASS zcl_cd_job_dao DEFINITION
   PUBLIC
   FINAL
@@ -44,12 +45,12 @@ CLASS zcl_cd_job_dao IMPLEMENTATION.
     ranges( EXPORTING it_runs  = it_runs
             IMPORTING et_dates = DATA(lt_dates)
                       et_ids   = DATA(lt_ids) ).
-    "VERIFY-SE11 V68: DPAYH-XVORL blank = not a proposal run
+    " confirmed path: payments of a run = DPAYH LAUFD + LAUFI with a payment document (DOC1R filled)
     SELECT laufd, laufi, bukrs, COUNT(*) AS payments
       FROM dpayh
       WHERE laufd IN @lt_dates
         AND laufi IN @lt_ids
-        AND xvorl = @space
+        AND doc1r <> @space
       GROUP BY laufd, laufi, bukrs
       ORDER BY laufd, laufi, bukrs
       INTO CORRESPONDING FIELDS OF TABLE @rt_payments.

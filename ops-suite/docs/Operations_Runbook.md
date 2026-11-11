@@ -440,8 +440,14 @@ The grace of the bank-evidence case starts at the end of the statement line's po
 | `JOB_LONG_RUNNING` | W | Active longer than `JOB_LONG_RUNNING_MIN` (240) minutes - long-running or orphaned (work process gone). | SM50 / SM66 for the work process; SM37 *check status* is a Basis action (never from the suite). Resolved by the next run once the job ended. |
 | `JOB_NOT_STARTED` | W | Released (S) or ready (Y) `JOB_NOT_STARTED_MIN` (30) minutes after its planned start - no free batch work process, target server down, or held. | SM37 target server, SM50 batch work processes; Basis. Resolved by the next run once it started. |
 | `JOB_READ_CAPPED` | W (notify) | A read reached its cap (`JOB_MAX_JOBS`, `JOB_MAX_LOG_READS`) - the next run continues where this one stopped (watermark). | Expected on the two peak days a month for a few runs; if it repeats for an hour, raise the cap after a QA1 runtime check. |
+| `JOB_LOG_UNREADABLE` | W | The job log of a job could not be read (deleted, or the job user lacks `S_BTCH_JOB` PROT). | Check the job user's role (`config/auth_zcd_ops.md` §3); the job is not judged on its log. |
 | `JOB_CONFIG_INVALID`, `JOB_PLUGIN_FAILED` | W | A pattern / field / class of the job monitor cannot be used; a resolver, enricher or claim raised (its links / objects are missing, the failures are still reported). | Configuration owner: correct the parameter (`ZUI_CA_PARAM_O4`) or the scheduler row (`ZUI_CA_OPS_CFG`) by transport. |
 | Information finding *failure reported by HCK …* | I | A step of a named job cycle failed: the morning report's `B_CYCLE_*` / `B_CLEAR_*` reports it (no second alert). | Follow the morning report's cycle step (§9 of `HCK_MORNING_REPORT.md`); the board keeps the evidence. |
+
+**Check the effect, not the job status.** After a rerun from Control-M confirm what the job was for - documents posted,
+file written, rows changed (payment worklist, payment trace) - before resolving the exception. A job without a linked
+parent on the board is not proven independent: the Control-M schedule's predecessors (free-text comments of the export)
+still decide what must rerun after it.
 
 **Which monitor alerts which job (no double alert).** Named job cycles (`ZCD_JOB_STEP` of the active cycles of `B_CYCLE_*` / `B_CLEAR_*`) stay with the morning report: their own failure is information in `CD_JOBS` (claim `ZCL_CD_HCK_JOB_CLAIM`). Every other failure - and every failed **child** of a cycle step - comes from `CD_JOBS`; the morning report's `E_JOBS` neither counts nor reports a job that `CD_JOBS` reports with an exception (`HCK_MORNING_REPORT.md` §9b). If `CD_JOBS` is not running, `E_JOBS` reports as before.
 

@@ -1107,14 +1107,24 @@ CLASS ltc_dao_reads IMPLEMENTATION.
   " (a claimed job) and findings of another area are not
   METHOD jobs_monitored_by_area.
     DATA lt_rows TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_finding.
     TRY.
-        lt_rows = VALUE #( run_id = gc_test-run_id object_type = zif_ca_ops_job_types=>gc_object_type
-                           ( finding_no = 1 area = zif_cd_job_types=>gc_area object_key = 'ZCD_A/00000001'
-                             severity = zif_ca_ops_types=>gc_severity-error )
-                           ( finding_no = 2 area = zif_cd_job_types=>gc_area object_key = 'ZCD_B/00000001'
-                             severity = zif_ca_ops_types=>gc_severity-info )
-                           ( finding_no = 3 area = zif_cd_ops_types=>gc_pe_area-health_check
-                             object_key = 'ZCD_C/00000001' severity = zif_ca_ops_types=>gc_severity-error ) ).
+        ls_row-run_id      = gc_test-run_id.
+        ls_row-object_type = zif_ca_ops_job_types=>gc_object_type.
+        ls_row-finding_no  = 1.
+        ls_row-area        = zif_cd_job_types=>gc_area.
+        ls_row-object_key  = 'ZCD_A/00000001'.
+        ls_row-severity    = zif_ca_ops_types=>gc_severity-error.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-finding_no  = 2.
+        ls_row-object_key  = 'ZCD_B/00000001'.
+        ls_row-severity    = zif_ca_ops_types=>gc_severity-info.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-finding_no  = 3.
+        ls_row-area        = zif_cd_ops_types=>gc_pe_area-health_check.
+        ls_row-object_key  = 'ZCD_C/00000001'.
+        ls_row-severity    = zif_ca_ops_types=>gc_severity-error.
+        INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_keys) = mo_cut->get_jobs_monitored( VALUE #( ( CONV #( 'ZCD_A/00000001' ) )
                                                              ( CONV #( 'ZCD_B/00000001' ) )

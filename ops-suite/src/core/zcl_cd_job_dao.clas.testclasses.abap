@@ -3,7 +3,7 @@
 *& Purpose:
 *& SQL tests of the suite's SAP job monitor plug-in data access on
 *& cl_osql_test_environment doubles of DPAYH and ZCD_PAY_OUTCOME: payments
-*& of the asked runs per company code, proposals and runs not asked left
+*& of the asked runs per company code, rows without a payment document and runs not asked left
 *& out (also a run date / run ID pair crossed between two asked runs);
 *& current worklist rows with a finding per run. Does not prove live SAP
 *& runtime behavior.
@@ -32,8 +32,7 @@ CLASS ltc_job_dao DEFINITION FINAL FOR TESTING
       IMPORTING
         iv_laufd TYPE d
         iv_laufi TYPE clike
-        iv_doc   TYPE clike
-        iv_xvorl TYPE abap_bool DEFAULT abap_false.
+        iv_doc   TYPE clike OPTIONAL.
 
     METHODS payments_of_asked_runs  FOR TESTING.
     METHODS worklist_exceptions_run FOR TESTING.
@@ -63,9 +62,9 @@ CLASS ltc_job_dao IMPLEMENTATION.
     DATA ls_row TYPE dpayh.
     ls_row-laufd = iv_laufd.
     ls_row-laufi = iv_laufi.
-    ls_row-pyord = iv_doc.
+    ls_row-pyord = |{ iv_laufi }{ iv_doc }|.
+    ls_row-doc1r = iv_doc.
     ls_row-bukrs = gc_bukrs.
-    ls_row-xvorl = iv_xvorl.
     INSERT ls_row INTO TABLE lt_rows.
     go_env->insert_test_data( lt_rows ).
   ENDMETHOD.
@@ -76,7 +75,8 @@ CLASS ltc_job_dao IMPLEMENTATION.
     TRY.
         given_payment( iv_laufd = gc_day_1 iv_laufi = gc_run_1 iv_doc = '000000000001' ).
         given_payment( iv_laufd = gc_day_1 iv_laufi = gc_run_1 iv_doc = '000000000002' ).
-        given_payment( iv_laufd = gc_day_1 iv_laufi = gc_run_1 iv_doc = '000000000003' iv_xvorl = abap_true ).
+        " a row without a payment document (proposal) is not a payment
+        given_payment( iv_laufd = gc_day_1 iv_laufi = gc_run_1 ).
         given_payment( iv_laufd = gc_day_2 iv_laufi = gc_run_2 iv_doc = '000000000004' ).
         " crossed pair: day 1 with the ID of the second run was not asked
         given_payment( iv_laufd = gc_day_1 iv_laufi = gc_run_2 iv_doc = '000000000005' ).
@@ -84,7 +84,7 @@ CLASS ltc_job_dao IMPLEMENTATION.
                                                            ( laufd = gc_day_2 laufi = gc_run_2 ) ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_payments ) exp = 2 msg = 'Two runs' ).
         cl_abap_unit_assert=>assert_equals( act = lt_payments[ laufd = gc_day_1 laufi = gc_run_1 ]-payments exp = 2
-                                            msg = 'Proposal not counted' ).
+                                            msg = 'Row without payment document not counted' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -94,12 +94,23 @@ CLASS ltc_job_dao IMPLEMENTATION.
   " Rule: current worklist rows with a finding of the run
   METHOD worklist_exceptions_run.
     DATA lt_rows TYPE STANDARD TABLE OF zcd_pay_outcome WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_pay_outcome.
     TRY.
-        lt_rows = VALUE #( laufd = gc_day_1 laufi = gc_run_1 bukrs = gc_bukrs
-                           ( augbl = '000000000001' valid_to = zif_cd_ops_payout_types=>gc_valid_to_open
-                             finding = 'PAYMENT_NOT_CLEARED' )
-                           ( augbl = '000000000002' valid_to = zif_cd_ops_payout_types=>gc_valid_to_open )
-                           ( augbl = '000000000003' valid_to = '20261110120000' finding = 'PAYMENT_NOT_CLEARED' ) ).
+        " field by field (type resolution in the OSQL environment)
+        ls_row-laufd    = gc_day_1.
+        ls_row-laufi    = gc_run_1.
+        ls_row-bukrs    = gc_bukrs.
+        ls_row-augbl    = '000000000001'.
+        ls_row-valid_to = zif_cd_ops_payout_types=>gc_valid_to_open.
+        ls_row-finding  = 'PAYMENT_NOT_CLEARED'.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-augbl    = '000000000002'.
+        CLEAR ls_row-finding.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-augbl    = '000000000003'.
+        ls_row-valid_to = '20261110120000'.
+        ls_row-finding  = 'PAYMENT_NOT_CLEARED'.
+        INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_exceptions) = mo_cut->run_exceptions( VALUE #( ( laufd = gc_day_1 laufi = gc_run_1 ) ) ).
         cl_abap_unit_assert=>assert_equals( act = lt_exceptions[ 1 ]-exceptions exp = 1
