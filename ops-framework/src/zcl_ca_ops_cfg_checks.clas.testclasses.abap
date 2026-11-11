@@ -580,30 +580,42 @@ CLASS ltc_response_check IMPLEMENTATION.
 
   " Rule: an active runbook row needs an http(s) link - the placeholder of a seed row is refused
   METHOD active_runbook_needs_link.
-    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>link_valid( 'https://wiki.example.com/runbook/no-ack' )
-                                      msg = 'An https link is accepted' ).
-    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>link_valid( space )
-                                       msg = 'An active row without link is refused (439)' ).
-    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>link_valid( '<Site runbook URL>' )
-                                       msg = 'The placeholder of a seed row is refused while active' ).
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>link_valid( 'https://wiki.example.com/runbook/no-ack' )
+                                          msg = 'An https link is accepted' ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>link_valid( space )
+                                           msg = 'An active row without link is refused (439)' ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>link_valid( '<Site runbook URL>' )
+                                           msg = 'The placeholder of a seed row is refused while active' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the key is built from finding fields only, in any case, comma separated
   METHOD key_fields_of_the_finding.
-    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>key_fields_valid( 'GROUP1, object_key' )
-                                      msg = 'Finding fields, any case, blanks ignored' ).
-    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>key_fields_valid( 'GROUP1,AMOUNT' )
-                                       msg = 'A field that is not a key field is refused (153)' ).
-    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>key_fields_valid( space )
-                                       msg = 'An empty list is refused (153)' ).
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>key_fields_valid( 'GROUP1, object_key' )
+                                          msg = 'Finding fields, any case, blanks ignored' ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>key_fields_valid( 'GROUP1,AMOUNT' )
+                                           msg = 'A field that is not a key field is refused (153)' ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>key_fields_valid( space )
+                                           msg = 'An empty list is refused (153)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the correlation window is at least one minute
   METHOD window_at_least_one_minute.
-    cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>window_min_valid( 1 ) msg = 'One minute is accepted' ).
-    cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>window_min_valid( 0 ) msg = 'Zero is refused (154)' ).
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>window_min_valid( 1 ) msg = 'One minute is accepted' ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>window_min_valid( 0 ) msg = 'Zero is refused (154)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

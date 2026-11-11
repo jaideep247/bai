@@ -51,7 +51,7 @@ response time is measured. Reusable by any consumer: configuration of its areas 
   report service `ZUI_CA_OPS_HOVR`, card data points. No handover note table (decision: a team note cannot be
   protected by the area / company-code rule).
 - Types `ZIF_CA_OPS_RESP_TYPES`; name prefixes `RUNBOOK_`, `DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_`, `SHIFT_` read in
-  area `CA_OPS`; 9 parameter definitions (24 in all); messages 140-159; domain `ZCA_OPS_DTW_STATUS`; alert DAO
+  area `CA_OPS`; 9 parameter definitions (24 in all); messages 140-160; domain `ZCA_OPS_DTW_STATUS`; alert DAO
   `GET_MARKS`, `GET_CHILD_COUNTS`, `GET_RUNBOOKS`, `GET_ESCALATION_CANDIDATES`, `GET_INTENT_LOG` (DEFAULT IGNORE);
   configuration checks `LINK_VALID`, `KEY_FIELDS_VALID`, `WINDOW_MIN_VALID`.
 - Tests: downtime policy (14) and API (4, OSQL), correlator (9), router (`ltc_response`, 9), policy (`ltc_response`,
@@ -62,6 +62,10 @@ response time is measured. Reusable by any consumer: configuration of its areas 
 - `ZCL_CA_OPS_PURGE` test `deletes_in_packages`: one commit per built-in target - the expectation (4) had not counted
   REVIEW; with DOWNTIME it is 6.
 - Generic template `ZCA_OPS_ALERT_DEFAULT` (documented source): four rows for the new context keys.
+- Coding standards review of the build: new test method bodies wrapped in `TRY ... CATCH cx_root`, test rows of the
+  handover CDS test built field by field; downtime validations clear and tag their state areas (`VALIDATE_AREA`,
+  `VALIDATE_WINDOW`); an escalation step without intent key is logged failed (message 160) instead of being sent
+  without its duplicate guard; concurrency, side-effects and analytics notes in `docs/OPERATIONS_FEATURES.md` §6a.
 
 ### Offline evidence (2026-11-11)
 - abaplint 0 issues, `tools/checks.py` 17/17, serializer / parameter seed / configuration app up to date, tool tests

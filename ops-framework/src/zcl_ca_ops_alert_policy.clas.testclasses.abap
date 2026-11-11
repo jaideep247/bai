@@ -842,155 +842,191 @@ CLASS ltc_response IMPLEMENTATION.
 
   " Rule: an exception open for less than ESC_AFTER_MIN is not escalated
   METHOD no_step_before_after_min.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-min_29
-                                                                       iv_max_default = gc-max_param )
-                                        exp = 0
-                                        msg = '29 of 30 minutes: no escalation' ).
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-min_29
+                                                                           iv_max_default = gc-max_param )
+                                            exp = 0
+                                            msg = '29 of 30 minutes: no escalation' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: after ESC_AFTER_MIN the first escalation is due
   METHOD first_step_after_min.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-min_30
-                                                                       iv_max_default = gc-max_param )
-                                        exp = 1
-                                        msg = '30 minutes: the first escalation' ).
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-min_30
+                                                                           iv_max_default = gc-max_param )
+                                            exp = 1
+                                            msg = '30 minutes: the first escalation' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: one more step every ESC_REPEAT_MIN after the first; ESC_REPEAT_MIN 0 = once
   METHOD repeats_every_repeat_min.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-min_89
-                                                                       iv_max_default = gc-max_param )
-                                        exp = 1
-                                        msg = '89 minutes: still the first' ).
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-min_90
-                                                                       iv_max_default = gc-max_param )
-                                        exp = 2
-                                        msg = '90 minutes: the second (30 + 60)' ).
-    ms_rule-esc_repeat_min = 0.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-day_later
-                                                                       iv_max_default = gc-max_param )
-                                        exp = 1
-                                        msg = 'Without repeat: once' ).
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-min_89
+                                                                           iv_max_default = gc-max_param )
+                                            exp = 1
+                                            msg = '89 minutes: still the first' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-min_90
+                                                                           iv_max_default = gc-max_param )
+                                            exp = 2
+                                            msg = '90 minutes: the second (30 + 60)' ).
+        ms_rule-esc_repeat_min = 0.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-day_later
+                                                                           iv_max_default = gc-max_param )
+                                            exp = 1
+                                            msg = 'Without repeat: once' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: without ESC_MAX_COUNT the parameter ESC_MAX_DEFAULT limits the steps
   METHOD steps_capped_by_parameter.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-day_later
-                                                                       iv_max_default = gc-max_param )
-                                        exp = gc-max_param
-                                        msg = 'A day later: the third and last' ).
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-day_later
+                                                                           iv_max_default = gc-max_param )
+                                            exp = gc-max_param
+                                            msg = 'A day later: the third and last' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the rule's ESC_MAX_COUNT wins over the parameter
   METHOD rule_max_beats_parameter.
-    ms_rule-esc_max_count = 5.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-day_later
-                                                                       iv_max_default = gc-max_param )
-                                        exp = 5
-                                        msg = 'The rule allows five' ).
+    TRY.
+        ms_rule-esc_max_count = 5.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-day_later
+                                                                           iv_max_default = gc-max_param )
+                                            exp = 5
+                                            msg = 'The rule allows five' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule (precedence): with ESC_AFTER_MIN the run-based ESCALATE_AFTER no longer adds the destination to the
   " rule's own alerts - the escalation job escalates; without it the run-based setting works as before
   METHOD time_based_replaces_runs.
-    ms_rule-escalate_after = 2.
-    cl_abap_unit_assert=>assert_false( act = mo_cut->needs_escalation( is_rule = ms_rule iv_consecutive = 5 )
-                                       msg = 'Time-based rule: no run-based escalation' ).
-    ms_rule-esc_after_min = 0.
-    cl_abap_unit_assert=>assert_true( act = mo_cut->needs_escalation( is_rule = ms_rule iv_consecutive = 5 )
-                                      msg = 'Run-based rule unchanged' ).
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
-                                                                       iv_first_seen  = gc-first_seen
-                                                                       iv_now         = gc-day_later
-                                                                       iv_max_default = gc-max_param )
-                                        exp = 0
-                                        msg = 'A run-based rule has no time-based step' ).
+    TRY.
+        ms_rule-escalate_after = 2.
+        cl_abap_unit_assert=>assert_false( act = mo_cut->needs_escalation( is_rule = ms_rule iv_consecutive = 5 )
+                                           msg = 'Time-based rule: no run-based escalation' ).
+        ms_rule-esc_after_min = 0.
+        cl_abap_unit_assert=>assert_true( act = mo_cut->needs_escalation( is_rule = ms_rule iv_consecutive = 5 )
+                                          msg = 'Run-based rule unchanged' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->escalation_step( is_rule        = ms_rule
+                                                                           iv_first_seen  = gc-first_seen
+                                                                           iv_now         = gc-day_later
+                                                                           iv_max_default = gc-max_param )
+                                            exp = 0
+                                            msg = 'A run-based rule has no time-based step' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the escalation applies ESC_SEVERITY as floor (blank = the rule's minimum severity)
   METHOD escalation_severity_floor.
-    DATA(ls_warning) = finding( ).
-    ls_warning-severity = zif_ca_ops_types=>gc_severity-warning.
-    cl_abap_unit_assert=>assert_true(
-        act = mo_cut->matches( is_rule = mo_cut->escalation_rule( ms_rule ) is_finding = ls_warning )
-        msg = 'Blank: the rule floor W escalates a warning' ).
-    ms_rule-esc_severity = zif_ca_ops_types=>gc_severity-error.
-    cl_abap_unit_assert=>assert_false(
-        act = mo_cut->matches( is_rule = mo_cut->escalation_rule( ms_rule ) is_finding = ls_warning )
-        msg = 'E: a warning is alerted, not escalated' ).
-    cl_abap_unit_assert=>assert_true(
-        act = mo_cut->matches( is_rule = mo_cut->escalation_rule( ms_rule ) is_finding = finding( ) )
-        msg = 'E: an error is escalated' ).
+    TRY.
+        DATA(ls_warning) = finding( ).
+        ls_warning-severity = zif_ca_ops_types=>gc_severity-warning.
+        cl_abap_unit_assert=>assert_true(
+            act = mo_cut->matches( is_rule = mo_cut->escalation_rule( ms_rule ) is_finding = ls_warning )
+            msg = 'Blank: the rule floor W escalates a warning' ).
+        ms_rule-esc_severity = zif_ca_ops_types=>gc_severity-error.
+        cl_abap_unit_assert=>assert_false(
+            act = mo_cut->matches( is_rule = mo_cut->escalation_rule( ms_rule ) is_finding = ls_warning )
+            msg = 'E: a warning is alerted, not escalated' ).
+        cl_abap_unit_assert=>assert_true(
+            act = mo_cut->matches( is_rule = mo_cut->escalation_rule( ms_rule ) is_finding = finding( ) )
+            msg = 'E: an error is escalated' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: CHECK_CODE before GROUP2 before RULE_ID; another area's row never applies
   METHOD runbook_check_before_rule.
-    DATA lt_runbooks TYPE zif_ca_ops_resp_types=>tt_runbook.
-    DATA ls_runbook TYPE zif_ca_ops_resp_types=>ty_runbook.
-    ls_runbook-area        = ms_rule-area.
-    ls_runbook-match_field = zif_ca_ops_ctl_types=>gc_match_field-rule_id.
-    ls_runbook-match_value = 'F_ACK'.
-    ls_runbook-runbook_url = gc-url_rule.
-    INSERT ls_runbook INTO TABLE lt_runbooks.
-    ls_runbook-match_field = zif_ca_ops_ctl_types=>gc_match_field-check_code.
-    ls_runbook-match_value = 'NO_BANK_ACK'.
-    ls_runbook-runbook_url = gc-url_check.
-    INSERT ls_runbook INTO TABLE lt_runbooks.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->runbook_for( it_runbooks = lt_runbooks
-                                                                   iv_area     = ms_rule-area
-                                                                   is_finding  = finding( ) )-runbook_url
-                                        exp = gc-url_check
-                                        msg = 'The check code row wins' ).
-    cl_abap_unit_assert=>assert_initial( act = mo_cut->runbook_for( it_runbooks = lt_runbooks
-                                                                    iv_area     = zcl_ca_ops_param_seed=>gc_test_area-second
-                                                                    is_finding  = finding( ) )
-                                         msg = 'Rows of another area do not apply' ).
+    TRY.
+        DATA lt_runbooks TYPE zif_ca_ops_resp_types=>tt_runbook.
+        DATA ls_runbook TYPE zif_ca_ops_resp_types=>ty_runbook.
+        ls_runbook-area        = ms_rule-area.
+        ls_runbook-match_field = zif_ca_ops_ctl_types=>gc_match_field-rule_id.
+        ls_runbook-match_value = 'F_ACK'.
+        ls_runbook-runbook_url = gc-url_rule.
+        INSERT ls_runbook INTO TABLE lt_runbooks.
+        ls_runbook-match_field = zif_ca_ops_ctl_types=>gc_match_field-check_code.
+        ls_runbook-match_value = 'NO_BANK_ACK'.
+        ls_runbook-runbook_url = gc-url_check.
+        INSERT ls_runbook INTO TABLE lt_runbooks.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->runbook_for( it_runbooks = lt_runbooks
+                                                                       iv_area     = ms_rule-area
+                                                                       is_finding  = finding( ) )-runbook_url
+                                            exp = gc-url_check
+                                            msg = 'The check code row wins' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->runbook_for( it_runbooks = lt_runbooks
+                                                                        iv_area     = zcl_ca_ops_param_seed=>gc_test_area-second
+                                                                        is_finding  = finding( ) )
+                                             msg = 'Rows of another area do not apply' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the message carries runbook link, first action, the parent's open children and the escalation step
   METHOD context_runbook_and_children.
-    DATA ls_extra TYPE zcl_ca_ops_alert_policy=>ty_extra.
-    DATA(ls_finding) = finding( ).
-    INSERT VALUE #( area = ms_rule-area match_field = zif_ca_ops_ctl_types=>gc_match_field-group2
-                    match_value = 'F_BANKACK' runbook_url = gc-url_check first_action = 'Call the bank' )
-      INTO TABLE ls_extra-runbooks.
-    INSERT VALUE #( object_type = ls_finding-object_type object_key = ls_finding-object_key
-                    check_code = ls_finding-check_code corr_id = gc-parent_id
-                    corr_role = zif_ca_ops_resp_types=>gc_corr_role-parent ) INTO TABLE ls_extra-marks.
-    INSERT VALUE #( corr_id = gc-parent_id children = 4 ) INTO TABLE ls_extra-children.
-    ls_extra-escalation = `1 / 3`.
-    DATA(lt_messages) = mo_cut->build_messages(
-                          is_selection   = VALUE #( rule = ms_rule findings = VALUE #( ( ls_finding ) ) )
-                          is_run         = VALUE #( area = ms_rule-area )
-                          iv_destination = ms_rule-escalation_dest
-                          is_extra       = ls_extra ).
-    DATA(ls_header) = lt_messages[ 1 ]-context-header.
-    cl_abap_unit_assert=>assert_equals( act = ls_header-runbook_url exp = gc-url_check msg = 'Runbook of the check' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_header-first_action exp = 'Call the bank' msg = 'First action' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_header-correlated_count exp = '4' msg = 'Open children of the parent' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_header-escalation exp = '1 / 3' msg = 'Escalation step' ).
+    TRY.
+        DATA ls_extra TYPE zcl_ca_ops_alert_policy=>ty_extra.
+        DATA(ls_finding) = finding( ).
+        INSERT VALUE #( area = ms_rule-area match_field = zif_ca_ops_ctl_types=>gc_match_field-group2
+                        match_value = 'F_BANKACK' runbook_url = gc-url_check first_action = 'Call the bank' )
+          INTO TABLE ls_extra-runbooks.
+        INSERT VALUE #( object_type = ls_finding-object_type object_key = ls_finding-object_key
+                        check_code = ls_finding-check_code corr_id = gc-parent_id
+                        corr_role = zif_ca_ops_resp_types=>gc_corr_role-parent ) INTO TABLE ls_extra-marks.
+        INSERT VALUE #( corr_id = gc-parent_id children = 4 ) INTO TABLE ls_extra-children.
+        ls_extra-escalation = `1 / 3`.
+        DATA(lt_messages) = mo_cut->build_messages(
+                              is_selection   = VALUE #( rule = ms_rule findings = VALUE #( ( ls_finding ) ) )
+                              is_run         = VALUE #( area = ms_rule-area )
+                              iv_destination = ms_rule-escalation_dest
+                              is_extra       = ls_extra ).
+        DATA(ls_header) = lt_messages[ 1 ]-context-header.
+        cl_abap_unit_assert=>assert_equals( act = ls_header-runbook_url exp = gc-url_check msg = 'Runbook of the check' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-first_action exp = 'Call the bank' msg = 'First action' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-correlated_count exp = '4' msg = 'Open children of the parent' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-escalation exp = '1 / 3' msg = 'Escalation step' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

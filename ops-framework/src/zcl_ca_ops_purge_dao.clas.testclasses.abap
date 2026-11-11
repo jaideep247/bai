@@ -312,29 +312,33 @@ CLASS ltc_purge_dao IMPLEMENTATION.
   " Rule: a planned downtime window is purged by its end - a window that ended before the cutoff goes,
   " a recent one stays
   METHOD ended_window_is_deleted.
-    DATA lt_windows TYPE STANDARD TABLE OF zca_ops_dtwin WITH EMPTY KEY.
-    DATA ls_window TYPE zca_ops_dtwin.
-    ls_window-window_id = '000000000000000000000000000000B1'.
-    ls_window-area      = gc-area.
-    ls_window-to_utc    = gc-old.
-    INSERT ls_window INTO TABLE lt_windows.
-    ls_window-window_id = '000000000000000000000000000000B2'.
-    ls_window-to_utc    = gc-recent.
-    INSERT ls_window INTO TABLE lt_windows.
-    go_env->insert_test_data( lt_windows ).
+    TRY.
+        DATA lt_windows TYPE STANDARD TABLE OF zca_ops_dtwin WITH EMPTY KEY.
+        DATA ls_window TYPE zca_ops_dtwin.
+        ls_window-window_id = '000000000000000000000000000000B1'.
+        ls_window-area      = gc-area.
+        ls_window-to_utc    = gc-old.
+        INSERT ls_window INTO TABLE lt_windows.
+        ls_window-window_id = '000000000000000000000000000000B2'.
+        ls_window-to_utc    = gc-recent.
+        INSERT ls_window INTO TABLE lt_windows.
+        go_env->insert_test_data( lt_windows ).
 
-    DATA(lv_count) = mo_cut->count_purgeable( iv_target = zif_ca_ops_purge_dao=>gc_target-downtime
-                                              iv_cutoff = gc-cutoff
-                                              iv_today  = gc-today ).
-    DATA(lv_deleted) = mo_cut->delete_package( iv_target = zif_ca_ops_purge_dao=>gc_target-downtime
-                                               iv_cutoff = gc-cutoff
-                                               iv_today  = gc-today
-                                               iv_max    = 100 ).
-    SELECT window_id FROM zca_ops_dtwin INTO TABLE @DATA(lt_left).
+        DATA(lv_count) = mo_cut->count_purgeable( iv_target = zif_ca_ops_purge_dao=>gc_target-downtime
+                                                  iv_cutoff = gc-cutoff
+                                                  iv_today  = gc-today ).
+        DATA(lv_deleted) = mo_cut->delete_package( iv_target = zif_ca_ops_purge_dao=>gc_target-downtime
+                                                   iv_cutoff = gc-cutoff
+                                                   iv_today  = gc-today
+                                                   iv_max    = 100 ).
+        SELECT window_id FROM zca_ops_dtwin INTO TABLE @DATA(lt_left).
 
-    cl_abap_unit_assert=>assert_equals( act = lv_count exp = 1 msg = 'One window ended before the cutoff' ).
-    cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'Only the ended window deleted' ).
-    cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'The recent window is kept' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_count exp = 1 msg = 'One window ended before the cutoff' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'Only the ended window deleted' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'The recent window is kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

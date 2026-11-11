@@ -41,28 +41,32 @@ CLASS ltc_current IMPLEMENTATION.
 
   " Rule: of the starts 10 hours ago, 2 hours ago and in 6 hours the current shift began 2 hours ago
   METHOD latest_start_not_after_now.
-    DATA lt_starts TYPE STANDARD TABLE OF zi_ca_opsshiftcand WITH EMPTY KEY.
-    DATA ls_start TYPE zi_ca_opsshiftcand.
-    DATA lv_now TYPE timestampl.
-    go_env->clear_doubles( ).
-    GET TIME STAMP FIELD lv_now.
-    ls_start-team = gc_team.
-    ls_start-starttime = '060000'.
-    ls_start-startutc = cl_abap_tstmp=>add( tstmp = lv_now secs = -36000 ).
-    INSERT ls_start INTO TABLE lt_starts.
-    ls_start-starttime = '140000'.
-    ls_start-startutc = cl_abap_tstmp=>add( tstmp = lv_now secs = -7200 ).
-    DATA(lv_expected) = ls_start-startutc.
-    INSERT ls_start INTO TABLE lt_starts.
-    ls_start-starttime = '220000'.
-    ls_start-startutc = cl_abap_tstmp=>add( tstmp = lv_now secs = 21600 ).
-    INSERT ls_start INTO TABLE lt_starts.
-    go_env->insert_test_data( lt_starts ).
+    TRY.
+        DATA lt_starts TYPE STANDARD TABLE OF zi_ca_opsshiftcand WITH EMPTY KEY.
+        DATA ls_start TYPE zi_ca_opsshiftcand.
+        DATA lv_now TYPE timestampl.
+        go_env->clear_doubles( ).
+        GET TIME STAMP FIELD lv_now.
+        ls_start-team = gc_team.
+        ls_start-starttime = '060000'.
+        ls_start-startutc = cl_abap_tstmp=>add( tstmp = lv_now secs = -36000 ).
+        INSERT ls_start INTO TABLE lt_starts.
+        ls_start-starttime = '140000'.
+        ls_start-startutc = cl_abap_tstmp=>add( tstmp = lv_now secs = -7200 ).
+        DATA(lv_expected) = ls_start-startutc.
+        INSERT ls_start INTO TABLE lt_starts.
+        ls_start-starttime = '220000'.
+        ls_start-startutc = cl_abap_tstmp=>add( tstmp = lv_now secs = 21600 ).
+        INSERT ls_start INTO TABLE lt_starts.
+        go_env->insert_test_data( lt_starts ).
 
-    SELECT team, currentstartutc FROM zi_ca_opsshiftcur INTO TABLE @DATA(lt_rows).
-    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One row per team' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-currentstartutc exp = lv_expected
-                                        msg = 'The shift that began 2 hours ago' ).
+        SELECT team, currentstartutc FROM zi_ca_opsshiftcur INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One row per team' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-currentstartutc exp = lv_expected
+                                            msg = 'The shift that began 2 hours ago' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -104,25 +108,32 @@ CLASS ltc_previous IMPLEMENTATION.
 
   " Rule: three shifts a day, the current one from 14:00 - the handover counts since 06:00
   METHOD latest_before_current.
-    DATA lt_starts TYPE STANDARD TABLE OF zi_ca_opsshiftcand WITH EMPTY KEY.
-    DATA ls_start TYPE zi_ca_opsshiftcand.
-    DATA lt_current TYPE STANDARD TABLE OF zi_ca_opsshiftcur WITH EMPTY KEY.
-    go_env->clear_doubles( ).
-    ls_start-team = gc-team.
-    ls_start-startutc = gc-night.
-    INSERT ls_start INTO TABLE lt_starts.
-    ls_start-startutc = gc-morning.
-    INSERT ls_start INTO TABLE lt_starts.
-    ls_start-startutc = gc-noon.
-    INSERT ls_start INTO TABLE lt_starts.
-    ls_start-startutc = gc-evening.
-    INSERT ls_start INTO TABLE lt_starts.
-    go_env->insert_test_data( lt_starts ).
-    INSERT VALUE #( team = gc-team currentstartutc = gc-noon ) INTO TABLE lt_current.
-    go_env->insert_test_data( lt_current ).
+    TRY.
+        DATA lt_starts TYPE STANDARD TABLE OF zi_ca_opsshiftcand WITH EMPTY KEY.
+        DATA ls_start TYPE zi_ca_opsshiftcand.
+        DATA lt_current TYPE STANDARD TABLE OF zi_ca_opsshiftcur WITH EMPTY KEY.
+        DATA ls_current TYPE zi_ca_opsshiftcur.
+        go_env->clear_doubles( ).
+        ls_start-team = gc-team.
+        ls_start-startutc = gc-night.
+        INSERT ls_start INTO TABLE lt_starts.
+        ls_start-startutc = gc-morning.
+        INSERT ls_start INTO TABLE lt_starts.
+        ls_start-startutc = gc-noon.
+        INSERT ls_start INTO TABLE lt_starts.
+        ls_start-startutc = gc-evening.
+        INSERT ls_start INTO TABLE lt_starts.
+        go_env->insert_test_data( lt_starts ).
+        ls_current-team            = gc-team.
+        ls_current-currentstartutc = gc-noon.
+        INSERT ls_current INTO TABLE lt_current.
+        go_env->insert_test_data( lt_current ).
 
-    SELECT SINGLE previousstartutc FROM zi_ca_opsshiftprev WHERE team = @gc-team INTO @DATA(lv_previous).
-    cl_abap_unit_assert=>assert_equals( act = lv_previous exp = gc-morning msg = 'The morning shift' ).
+        SELECT SINGLE previousstartutc FROM zi_ca_opsshiftprev WHERE team = @gc-team INTO @DATA(lv_previous).
+        cl_abap_unit_assert=>assert_equals( act = lv_previous exp = gc-morning msg = 'The morning shift' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -193,6 +204,7 @@ CLASS ltc_events IMPLEMENTATION.
 
   METHOD setup.
     DATA lt_windows TYPE STANDARD TABLE OF zi_ca_opsshiftwin WITH EMPTY KEY.
+    DATA ls_window TYPE zi_ca_opsshiftwin.
     DATA lt_episodes TYPE STANDARD TABLE OF zi_ca_opsexcepisode WITH EMPTY KEY.
     DATA ls_episode TYPE zi_ca_opsexcepisode.
     DATA lt_log TYPE STANDARD TABLE OF zca_ops_allog WITH EMPTY KEY.
@@ -200,14 +212,19 @@ CLASS ltc_events IMPLEMENTATION.
     DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
     DATA ls_finding TYPE zca_ops_finding.
     DATA lt_teams TYPE STANDARD TABLE OF zi_ca_opsfindteam WITH EMPTY KEY.
+    DATA ls_team TYPE zi_ca_opsfindteam.
     DATA lt_reviews TYPE STANDARD TABLE OF zr_ca_opsctlreview WITH EMPTY KEY.
     DATA ls_review TYPE zr_ca_opsctlreview.
     DATA lt_downtime TYPE STANDARD TABLE OF zi_ca_opsdtwnow WITH EMPTY KEY.
     DATA ls_downtime TYPE zi_ca_opsdtwnow.
     go_env->clear_doubles( ).
     " the team's shift window and the default shift (team blank)
-    INSERT VALUE #( team = gc-team previousstartutc = gc-since nextendutc = gc-next_end ) INTO TABLE lt_windows.
-    INSERT VALUE #( team = space previousstartutc = gc-since nextendutc = gc-next_end ) INTO TABLE lt_windows.
+    ls_window-team             = gc-team.
+    ls_window-previousstartutc = gc-since.
+    ls_window-nextendutc       = gc-next_end.
+    INSERT ls_window INTO TABLE lt_windows.
+    CLEAR ls_window-team.
+    INSERT ls_window INTO TABLE lt_windows.
     go_env->insert_test_data( lt_windows ).
 
     ls_episode-team      = gc-team.
@@ -257,7 +274,10 @@ CLASS ltc_events IMPLEMENTATION.
     ls_finding-area       = gc-area.
     INSERT ls_finding INTO TABLE lt_findings.
     go_env->insert_test_data( lt_findings ).
-    INSERT VALUE #( runid = gc-run_old findingno = 1 team = gc-team ) INTO TABLE lt_teams.
+    ls_team-runid     = gc-run_old.
+    ls_team-findingno = 1.
+    ls_team-team      = gc-team.
+    INSERT ls_team INTO TABLE lt_teams.
     go_env->insert_test_data( lt_teams ).
 
     " a control of today awaiting sign-off, another one signed off
@@ -299,34 +319,46 @@ CLASS ltc_events IMPLEMENTATION.
   " Rule: since the previous shift start - one new, one resolved, two still open (new and old), one escalation,
   " one control awaiting sign-off; an exception resolved before is not part of the handover
   METHOD counts_since_previous_shift.
-    DATA(lt_sums) = sums( ).
-    DATA(ls_team) = VALUE #( lt_sums[ team = gc-team companycode = space ] OPTIONAL ).
-    cl_abap_unit_assert=>assert_equals( act = ls_team-new_count exp = 1 msg = 'One new exception' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_team-resolved exp = 1 msg = 'One resolved since' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_team-open_count exp = 2 msg = 'Two still open' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_team-escalated exp = 1 msg = 'One escalation' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_team-awaiting exp = 1 msg = 'One control awaiting sign-off' ).
+    TRY.
+        DATA(lt_sums) = sums( ).
+        DATA(ls_team) = VALUE #( lt_sums[ team = gc-team companycode = space ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_team-new_count exp = 1 msg = 'One new exception' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_team-resolved exp = 1 msg = 'One resolved since' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_team-open_count exp = 2 msg = 'Two still open' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_team-escalated exp = 1 msg = 'One escalation' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_team-awaiting exp = 1 msg = 'One control awaiting sign-off' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: an exception of a company code is counted on its own row (company-code isolation)
   METHOD company_code_own_row.
-    DATA(lt_sums) = sums( ).
-    DATA(ls_cc) = VALUE #( lt_sums[ team = gc-team companycode = gc-bukrs ] OPTIONAL ).
-    cl_abap_unit_assert=>assert_equals( act = ls_cc-new_count exp = 1 msg = 'New in the company code' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_cc-open_count exp = 1 msg = 'Open in the company code' ).
+    TRY.
+        DATA(lt_sums) = sums( ).
+        DATA(ls_cc) = VALUE #( lt_sums[ team = gc-team companycode = gc-bukrs ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_cc-new_count exp = 1 msg = 'New in the company code' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_cc-open_count exp = 1 msg = 'Open in the company code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: a planned downtime window has no team: every team with shift times sees it (area-level row)
   METHOD downtime_for_every_team.
-    DATA(lt_sums) = sums( ).
-    cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_sums[ team = gc-team companycode = space ]-downtime OPTIONAL )
-                                        exp = 1
-                                        msg = 'The team sees the active window' ).
-    cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_sums[ team = space companycode = space ]-downtime OPTIONAL )
-                                        exp = 1
-                                        msg = 'The default shift too' ).
+    TRY.
+        DATA(lt_sums) = sums( ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_sums[ team = gc-team companycode = space ]-downtime OPTIONAL )
+                                            exp = 1
+                                            msg = 'The team sees the active window' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_sums[ team = space companycode = space ]-downtime OPTIONAL )
+                                            exp = 1
+                                            msg = 'The default shift too' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

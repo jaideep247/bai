@@ -93,47 +93,63 @@ CLASS ltc_downtime IMPLEMENTATION.
 
   " Rule: the approved windows of the area that overlap the time - not another area's, not an ended one
   METHOD approved_windows_of_area.
-    DATA(lt_windows) = mo_cut->windows( iv_area = gc-area iv_from = gc-inside iv_to = gc-inside ).
-    cl_abap_unit_assert=>assert_equals( act = lines( lt_windows ) exp = 2 msg = 'Area-wide and bank window' ).
-    cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_windows[ window_id = gc-pending ] ) )
-                                       msg = 'A window awaiting approval takes no effect' ).
+    TRY.
+        DATA(lt_windows) = mo_cut->windows( iv_area = gc-area iv_from = gc-inside iv_to = gc-inside ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_windows ) exp = 2 msg = 'Area-wide and bank window' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_windows[ window_id = gc-pending ] ) )
+                                           msg = 'A window awaiting approval takes no effect' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the overlap check of the app also sees windows awaiting approval
   METHOD pending_for_overlap_check.
-    DATA(lt_windows) = mo_cut->windows( iv_area = gc-area iv_from = gc-earlier iv_to = gc-to_utc
-                                        iv_approved_only = abap_false ).
-    cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_windows[ window_id = gc-pending ] ) )
-                                      msg = 'The pending window is listed' ).
-    cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_windows[ window_id = gc-ended ] ) )
-                                       msg = 'A window that ended before the period is not' ).
+    TRY.
+        DATA(lt_windows) = mo_cut->windows( iv_area = gc-area iv_from = gc-earlier iv_to = gc-to_utc
+                                            iv_approved_only = abap_false ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_windows[ window_id = gc-pending ] ) )
+                                          msg = 'The pending window is listed' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_windows[ window_id = gc-ended ] ) )
+                                           msg = 'A window that ended before the period is not' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: is this planned? - a finding of the bank at a time inside the window
   METHOD finding_of_bank_is_planned.
-    DATA ls_finding TYPE zif_ca_ops_types=>ty_finding.
-    ls_finding-check_code = 'NO_BANK_ACK'.
-    ls_finding-group1     = 'BANK_A_ACK'.
-    cl_abap_unit_assert=>assert_not_initial( act = mo_cut->planned( iv_area    = gc-area
+    TRY.
+        DATA ls_finding TYPE zif_ca_ops_types=>ty_finding.
+        ls_finding-check_code = 'NO_BANK_ACK'.
+        ls_finding-group1     = 'BANK_A_ACK'.
+        cl_abap_unit_assert=>assert_not_initial( act = mo_cut->planned( iv_area    = gc-area
+                                                                        is_finding = ls_finding
+                                                                        iv_from    = gc-inside )
+                                                 msg = 'Planned inside the window' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->planned( iv_area    = gc-other
                                                                     is_finding = ls_finding
-                                                                    iv_from    = gc-inside )
-                                             msg = 'Planned inside the window' ).
-    cl_abap_unit_assert=>assert_initial( act = mo_cut->planned( iv_area    = gc-other
-                                                                is_finding = ls_finding
-                                                                iv_from    = gc-earlier )
-                                         msg = 'Not planned before the window' ).
+                                                                    iv_from    = gc-earlier )
+                                             msg = 'Not planned before the window' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the area-wide window (no pattern) holds back run-level alerts
   METHOD area_wide_window_found.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->area_planned( iv_area = gc-area iv_at = gc-inside )
-                                        exp = gc-wide
-                                        msg = 'The window without pattern' ).
-    cl_abap_unit_assert=>assert_initial( act = mo_cut->area_planned( iv_area = gc-area iv_at = gc-earlier )
-                                         msg = 'None before the window' ).
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->area_planned( iv_area = gc-area iv_at = gc-inside )
+                                            exp = gc-wide
+                                            msg = 'The window without pattern' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->area_planned( iv_area = gc-area iv_at = gc-earlier )
+                                             msg = 'None before the window' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

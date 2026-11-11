@@ -90,10 +90,14 @@ CLASS ltc_assign IMPLEMENTATION.
   " Rule: time to assign counts from the first assignment of the exception, on whatever row it was made;
   " a classification is no assignment
   METHOD first_assign_of_episode.
-    SELECT firstassignedat FROM zi_ca_opsexcassign1 INTO TABLE @DATA(lt_rows).
-    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One episode' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-firstassignedat exp = gc-assigned_1
-                                        msg = 'The first assignment, on the superseded row' ).
+    TRY.
+        SELECT firstassignedat FROM zi_ca_opsexcassign1 INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One episode' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-firstassignedat exp = gc-assigned_1
+                                            msg = 'The first assignment, on the superseded row' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -167,10 +171,14 @@ CLASS ltc_reopen IMPLEMENTATION.
 
   " Rule: an exception raised again after its resolution is re-opened; another company code's is not
   METHOD raised_again_after_resolve.
-    SELECT runid, earlierresolved FROM zi_ca_opsexcreopen INTO TABLE @DATA(lt_rows).
-    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One re-opened exception' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-runid exp = gc-again msg = 'The one raised again' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-earlierresolved exp = 1 msg = 'One earlier resolution' ).
+    TRY.
+        SELECT runid, earlierresolved FROM zi_ca_opsexcreopen INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One re-opened exception' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-runid exp = gc-again msg = 'The one raised again' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-earlierresolved exp = 1 msg = 'One earlier resolution' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -260,20 +268,24 @@ CLASS ltc_times IMPLEMENTATION.
   " Rule: seconds to assign from the first raise to the first assignment, to resolve from the raise to the
   " resolution; flags say which apply; the month of the raise; re-opened from the earlier resolution
   METHOD assigned_open_and_resolved.
-    SELECT SINGLE assignseconds, isassigned, isopen, raisedmonth FROM zi_ca_opsexctimes
-      WHERE runid = @gc-open_run
-      INTO @DATA(ls_open).
-    cl_abap_unit_assert=>assert_equals( act = ls_open-assignseconds exp = 1800 msg = 'Assigned after 30 minutes' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_open-isassigned exp = abap_true msg = 'Assigned' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_open-isopen exp = abap_true msg = 'Still open (assigned)' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_open-raisedmonth exp = '202611' msg = 'Month of the raise' ).
-    SELECT SINGLE resolveseconds, isassigned, isresolved, reopenedcount FROM zi_ca_opsexctimes
-      WHERE runid = @gc-done_run
-      INTO @DATA(ls_done).
-    cl_abap_unit_assert=>assert_equals( act = ls_done-resolveseconds exp = 7200 msg = 'Resolved after two hours' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_done-isassigned exp = abap_false msg = 'Never assigned' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_done-isresolved exp = abap_true msg = 'Resolved' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_done-reopenedcount exp = 1 msg = 'Re-opened' ).
+    TRY.
+        SELECT SINGLE assignseconds, isassigned, isopen, raisedmonth FROM zi_ca_opsexctimes
+          WHERE runid = @gc-open_run
+          INTO @DATA(ls_open).
+        cl_abap_unit_assert=>assert_equals( act = ls_open-assignseconds exp = 1800 msg = 'Assigned after 30 minutes' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_open-isassigned exp = abap_true msg = 'Assigned' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_open-isopen exp = abap_true msg = 'Still open (assigned)' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_open-raisedmonth exp = '202611' msg = 'Month of the raise' ).
+        SELECT SINGLE resolveseconds, isassigned, isresolved, reopenedcount FROM zi_ca_opsexctimes
+          WHERE runid = @gc-done_run
+          INTO @DATA(ls_done).
+        cl_abap_unit_assert=>assert_equals( act = ls_done-resolveseconds exp = 7200 msg = 'Resolved after two hours' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_done-isassigned exp = abap_false msg = 'Never assigned' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_done-isresolved exp = abap_true msg = 'Resolved' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_done-reopenedcount exp = 1 msg = 'Re-opened' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -349,38 +361,46 @@ CLASS ltc_metric IMPLEMENTATION.
 
   " Rule: one raise per episode; assigned / resolved / open / re-opened counted; each episode in one time bucket
   METHOD counters_and_buckets.
-    SELECT SUM( raisedcount ) AS raised, SUM( assignedcount ) AS assigned, SUM( resolvedcount ) AS resolved,
-           SUM( opencount ) AS open_now, SUM( reopenedcount ) AS reopened, SUM( assignedin15min ) AS in_15_min,
-           SUM( assignedin4hours ) AS in_4_hours, SUM( notassigned ) AS not_assigned,
-           SUM( resolvedin4hours ) AS resolved_4_hours, SUM( open1to3days ) AS open_1_to_3,
-           SUM( openover7days ) AS open_over_7
-      FROM zr_ca_opsexcmetric
-      INTO @DATA(ls_sum).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-raised exp = 3 msg = 'Three raised' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-assigned exp = 2 msg = 'Two assigned' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-resolved exp = 1 msg = 'One resolved' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-open_now exp = 2 msg = 'Two open' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-reopened exp = 1 msg = 'One re-opened' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-in_15_min exp = 1 msg = 'Assigned within 15 minutes' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-in_4_hours exp = 1 msg = 'Assigned within 4 hours' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-not_assigned exp = 1 msg = 'Never assigned' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-resolved_4_hours exp = 1 msg = 'Resolved within 4 hours' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-open_1_to_3 exp = 1 msg = 'Open 1-3 days' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_sum-open_over_7 exp = 1 msg = 'Open more than 7 days' ).
+    TRY.
+        SELECT SUM( raisedcount ) AS raised, SUM( assignedcount ) AS assigned, SUM( resolvedcount ) AS resolved,
+               SUM( opencount ) AS open_now, SUM( reopenedcount ) AS reopened, SUM( assignedin15min ) AS in_15_min,
+               SUM( assignedin4hours ) AS in_4_hours, SUM( notassigned ) AS not_assigned,
+               SUM( resolvedin4hours ) AS resolved_4_hours, SUM( open1to3days ) AS open_1_to_3,
+               SUM( openover7days ) AS open_over_7
+          FROM zr_ca_opsexcmetric
+          INTO @DATA(ls_sum).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-raised exp = 3 msg = 'Three raised' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-assigned exp = 2 msg = 'Two assigned' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-resolved exp = 1 msg = 'One resolved' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-open_now exp = 2 msg = 'Two open' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-reopened exp = 1 msg = 'One re-opened' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-in_15_min exp = 1 msg = 'Assigned within 15 minutes' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-in_4_hours exp = 1 msg = 'Assigned within 4 hours' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-not_assigned exp = 1 msg = 'Never assigned' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-resolved_4_hours exp = 1 msg = 'Resolved within 4 hours' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-open_1_to_3 exp = 1 msg = 'Open 1-3 days' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_sum-open_over_7 exp = 1 msg = 'Open more than 7 days' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: minutes to assign only for assigned episodes (an average ignores the others), in minutes
   METHOD minutes_only_when_applies.
-    SELECT runid, minutestoassign FROM zr_ca_opsexcmetric
-      WHERE minutestoassign IS NOT NULL
-      ORDER BY runid
-      INTO TABLE @DATA(lt_rows).
-    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Two assigned episodes' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-minutestoassign exp = '10.0' msg = '600 seconds' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-minutestoassign exp = '100.0' msg = '6000 seconds' ).
-    SELECT COUNT(*) FROM zr_ca_opsexcmetric WHERE minutestoassign IS NULL INTO @DATA(lv_unassigned).
-    cl_abap_unit_assert=>assert_equals( act = lv_unassigned exp = 1 msg = 'Not assigned: no minutes' ).
+    TRY.
+        SELECT runid, minutestoassign FROM zr_ca_opsexcmetric
+          WHERE minutestoassign IS NOT NULL
+          ORDER BY runid
+          INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Two assigned episodes' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-minutestoassign exp = '10.0' msg = '600 seconds' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-minutestoassign exp = '100.0' msg = '6000 seconds' ).
+        SELECT COUNT(*) FROM zr_ca_opsexcmetric WHERE minutestoassign IS NULL INTO @DATA(lv_unassigned).
+        cl_abap_unit_assert=>assert_equals( act = lv_unassigned exp = 1 msg = 'Not assigned: no minutes' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

@@ -211,6 +211,28 @@ review's sign-off. So the handover stays **derived only** (nothing stored, nothi
 note stays in the team's existing channel. If the user wants a note in SAP, the safe shape is one note per **area and
 company-code slice** and shift (the review's sign-off pattern), not per team - a decision for the user, not built.
 
+## 6a. Concurrency, transactions and failure handling
+
+| Situation | Behaviour | Why it is acceptable |
+|---|---|---|
+| Two runs of different variants of one area correlate at the same moment | Each run reads the open parents before it saves; both can open a parent for the same key (two parents, each with its children) | No lock across runs (a run must never wait for another variant). The next run of either variant joins new findings to the newest open parent of the key; the other parent resolves with its own findings. Each parent shows its children in the exceptions app |
+| Escalation job and an assignment at the same moment | The job reads the candidates (open, unassigned) once; an assignment after that read can still receive one more step | At most one extra mail per exception and job; the next job no longer selects it. The step is claimed by intent key (unique index `INT`), so two jobs never send the same step twice |
+| Escalation step whose intent key cannot be built | Logged `F` with message 160, counted as failed, not sent | Without the key the step done is not recognised and every job would resend it |
+| Failed escalation step (channel inactive, transport error) | Logged `F`; the next job tries the same step again while the exception stays open and unassigned | The intent of a failed step is not claimed (`STEPS_DONE` counts `S`, claimed and partial only) |
+| Two planners create overlapping windows at the same moment | Both validations pass (each sees only saved windows); two overlapping windows exist | The duplicate check is a convenience, not a constraint: overlapping windows are harmless (a finding is planned if any window covers it) and the approver sees both in the app |
+| Commits | Unchanged pattern: an escalation step goes through the router's existing delivery - durable claim committed through `ZIF_CA_OPS_STORE~COMMIT` before the send, result committed after (A17). The downtime, correlator and policy classes never commit; the downtime app writes only in the RAP save sequence (no `COMMIT WORK` in the behaviour pool) | The claim is the evidence of the attempt even when the send fails after it |
+
+**Downtime app and side effects.** The app has no draft and no field that is recalculated while the user types:
+the UTC pair and the time zone are set on save, the status is a calculated element, and both actions return
+`$self`, so the object page shows the new values after save or action without a side-effects declaration.
+
+**Metrics as an analytical list page, not an analytical query.** `ZC_CA_OpsExcMetric` is a transactional query
+with `@Aggregation.default` (#SUM / #AVG) for the OData V4 aggregation of the analytical list page and the overview
+card. A cube (`@Analytics.dataCategory: #CUBE`) with a transient analytical query (`provider contract
+analytical_query`, averages as `#FORMULA`) would add the multidimensional report and analytics cloud live access;
+it is not built (decision for the user, see the build report). The DCL sits on the exposed projection, as for every
+other app of the framework.
+
 ## 7. Objects
 
 | Kind | Objects |
@@ -222,7 +244,7 @@ company-code slice** and shift (the review's sign-off pattern), not per team - a
 | Exceptions app, review, dashboard | `ZR_CA_OpsException` / `ZC_CA_OpsException` (+ BDEF, DDLX), `ZI_CA_OpsFindRunbook`, `ZI_CA_OpsCorrCount`; `ZI_CA_OpsCtlFind` ... `ZR_CA_OpsCtlReview` / `ZC_CA_OpsCtlReview` (downtime mark); `ZR_CA_OpsCheckStatus` / `ZC_CA_OpsCheckStatus` (downtime mark) |
 | Metrics | `ZI_CA_OpsMetricTz`, `ZI_CA_OpsCheckTeam`, `ZI_CA_OpsFindTeam`, `ZI_CA_OpsExcEpisode`, `ZI_CA_OpsExcAssign1`, `ZI_CA_OpsExcReopen`, `ZI_CA_OpsExcTimes`, `ZR_CA_OpsExcMetric`, `ZC_CA_OpsExcMetric` (+ DDLX, DCL), service `ZUI_CA_OPS_MET` |
 | Shift handover | `ZI_CA_OpsShiftTz`, `ZI_CA_OpsShiftDef`, `ZI_CA_OpsShiftCand`, `ZI_CA_OpsShiftCur`, `ZI_CA_OpsShiftPrev`, `ZI_CA_OpsShiftNext`, `ZI_CA_OpsShiftNEnd`, `ZI_CA_OpsShiftWin`, `ZI_CA_OpsHovrEvt`, `ZI_CA_OpsHovrSum`, `ZR_CA_OpsHandover`, `ZC_CA_OpsHandover` (+ DDLX, DCL), service `ZUI_CA_OPS_HOVR` |
-| Messages | `ZCA_OPS` 140-159 (153 / 154: configuration app) |
+| Messages | `ZCA_OPS` 140-160 (153 / 154: configuration app) |
 | Tests | `ZCL_CA_OPS_DOWNTIME_POLICY` (14), `ZCL_CA_OPS_DOWNTIME` (4, OSQL), `ZCL_CA_OPS_CORRELATOR` (9), `ZCL_CA_OPS_ALERT_ROUTER` (`ltc_response`, 9), `ZCL_CA_OPS_ALERT_POLICY` (`ltc_response`, 9), `ZCL_CA_OPS_STORE` (3 new), `ZCL_CA_OPS_PURGE_DAO` (`ended_window_is_deleted`), `ZCL_CA_OPS_CFG_CHECKS` (`ltc_response_check`, 3), `ZCL_CA_OPS_FACTORY` (2 new), CDS tests `ZCL_CA_OPS_MET_CDS_TEST` (`ltc_assign`, `ltc_reopen`, `ltc_times`, `ltc_metric`) and `ZCL_CA_OPS_HOVR_CDS_TEST` (`ltc_current`, `ltc_previous`, `ltc_events`); the downtime behaviour pool is exempt (every rule in the policy; QA1) |
 
 ## 8. VERIFY

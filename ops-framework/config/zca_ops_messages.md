@@ -104,6 +104,7 @@ texts <= 73 characters).
 | 157 | Run-level alert of rule &1 suppressed: planned downtime &2 |
 | 158 | Enter the start and the end of the window (date and time) |
 | 159 | Downtime window awaits approval: change or delete it instead |
+| 160 | Escalation step &1 of rule &2 not sent: no intent key (duplicate guard) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

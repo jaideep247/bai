@@ -1078,113 +1078,145 @@ CLASS ltc_response IMPLEMENTATION.
 
   " Rule: a finding recorded in an approved planned downtime window is not alerted; the decision is logged D
   METHOD downtime_finding_not_alerted.
-    given_rule( ).
-    mark( iv_object_key = 'S0001/1' iv_downtime = gc-window_id ).
-    dispatch( VALUE #( ( finding( 'S0001/1' ) ) ) ).
-    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing is delivered' ).
-    cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-downtime ) exp = 1
-                                        msg = 'One decision D in the alert log' ).
+    TRY.
+        given_rule( ).
+        mark( iv_object_key = 'S0001/1' iv_downtime = gc-window_id ).
+        dispatch( VALUE #( ( finding( 'S0001/1' ) ) ) ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing is delivered' ).
+        cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-downtime ) exp = 1
+                                            msg = 'One decision D in the alert log' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: a run-level alert (RAG) inside an approved area-wide window is held back and logged D
   METHOD area_window_holds_run_alert.
-    given_rule( iv_min_rag = zif_ca_ops_types=>gc_rag-red ).
-    INSERT VALUE #( window_id = gc-window_id area = zcl_ca_ops_param_seed=>gc_test_area-first
-                    from_utc = gc-win_from to_utc = gc-win_to approved_by = gc-approver ) INTO TABLE mo_downtime->mt_windows.
-    dispatch( VALUE #( ) ).
-    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'The red run is not alerted' ).
-    cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-downtime ) exp = 1
-                                        msg = 'Logged D' ).
+    TRY.
+        given_rule( iv_min_rag = zif_ca_ops_types=>gc_rag-red ).
+        INSERT VALUE #( window_id = gc-window_id area = zcl_ca_ops_param_seed=>gc_test_area-first
+                        from_utc = gc-win_from to_utc = gc-win_to approved_by = gc-approver ) INTO TABLE mo_downtime->mt_windows.
+        dispatch( VALUE #( ) ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'The red run is not alerted' ).
+        cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-downtime ) exp = 1
+                                            msg = 'Logged D' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: a correlated child is not alerted on its own (logged K); the parent's message names its open children
   METHOD child_held_back_parent_count.
-    given_rule( ).
-    mark( iv_object_key = 'S0001/1' iv_role = zif_ca_ops_resp_types=>gc_corr_role-parent ).
-    mark( iv_object_key = 'S0001/2' iv_role = zif_ca_ops_resp_types=>gc_corr_role-child ).
-    INSERT VALUE #( corr_id = gc-parent_id children = 1 ) INTO TABLE mo_dao->mt_children.
-    dispatch( VALUE #( ( finding( 'S0001/1' ) ) ( finding( 'S0001/2' ) ) ) ).
-    cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1 msg = 'One message' ).
-    DATA(ls_message) = mo_channel->mt_delivered[ 1 ].
-    cl_abap_unit_assert=>assert_equals( act = ls_message-item_count exp = 1 msg = 'Only the parent is listed' ).
-    cl_abap_unit_assert=>assert_equals( act = ls_message-context-header-correlated_count exp = '1'
-                                        msg = 'The parent names its child' ).
-    cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-correlated ) exp = 1
-                                        msg = 'The held-back child is logged K' ).
+    TRY.
+        given_rule( ).
+        mark( iv_object_key = 'S0001/1' iv_role = zif_ca_ops_resp_types=>gc_corr_role-parent ).
+        mark( iv_object_key = 'S0001/2' iv_role = zif_ca_ops_resp_types=>gc_corr_role-child ).
+        INSERT VALUE #( corr_id = gc-parent_id children = 1 ) INTO TABLE mo_dao->mt_children.
+        dispatch( VALUE #( ( finding( 'S0001/1' ) ) ( finding( 'S0001/2' ) ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1 msg = 'One message' ).
+        DATA(ls_message) = mo_channel->mt_delivered[ 1 ].
+        cl_abap_unit_assert=>assert_equals( act = ls_message-item_count exp = 1 msg = 'Only the parent is listed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-context-header-correlated_count exp = '1'
+                                            msg = 'The parent names its child' ).
+        cl_abap_unit_assert=>assert_equals( act = logged( zif_ca_ops_types=>gc_alert_status-correlated ) exp = 1
+                                            msg = 'The held-back child is logged K' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: the alert e-mail carries the runbook link of its check
   METHOD runbook_link_in_the_message.
-    given_rule( ).
-    INSERT VALUE #( area = zcl_ca_ops_param_seed=>gc_test_area-first match_field = zif_ca_ops_ctl_types=>gc_match_field-check_code
-                    match_value = gc-check runbook_url = gc-url first_action = 'Map the code' ) INTO TABLE mo_dao->mt_runbooks.
-    dispatch( VALUE #( ( finding( 'S0001/1' ) ) ) ).
-    cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-context-header-runbook_url exp = gc-url
-                                        msg = 'Runbook link of the check' ).
-    cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = mo_channel->mt_delivered[ 1 ]-html sub = gc-url ) >= 0 )
-                                      msg = 'The built-in layout shows the link' ).
+    TRY.
+        given_rule( ).
+        INSERT VALUE #( area = zcl_ca_ops_param_seed=>gc_test_area-first match_field = zif_ca_ops_ctl_types=>gc_match_field-check_code
+                        match_value = gc-check runbook_url = gc-url first_action = 'Map the code' ) INTO TABLE mo_dao->mt_runbooks.
+        dispatch( VALUE #( ( finding( 'S0001/1' ) ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-context-header-runbook_url exp = gc-url
+                                            msg = 'Runbook link of the check' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = mo_channel->mt_delivered[ 1 ]-html sub = gc-url ) >= 0 )
+                                          msg = 'The built-in layout shows the link' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: an open, unassigned exception past ESC_AFTER_MIN is escalated once to the escalation destination,
   " the step and the exception on the claim
   METHOD due_escalation_sent_once.
-    given_rule( iv_esc_after_min = 30 ).
-    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
-    DATA(ls_result) = escalate( ).
-    cl_abap_unit_assert=>assert_equals( act = ls_result-escalated exp = 1 msg = 'One escalation' ).
-    cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1 msg = 'One message' ).
-    cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-destination exp = gc-escalation
-                                        msg = 'To the escalation destination' ).
-    cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-esc_step exp = 1 msg = 'Step 1 on the claim' ).
-    cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-finding_no exp = gc-finding_no
-                                        msg = 'The exception on the claim' ).
+    TRY.
+        given_rule( iv_esc_after_min = 30 ).
+        INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+        DATA(ls_result) = escalate( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-escalated exp = 1 msg = 'One escalation' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1 msg = 'One message' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-destination exp = gc-escalation
+                                            msg = 'To the escalation destination' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-esc_step exp = 1 msg = 'Step 1 on the claim' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-finding_no exp = gc-finding_no
+                                            msg = 'The exception on the claim' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: a step already sent is not sent again (the next job sends the next step when it is due)
   METHOD escalated_step_not_resent.
-    given_rule( iv_esc_after_min = 30 ).
-    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
-    escalate( ).
-    DATA(ls_sent) = mo_dao->mt_claims[ 1 ].
-    ls_sent-status = zif_ca_ops_types=>gc_alert_status-sent.
-    INSERT ls_sent INTO TABLE mo_dao->mt_intent_log.
-    CLEAR mo_channel->mt_delivered.
-    DATA(ls_result) = escalate( ).
-    cl_abap_unit_assert=>assert_equals( act = ls_result-escalated exp = 0 msg = 'Nothing more' ).
-    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'No second message' ).
+    TRY.
+        given_rule( iv_esc_after_min = 30 ).
+        INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+        escalate( ).
+        DATA(ls_sent) = mo_dao->mt_claims[ 1 ].
+        ls_sent-status = zif_ca_ops_types=>gc_alert_status-sent.
+        INSERT ls_sent INTO TABLE mo_dao->mt_intent_log.
+        CLEAR mo_channel->mt_delivered.
+        DATA(ls_result) = escalate( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-escalated exp = 0 msg = 'Nothing more' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'No second message' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: a correlated child escalates with its parent; an exception in planned downtime is held back
   METHOD child_and_downtime_skipped.
-    given_rule( iv_esc_after_min = 30 ).
-    INSERT candidate( zif_ca_ops_resp_types=>gc_corr_role-child ) INTO TABLE mo_dao->mt_candidates.
-    DATA(ls_result) = escalate( ).
-    cl_abap_unit_assert=>assert_equals( act = ls_result-skipped exp = 1 msg = 'The child is skipped' ).
-    CLEAR mo_dao->mt_candidates.
-    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
-    INSERT VALUE #( window_id = gc-window_id area = zcl_ca_ops_param_seed=>gc_test_area-first
-                    from_utc = gc-win_from to_utc = gc-win_to approved_by = gc-approver ) INTO TABLE mo_downtime->mt_windows.
-    ls_result = escalate( ).
-    cl_abap_unit_assert=>assert_equals( act = ls_result-skipped exp = 1 msg = 'Planned downtime holds it back' ).
-    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing is escalated' ).
+    TRY.
+        given_rule( iv_esc_after_min = 30 ).
+        INSERT candidate( zif_ca_ops_resp_types=>gc_corr_role-child ) INTO TABLE mo_dao->mt_candidates.
+        DATA(ls_result) = escalate( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-skipped exp = 1 msg = 'The child is skipped' ).
+        CLEAR mo_dao->mt_candidates.
+        INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+        INSERT VALUE #( window_id = gc-window_id area = zcl_ca_ops_param_seed=>gc_test_area-first
+                        from_utc = gc-win_from to_utc = gc-win_to approved_by = gc-approver ) INTO TABLE mo_downtime->mt_windows.
+        ls_result = escalate( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-skipped exp = 1 msg = 'Planned downtime holds it back' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing is escalated' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
   " Rule: before ESC_AFTER_MIN nothing is escalated; a rule without time-based escalation never escalates
   METHOD not_yet_due_not_escalated.
-    given_rule( iv_esc_after_min = 90 ).
-    INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
-    cl_abap_unit_assert=>assert_equals( act = escalate( )-escalated exp = 0 msg = '60 of 90 minutes' ).
-    CLEAR mo_dao->mt_rules.
-    given_rule( ).
-    cl_abap_unit_assert=>assert_equals( act = escalate( )-escalated exp = 0 msg = 'Run-based rule' ).
-    cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing delivered' ).
+    TRY.
+        given_rule( iv_esc_after_min = 90 ).
+        INSERT candidate( ) INTO TABLE mo_dao->mt_candidates.
+        cl_abap_unit_assert=>assert_equals( act = escalate( )-escalated exp = 0 msg = '60 of 90 minutes' ).
+        CLEAR mo_dao->mt_rules.
+        given_rule( ).
+        cl_abap_unit_assert=>assert_equals( act = escalate( )-escalated exp = 0 msg = 'Run-based rule' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered msg = 'Nothing delivered' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

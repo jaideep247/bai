@@ -6,7 +6,7 @@
 *& check, planned downtime windows, escalation until acknowledged, alert
 *& correlation (parent / child exceptions), response-time metrics and the
 *& shift handover - parameters of area CA_OPS (name prefixes RUNBOOK_,
-*& DOWNTIME_, ESC_, CORR_, METRIC_, SHIFT_), messages 140-159 of ZCA_OPS (153 / 154: ZIF_CA_OPS_CFG_TYPES),
+*& DOWNTIME_, ESC_, CORR_, METRIC_, SHIFT_), messages 140-160 of ZCA_OPS (153 / 154: ZIF_CA_OPS_CFG_TYPES),
 *& rows read by the alert router, the store and the downtime API. No logic.
 *& Modification log:
 *& 2026-11-11 | Initial version (operations response features).
@@ -287,6 +287,8 @@ INTERFACE zif_ca_ops_resp_types
       window_incomplete   TYPE zif_ca_ops_types=>ty_msgno VALUE '158',
       "! End now of a window that awaits approval (change or delete it instead)
       window_pending      TYPE zif_ca_ops_types=>ty_msgno VALUE '159',
+      "! Escalation step not sent: its intent key could not be built (without it every job would resend)
+      esc_no_intent       TYPE zif_ca_ops_types=>ty_msgno VALUE '160',
     END OF gc_msg.
 
 ENDINTERFACE.

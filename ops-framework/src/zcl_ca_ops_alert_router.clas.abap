@@ -678,6 +678,20 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
         CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
           CLEAR lv_minutes.
       ENDTRY.
+      " without the intent key the step done is not recognised and every job would send it again
+      DATA(lv_intent) = escalation_intent( is_rule      = <ls_due>-rule
+                                           is_candidate = <ls_due>-candidate
+                                           iv_area      = iv_area
+                                           iv_step      = <ls_due>-step ).
+      IF lv_intent IS INITIAL.
+        add_log( iv_rule_id = <ls_due>-rule-rule_id iv_channel = <ls_due>-rule-channel is_run = ls_run
+                 iv_status  = zif_ca_ops_types=>gc_alert_status-failed
+                 iv_error   = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_resp_types=>gc_msg-esc_no_intent
+                                                     iv_v1    = <ls_due>-step
+                                                     iv_v2    = <ls_due>-rule-rule_id ) ).
+        rs_result-failed += 1.
+        CONTINUE.
+      ENDIF.
       ms_extra-escalation = |{ <ls_due>-step } / { <ls_due>-max }|.
       " one message per exception and step, to the escalation destination of the rule
       DATA(ls_rule_single) = <ls_due>-rule.
@@ -702,10 +716,7 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
                         io_dao        = lo_dao
                         is_escalation = VALUE #( step       = <ls_due>-step
                                                  finding_no = <ls_due>-candidate-finding_no
-                                                 intent_key = escalation_intent( is_rule      = <ls_due>-rule
-                                                                                 is_candidate = <ls_due>-candidate
-                                                                                 iv_area      = iv_area
-                                                                                 iv_step      = <ls_due>-step ) ) ).
+                                                 intent_key = lv_intent ) ).
       rs_result-escalated += 1.
     ENDLOOP.
     IF mt_log IS NOT INITIAL.

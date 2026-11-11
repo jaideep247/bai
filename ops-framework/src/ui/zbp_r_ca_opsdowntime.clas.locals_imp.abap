@@ -15,6 +15,13 @@ CLASS lhc_downtime DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     TYPES tt_entities TYPE TABLE FOR READ RESULT zr_ca_opsdowntime\\Downtime.
 
+    "! State areas of the checks on save: the messages of a check are cleared before it runs again
+    CONSTANTS:
+      BEGIN OF gc_state,
+        area   TYPE string VALUE 'VALIDATE_AREA',
+        window TYPE string VALUE 'VALIDATE_WINDOW',
+      END OF gc_state.
+
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR Downtime RESULT result.
 
@@ -248,9 +255,11 @@ CLASS lhc_downtime IMPLEMENTATION.
       ENTITY Downtime FIELDS ( Area ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_windows).
     LOOP AT lt_windows ASSIGNING FIELD-SYMBOL(<ls_entity>).
+      INSERT VALUE #( %tky = <ls_entity>-%tky %state_area = gc_state-area ) INTO TABLE reported-downtime.
       IF zcl_ca_ops_cfg_checks=>area_valid( iv_area = <ls_entity>-Area iv_any_allowed = abap_false ) = abap_false.
         INSERT VALUE #( %tky = <ls_entity>-%tky ) INTO TABLE failed-downtime.
         INSERT VALUE #( %tky          = <ls_entity>-%tky
+                        %state_area   = gc_state-area
                         %element-Area = if_abap_behv=>mk-on
                         %msg          = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                      number   = zif_ca_ops_cfg_types=>gc_msg-area_invalid
@@ -260,6 +269,7 @@ CLASS lhc_downtime IMPLEMENTATION.
                    iv_area     = <ls_entity>-Area ) <> if_abap_behv=>auth-allowed.
         INSERT VALUE #( %tky = <ls_entity>-%tky ) INTO TABLE failed-downtime.
         INSERT VALUE #( %tky          = <ls_entity>-%tky
+                        %state_area   = gc_state-area
                         %element-Area = if_abap_behv=>mk-on
                         %msg          = new_message( id       = zif_ca_ops_types=>gc_message_class
                                                      number   = zif_ca_ops_resp_types=>gc_msg-not_authorised
@@ -287,6 +297,7 @@ CLASS lhc_downtime IMPLEMENTATION.
                                                   iv_default = zif_ca_ops_resp_types=>gc_param_default-downtime_past_tol ) ).
     DATA(lo_downtime) = zcl_ca_ops_factory=>get_downtime( ).
     LOOP AT lt_windows ASSIGNING FIELD-SYMBOL(<ls_entity>).
+      INSERT VALUE #( %tky = <ls_entity>-%tky %state_area = gc_state-window ) INTO TABLE reported-downtime.
       DATA(ls_window) = window_of( <ls_entity> ).
       " the other windows of the area around this one, approved or not (duplicates)
       DATA(lt_others) = COND zif_ca_ops_resp_types=>tt_window(
@@ -305,6 +316,7 @@ CLASS lhc_downtime IMPLEMENTATION.
       INSERT VALUE #( %tky = <ls_entity>-%tky ) INTO TABLE failed-downtime.
       LOOP AT lt_problems ASSIGNING FIELD-SYMBOL(<ls_problem>).
         INSERT VALUE #( %tky                   = <ls_entity>-%tky
+                        %state_area            = gc_state-window
                         %element-FromDate      = COND #( WHEN <ls_problem>-element = zif_ca_ops_resp_types=>gc_element-from_date
                                                          THEN if_abap_behv=>mk-on )
                         %element-ToDate        = COND #( WHEN <ls_problem>-element = zif_ca_ops_resp_types=>gc_element-to_date

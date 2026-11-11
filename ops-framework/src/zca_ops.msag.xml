@@ -539,6 +539,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>160</MSGNR>
+     <TEXT>Escalation step &amp;1 of rule &amp;2 not sent: no intent key (duplicate guard)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>
