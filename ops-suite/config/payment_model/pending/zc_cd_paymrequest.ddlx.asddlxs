@@ -1,0 +1,62 @@
+// UI annotations: payment model - payment request (entity PaymentRequest; generated - never edit, regenerate)
+// Object page: request, feeder (masked reference, deep link), attempts, timeline, payments of the request.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment request', typeNamePlural: 'Payment requests',
+                  title: { type: #STANDARD, value: 'RequestReference' },
+                  description: { type: #STANDARD, value: 'FeederName' } }
+annotate entity ZC_CD_PaymRequest with
+{
+  @UI.facet: [ { id: 'Request', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Request', position: 10 },
+               { id: 'Feeder', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Feeder', label: 'Feeder system', position: 20 },
+               { id: 'Payments', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Payments', label: 'Payments', position: 50 }
+             ]
+  @EndUserText.label: 'Request reference'
+  @UI.lineItem: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  RequestReference;
+  @EndUserText.label: 'Received on'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter: { mandatory: true, selectionType: #SINGLE }
+  @UI.lineItem: [ { position: 20 } ]
+  BusinessDate;
+  @EndUserText.label: 'Received at'
+  @UI.identification: [ { position: 20 } ]
+  ReceivedAt;
+  @EndUserText.label: 'Company code'
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 30 } ]
+  CompanyCode;
+  @UI.hidden: true
+  OpsArea;
+  @EndUserText.label: 'Source'
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.lineItem: [ { position: 30 } ]
+  @UI.fieldGroup: [ { qualifier: 'Feeder', position: 10 } ]
+  Source;
+  @EndUserText.label: 'Feeder system'
+  FeederName;
+  @EndUserText.label: 'Transaction'
+  @UI.lineItem: [ { position: 40 } ]
+  @UI.identification: [ { position: 40 } ]
+  TransactionType;
+  @EndUserText.label: 'Transaction'
+  TransactionText;
+  @EndUserText.label: 'Request status'
+  @UI.lineItem: [ { position: 50 } ]
+  @UI.identification: [ { position: 50 } ]
+  RequestStatus;
+  @EndUserText.label: 'Processing status'
+  @UI.identification: [ { position: 60 } ]
+  ProcessingStatus;
+  @EndUserText.label: 'Feeder reference'
+  @UI.fieldGroup: [ { qualifier: 'Feeder', position: 20 } ]
+  FeederReference;
+  @EndUserText.label: 'Open in the feeder system'
+  @UI.fieldGroup: [ { qualifier: 'Feeder', position: 30, type: #WITH_URL, url: 'FeederUrl' } ]
+  FeederUrl;
+  @EndUserText.label: 'Currency'
+  Currency;
+  @EndUserText.label: 'Amount'
+  @UI.identification: [ { position: 70 } ]
+  Amount;
+}

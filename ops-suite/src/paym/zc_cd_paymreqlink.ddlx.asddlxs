@@ -1,0 +1,18 @@
+// UI annotations: payment model - payment to request link (entity PaymentRequestLink; generated - never edit)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Request of the payment', typeNamePlural: 'Requests of the payment',
+                  title: { type: #STANDARD, value: 'RequestReference' } }
+annotate entity ZC_CD_PaymReqLink with
+{
+  @EndUserText.label: 'Payment'
+  @UI.lineItem: [ { position: 10 } ]
+  PaymentDocument;
+  @EndUserText.label: 'Request reference'
+  @UI.lineItem: [ { position: 20 } ]
+  RequestReference;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30 } ]
+  CompanyCode;
+  @UI.hidden: true
+  OpsArea;
+}

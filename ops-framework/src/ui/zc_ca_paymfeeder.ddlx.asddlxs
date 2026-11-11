@@ -1,0 +1,39 @@
+// UI annotations: Processes, checks, alerting, purge targets and controls - Feeder systems of the payment model
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Feeder system',
+                     typeNamePlural: 'Feeder systems of the payment model',
+                     title: { type: #STANDARD, value: 'Feeder' } } }
+annotate entity ZC_CA_PaymFeeder with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Feeder;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Description;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  UrlTemplate;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  RefVisible;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Seq;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

@@ -1,0 +1,39 @@
+// UI annotations: Processes, checks, alerting, purge targets and controls - Payment model dimension texts
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Dimension text',
+                     typeNamePlural: 'Payment model dimension texts',
+                     title: { type: #STANDARD, value: 'Langu' } } }
+annotate entity ZC_CA_PaymDimText with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Langu;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Dimension;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  DimValue;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Text;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Seq;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

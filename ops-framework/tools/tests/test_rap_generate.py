@@ -38,7 +38,15 @@ class FrameworkAppTest(unittest.TestCase):
         tables = [t[0] for t in rap_generate.SPEC['framework']['tables']]
         self.assertEqual(tables, ['zca_ops_alrule', 'zca_ops_alchn', 'zca_ops_purge',
                                   'zca_ops_control', 'zca_ops_ctlt', 'zca_ops_ctlchk',
-                                  'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl'])
+                                  'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl',
+                                  'zca_ops_pmdim', 'zca_ops_feeder'])
+
+    def test_payment_model_tables_checked_on_save(self):
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        self.assertIn(('enum', 'dimension', 'FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS'),
+                      checks['zca_ops_pmdim'])
+        self.assertIn(('valid', 'url_template', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid'),
+                      checks['zca_ops_feeder'])
 
     def test_check_registry_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

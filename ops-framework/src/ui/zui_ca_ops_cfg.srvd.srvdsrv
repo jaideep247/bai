@@ -12,4 +12,6 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_RegisteredCheck as RegisteredCheck;
   expose ZC_CA_AggregateCheck as AggregateCheck;
   expose ZC_CA_ApprovedTable as ApprovedTable;
+  expose ZC_CA_PaymDimText as PaymDimText;
+  expose ZC_CA_PaymFeeder as PaymFeeder;
 }

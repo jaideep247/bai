@@ -19,6 +19,8 @@ Modification log:
 2026-11-10 | Alert rules: company-code pattern BUKRS_PATTERN (PCRE, checked on save as the other patterns).
 2026-11-10 | Process onboarding: business processes, registered checks, aggregate rows (table 082 / field 083
            | checks) and approved tables.
+2026-11-11 | Payment model: dimension texts (ZCA_OPS_PMDIM) and feeder systems with deep-link URL template
+           | (ZCA_OPS_FEEDER, check url_invalid).
 """
 import os
 import sys
@@ -79,6 +81,12 @@ SPEC = {
             ('zca_ops_tabwl', 'ApprovedTable', 'zca_d_tabwl', 'Approved table', 'Tables approved for aggregate checks', [],
              [('area', 'area', False), ('table', 'table_name'),
               ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid')]),
+            # Payment model (2026-11-11): texts / order of the dimension values and the feeder systems with their
+            # deep-link URL template (read by the consumers' generated payment model CDS)
+            ('zca_ops_pmdim', 'PaymDimText', 'zca_d_pmdim', 'Dimension text', 'Payment model dimension texts', [],
+             [('enum', 'dimension', 'FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS')]),
+            ('zca_ops_feeder', 'PaymFeeder', 'zca_d_feeder', 'Feeder system', 'Feeder systems of the payment model', [],
+             [('valid', 'url_template', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid')]),
         ]),
 }
 
@@ -108,6 +116,11 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'cond_field': 'Condition field', 'cond_op': 'Condition operator', 'cond_value': 'Condition value(s)',
           'amber': 'Amber limit (rows or days, 0 = none)', 'red': 'Red limit (rows or days, 0 = none)',
           'check_code': 'Check code of the findings', 'table_name': 'Table',
+          # Payment model (2026-11-11)
+          'dimension': 'Dimension of the payment model', 'dim_value': 'Value (as the adapter delivers it)',
+          'text': 'Text on cards', 'seq': 'Display order', 'feeder': 'Feeder system (source value)',
+          'url_template': 'Deep link (https URL, placeholder {REF})',
+          'ref_visible': 'Feeder reference shown in full (not sensitive)',
           'approved_by': 'Approved by (reviewer)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)

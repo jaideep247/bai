@@ -26,7 +26,7 @@ define view entity ZR_CA_Control
       runbook_url as RunbookUrl,
       @EndUserText.label: 'Active'
       active as Active,
-      @EndUserText.label: 'Seq'
+      @EndUserText.label: 'Display order'
       seq as Seq,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'

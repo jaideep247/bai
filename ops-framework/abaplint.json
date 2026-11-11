@@ -38,7 +38,7 @@
       "exclude": [
         "/src/ui/zca_d_[a-z]+\\.tabl\\.xml$",
         "/src/zca_ops_lock\\.tabl\\.xml$",
-        "/src/zca_ops_(control|ctlt|ctlchk)\\.tabl\\.xml$"
+        "/src/zca_ops_(control|ctlt|ctlchk|pmdim|feeder)\\.tabl\\.xml$"
       ]
     },
     "definitions_top": false,

@@ -1,0 +1,107 @@
+// UI annotations: payment model - individual payment (entity Payment; generated - never edit, regenerate)
+// List (drill-down of every category card; business date mandatory) and object page: header, request(s) the payment
+// settled, statuses, amounts per currency, links (intent-based navigation) to the payment trace, the exceptions
+// and the job of the payment run. VERIFY-ADT: intents exist in the launchpad of the landscape (else the link is hidden).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment', typeNamePlural: 'Payments',
+                  title: { type: #STANDARD, value: 'PaymentDocument' },
+                  description: { type: #STANDARD, value: 'PaymentStatusText' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'BusinessDate', direction: #DESC }, { by: 'PaymentDocument', direction: #ASC } ] } ]
+annotate entity ZC_CD_Payment with
+{
+  @UI.facet: [ { id: 'Payment', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Payment', position: 10 },
+               { id: 'Status', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Status', label: 'Status', position: 20 },
+               { id: 'Bank', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Bank', label: 'Bank and amount', position: 30 }
+               ,{ id: 'Requests', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Requests', label: 'Requests', position: 40 }
+             ]
+  @EndUserText.label: 'Business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter: { mandatory: true, selectionType: #SINGLE }
+  @UI.lineItem: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  BusinessDate;
+  @EndUserText.label: 'Payment run'
+  @UI.identification: [ { position: 20 },
+                        { type: #FOR_INTENT_BASED_NAVIGATION, semanticObject: 'ZCDJobFailure', semanticObjectAction: 'display',
+                          label: 'Job of the payment run', position: 25 } ]
+  PaymentRun;
+  @EndUserText.label: 'Payment'
+  @UI.lineItem: [ { position: 20 },
+                  { type: #FOR_INTENT_BASED_NAVIGATION, semanticObject: 'ZCDPaymentTrace', semanticObjectAction: 'display',
+                    label: 'Payment trace' } ]
+  @UI.identification: [ { position: 30 },
+                        { type: #FOR_INTENT_BASED_NAVIGATION, semanticObject: 'ZCDPaymentTrace', semanticObjectAction: 'display',
+                          label: 'Payment trace', position: 31 },
+                        { type: #FOR_INTENT_BASED_NAVIGATION, semanticObject: 'ZCDOpsException', semanticObjectAction: 'manage',
+                          label: 'Exceptions of the payment', position: 32 } ]
+  PaymentDocument;
+  @EndUserText.label: 'Company code'
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.lineItem: [ { position: 30 } ]
+  @UI.identification: [ { position: 40 } ]
+  CompanyCode;
+  @UI.hidden: true
+  OpsArea;
+  @EndUserText.label: 'Collection / disbursement'
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 10 } ]
+  Flow;
+  @EndUserText.label: 'Collection / disbursement'
+  FlowText;
+  @EndUserText.label: 'Source'
+  @UI.selectionField: [ { position: 40 } ]
+  @UI.lineItem: [ { position: 40 } ]
+  @UI.identification: [ { position: 50 } ]
+  Source;
+  @EndUserText.label: 'Feeder system'
+  FeederName;
+  @EndUserText.label: 'Transaction'
+  @UI.identification: [ { position: 60 } ]
+  TransactionType;
+  @EndUserText.label: 'Request status'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 20 } ]
+  RequestStatus;
+  @EndUserText.label: 'Payment status'
+  @UI.selectionField: [ { position: 50 } ]
+  @UI.lineItem: [ { position: 50 } ]
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 30 } ]
+  PaymentStatus;
+  @EndUserText.label: 'Payment status'
+  PaymentStatusText;
+  @EndUserText.label: 'Payment method'
+  @UI.fieldGroup: [ { qualifier: 'Bank', position: 10 } ]
+  PaymentMethod;
+  @EndUserText.label: 'Payment type'
+  @UI.selectionField: [ { position: 60 } ]
+  @UI.lineItem: [ { position: 60 } ]
+  @UI.fieldGroup: [ { qualifier: 'Bank', position: 20 } ]
+  MethodClass;
+  @EndUserText.label: 'Payment type'
+  MethodClassText;
+  @EndUserText.label: 'House bank'
+  @UI.selectionField: [ { position: 70 } ]
+  @UI.lineItem: [ { position: 70 } ]
+  @UI.fieldGroup: [ { qualifier: 'Bank', position: 30 } ]
+  HouseBank;
+  @EndUserText.label: 'House bank account ID'
+  @UI.fieldGroup: [ { qualifier: 'Bank', position: 40 } ]
+  HouseBankAccount;
+  @EndUserText.label: 'Open outcome'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 40 } ]
+  Outcome;
+  @EndUserText.label: 'Open finding'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 50 } ]
+  Finding;
+  @EndUserText.label: 'Late'
+  @UI.lineItem: [ { position: 80 } ]
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 60 } ]
+  IsLate;
+  @EndUserText.label: 'Currency'
+  Currency;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 90 } ]
+  @UI.fieldGroup: [ { qualifier: 'Bank', position: 50 } ]
+  Amount;
+  @EndUserText.label: 'Company code currency'
+  CompanyCurrency;
+}

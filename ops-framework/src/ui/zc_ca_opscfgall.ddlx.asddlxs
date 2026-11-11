@@ -27,7 +27,11 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'AggregateCheck', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Aggregate checks (no code)', position: 100, targetElement: '_AggregateCheck' },
     { id: 'ApprovedTable', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Tables approved for aggregate checks', position: 110, targetElement: '_ApprovedTable' }
+      label: 'Tables approved for aggregate checks', position: 110, targetElement: '_ApprovedTable' },
+    { id: 'PaymDimText', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Payment model dimension texts', position: 120, targetElement: '_PaymDimText' },
+    { id: 'PaymFeeder', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Feeder systems of the payment model', position: 130, targetElement: '_PaymFeeder' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

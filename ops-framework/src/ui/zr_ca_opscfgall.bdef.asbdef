@@ -25,6 +25,8 @@ authorization master ( global )
   association _RegisteredCheck { create ( features : global ); with draft; }
   association _AggregateCheck { create ( features : global ); with draft; }
   association _ApprovedTable { create ( features : global ); with draft; }
+  association _PaymDimText { create ( features : global ); with draft; }
+  association _PaymFeeder { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -52,6 +54,10 @@ authorization master ( global )
     validation AggregateCheck ~ validateTransport;
     validation ApprovedTable ~ validateFields;
     validation ApprovedTable ~ validateTransport;
+    validation PaymDimText ~ validateFields;
+    validation PaymDimText ~ validateTransport;
+    validation PaymFeeder ~ validateFields;
+    validation PaymFeeder ~ validateTransport;
   }
 }
 
@@ -420,6 +426,70 @@ etag master LocalLastChangedAt
     Active = active;
     ApprovedBy = approved_by;
     Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_PaymDimText alias PaymDimText
+persistent table zca_ops_pmdim
+with additional save
+draft table zca_d_pmdim
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Langu, Dimension, DimValue;
+  field ( mandatory : create ) Langu, Dimension, DimValue;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_pmdim
+  {
+    Langu = langu;
+    Dimension = dimension;
+    DimValue = dim_value;
+    Text = text;
+    Seq = seq;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_PaymFeeder alias PaymFeeder
+persistent table zca_ops_feeder
+with additional save
+draft table zca_d_feeder
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Feeder;
+  field ( mandatory : create ) Feeder;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_feeder
+  {
+    Feeder = feeder;
+    Description = description;
+    UrlTemplate = url_template;
+    RefVisible = ref_visible;
+    Seq = seq;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

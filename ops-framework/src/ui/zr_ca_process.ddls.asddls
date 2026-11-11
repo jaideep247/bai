@@ -26,7 +26,7 @@ define view entity ZR_CA_Process
       purge_target as PurgeTarget,
       @EndUserText.label: 'Active'
       active as Active,
-      @EndUserText.label: 'Seq'
+      @EndUserText.label: 'Display order'
       seq as Seq,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'

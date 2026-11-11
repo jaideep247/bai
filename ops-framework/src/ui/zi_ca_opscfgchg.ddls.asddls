@@ -52,3 +52,13 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_pmdim
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_feeder
+  {
+    last_changed_at as LastChangedAt
+  }

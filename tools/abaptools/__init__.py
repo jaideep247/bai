@@ -19,6 +19,9 @@ works unchanged.
                       (process onboarding of ZCA_OPS: checks, control, alert rule, owner, purge, role)
   new_process         scaffold of a new business process: configuration rows (seed files), process
                       document, check class skeleton with its test class
+  payment_model       a consumer's payment model from the product templates of the operations framework
+                      (ops-framework/templates/payment_model) and the consumer's mapping spec: adapter views,
+                      cube, trend, payment / request object pages, DCL, service, CDS test holder (--check)
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).

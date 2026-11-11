@@ -13,6 +13,8 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_RegisteredCheck as _RegisteredCheck
   composition [0..*] of ZR_CA_AggregateCheck as _AggregateCheck
   composition [0..*] of ZR_CA_ApprovedTable as _ApprovedTable
+  composition [0..*] of ZR_CA_PaymDimText as _PaymDimText
+  composition [0..*] of ZR_CA_PaymFeeder as _PaymFeeder
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -27,7 +29,9 @@ define root view entity ZR_CA_OpsCfgAll
       _Process,
       _RegisteredCheck,
       _AggregateCheck,
-      _ApprovedTable
+      _ApprovedTable,
+      _PaymDimText,
+      _PaymFeeder
 }
 where
   I_Language.Language = $session.system_language
