@@ -99,7 +99,6 @@ annotate entity ZC_CA_OpsProcStatus with
   @EndUserText.label: 'Active but not monitored'
   @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
   @UI.selectionField: [ { position: 40 } ]
-  @UI.dataPoint: { qualifier: 'UnmonitoredProcesses', title: 'Unmonitored' }
   IsUnmonitored;
   @EndUserText.label: 'Needs attention'
   @UI.selectionField: [ { position: 50 } ]
@@ -107,4 +106,7 @@ annotate entity ZC_CA_OpsProcStatus with
   @EndUserText.label: 'Active business processes'
   @UI.dataPoint: { qualifier: 'ActiveProcesses', title: 'Active business processes' }
   ProcessCount;
+  @EndUserText.label: 'Active but not monitored'
+  @UI.dataPoint: { qualifier: 'UnmonitoredProcesses', title: 'Unmonitored processes' }
+  UnmonitoredCount;
 }

@@ -40,5 +40,7 @@ define root view entity ZC_CA_OpsProcStatus
       IsUnmonitored,
       IsAttention,
       @Aggregation.default: #SUM
-      ProcessCount
+      ProcessCount,
+      @Aggregation.default: #SUM
+      UnmonitoredCount
 }

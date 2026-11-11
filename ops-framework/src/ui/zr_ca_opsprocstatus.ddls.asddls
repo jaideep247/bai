@@ -43,5 +43,6 @@ define root view entity ZR_CA_OpsProcStatus
       cast( case when Agg.StatusCriticality < 3 or Agg.StaleCount > 0
                    or ( Agg.CompanyCode = ' ' and Agg.CheckCount = 0 ) then 'X'
                  else ' ' end as abap_boolean )             as IsAttention,
-      cast( case when Agg.CompanyCode = ' ' then 1 else 0 end as abap.int4 ) as ProcessCount
+      cast( case when Agg.CompanyCode = ' ' then 1 else 0 end as abap.int4 ) as ProcessCount,
+      cast( case when Agg.CompanyCode = ' ' and Agg.CheckCount = 0 then 1 else 0 end as abap.int4 ) as UnmonitoredCount
 }
