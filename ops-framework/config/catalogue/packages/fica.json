@@ -550,15 +550,27 @@
    ],
    "tables": [
     {
-     "name": "‹invoicing document header›",
+     "name": "DFKKINVDOC_H",
      "role": "H",
      "description": "Invoicing documents",
      "verify": "V128"
     },
     {
-     "name": "‹billing document header›",
+     "name": "DFKKINVDOC_I",
+     "role": "I",
+     "description": "Invoicing document items (INVDOCNO, INVDOCITEM)",
+     "verify": "V128"
+    },
+    {
+     "name": "DFKKINVBILL_H",
      "role": "H",
      "description": "Billing documents to invoice",
+     "verify": "V128"
+    },
+    {
+     "name": "DFKKINVBILL_I",
+     "role": "I",
+     "description": "Billing document items (tax _T, additional _A)",
      "verify": "V128"
     }
    ],
@@ -571,7 +583,7 @@
      "aggregates": [
       {
        "id": "R1",
-       "table": "‹billing document header›",
+       "table": "DFKKINVBILL_H",
        "description": "Billing documents not invoiced",
        "func": "AGE",
        "date_field": "‹billing date field›",
@@ -607,9 +619,9 @@
    ],
    "tables": [
     {
-     "name": "‹interest history table›",
+     "name": "DFKKIH",
      "role": "L",
-     "description": "Interest calculated per item",
+     "description": "Interest history per item (interest document IOPBEL)",
      "verify": "V128"
     },
     {
@@ -628,7 +640,7 @@
      "aggregates": [
       {
        "id": "R1",
-       "table": "‹interest history table›",
+       "table": "DFKKIH",
        "description": "Interest lines in error",
        "func": "COUNT",
        "date_field": "‹run date field›",
@@ -676,9 +688,15 @@
      "link_object": "FICA_OPEN_ITEM"
     },
     {
-     "name": "‹write-off history table›",
+     "name": "DFKKWOH",
      "role": "L",
-     "description": "Write-off history",
+     "description": "Write-off history (ABBEL write-off, OPBEL original)",
+     "verify": "V128"
+    },
+    {
+     "name": "DFKKOPK",
+     "role": "I",
+     "description": "G/L lines of the write-off document (ABBEL of DFKKWOH)",
      "verify": "V128"
     }
    ],
@@ -763,7 +781,7 @@
    ],
    "tables": [
     {
-     "name": "‹instalment plan header›",
+     "name": "FKK_INSTPLN_HEAD",
      "role": "H",
      "description": "Instalment plans",
      "verify": "V128"
@@ -879,9 +897,15 @@
    ],
    "tables": [
     {
-     "name": "‹correspondence history header›",
+     "name": "DFKKCOH",
      "role": "H",
      "description": "Correspondence requests and their print state",
+     "verify": "V128"
+    },
+    {
+     "name": "DFKKCOHI",
+     "role": "L",
+     "description": "Correspondence history (detail in DFKKCOD by type)",
      "verify": "V128"
     }
    ],
@@ -894,7 +918,7 @@
      "aggregates": [
       {
        "id": "R1",
-       "table": "‹correspondence history header›",
+       "table": "DFKKCOH",
        "description": "Oldest correspondence not printed",
        "func": "AGE",
        "date_field": "‹request date field›",

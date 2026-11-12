@@ -1,7 +1,8 @@
 PROCESS_ID,TABNAME,TAB_ROLE,LINK_OBJECT,DESCRIPTION,EVIDENCE,VERIFY_REF
 FICA_CLEARING,DFKKOP,I,FICA_OPEN_ITEM,Open and cleared items,C,
 FICA_CLEARING,DFKKRAPT,L,,Clearing history (reset clearings),V,V128
-FICA_CORRESP,‹correspondence history header›,H,,Correspondence requests and their print state,V,V128
+FICA_CORRESP,DFKKCOH,H,,Correspondence requests and their print state,V,V128
+FICA_CORRESP,DFKKCOHI,L,,Correspondence history (detail in DFKKCOD by type),V,V128
 FICA_DEFERRAL,DFKKOP,I,FICA_OPEN_ITEM,Deferred items (deferral date),C,
 FICA_DUNNING,DFKKOP,I,FICA_OPEN_ITEM,Dunned items,C,
 FICA_DUNNING,FKKMAKO,H,,Dunning header (dunning history),C,
@@ -13,11 +14,13 @@ FICA_GL_TRANSFER,DFKKKO,H,FICA_DOC_HEADER,Documents of a reconciliation key,C,
 FICA_GL_TRANSFER,DFKKSUMC,S,FICA_SUMMARY_RECORD,Summary records of a reconciliation key,C,
 FICA_GL_TRANSFER,‹reconciliation key status table›,S,,"Reconciliation keys: closed, transferred",V,V128
 FICA_INSTALMENT,DFKKOP,I,FICA_OPEN_ITEM,Instalments (items of the plan),C,
-FICA_INSTALMENT,‹instalment plan header›,H,,Instalment plans,V,V128
+FICA_INSTALMENT,FKK_INSTPLN_HEAD,H,,Instalment plans,V,V128
+FICA_INTEREST,DFKKIH,L,,Interest history per item (interest document IOPBEL),V,V128
 FICA_INTEREST,DFKKOP,I,FICA_OPEN_ITEM,Items interest is calculated on,C,
-FICA_INTEREST,‹interest history table›,L,,Interest calculated per item,V,V128
-FICA_INVOICING,‹billing document header›,H,,Billing documents to invoice,V,V128
-FICA_INVOICING,‹invoicing document header›,H,,Invoicing documents,V,V128
+FICA_INVOICING,DFKKINVBILL_H,H,,Billing documents to invoice,V,V128
+FICA_INVOICING,DFKKINVBILL_I,I,,"Billing document items (tax _T, additional _A)",V,V128
+FICA_INVOICING,DFKKINVDOC_H,H,,Invoicing documents,V,V128
+FICA_INVOICING,DFKKINVDOC_I,I,,"Invoicing document items (INVDOCNO, INVDOCITEM)",V,V128
 FICA_PAYRUN,DFKKCR,L,FICA_CHEQUE,Cheque register (cheque method),C,
 FICA_PAYRUN,DFKKKO,H,FICA_DOC_HEADER,Payment documents,C,
 FICA_PAYRUN,DFKKOP,I,FICA_OPEN_ITEM,Items cleared by the payment,C,
@@ -32,7 +35,8 @@ FICA_RETURNS,DFKKRH,H,,Returns lot header,C,
 FICA_RETURNS,DFKKRP,I,FICA_RETURN_ITEM,"Returns lot items (returned payment, reason)",C,
 FICA_REVERSAL,DFKKKO,H,FICA_DOC_HEADER,Document header (reversal document STBEL),C,
 FICA_WRITEOFF,DFKKOP,I,FICA_OPEN_ITEM,"Written-off items (clearing and write-off reason, amount)",C,
-FICA_WRITEOFF,‹write-off history table›,L,,Write-off history,V,V128
+FICA_WRITEOFF,DFKKOPK,I,,G/L lines of the write-off document (ABBEL of DFKKWOH),V,V128
+FICA_WRITEOFF,DFKKWOH,L,,"Write-off history (ABBEL write-off, OPBEL original)",V,V128
 FSCD_BROKER,‹broker report header›,H,,Broker reports and their status,V,V128
 FSCD_CLAIMS,DPAYH,H,FICA_PAYMENT_RUN,Disbursements of the payment run,C,
 FSCD_CLAIMS,‹claims payment request table›,S,,Claim payment requests and their status,V,V128

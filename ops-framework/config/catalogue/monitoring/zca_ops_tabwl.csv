@@ -1,14 +1,14 @@
 AREA,TABLE_NAME,ACTIVE,APPROVED_BY,DESCRIPTION
 CA_FICA,DFKKRAPT,,,Clearing and reset of clearing
-CA_FICA,‹correspondence history header›,,,Correspondence
+CA_FICA,DFKKCOH,,,Correspondence
 CA_FICA,DFKKOP,,,Deferral of due dates
 CA_FICA,FKKMAKO,,,Dunning
 CA_FICA,FEBEP,,,Bank statement items to payment lots and clearing
 CA_FICA,‹reconciliation key status table›,,,G/L transfer and reconciliation keys
 CA_FICA,DFKKKO,,,G/L transfer and reconciliation keys
 CA_FICA,DFKKOP,,,Instalment plans
-CA_FICA,‹interest history table›,,,Interest calculation
-CA_FICA,‹billing document header›,,,Invoicing (FI-CA invoicing)
+CA_FICA,DFKKIH,,,Interest calculation
+CA_FICA,DFKKINVBILL_H,,,Invoicing (FI-CA invoicing)
 CA_FICA,DPAYH,,,Payment run (disbursements and collections)
 CA_FICA,DFKKZK,,,Incoming payment lots and cash journal
 CA_FICA,DFKKZP,,,Incoming payment lots and cash journal

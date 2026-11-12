@@ -1,6 +1,6 @@
 AREA,CHECK_ID,AGG_ID,DESCRIPTION,TABNAME,AGG_FUNC,DATE_FIELD,MIN_AGE_DAYS,MAX_AGE_DAYS,TIME_FIELD,BUKRS_FIELD,STATUS_FIELD,STATUS_OP,STATUS_VALUE,COND_FIELD,COND_OP,COND_VALUE,AMBER,RED,CHECK_CODE,ACTIVE
 CA_FICA,FICA_CLR_RESET,R1,Clearing resets of the last day,DFKKRAPT,COUNT,‹reset date field›,0,1,,,,,,,,,‹amber count›,‹red count›,CLEARING_RESET_VOLUME,
-CA_FICA,FICA_CORR_OPEN,R1,Oldest correspondence not printed,‹correspondence history header›,AGE,‹request date field›,1,0,,,‹print status field›,NE,‹printed value›,,,,1,3,CORRESPONDENCE_NOT_PRINTED,
+CA_FICA,FICA_CORR_OPEN,R1,Oldest correspondence not printed,DFKKCOH,AGE,‹request date field›,1,0,,,‹print status field›,NE,‹printed value›,,,,1,3,CORRESPONDENCE_NOT_PRINTED,
 CA_FICA,FICA_DEF_EXPIRED,R1,Open items past their deferral date,DFKKOP,COUNT,‹deferral date field›,1,0,,,‹clearing status field›,NE,‹cleared value›,,,,‹amber count›,‹red count›,DEFERRAL_EXPIRED,
 CA_FICA,FICA_DUN_NOACT,R1,Proposals without activity run,FKKMAKO,COUNT,‹dunning date field›,1,0,,,‹activity run status field›,EQ,‹proposal only value›,,,,1,‹red count›,DUNNING_NO_ACTIVITY,
 CA_FICA,FICA_EBS_NOLOT,R1,Items of past days without FI-CA transfer,FEBEP,COUNT,BUDAT,1,0,,,‹FI-CA transfer flag›,NE,X,,,,1,‹red count›,EBS_ITEM_NOT_IN_FICA,
@@ -8,8 +8,8 @@ CA_FICA,FICA_GL_OPENKEY,R1,Oldest key not transferred,‹reconciliation key stat
 CA_FICA,FICA_GL_OUTAGE,OUT_POST,Documents entered inside a planned downtime window,DFKKKO,COUNT,CPUDT,0,0,CPUTM,,,,,,,,1,‹red count›,POSTED_IN_DOWNTIME,
 CA_FICA,FICA_GL_OUTAGE,OUT_GLKEY,Keys of the downtime days not transferred,‹reconciliation key status table›,COUNT,‹key date field›,0,0,,,‹key status field›,NE,‹transferred value›,,,,1,1,GL_GAP_AROUND_DOWNTIME,
 CA_FICA,FICA_IP_BREACH,R1,Overdue instalments,DFKKOP,COUNT,‹due date field›,‹tolerance days›,0,,,‹instalment item flag›,EQ,X,‹clearing status field›,NE,‹cleared value›,1,‹red count›,INSTALMENT_BREACH,
-CA_FICA,FICA_INT_MISSED,R1,Interest lines in error,‹interest history table›,COUNT,‹run date field›,0,1,,,‹error flag›,EQ,X,,,,1,‹red count›,INTEREST_ERROR,
-CA_FICA,FICA_INV_BACKLOG,R1,Billing documents not invoiced,‹billing document header›,AGE,‹billing date field›,1,0,,,‹invoicing status field›,NE,‹invoiced value›,,,,1,3,INVOICING_BACKLOG,
+CA_FICA,FICA_INT_MISSED,R1,Interest lines in error,DFKKIH,COUNT,‹run date field›,0,1,,,‹error flag›,EQ,X,,,,1,‹red count›,INTEREST_ERROR,
+CA_FICA,FICA_INV_BACKLOG,R1,Billing documents not invoiced,DFKKINVBILL_H,AGE,‹billing date field›,1,0,,,‹invoicing status field›,NE,‹invoiced value›,,,,1,3,INVOICING_BACKLOG,
 CA_FICA,FICA_PAYRUN_NOPAY,R1,Payments of past runs without a payment document,DPAYH,COUNT,LAUFD,1,0,,BUKRS,DOC1R,EQ,,,,,1,‹red count›,PAYRUN_NO_DOCUMENT,
 CA_FICA,FICA_LOT_OPEN,R1,Oldest payment lot not closed,DFKKZK,AGE,‹lot creation date field›,1,0,,,‹lot status field›,NE,‹closed value›,,,,1,3,LOT_NOT_CLOSED,
 CA_FICA,FICA_LOT_CLARIF,R1,Lot items in clarification,DFKKZP,COUNT,‹lot item date field›,1,0,,,‹clarification flag›,EQ,X,,,,1,‹red count›,LOT_ITEM_CLARIFICATION,

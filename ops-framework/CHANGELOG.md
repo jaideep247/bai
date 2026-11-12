@@ -7,6 +7,12 @@ All notable changes of the operations framework (`ops-framework/` in jaideep247/
 Goal (user, 2026-11-11): SAP-native subledger operations and reconciliation evidence - read-only, no matching, no
 postings (`docs/BREAK_ANALYSIS.md`, `docs/PILOT_PACK.md`).
 
+### Changed (2026-11-12, process catalogue table names)
+- FI-CA catalogue placeholders replaced by SAP standard table names from SAP documentation (evidence V, V128 until
+  seen in SE11): invoicing `DFKKINVDOC_H` / `_I`, billing `DFKKINVBILL_H` / `_I`, interest history `DFKKIH`, write-off
+  history `DFKKWOH` (G/L lines `DFKKOPK`), instalment plan `FKK_INSTPLN_HEAD`, correspondence `DFKKCOH` / `DFKKCOHI`.
+  Date / status fields of the aggregates stay placeholders; every process and monitoring row stays inactive.
+
 ### Added
 - Break analysis: configuration tables `ZCA_OPS_BRKACC`, `_BRKBKT`, `_BRKRUL`, `_BRKCND` (entities of `ZUI_CA_OPS_CFG`),
   snapshot `ZCA_OPS_BRKRUN` / `_BRKGRP` / `_BRKITM`; `ZIF_CA_OPS_BRK_TYPES`, `ZIF_CA_OPS_BRK_DAO` / `ZCL_CA_OPS_BRK_DAO`

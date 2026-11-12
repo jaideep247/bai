@@ -229,12 +229,14 @@ Package FICA · component FI-CA · dashboard card INVOICING · business owner ro
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `‹invoicing document header›` | header | - | Invoicing documents | V V128 |
-| `‹billing document header›` | header | - | Billing documents to invoice | V V128 |
+| `DFKKINVDOC_H` | header | - | Invoicing documents | V V128 |
+| `DFKKINVDOC_I` | item | - | Invoicing document items (INVDOCNO, INVDOCITEM) | V V128 |
+| `DFKKINVBILL_H` | header | - | Billing documents to invoice | V V128 |
+| `DFKKINVBILL_I` | item | - | Billing document items (tax _T, additional _A) | V V128 |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_INV_BACKLOG | Billing documents of past days not invoiced | R1: AGE `‹billing document header›`, date ‹billing date field› (>= 1 d), ‹invoicing status field› NE ‹invoiced value›, amber 1 / red 3 | V V128 |
+| FICA_INV_BACKLOG | Billing documents of past days not invoiced | R1: AGE `DFKKINVBILL_H`, date ‹billing date field› (>= 1 d), ‹invoicing status field› NE ‹invoiced value›, amber 1 / red 3 | V V128 |
 
 ### FICA_INTEREST - Interest calculation
 
@@ -246,12 +248,12 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `‹interest history table›` | log / history | - | Interest calculated per item | V V128 |
+| `DFKKIH` | log / history | - | Interest history per item (interest document IOPBEL) | V V128 |
 | `DFKKOP` | item | FICA_OPEN_ITEM | Items interest is calculated on | C  |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_INT_MISSED | Interest runs that did not post (error lines) | R1: COUNT `‹interest history table›`, date ‹run date field› (<= 1 d), ‹error flag› EQ X, amber 1 / red ‹red count› | V V128 |
+| FICA_INT_MISSED | Interest runs that did not post (error lines) | R1: COUNT `DFKKIH`, date ‹run date field› (<= 1 d), ‹error flag› EQ X, amber 1 / red ‹red count› | V V128 |
 
 ### FICA_WRITEOFF - Write-off
 
@@ -267,7 +269,8 @@ Carries the generic write-off risk checks: write-offs above an amount limit and 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
 | `DFKKOP` | item | FICA_OPEN_ITEM | Written-off items (clearing and write-off reason, amount) | C  |
-| `‹write-off history table›` | log / history | - | Write-off history | V V128 |
+| `DFKKWOH` | log / history | - | Write-off history (ABBEL write-off, OPBEL original) | V V128 |
+| `DFKKOPK` | item | - | G/L lines of the write-off document (ABBEL of DFKKWOH) | V V128 |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
@@ -285,7 +288,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `‹instalment plan header›` | header | - | Instalment plans | V V128 |
+| `FKK_INSTPLN_HEAD` | header | - | Instalment plans | V V128 |
 | `DFKKOP` | item | FICA_OPEN_ITEM | Instalments (items of the plan) | C  |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
@@ -319,11 +322,12 @@ Package FICA · component FI-CA · dashboard card CUSTOMER · business owner rol
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `‹correspondence history header›` | header | - | Correspondence requests and their print state | V V128 |
+| `DFKKCOH` | header | - | Correspondence requests and their print state | V V128 |
+| `DFKKCOHI` | log / history | - | Correspondence history (detail in DFKKCOD by type) | V V128 |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_CORR_OPEN | Correspondence requests not printed after n days | R1: AGE `‹correspondence history header›`, date ‹request date field› (>= 1 d), ‹print status field› NE ‹printed value›, amber 1 / red 3 | V V128 |
+| FICA_CORR_OPEN | Correspondence requests not printed after n days | R1: AGE `DFKKCOH`, date ‹request date field› (>= 1 d), ‹print status field› NE ‹printed value›, amber 1 / red 3 | V V128 |
 
 ### FICA_GL_TRANSFER - G/L transfer and reconciliation keys
 
