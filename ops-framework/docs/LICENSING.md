@@ -165,7 +165,7 @@ and the system's identity, and writes only `ZCA_OPS_LIC` / `_LICM` / `_LICMOD` a
 | D-L2 | Customer extensions (`EXTENSIONS`) part of `CORE`, not a module | refusing them would break the customer's own objects that sit on the product views |
 | D-L3 | Areas are not licensed | an area is the customer's grouping; modules decide what runs in it |
 | D-L4 | Fingerprint of the vendor's certificate in the product constant `GC_VENDOR-CERT_SHA256` | set it in the release build once the vendor's certificate exists (blank = subject check only) |
-| D-L5 | Licence installation = `ZCA_OPS` 01 (check 03) for area `CA_OPS`, no new activity | a separate licence administrator role `Z_CA_OPS_LICENSE` in each system (`docs/auth_zca_ops.md`) |
+| D-L5 | Licence installation = `ZCA_OPS` 01 (check 03) for area `CA_OPS`, no new activity, **no new role: the existing configuration role `Z_CA_OPS_CONFIG` (decided 2026-11-15)** | the role is assigned in each system where the licence is installed (DV1, QA1, PS4); outside DV1 its other activities create or change no configuration (the apps refuse it) |
 | D-L6 | `LIC_ENFORCE` delivered `W` | switch to `X` per system after the installation (INSTALL 6h) |
 | D-L7 | A running module that ends keeps its stored data readable and its exceptions workable | not negotiable: no licence state hides data |
 | D-L8 | Planned downtime windows app, metrics and handover (`RESPONSE`) are not gated (read apps / planning); escalation, runbook links and correlation rules are | revisit if the downtime app should be refused under X |

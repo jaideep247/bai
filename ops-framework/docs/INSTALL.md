@@ -269,8 +269,9 @@ missing licence as an exception of `CA_OPS`.
 1. Binding `ZUI_CA_OPS_LIC_O4` (OData V4 - UI); republish `ZUI_CA_OPS_CFG_O4` (activation now checks the licence,
    message 350, refused only under `X`).
 2. Basis, per system (DV1, QA1, PS4): SSF application and PSE for the licence, the vendor's certificate in its
-   certificate list (STRUST); parameter `LIC_SSF_PROFILE` = the PSE (V166). Role `Z_CA_OPS_LICENSE` (`ZCA_OPS` 01 / 03
-   for `CA_OPS`) for the licence administrator (`docs/auth_zca_ops.md`).
+   certificate list (STRUST); parameter `LIC_SSF_PROFILE` = the PSE (V166). The licence is installed with the
+   existing configuration role `Z_CA_OPS_CONFIG` (`ZCA_OPS` 01 / 03 for `CA_OPS`), assigned in each system (D-L5,
+   `docs/auth_zca_ops.md`).
 3. Per system: `ZCA_OPS_LICENSE_INSTALL` in test mode, then without - the licence file the vendor issued for that
    system's installation number and SID; check the dashboard and the next run of the `LICENSE` check (registry row
    `CA_OPS / LICENSE`, group `MORNING`, delivered active). The licence is per system - never transported.

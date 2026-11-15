@@ -2,6 +2,12 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (licence installation role)
+
+### Changed
+- Decision D-L5: the vendor's licence is installed with the existing configuration role `Z_CA_OPS_CONFIG` (`ZCA_OPS`
+  01 / 03 for `CA_OPS`); the proposed role `Z_CA_OPS_LICENSE` is dropped (`docs/auth_zca_ops.md`, `LICENSING.md`, INSTALL).
+
 ## [Unreleased] - 2026-11-15 (build I: field references checked against a reference system)
 
 Evidence: the dictionary of 46 SAP standard tables of a reference system (S/4HANA 2025 with FI-CA; the product

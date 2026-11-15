@@ -62,13 +62,15 @@ active-process rows of the dashboard (`ZC_CA_OpsProcStatus`) follow the area das
 **Licensing - installation of the vendor's licence (decision D-L5, 2026-11-15, `docs/LICENSING.md`).** No new
 activity and no new field: checking a licence file with `ZCA_OPS_LICENSE_INSTALL` in test mode needs **03**, installing
 it **01** (create), both for the framework's own area `CA_OPS`. The licence is installed per system (DV1, QA1, PS4 -
-never transported), so the role `Z_CA_OPS_LICENSE` exists in production too; 01 for `CA_OPS` there creates no
+never transported), so the configuration role `Z_CA_OPS_CONFIG` - which already holds 01 / 03 for `CA_OPS` and is the
+role that installs the licence (decided 2026-11-15, no separate licence role) - is assigned in QA1 and PS4 too, to the
+licence administrator only; 01 for `CA_OPS` there creates no
 configuration row (the configuration apps refuse new rows outside DV1, D-3) and plans at most a downtime window of
 `CA_OPS`. A file read from the application server needs `S_DATASET` READ on the logical path `LIC_FILE_PATH`. The
 dashboard `ZUI_CA_OPS_LIC` needs 03 for `CA_OPS` (DCLs `ZC_CA_OPSLICMODULE`, `ZC_CA_OPSLICENSE`). Under
 `LIC_ENFORCE = X` the licence refuses a module whatever the user's roles: no authorisation grants an unlicensed
-module. A landscape that wants the licence administrator separate from the configuration owner keeps the two roles
-apart (as proposed in §3); a separate activity is the documented alternative, not built.
+module. A landscape that wants the licence administrator separate from the configuration owner can copy the role
+with 01 / 03 only; a separate activity is the documented alternative, not built.
 
 **Daily control review - activity of the sign-off (decision 2026-11-10).** The sign-off uses the existing change
 activity **02** of the control's area, not a new activity: the reviewer is the operator who already works the
@@ -84,10 +86,9 @@ no separate sign-off activity.
 |---|---|---|---|
 | `Z_CA_OPS_DISPLAY` | * | 03 | * |
 | `Z_CA_OPS_BATCH` (job user) | `CA_OPS` + the consumer areas it runs | 16 | * |
-| `Z_CA_OPS_CONFIG` (configuration owner of the framework; also the link registry and the process catalogue with its activation rows, 2026-11-11 - DV1 only) | `CA_OPS` | 01, 02, 03, 06 | * |
+| `Z_CA_OPS_CONFIG` (configuration owner of the framework; also the link registry and the process catalogue with its activation rows, 2026-11-11 - DV1 only; 2026-11-15: also installs the vendor's licence, so it is assigned to the licence administrator in QA1 and PS4) | `CA_OPS` | 01, 02, 03, 06 | * |
 | `Z_CA_OPS_DOWNTIME_PLANNER` (2026-11-11: plans downtime windows of an area) | the area | 01, 02, 03, 06 | * |
 | `Z_CA_OPS_DOWNTIME_APPROVER` (2026-11-11: approves them - never the planner) | the area | 03, 85 | * |
-| `Z_CA_OPS_LICENSE` (2026-11-15: licence administrator - installs the vendor's licence in each system) | `CA_OPS` | 01, 03 | * |
 
 **SAP job monitor (2026-11-11).** The job user of `ZCA_OPS_CHECK_RUN` for the monitor's area also needs `S_BTCH_JOB`
 JOBACTION `PROT` (display job log), JOBGROUP `*` - read only; the monitor never releases, cancels, changes or restarts
