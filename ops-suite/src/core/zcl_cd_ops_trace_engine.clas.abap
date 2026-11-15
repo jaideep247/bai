@@ -38,6 +38,7 @@
 *& 2026-11-10 | A BP_SOURCE_FIELD the partner read refuses is a CONFIGURATION row (815), no longer cleared
 *&            | silently; the row never decides the verdict.
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*& 2026-11-15 | Cheque row shows DFKKCR-STATE (no CRSTATUS).
 *&            | currency).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
@@ -882,7 +883,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                                                        iv_v1    = <ls_check>-ztnum
                                                        iv_v2    = <ls_check>-hbkid
                                                        iv_v3    = <ls_check>-hktid
-                                                       iv_v4    = <ls_check>-crstatus ).
+                                                       iv_v4    = <ls_check>-state ).
         add_row( is_attempt = is_attempt is_row = ls_base ).
       ENDLOOP.
     ELSE.

@@ -27,6 +27,7 @@
 *&            | (through ZI_CD_OpsGlItem), get_gl_balances the released I_JournalEntryItem (through
 *&            | ZI_CD_EbsGlLine) - no DCL in a job read; same keys, filters and sums.
 *& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V159 / V160 noted.
+*& 2026-11-15 | Cheque status read from DFKKCR-STATE (DFKKCR has no CRSTATUS, user).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -45,7 +46,7 @@ CLASS zcl_cd_ebs_sap_dao DEFINITION
   PRIVATE SECTION.
     "! Check register and its static field list (A07 appends the configured company-code field)
     CONSTANTS gc_check_table TYPE string VALUE `DFKKCR`.
-    CONSTANTS gc_check_fields TYPE string VALUE `ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus`.
+    CONSTANTS gc_check_fields TYPE string VALUE `ztnum, hbkid, hktid, doc1r, rwbtr AS amount, state`.
     CONSTANTS gc_sql_separator TYPE string VALUE `, `.
     CONSTANTS gc_sql_as_bukrs TYPE string VALUE ` AS bukrs`.
 
@@ -202,8 +203,8 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
   METHOD zif_cd_ebs_sap_dao~get_checks.
     CHECK it_ztnum IS NOT INITIAL.
     " Confirmed: DFKKCR-ZTNUM = FEBEP-CHECT, DFKKCR-DOC1R = DFKKOP-AUGBL.
-    " DFKKCR-RWBTR (amount) seen on the reference system S/4HANA 2025; CRSTATUS (legacy v4 581/255) is not a
-    " field there - VERIFY V159 (ddic/open_fields.csv; the company code of a cheque is DFKKCR-BBUKR);
+    " DFKKCR-RWBTR (amount) seen on the reference system S/4HANA 2025; the cheque status is STATE (legacy v4
+    " 581/255 read CRSTATUS, which DFKKCR does not have - user 2026-11-15; the company code is DFKKCR-BBUKR);
     " HBKID/HKTID returned so rules scope a check number to its house bank account
     " A07: optional company-code field (EBS_DFKKCR_BUKRS_FIELD), validated against the DDIC
     DATA(lv_fields) = gc_check_fields.

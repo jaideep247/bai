@@ -3,6 +3,12 @@
 Changes of the ops suite (`ops-suite/`) from 2026-11-15 on; earlier changes are in the modification logs of the
 objects, `docs/Class_Purpose_and_Modification_Log.md`, `docs/Implementation_Order.md` and `docs/history/`.
 
+## 2026-11-15 - cheque status from DFKKCR-STATE
+
+- `DFKKCR` has no `CRSTATUS` (user); the cheque status is `STATE` (B cashed, V voided, blank open). `ZCL_CD_EBS_SAP_DAO`,
+  `ZCL_CD_OPS_TRACE_DAO`, the trace engine and their types read `STATE`; rule R07C forbids `V` by default (legacy 99 =
+  cancelled), BTC rule `BAI255D` PARAM1 `V`; tests on `V` / `B`. V159 closed, row removed from `ddic/open_fields.csv`.
+
 ## [Unreleased] - 2026-11-15 (build I: field references checked against a reference system)
 
 Evidence: `ddic/a4h` - the dictionary of 46 SAP standard tables of a reference system (S/4HANA 2025 with FI-CA). A

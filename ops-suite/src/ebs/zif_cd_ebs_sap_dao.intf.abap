@@ -21,6 +21,7 @@
 *& 2026-11-07 | TY_RETURN_ITEM-AMOUNT (DFKKRP-BETRW) for the in-flight check (shared read, A_INFLIGHT).
 *& 2026-11-08 | Customer posting area: FICA_REASON is a result of ZRSN (was ZCD_EBS_RSN_MAP) - comment only.
 *& 2026-11-10 | is_lookup_field_approved: ZCD_OPS_TABWL row EBS / LOOKUP for the table and field (R21,
+*& 2026-11-15 | TY_CHECK-CRSTATUS renamed STATE (DFKKCR-STATE).
 *&            | DEFAULT IGNORE); get_lookup_rows reads only approved fields with S_TABU_NAM 03.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
@@ -108,7 +109,8 @@ INTERFACE zif_cd_ebs_sap_dao
       hktid    TYPE c LENGTH 5,
       doc1r    TYPE ty_docno,
       amount   TYPE zif_ca_ops_types=>ty_amount,
-      crstatus TYPE ty_status,
+      "! Cheque status DFKKCR-STATE (B cashed, V voided, blank open; user 2026-11-07 / 2026-11-15)
+      state    TYPE ty_status,
     END OF ty_check.
   TYPES tt_check TYPE STANDARD TABLE OF ty_check WITH EMPTY KEY.
 

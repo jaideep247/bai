@@ -25,6 +25,7 @@
 *&            | and AMOUNT of the request log, TY_CFG_ROW-DUE / AMOUNT, keyset position TY_CFG_SEEK.
 *& 2026-11-10 | Stage CONFIGURATION (configuration row, never the verdict); message 815 (partner filter off).
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*& 2026-11-15 | TY_CHECK-CRSTATUS removed (DFKKCR has no such field).
 *&            | currency). Constant GC_TABLE-DFKKSUM (was SUMC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
@@ -412,7 +413,6 @@ INTERFACE zif_cd_ops_trace_types
       hktid    TYPE c LENGTH 5,
       doc1r    TYPE ty_docno,
       amount   TYPE zif_ca_ops_types=>ty_amount,
-      crstatus TYPE c LENGTH 20,
       "! Cheque status DFKKCR-STATE (confirmed 2026-11-07: B cashed, V voided, blank open);
       "! read by get_checks_by_doc
       state    TYPE c LENGTH 1,

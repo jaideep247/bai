@@ -20,7 +20,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | V139-V141, V144 | Build F: break analysis overlay - assignment carries the payment document (overlay links), bank transaction code lists, accounts of the reconciliation sets and PlanViz on the busiest account; pilot baselines and export path (2026-11-11) | `Break_Analysis_Overlay.md` §6 |
 | V150-V152 | Build G: account flow overlay - accounts of the flows by role, values of the stage rules, findings area of the morning report's checks and PlanViz on the busiest account (2026-11-15) | `Account_Flow_Overlay.md` §4 |
 | V158 | Build H: customer extensions - the pack's generated extensions of the framework views activate from `src/ext` (worklist state of the payment next to the break groups, query copy), PlanViz of the break list with the association (2026-11-15) | `Extensions_Overlay.md` §4 |
-| **V159-V161** | **Fields the suite's code reads that the reference system does not have (2026-11-15, build I)** | **this document, §4; `ddic/open_fields.csv`** |
+| **V159-V161** (V159 closed) | **Fields the suite's code reads that the reference system does not have (2026-11-15, build I)** | **this document, §4; `ddic/open_fields.csv`** |
 | V130, V131 | Process catalogue customer layer: the customer process's table and programs, approval of the activation proposal and the order of the catalogue rows before `CAT_PROCESS` (2026-11-11) | `Process_Catalogue_Overlay.md` §4 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping
@@ -72,7 +72,7 @@ transfer gaps), `ZCL_CD_HCK_RECON_DAO=>GET_FICA_DAYS`, `ZCL_CD_OPS_TRACE_DAO=>GE
 
 | ID | Kind | Item |
 |---|---|---|
-| V159 | VERIFY-SE11 / business | `DFKKCR-CRSTATUS` is not a field of DFKKCR on the reference system (cheque status there: `STATE`, `CHKSTATE`). Read by `ZCL_CD_OPS_TRACE_DAO=>GET_CHECKS_BY_DOC` and the EBS check list of `ZCL_CD_EBS_SAP_DAO` (rule R07C, value 99 = cancelled, from the legacy validator). SE11 of the landscape: a customer field of that name (then evidence C) - else R07C and the trace read `STATE` (code change; until then the read stops activation of both DAOs) |
+| V159 | Closed 2026-11-15 | `DFKKCR` has no `CRSTATUS` (user, 2026-11-15; also absent on the reference system). The cheque status is `DFKKCR-STATE` (`CHKSTATE`, CHAR 1: B cashed, V voided, blank open - user 2026-11-07): `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_OPS_TRACE_DAO` and the trace engine read it; rule R07C forbids `V` by default (legacy 255D: status 99 = cancelled), BTC rule `BAI255D` PARAM1 `V`. |
 | V160 | VERIFY-SE11 / business | `DFKKRP-BETRW` is not a field of DFKKRP on the reference system: the returns item has `BETRR` (`BETRR_KK`), `BETRH` (`BETRH_KK`), `BETRU` (`BETRU_KK`) with `WAERS` / `WAERU`. Which one is the returned amount `A_INFLIGHT` compares with the return line is not clear from the data elements - decide in SE11 (texts) / with FI-CA, then change `ZCL_CD_EBS_SAP_DAO=>GET_RETURN_ITEMS` and its test double |
 | V161 | VERIFY-SE11 / design | `TFK033D` has `FUN01`-`FUN06` (CHAR 12) only - the ZBTM layout has 7 results (`FUN07` = DISPOSITION, audit A26); keys and results are CHAR 12, shorter than the layouts of `FICA_Posting_Areas.md` assume. Decide the ZBTM layout (e.g. disposition combined with another result, or kept in a parameter) before gate 1; `ZCL_CD_OPS_POSTAREA_DAO` reads `FUN07` until then |
 

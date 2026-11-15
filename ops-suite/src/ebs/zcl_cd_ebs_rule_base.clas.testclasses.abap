@@ -36,6 +36,7 @@
 *&            | as the rule capability (helper run_lot_chain).
 *& 2026-11-08 | Configuration double: get_reason (R05 asks the DAO for the ZRSN entry of a reason).
 *& 2026-11-10 | s04_unconfigured_account: the account number is masked in the message (B15).
+*& 2026-11-15 | R07C tests on DFKKCR-STATE (V voided, B cashed).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -775,7 +776,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   METHOD r07c_cancelled_check_fails.
     DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
     ls_check-ztnum    = gc_test-ref.
-    ls_check-crstatus = '99'.
+    ls_check-state    = 'V'.
     INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
     add_statement( ).
     add_line( ).
@@ -1123,9 +1124,9 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
     DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
     TRY.
         ls_check-ztnum    = gc_test-ref.
-        ls_check-crstatus = '01'.
+        ls_check-state    = 'B'.
         INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
-        ls_check-crstatus = '99'.
+        ls_check-state    = 'V'.
         INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
         add_statement( ).
         add_line( ).
@@ -1560,7 +1561,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
         ls_check-hbkid    = gc_test-hbkid.
         ls_check-hktid    = gc_test-hktid.
         ls_check-amount   = gc_test-amount.
-        ls_check-crstatus = '99'.
+        ls_check-state    = 'V'.
         INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
         add_statement( ).
         add_line( ).
