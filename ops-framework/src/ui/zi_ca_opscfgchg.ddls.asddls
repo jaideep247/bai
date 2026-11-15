@@ -162,3 +162,33 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_flow
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_flwacc
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_flwstg
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_flwtil
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_flwctl
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_flwrul
+  {
+    last_changed_at as LastChangedAt
+  }

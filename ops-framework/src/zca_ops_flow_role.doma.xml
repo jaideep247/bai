@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_DOMA" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <DD01V>
+    <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+    <DDLANGUAGE>E</DDLANGUAGE>
+    <DATATYPE>CHAR</DATATYPE>
+    <LENG>000015</LENG>
+    <OUTPUTLEN>000015</OUTPUTLEN>
+    <VALEXI>X</VALEXI>
+    <DDTEXT>Role of an account in an account flow</DDTEXT>
+    <DOMMASTER>E</DOMMASTER>
+   </DD01V>
+   <DD07V_TAB>
+    <DD07V>
+     <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+     <VALPOS>0001</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>RECEIVABLE</DOMVALUE_L>
+     <DDTEXT>Receivable</DDTEXT>
+    </DD07V>
+    <DD07V>
+     <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+     <VALPOS>0002</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>PAYABLE</DOMVALUE_L>
+     <DDTEXT>Payable</DDTEXT>
+    </DD07V>
+    <DD07V>
+     <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+     <VALPOS>0003</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>OUTSIDE</DOMVALUE_L>
+     <DDTEXT>Outside the control chain</DDTEXT>
+    </DD07V>
+    <DD07V>
+     <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+     <VALPOS>0004</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>SETTLEMENT</DOMVALUE_L>
+     <DDTEXT>Settlement</DDTEXT>
+    </DD07V>
+    <DD07V>
+     <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+     <VALPOS>0005</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>CLEARING</DOMVALUE_L>
+     <DDTEXT>Clearing</DDTEXT>
+    </DD07V>
+    <DD07V>
+     <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+     <VALPOS>0006</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>CASH</DOMVALUE_L>
+     <DDTEXT>Cash (house bank)</DDTEXT>
+    </DD07V>
+    <DD07V>
+     <DOMNAME>ZCA_OPS_FLOW_ROLE</DOMNAME>
+     <VALPOS>0007</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>CLARIFICATION</DOMVALUE_L>
+     <DDTEXT>Clarification</DDTEXT>
+    </DD07V>
+   </DD07V_TAB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

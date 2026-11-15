@@ -1,0 +1,13 @@
+AREA,FLOW_ID,STAGE_ID,SEQ,DESCRIPTION,EXPECT_FROM,EXPECT_TO,ACTIVE
+CA_FICA,DISB,REQUEST,10,Payment request posted (payable),,,
+CA_FICA,DISB,PAYRUN,20,Payment run (FPY1),,,
+CA_FICA,DISB,BANK_PAID,30,Bank statement: paid,,,
+CA_FICA,DISB,BANK_RETURN,40,Bank statement: return,,,
+CA_FICA,DISB,RETURNS_LOT,50,Returns lot (payable reopened),CLARIFICATION,PAYABLE,
+CA_FICA,DISB,GL_TRANSFER,60,G/L transfer (FPG1),,,
+CA_FICA,COLL,RECEIVABLE,10,Receivable posted (billing / invoicing),,,
+CA_FICA,COLL,PAYMENT_LOT,20,Payment lot or payment run (incoming),,,
+CA_FICA,COLL,SETTLEMENT,30,Settlement by the acquirer or bank,,,
+CA_FICA,COLL,BANK_CREDIT,40,Bank statement: credit,,,
+CA_FICA,COLL,CLARIFY,50,Clarification of payment lot items,CLARIFICATION,RECEIVABLE,
+CA_FICA,COLL,GL_TRANSFER,60,G/L transfer (FPG1),,,

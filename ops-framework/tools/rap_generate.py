@@ -33,6 +33,9 @@ Modification log:
            | (083 check), operator NI (none of a list).
 2026-11-11 | Clearing-account break analysis: accounts, buckets, bucket rules (PCRE account pattern, bucket required)
            | and their conditions (kind, operator, LINK needs its link); pilot detection baselines per check.
+2026-11-15 | Account flow reconciliation: flows, accounts by role (role, line source, plug-in class of what checks
+           | account for), stages (expected roles, reserved rows 340), tiles fed by stage rows, stage controls and
+           | ordered stage rules (criteria of the rule's line source only).
 """
 import os
 import sys
@@ -45,6 +48,11 @@ _engine = abaptools.fresh('rap_generate', 'ops_framework')
 FILLED = _engine.FILLED
 
 SEV = 'B,E,W,I'
+# Account flow reconciliation (2026-11-15): roles of an account, stage IDs the dashboard reserves (a rule may name
+# OTHER - a rule that sends lines to the row OTHER on purpose - but none of the position rows)
+FLOW_ROLES = 'RECEIVABLE,PAYABLE,OUTSIDE,SETTLEMENT,CLEARING,CASH,CLARIFICATION'
+FLOW_RESERVED = 'OTHER,MOVEMENT,OPENING,CLOSING,UNEXPLAINED'
+FLOW_RESERVED_RULE = 'MOVEMENT,OPENING,CLOSING,UNEXPLAINED'
 
 SPEC = {
     # The framework's own app (2026-11-10): sub-package ZCA_OPS_UI (folder ui), prefix CA, messages of
@@ -177,6 +185,32 @@ SPEC = {
             # Pilot pack (2026-11-11): the previous detection time per check (baseline of the time to detect)
             ('zca_ops_pilotbl', 'PilotBaseline', 'zca_d_pilotbl', 'Baseline', 'Pilot detection baselines', [],
              [('area', 'area', False)]),
+            # Account flow reconciliation (2026-11-15): flows, their accounts by role, stages, the checks that
+            # control a stage and the ordered stage rules (first match wins); cross-row rules (stage of a rule, one
+            # account per role, criteria of the rule's source) are the evaluation's (ZCL_CA_OPS_FLOW_CONFIG=>VALIDATE)
+            # and the offline validator's (tools/checks.py flow_config)
+            ('zca_ops_flow', 'AccountFlow', 'zca_d_flow', 'Flow', 'Account flows', [],
+             [('area', 'area', False), ('enum', 'direction', ',D,C')]),
+            ('zca_ops_flwacc', 'FlowAccount', 'zca_d_flwacc', 'Flow account', 'Account flow accounts by role', [],
+             [('area', 'area', False), ('enum', 'role', FLOW_ROLES), ('enum', 'line_source', 'G,F'),
+              ('enum', 'eval_category', ',TRANSIT,CLARIFY,OPEN,BANK'),
+              ('class', 'eval_class', 'ZIF_CA_OPS_FLOW_SOURCE'),
+              ('when', 'active', 'X', [('required', 'bukrs'), ('required', 'hkont_from')])]),
+            ('zca_ops_flwstg', 'FlowStage', 'zca_d_flwstg', 'Stage', 'Account flow stages', [],
+             [('area', 'area', False),
+              ('enum', 'expect_from', ',' + FLOW_ROLES), ('enum', 'expect_to', ',' + FLOW_ROLES),
+              ('when', 'active', 'X', [('reserved', 'stage_id', FLOW_RESERVED)]),
+              ('when', 'expect_from', FILLED, [('required', 'expect_to')])]),
+            ('zca_ops_flwtil', 'FlowTileStage', 'zca_d_flwtil', 'Tile row', 'Account flow tiles from stages', [],
+             [('area', 'area', False), ('enum', 'tile', 'REQUESTED,PAID,CLEARED'), ('enum', 'role', FLOW_ROLES),
+              ('enum', 'side', 'D,C')]),
+            ('zca_ops_flwctl', 'FlowStageControl', 'zca_d_flwctl', 'Stage control', 'Account flow stage controls', [],
+             [('area', 'area', False), ('area', 'check_area', False)]),
+            ('zca_ops_flwrul', 'FlowStageRule', 'zca_d_flwrul', 'Stage rule', 'Account flow stage rules', [],
+             [('area', 'area', False), ('enum', 'line_source', 'G,F'), ('enum', 'debit_credit', ',S,H'),
+              ('when', 'active', 'X', [('required', 'stage_id'), ('reserved', 'stage_id', FLOW_RESERVED_RULE)]),
+              ('when', 'line_source', 'G', [('blank', 'origin'), ('blank', 'main_trans'), ('blank', 'sub_trans')]),
+              ('when', 'line_source', 'F', [('blank', 'ref_type')])]),
         ]),
 }
 
@@ -255,7 +289,22 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'acct_pattern': 'Accounts (PCRE on the account ID, blank = all)',
           'operator': 'Operator', 'min_count': 'Linked rows needed (EX, 0 = 1)',
           # Pilot pack (2026-11-11)
-          'baseline_min': 'Previous detection time (minutes after the event)', 'source': 'Source of the baseline'}
+          'baseline_min': 'Previous detection time (minutes after the event)', 'source': 'Source of the baseline',
+          # Account flow reconciliation (2026-11-15)
+          'flow_id': 'Account flow', 'direction': 'Direction (D disbursement, C collection)',
+          'jrnl_ledger': 'Ledger (blank = FLOW_LEDGER)', 'flow_acct': 'Account (column of the dashboard)',
+          'role': 'Role (RECEIVABLE, PAYABLE, OUTSIDE, CLEARING, ...)', 'currency': 'Currency (blank = every currency)',
+          'hkont_from': 'G/L account (or first of a range)', 'hkont_to': 'Last G/L account of the range (blank = one)',
+          'line_source': 'Lines from (G journal, F FI-CA documents)',
+          'eval_class': 'Accounted for by class (blank = not evaluated)',
+          'eval_category': 'Tile (TRANSIT, CLARIFY, OPEN, BANK)', 'stage_id': 'Stage',
+          'tile': 'Tile (REQUESTED, PAID, CLEARED)', 'side': 'Side (D debit, C credit)',
+          'expect_from': 'Expected: clears the open items of role',
+          'expect_to': 'Expected: counter-posting on role',
+          'rule_seq': 'Sequence (first match wins)', 'ref_type': 'Reference transaction (AWTYP)',
+          'doc_type': 'Document type (journal or FI-CA)', 'origin': 'FI-CA origin key',
+          'main_trans': 'FI-CA main transaction', 'sub_trans': 'FI-CA sub-transaction',
+          'debit_credit': 'Debit / credit (S, H, blank = both)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

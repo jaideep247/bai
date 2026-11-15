@@ -1,0 +1,3 @@
+AREA,FLOW_ID,DESCRIPTION,DIRECTION,JRNL_LEDGER,PROCESS_ID,ACTIVE
+CA_FICA,DISB,Disbursements: payable to house bank,D,,,
+CA_FICA,COLL,Collections: receivable to house bank,C,,,

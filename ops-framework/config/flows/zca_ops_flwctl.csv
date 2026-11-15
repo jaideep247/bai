@@ -1,0 +1,5 @@
+AREA,FLOW_ID,STAGE_ID,CHECK_AREA,CHECK_ID,DESCRIPTION,ACTIVE
+CA_FICA,DISB,BANK_PAID,CA_FICA,FICA_GL_BREAKS,Clearing-account breaks not explained,
+CA_FICA,DISB,GL_TRANSFER,CA_FICA,FICA_GL_OPENKEY,Reconciliation keys not transferred (G/L gap),
+CA_FICA,COLL,BANK_CREDIT,CA_FICA,FICA_GL_BREAKS,Clearing-account breaks not explained,
+CA_FICA,COLL,GL_TRANSFER,CA_FICA,FICA_GL_OPENKEY,Reconciliation keys not transferred (G/L gap),

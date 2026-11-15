@@ -7,7 +7,8 @@ the table and field names of an aggregate row on save; the scheduler jobs of the
 check their SAP job name pattern and criticality on save; the operations response features (2026-11-11) check
 the runbook link of an active runbook row, the patterns, key fields and window of a correlation rule and the
 escalation severity of an alert rule on save; the link registry (2026-11-11) checks sources and fields against the
-runtime DDIC, the TABLE-FIELD references and the kind-dependent fields of a condition on save.
+runtime DDIC, the TABLE-FIELD references and the kind-dependent fields of a condition on save; the account flows
+(2026-11-15) check roles, line sources, the source plug-in, reserved stage IDs and the criteria of a rule's source.
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-framework/)
 """
@@ -54,7 +55,9 @@ class FrameworkAppTest(unittest.TestCase):
                               'zca_ops_lnkfld', 'zca_ops_link', 'zca_ops_lnkcnd', 'zca_ops_lnkact',
                               'zca_ops_catpkg', 'zca_ops_catprc', 'zca_ops_catstp', 'zca_ops_cattab',
                               'zca_ops_catdep', 'zca_ops_catact', 'zca_ops_brkacc', 'zca_ops_brkbkt',
-                              'zca_ops_brkrul', 'zca_ops_brkcnd', 'zca_ops_pilotbl'])
+                              'zca_ops_brkrul', 'zca_ops_brkcnd', 'zca_ops_pilotbl', 'zca_ops_flow',
+                              'zca_ops_flwacc', 'zca_ops_flwstg', 'zca_ops_flwtil', 'zca_ops_flwctl',
+                              'zca_ops_flwrul'])
 
     def test_payment_model_tables_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
@@ -122,6 +125,19 @@ class FrameworkAppTest(unittest.TestCase):
         bp = open(os.path.join(rap_generate.ROOT, 'src', 'ui', 'zbp_r_ca_opscfgall.clas.locals_imp.abap'),
                   encoding='utf-8').read()
         self.assertIn('zcl_ca_ops_cfg_checks=>field_ref_valid', bp)
+
+    def test_account_flow_checked_on_save(self):
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        # roles, line sources, the plug-in of what checks account for, reserved rows, criteria of the line source
+        self.assertIn(('enum', 'role', rap_generate.FLOW_ROLES), checks['zca_ops_flwacc'])
+        self.assertIn(('class', 'eval_class', 'ZIF_CA_OPS_FLOW_SOURCE'), checks['zca_ops_flwacc'])
+        self.assertIn(('when', 'active', 'X', [('reserved', 'stage_id', rap_generate.FLOW_RESERVED)]),
+                      checks['zca_ops_flwstg'])
+        self.assertIn(('when', 'line_source', 'F', [('blank', 'ref_type')]), checks['zca_ops_flwrul'])
+        self.assertIn(('enum', 'side', 'D,C'), checks['zca_ops_flwtil'])
+        bp = open(os.path.join(rap_generate.ROOT, 'src', 'ui', 'zbp_r_ca_opscfgall.clas.locals_imp.abap'),
+                  encoding='utf-8').read()
+        self.assertIn('gc_msg-value_reserved', bp)
 
 
 if __name__ == '__main__':

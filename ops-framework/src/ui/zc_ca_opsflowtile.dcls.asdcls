@@ -1,0 +1,13 @@
+// Artifact: zc_ca_opsflowtile.dcls.asdcls
+// Purpose: Read access to the account flow tiles (service ZUI_CA_OPS_FLOW): authorization object ZCA_OPS with ZCA_PARAR
+//          = the area and ACTVT 03, and the same object with BUKRS = the company code (company-code isolation,
+//          docs/auth_zca_ops.md section 3c).
+// Modification log: 2026-11-15 | Initial version (build G: account flow reconciliation).
+// VERIFY-ADT: aspect pfcg_auth on a view with parameters (7.58) - V147.
+@EndUserText.label: 'Account flow tiles - read access'
+@MappingRole: true
+define role ZC_CA_OpsFlowTile {
+  grant select on ZC_CA_OpsFlowTile
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
+}

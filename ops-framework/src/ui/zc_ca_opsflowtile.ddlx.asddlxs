@@ -1,0 +1,70 @@
+// UI annotations: overview KPI cards "Account flow" (service ZUI_CA_OPS_FLOW, 2026-11-15)
+// One data point per tile: requested, paid / settled by the bank, matched and cleared, still in transit, in
+// clarification, exposure behind it (criticality: grey while an account is not evaluated - never green), accounts
+// not evaluated. A consumer's overview page adds the KPI cards on entity FlowTile with the parameters P_DateFrom /
+// P_DateTo and a filter on flow, company code and currency (one currency per card - never summed across).
+// VERIFY-ADT: card rendering (OVP V4) with a parameterised entity set - V147.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Account flow', typeNamePlural: 'Account flow tiles',
+                  title: { type: #STANDARD, value: 'FlowId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'FlowId', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsFlowTile with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #LOW } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Account flow'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  FlowId;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Currency;
+  @EndUserText.label: 'Flow'
+  FlowName;
+  @EndUserText.label: 'Direction'
+  Direction;
+  @EndUserText.label: 'Requested'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.dataPoint: { title: 'Requested' }
+  RequestedAmount;
+  @EndUserText.label: 'Paid / settled by the bank'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.dataPoint: { title: 'Paid / settled by the bank' }
+  PaidAmount;
+  @EndUserText.label: 'Matched and cleared'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.dataPoint: { title: 'Matched and cleared' }
+  ClearedAmount;
+  @EndUserText.label: 'Still in transit'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.dataPoint: { title: 'Still in transit' }
+  InTransitAmount;
+  @EndUserText.label: 'In clarification'
+  @UI.lineItem: [ { position: 90, importance: #HIGH } ]
+  @UI.dataPoint: { title: 'In clarification' }
+  InClarificationAmount;
+  @EndUserText.label: 'Items in clarification'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  InClarificationItems;
+  @EndUserText.label: 'Unexplained (absolute)'
+  @UI.lineItem: [ { position: 110, importance: #HIGH } ]
+  UnexplainedAbsolute;
+  @EndUserText.label: 'Exposure behind it'
+  @UI.lineItem: [ { position: 120, importance: #HIGH, criticality: 'ExposureCriticality' } ]
+  @UI.dataPoint: { title: 'Exposure behind it', criticality: 'ExposureCriticality' }
+  ExposureAmount;
+  @EndUserText.label: 'Accounts not evaluated'
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  @UI.dataPoint: { title: 'Accounts not evaluated' }
+  NotEvaluatedCount;
+  @UI.hidden: true
+  ExposureCriticality;
+}

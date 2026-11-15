@@ -29,6 +29,7 @@ INTERFACE lif_c.
       area                           TYPE string VALUE `AREA`,
       backup                         TYPE string VALUE `BACKUP`,
       bucket                         TYPE string VALUE `BUCKET`,
+      bukrs                          TYPE string VALUE `BUKRS`,
       bukrsfield                     TYPE string VALUE `BUKRSFIELD`,
       bukrspattern                   TYPE string VALUE `BUKRSPATTERN`,
       cardinality                    TYPE string VALUE `CARDINALITY`,
@@ -41,25 +42,35 @@ INTERFACE lif_c.
       condvalue                      TYPE string VALUE `CONDVALUE`,
       criticality                    TYPE string VALUE `CRITICALITY`,
       datefield                      TYPE string VALUE `DATEFIELD`,
+      debitcredit                    TYPE string VALUE `DEBITCREDIT`,
       depkind                        TYPE string VALUE `DEPKIND`,
       destination                    TYPE string VALUE `DESTINATION`,
       dimension                      TYPE string VALUE `DIMENSION`,
+      direction                      TYPE string VALUE `DIRECTION`,
       escseverity                    TYPE string VALUE `ESCSEVERITY`,
+      evalcategory                   TYPE string VALUE `EVALCATEGORY`,
+      evalclass                      TYPE string VALUE `EVALCLASS`,
       evidence                       TYPE string VALUE `EVIDENCE`,
+      expectfrom                     TYPE string VALUE `EXPECTFROM`,
+      expectto                       TYPE string VALUE `EXPECTTO`,
       field                          TYPE string VALUE `FIELD`,
       fieldname                      TYPE string VALUE `FIELDNAME`,
       fromref                        TYPE string VALUE `FROMREF`,
       group1pattern                  TYPE string VALUE `GROUP1PATTERN`,
       group2pattern                  TYPE string VALUE `GROUP2PATTERN`,
+      hkontfrom                      TYPE string VALUE `HKONTFROM`,
       keyfields                      TYPE string VALUE `KEYFIELDS`,
       keypattern                     TYPE string VALUE `KEYPATTERN`,
       layerkind                      TYPE string VALUE `LAYERKIND`,
+      linesource                     TYPE string VALUE `LINESOURCE`,
       linkid                         TYPE string VALUE `LINKID`,
+      maintrans                      TYPE string VALUE `MAINTRANS`,
       matchfield                     TYPE string VALUE `MATCHFIELD`,
       minrag                         TYPE string VALUE `MINRAG`,
       minseverity                    TYPE string VALUE `MINSEVERITY`,
       monarea                        TYPE string VALUE `MONAREA`,
       operator                       TYPE string VALUE `OPERATOR`,
+      origin                         TYPE string VALUE `ORIGIN`,
       owner                          TYPE string VALUE `OWNER`,
       paramarea                      TYPE string VALUE `PARAMAREA`,
       paramname                      TYPE string VALUE `PARAMNAME`,
@@ -69,21 +80,27 @@ INTERFACE lif_c.
       quietfrom                      TYPE string VALUE `QUIETFROM`,
       quietto                        TYPE string VALUE `QUIETTO`,
       reason                         TYPE string VALUE `REASON`,
+      reftype                        TYPE string VALUE `REFTYPE`,
+      role                           TYPE string VALUE `ROLE`,
       rulepattern                    TYPE string VALUE `RULEPATTERN`,
       runbookurl                     TYPE string VALUE `RUNBOOKURL`,
       sappattern                     TYPE string VALUE `SAPPATTERN`,
       sensitivity                    TYPE string VALUE `SENSITIVITY`,
+      side                           TYPE string VALUE `SIDE`,
       sourcekind                     TYPE string VALUE `SOURCEKIND`,
       sourcename                     TYPE string VALUE `SOURCENAME`,
+      stageid                        TYPE string VALUE `STAGEID`,
       statusfield                    TYPE string VALUE `STATUSFIELD`,
       statusop                       TYPE string VALUE `STATUSOP`,
       stepkind                       TYPE string VALUE `STEPKIND`,
+      subtrans                       TYPE string VALUE `SUBTRANS`,
       tablename                      TYPE string VALUE `TABLENAME`,
       tabname                        TYPE string VALUE `TABNAME`,
       tabrole                        TYPE string VALUE `TABROLE`,
       targetkind                     TYPE string VALUE `TARGETKIND`,
       team                           TYPE string VALUE `TEAM`,
       templateid                     TYPE string VALUE `TEMPLATEID`,
+      tile                           TYPE string VALUE `TILE`,
       timefield                      TYPE string VALUE `TIMEFIELD`,
       toref                          TYPE string VALUE `TOREF`,
       transform                      TYPE string VALUE `TRANSFORM`,
@@ -93,6 +110,7 @@ INTERFACE lif_c.
       windowmin                      TYPE string VALUE `WINDOWMIN`,
     END OF gc_el,
     BEGIN OF gc_ent,
+      accountflow                    TYPE string VALUE `AccountFlow`,
       aggregatecheck                 TYPE string VALUE `AggregateCheck`,
       alertchannel                   TYPE string VALUE `AlertChannel`,
       alertrule                      TYPE string VALUE `AlertRule`,
@@ -111,6 +129,11 @@ INTERFACE lif_c.
       controlcheck                   TYPE string VALUE `ControlCheck`,
       controltext                    TYPE string VALUE `ControlText`,
       correlationrule                TYPE string VALUE `CorrelationRule`,
+      flowaccount                    TYPE string VALUE `FlowAccount`,
+      flowstage                      TYPE string VALUE `FlowStage`,
+      flowstagecontrol               TYPE string VALUE `FlowStageControl`,
+      flowstagerule                  TYPE string VALUE `FlowStageRule`,
+      flowtilestage                  TYPE string VALUE `FlowTileStage`,
       link                           TYPE string VALUE `Link`,
       linkactivation                 TYPE string VALUE `LinkActivation`,
       linkcondition                  TYPE string VALUE `LinkCondition`,
@@ -129,9 +152,11 @@ INTERFACE lif_c.
     BEGIN OF gc_if,
       zif_ca_ops_alert_channel       TYPE string VALUE `ZIF_CA_OPS_ALERT_CHANNEL`,
       zif_ca_ops_check               TYPE string VALUE `ZIF_CA_OPS_CHECK`,
+      zif_ca_ops_flow_source         TYPE string VALUE `ZIF_CA_OPS_FLOW_SOURCE`,
       zif_ca_ops_purge_target        TYPE string VALUE `ZIF_CA_OPS_PURGE_TARGET`,
     END OF gc_if,
     BEGIN OF gc_tab,
+      accountflow                    TYPE string VALUE `ZCA_OPS_FLOW`,
       aggregatecheck                 TYPE string VALUE `ZCA_OPS_AGG`,
       alertchannel                   TYPE string VALUE `ZCA_OPS_ALCHN`,
       alertrule                      TYPE string VALUE `ZCA_OPS_ALRULE`,
@@ -150,6 +175,11 @@ INTERFACE lif_c.
       controlcheck                   TYPE string VALUE `ZCA_OPS_CTLCHK`,
       controltext                    TYPE string VALUE `ZCA_OPS_CTLT`,
       correlationrule                TYPE string VALUE `ZCA_OPS_CORR`,
+      flowaccount                    TYPE string VALUE `ZCA_OPS_FLWACC`,
+      flowstage                      TYPE string VALUE `ZCA_OPS_FLWSTG`,
+      flowstagecontrol               TYPE string VALUE `ZCA_OPS_FLWCTL`,
+      flowstagerule                  TYPE string VALUE `ZCA_OPS_FLWRUL`,
+      flowtilestage                  TYPE string VALUE `ZCA_OPS_FLWTIL`,
       link                           TYPE string VALUE `ZCA_OPS_LINK`,
       linkactivation                 TYPE string VALUE `ZCA_OPS_LNKACT`,
       linkcondition                  TYPE string VALUE `ZCA_OPS_LNKCND`,
@@ -166,6 +196,7 @@ INTERFACE lif_c.
       schedulerjob                   TYPE string VALUE `ZCA_OPS_JOBSCH`,
     END OF gc_tab,
     BEGIN OF gc_val,
+      accountflow_direction          TYPE string VALUE `,D,C`,
       aggregatecheck_aggfunc         TYPE string VALUE `COUNT,AGE`,
       aggregatecheck_condop          TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN,NI`,
       aggregatecheck_statusop        TYPE string VALUE `,EQ,NE,IN,NI`,
@@ -182,6 +213,18 @@ INTERFACE lif_c.
       catalogtable_evidence          TYPE string VALUE `C,V`,
       catalogtable_tabrole           TYPE string VALUE `H,I,L,S,C`,
       controlcheck_matchfield        TYPE string VALUE `RULE_ID,CHECK_CODE,GROUP2`,
+      flowaccount_evalcategory       TYPE string VALUE `,TRANSIT,CLARIFY,OPEN,BANK`,
+      flowaccount_linesource         TYPE string VALUE `G,F`,
+      flowaccount_role               TYPE string VALUE `RECEIVABLE,PAYABLE,OUTSIDE,SETTLEMENT,CLEARING,CASH,CLARIFICATION`,
+      flowstage_expectfrom           TYPE string VALUE `,RECEIVABLE,PAYABLE,OUTSIDE,SETTLEMENT,CLEARING,CASH,CLARIFICATION`,
+      flowstage_expectto             TYPE string VALUE `,RECEIVABLE,PAYABLE,OUTSIDE,SETTLEMENT,CLEARING,CASH,CLARIFICATION`,
+      flowstage_stageid_reserved     TYPE string VALUE `OTHER,MOVEMENT,OPENING,CLOSING,UNEXPLAINED`,
+      flowstagerule_debitcredit      TYPE string VALUE `,S,H`,
+      flowstagerule_linesource       TYPE string VALUE `G,F`,
+      flowstagerule_stageid_reserved TYPE string VALUE `MOVEMENT,OPENING,CLOSING,UNEXPLAINED`,
+      flowtilestage_role             TYPE string VALUE `RECEIVABLE,PAYABLE,OUTSIDE,SETTLEMENT,CLEARING,CASH,CLARIFICATION`,
+      flowtilestage_side             TYPE string VALUE `D,C`,
+      flowtilestage_tile             TYPE string VALUE `REQUESTED,PAID,CLEARED`,
       link_cardinality               TYPE string VALUE `11,1N,N1,NM`,
       link_quality                   TYPE string VALUE `C,P`,
       linkactivation_targetkind      TYPE string VALUE `L,K`,
@@ -203,6 +246,11 @@ INTERFACE lif_c.
       catalogstep_evidence_v         TYPE string VALUE `V`,
       catalogtable_evidence_c        TYPE string VALUE `C`,
       catalogtable_evidence_v        TYPE string VALUE `V`,
+      flowaccount_active_x           TYPE string VALUE `X`,
+      flowstage_active_x             TYPE string VALUE `X`,
+      flowstagerule_active_x         TYPE string VALUE `X`,
+      flowstagerule_line_source_f    TYPE string VALUE `F`,
+      flowstagerule_line_source_g    TYPE string VALUE `G`,
       linkactivation_target_kind_lk  TYPE string VALUE `L,K`,
       linkcondition_cond_kind_constp TYPE string VALUE `CONST,PREFER`,
       linkcondition_cond_kind_eq     TYPE string VALUE `EQ`,
@@ -369,6 +417,24 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     IF requested_authorizations-%assoc-_PilotBaseline = if_abap_behv=>mk-on.
       result-%assoc-_PilotBaseline = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
+    IF requested_authorizations-%assoc-_AccountFlow = if_abap_behv=>mk-on.
+      result-%assoc-_AccountFlow = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_FlowAccount = if_abap_behv=>mk-on.
+      result-%assoc-_FlowAccount = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_FlowStage = if_abap_behv=>mk-on.
+      result-%assoc-_FlowStage = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_FlowTileStage = if_abap_behv=>mk-on.
+      result-%assoc-_FlowTileStage = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_FlowStageControl = if_abap_behv=>mk-on.
+      result-%assoc-_FlowStageControl = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_FlowStageRule = if_abap_behv=>mk-on.
+      result-%assoc-_FlowStageRule = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -472,6 +538,24 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_PilotBaseline = if_abap_behv=>mk-on.
       result-%assoc-_PilotBaseline = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_AccountFlow = if_abap_behv=>mk-on.
+      result-%assoc-_AccountFlow = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_FlowAccount = if_abap_behv=>mk-on.
+      result-%assoc-_FlowAccount = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_FlowStage = if_abap_behv=>mk-on.
+      result-%assoc-_FlowStage = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_FlowTileStage = if_abap_behv=>mk-on.
+      result-%assoc-_FlowTileStage = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_FlowStageControl = if_abap_behv=>mk-on.
+      result-%assoc-_FlowStageControl = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_FlowStageRule = if_abap_behv=>mk-on.
+      result-%assoc-_FlowStageRule = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -4492,6 +4576,832 @@ CLASS lhc_pilotbaseline IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_accountflow DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR AccountFlow RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR AccountFlow RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR AccountFlow~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR AccountFlow~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_accountflow IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY AccountFlow
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-accountflow.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Direction )
+                                        iv_list  = lif_c=>gc_val-accountflow_direction ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Direction
+                        v2 = lif_c=>gc_el-direction v3 = lif_c=>gc_val-accountflow_direction
+                        element = lif_c=>gc_el-direction ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-accountflow.
+        INSERT INITIAL LINE INTO TABLE reported-accountflow ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-accountflow.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-accountflow.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-accountflow.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_flowaccount DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR FlowAccount RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR FlowAccount RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowAccount~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowAccount~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_flowaccount IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY FlowAccount
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-flowaccount.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Role )
+                                        iv_list  = lif_c=>gc_val-flowaccount_role ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Role
+                        v2 = lif_c=>gc_el-role v3 = lif_c=>gc_val-flowaccount_role
+                        element = lif_c=>gc_el-role ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-LineSource )
+                                        iv_list  = lif_c=>gc_val-flowaccount_linesource ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-LineSource
+                        v2 = lif_c=>gc_el-linesource v3 = lif_c=>gc_val-flowaccount_linesource
+                        element = lif_c=>gc_el-linesource ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-EvalCategory )
+                                        iv_list  = lif_c=>gc_val-flowaccount_evalcategory ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-EvalCategory
+                        v2 = lif_c=>gc_el-evalcategory v3 = lif_c=>gc_val-flowaccount_evalcategory
+                        element = lif_c=>gc_el-evalcategory ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-EvalClass IS NOT INITIAL
+         AND zcl_ca_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-EvalClass )
+                                                iv_interface = CONV #( lif_c=>gc_if-zif_ca_ops_flow_source ) ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-class_invalid v1 = ls_row-EvalClass v2 = lif_c=>gc_if-zif_ca_ops_flow_source
+                        element = lif_c=>gc_el-evalclass ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-flowaccount_active_x ) = abap_true.
+        IF ls_row-Bukrs IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-bukrs
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-bukrs ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-HkontFrom IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-hkontfrom
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-hkontfrom ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-flowaccount.
+        INSERT INITIAL LINE INTO TABLE reported-flowaccount ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-flowaccount.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-flowaccount.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-flowaccount.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_flowstage DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR FlowStage RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR FlowStage RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowStage~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowStage~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_flowstage IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY FlowStage
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-flowstage.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-ExpectFrom )
+                                        iv_list  = lif_c=>gc_val-flowstage_expectfrom ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-ExpectFrom
+                        v2 = lif_c=>gc_el-expectfrom v3 = lif_c=>gc_val-flowstage_expectfrom
+                        element = lif_c=>gc_el-expectfrom ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-ExpectTo )
+                                        iv_list  = lif_c=>gc_val-flowstage_expectto ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-ExpectTo
+                        v2 = lif_c=>gc_el-expectto v3 = lif_c=>gc_val-flowstage_expectto
+                        element = lif_c=>gc_el-expectto ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-flowstage_active_x ) = abap_true.
+        IF ls_row-StageId IS NOT INITIAL
+           AND zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-StageId )
+                                              iv_list  = lif_c=>gc_val-flowstage_stageid_reserved ) = abap_true.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_reserved v1 = ls_row-StageId
+                          v2 = lif_c=>gc_el-stageid v3 = lif_c=>gc_val-flowstage_stageid_reserved
+                          element = lif_c=>gc_el-stageid ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF ls_row-ExpectFrom IS NOT INITIAL.
+        IF ls_row-ExpectTo IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-expectto
+                          v2 = lif_c=>gc_el-expectfrom v3 = ls_row-ExpectFrom
+                          element = lif_c=>gc_el-expectto ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-flowstage.
+        INSERT INITIAL LINE INTO TABLE reported-flowstage ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-flowstage.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-flowstage.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-flowstage.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_flowtilestage DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR FlowTileStage RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR FlowTileStage RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowTileStage~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowTileStage~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_flowtilestage IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY FlowTileStage
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-flowtilestage.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Tile )
+                                        iv_list  = lif_c=>gc_val-flowtilestage_tile ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Tile
+                        v2 = lif_c=>gc_el-tile v3 = lif_c=>gc_val-flowtilestage_tile
+                        element = lif_c=>gc_el-tile ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Role )
+                                        iv_list  = lif_c=>gc_val-flowtilestage_role ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Role
+                        v2 = lif_c=>gc_el-role v3 = lif_c=>gc_val-flowtilestage_role
+                        element = lif_c=>gc_el-role ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Side )
+                                        iv_list  = lif_c=>gc_val-flowtilestage_side ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Side
+                        v2 = lif_c=>gc_el-side v3 = lif_c=>gc_val-flowtilestage_side
+                        element = lif_c=>gc_el-side ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-flowtilestage.
+        INSERT INITIAL LINE INTO TABLE reported-flowtilestage ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-flowtilestage.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-flowtilestage.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-flowtilestage.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_flowstagecontrol DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR FlowStageControl RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR FlowStageControl RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowStageControl~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowStageControl~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_flowstagecontrol IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY FlowStageControl
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-flowstagecontrol.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-CheckArea
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-CheckArea
+                        element = lif_c=>gc_el-checkarea ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-flowstagecontrol.
+        INSERT INITIAL LINE INTO TABLE reported-flowstagecontrol ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-flowstagecontrol.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-flowstagecontrol.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-flowstagecontrol.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_flowstagerule DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR FlowStageRule RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR FlowStageRule RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowStageRule~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FlowStageRule~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_flowstagerule IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY FlowStageRule
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-flowstagerule.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-LineSource )
+                                        iv_list  = lif_c=>gc_val-flowstagerule_linesource ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-LineSource
+                        v2 = lif_c=>gc_el-linesource v3 = lif_c=>gc_val-flowstagerule_linesource
+                        element = lif_c=>gc_el-linesource ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DebitCredit )
+                                        iv_list  = lif_c=>gc_val-flowstagerule_debitcredit ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DebitCredit
+                        v2 = lif_c=>gc_el-debitcredit v3 = lif_c=>gc_val-flowstagerule_debitcredit
+                        element = lif_c=>gc_el-debitcredit ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-flowstagerule_active_x ) = abap_true.
+        IF ls_row-StageId IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-stageid
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-stageid ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-StageId IS NOT INITIAL
+           AND zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-StageId )
+                                              iv_list  = lif_c=>gc_val-flowstagerule_stageid_reserved ) = abap_true.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_reserved v1 = ls_row-StageId
+                          v2 = lif_c=>gc_el-stageid v3 = lif_c=>gc_val-flowstagerule_stageid_reserved
+                          element = lif_c=>gc_el-stageid ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-LineSource )
+                                        iv_list  = lif_c=>gc_when-flowstagerule_line_source_g ) = abap_true.
+        IF ls_row-Origin IS NOT INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-origin
+                          v2 = lif_c=>gc_el-linesource v3 = ls_row-LineSource
+                          element = lif_c=>gc_el-origin ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-MainTrans IS NOT INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-maintrans
+                          v2 = lif_c=>gc_el-linesource v3 = ls_row-LineSource
+                          element = lif_c=>gc_el-maintrans ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-SubTrans IS NOT INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-subtrans
+                          v2 = lif_c=>gc_el-linesource v3 = ls_row-LineSource
+                          element = lif_c=>gc_el-subtrans ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-LineSource )
+                                        iv_list  = lif_c=>gc_when-flowstagerule_line_source_f ) = abap_true.
+        IF ls_row-RefType IS NOT INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-reftype
+                          v2 = lif_c=>gc_el-linesource v3 = ls_row-LineSource
+                          element = lif_c=>gc_el-reftype ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-flowstagerule.
+        INSERT INITIAL LINE INTO TABLE reported-flowstagerule ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-flowstagerule.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-flowstagerule.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-flowstagerule.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_ca_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -4541,7 +5451,13 @@ CLASS lsc_zr_ca_opscfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-breakbucket table = lif_c=>gc_tab-breakbucket )
             ( entity = lif_c=>gc_ent-breakrule table = lif_c=>gc_tab-breakrule )
             ( entity = lif_c=>gc_ent-breakcondition table = lif_c=>gc_tab-breakcondition )
-            ( entity = lif_c=>gc_ent-pilotbaseline table = lif_c=>gc_tab-pilotbaseline ) )
+            ( entity = lif_c=>gc_ent-pilotbaseline table = lif_c=>gc_tab-pilotbaseline )
+            ( entity = lif_c=>gc_ent-accountflow table = lif_c=>gc_tab-accountflow )
+            ( entity = lif_c=>gc_ent-flowaccount table = lif_c=>gc_tab-flowaccount )
+            ( entity = lif_c=>gc_ent-flowstage table = lif_c=>gc_tab-flowstage )
+            ( entity = lif_c=>gc_ent-flowtilestage table = lif_c=>gc_tab-flowtilestage )
+            ( entity = lif_c=>gc_ent-flowstagecontrol table = lif_c=>gc_tab-flowstagecontrol )
+            ( entity = lif_c=>gc_ent-flowstagerule table = lif_c=>gc_tab-flowstagerule ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

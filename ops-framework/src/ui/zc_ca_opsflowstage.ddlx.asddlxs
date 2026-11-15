@@ -1,0 +1,50 @@
+// UI annotations: overview list card "Account flow stages and controls" (service ZUI_CA_OPS_FLOW, 2026-11-15)
+// The stages of a flow in their order with the control tag of their checks (criticality: open red, reconciled
+// green, pending and no control grey) and the open exceptions; selection variant Attention = not reconciled.
+// VERIFY-ADT: card rendering (OVP V4) - V147.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Stage', typeNamePlural: 'Account flow stages and controls',
+                  title: { type: #STANDARD, value: 'StageId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'FlowId', direction: #ASC }, { by: 'StageOrder', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Attention', text: 'Open or pending', filter: 'ControlStatus NE R' } ]
+annotate entity ZC_CA_OpsFlowStage with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #LOW } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Account flow'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  FlowId;
+  @EndUserText.label: 'Stage'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  StageId;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Flow'
+  FlowName;
+  @EndUserText.label: 'Stage'
+  StageName;
+  @EndUserText.label: 'Order'
+  @UI.hidden: true
+  StageOrder;
+  @EndUserText.label: 'Control'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'ControlCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  ControlStatus;
+  @EndUserText.label: 'Control'
+  ControlStatusText;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.dataPoint: { title: 'Open exceptions' }
+  OpenExceptions;
+  @EndUserText.label: 'Checks'
+  @UI.lineItem: [ { position: 70, importance: #LOW } ]
+  CheckCount;
+  @UI.hidden: true
+  ControlCriticality;
+}

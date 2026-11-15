@@ -26,6 +26,7 @@
 *& 2026-11-11 | Prefix LINK_ read in area CA_OPS (link registry walker).
 *& 2026-11-11 | Prefix CAT_ read in area CA_OPS (process catalogue).
 *& 2026-11-11 | Prefixes BRK_ (clearing-account break analysis) and PILOT_ (pilot pack) read in area CA_OPS.
+*& 2026-11-15 | Prefix FLOW_ (account flow reconciliation) read in area CA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CA_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
@@ -95,7 +96,8 @@ CLASS zcl_ca_ops_params IMPLEMENTATION.
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-link        area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-catalogue   area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-break       area = zif_ca_ops_types=>gc_param_area )
-      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-pilot       area = zif_ca_ops_types=>gc_param_area ) ).
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-pilot       area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-flow        area = zif_ca_ops_types=>gc_param_area ) ).
   ENDMETHOD.
 
 

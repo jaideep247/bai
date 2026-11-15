@@ -1031,6 +1031,120 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>320</MSGNR>
+     <TEXT>Account flow &amp;1 (&amp;2) evaluated at &amp;3: &amp;4 account(s) evaluated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>321</MSGNR>
+     <TEXT>Account &amp;1 of flow &amp;2 not evaluated: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>322</MSGNR>
+     <TEXT>No source class for account &amp;1: not evaluated (grey, never zero)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>323</MSGNR>
+     <TEXT>Flow &amp;1 of area &amp;2 skipped: business process &amp;3 is not active</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>324</MSGNR>
+     <TEXT>Flow &amp;1, &amp;2: stage &amp;3 is not an active stage of the flow</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>325</MSGNR>
+     <TEXT>Flow &amp;1 rule &amp;2: criterion &amp;3 does not apply to lines of source &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>326</MSGNR>
+     <TEXT>Flow &amp;1: &amp;2 accounts of role &amp;3 for &amp;4 (expected postings need one)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>327</MSGNR>
+     <TEXT>Flow &amp;1 has no active stage</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>328</MSGNR>
+     <TEXT>Flow &amp;1 stage &amp;2: no active account has role &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>329</MSGNR>
+     <TEXT>Flow &amp;1 rule &amp;2 has no criterion - it would hide the row OTHER</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>330</MSGNR>
+     <TEXT>Source class &amp;1 cannot be used: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>331</MSGNR>
+     <TEXT>No break analysis of &amp;1 / &amp;2 with a key date from &amp;3 to &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>332</MSGNR>
+     <TEXT>Break analysis &amp;1 (&amp;2) at &amp;3 is partial - not evaluated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>333</MSGNR>
+     <TEXT>Flow &amp;1: no check controls a stage that clears role &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>334</MSGNR>
+     <TEXT>Source &amp;1 failed: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>335</MSGNR>
+     <TEXT>Flow &amp;1: evaluations before &amp;2 removed: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>336</MSGNR>
+     <TEXT>Area &amp;1: no active account flow &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>338</MSGNR>
+     <TEXT>Source &amp;1 answered nothing for account &amp;2 - not evaluated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>340</MSGNR>
+     <TEXT>Value &amp;1 of &amp;2 is reserved (reserved: &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

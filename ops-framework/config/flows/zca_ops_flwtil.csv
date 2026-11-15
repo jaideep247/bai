@@ -1,0 +1,7 @@
+AREA,FLOW_ID,TILE,STAGE_ID,ROLE,SIDE,DESCRIPTION,ACTIVE
+CA_FICA,DISB,REQUESTED,REQUEST,PAYABLE,C,Payables posted by the requests,
+CA_FICA,DISB,PAID,BANK_PAID,CASH,C,Paid out of the house bank account,
+CA_FICA,DISB,CLEARED,BANK_PAID,CLEARING,D,Disbursement clearing matched and cleared,
+CA_FICA,COLL,REQUESTED,RECEIVABLE,RECEIVABLE,D,Receivables posted,
+CA_FICA,COLL,PAID,BANK_CREDIT,CASH,D,Settled into the house bank account,
+CA_FICA,COLL,CLEARED,PAYMENT_LOT,RECEIVABLE,C,Receivables matched and cleared,

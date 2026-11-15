@@ -1,0 +1,69 @@
+// UI annotations: Processes, checks, alerting, purge targets and controls - Account flow stage rules
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Stage rule',
+                     typeNamePlural: 'Account flow stage rules',
+                     title: { type: #STANDARD, value: 'Area' } } }
+annotate entity ZC_CA_FlowStageRule with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Area;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  FlowId;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  RuleSeq;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  RuleId;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  StageId;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  LineSource;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  RefType;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  DocType;
+
+  @UI.identification: [{ position: 90 }]
+  Origin;
+
+  @UI.identification: [{ position: 100 }]
+  MainTrans;
+
+  @UI.identification: [{ position: 110 }]
+  SubTrans;
+
+  @UI.identification: [{ position: 120 }]
+  DebitCredit;
+
+  @UI.identification: [{ position: 130 }]
+  Description;
+
+  @UI.identification: [{ position: 140 }]
+  Active;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

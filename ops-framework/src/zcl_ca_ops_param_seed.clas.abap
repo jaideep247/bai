@@ -656,6 +656,70 @@ CLASS zcl_ca_ops_param_seed DEFINITION
     CONSTANTS:
       BEGIN OF gc_d037,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'FLOW_BREAK_MAX_AGE_DAYS',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE '0',
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE '31',
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '2',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Days a break snapshot may lie before the flow key date',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d037.
+    CONSTANTS:
+      BEGIN OF gc_d038,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'FLOW_KEY_DATE_LAG',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE '0',
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE '31',
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '0',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Flow evaluation without key date: today minus these days',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d038.
+    CONSTANTS:
+      BEGIN OF gc_d039,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'FLOW_LEDGER',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '0L',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9]{2}',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Ledger of the journal lines of the account flows',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d039.
+    CONSTANTS:
+      BEGIN OF gc_d040,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'FLOW_RETENTION_DAYS',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE '0',
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE '3660',
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '400',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Days account flow evaluations are kept (0 = never removed)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d040.
+    CONSTANTS:
+      BEGIN OF gc_d041,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_CHILD_MSG_IDS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
         value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
@@ -668,9 +732,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job log messages naming a released job (MSGID/MSGNO list)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d037.
+      END OF gc_d041.
     CONSTANTS:
-      BEGIN OF gc_d038,
+      BEGIN OF gc_d042,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_CHILD_MSG_PCRE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -684,9 +748,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'PCRE of such a line: group 1 job name, group 2 job count',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d038.
+      END OF gc_d042.
     CONSTANTS:
-      BEGIN OF gc_d039,
+      BEGIN OF gc_d043,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_CLAIMS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -700,9 +764,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Claim classes of other monitors (ZIF_CA_OPS_JOB_CLAIM)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d039.
+      END OF gc_d043.
     CONSTANTS:
-      BEGIN OF gc_d040,
+      BEGIN OF gc_d044,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_ENRICHERS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -716,9 +780,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Enricher classes in order (ZIF_CA_OPS_JOB_ENRICHER)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d040.
+      END OF gc_d044.
     CONSTANTS:
-      BEGIN OF gc_d041,
+      BEGIN OF gc_d045,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_EVENT_IDS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -732,9 +796,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Events whose parameter names the predecessor job',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d041.
+      END OF gc_d045.
     CONSTANTS:
-      BEGIN OF gc_d042,
+      BEGIN OF gc_d046,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_EXCLUDE_PCRE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -748,9 +812,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job names never reported (PCRE list, complete name)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d042.
+      END OF gc_d046.
     CONSTANTS:
-      BEGIN OF gc_d043,
+      BEGIN OF gc_d047,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_LOG_ERROR_TYPES',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -764,9 +828,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job log message types that count as an error',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d043.
+      END OF gc_d047.
     CONSTANTS:
-      BEGIN OF gc_d044,
+      BEGIN OF gc_d048,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_LOG_PROGRAMS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -780,9 +844,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Programs whose finished jobs get their job log checked',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d044.
+      END OF gc_d048.
     CONSTANTS:
-      BEGIN OF gc_d045,
+      BEGIN OF gc_d049,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_LONG_RUNNING_MIN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -796,9 +860,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes active before a job is long-running',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d045.
+      END OF gc_d049.
     CONSTANTS:
-      BEGIN OF gc_d046,
+      BEGIN OF gc_d050,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_LOOKBACK_MIN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -812,9 +876,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes read back by the first run (no watermark)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d046.
+      END OF gc_d050.
     CONSTANTS:
-      BEGIN OF gc_d047,
+      BEGIN OF gc_d051,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MAX_APPLOGS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -828,9 +892,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Application logs linked per failed job',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d047.
+      END OF gc_d051.
     CONSTANTS:
-      BEGIN OF gc_d048,
+      BEGIN OF gc_d052,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MAX_CHILDREN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -844,9 +908,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Children of a failing job''s parent kept as context',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d048.
+      END OF gc_d052.
     CONSTANTS:
-      BEGIN OF gc_d049,
+      BEGIN OF gc_d053,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MAX_DEPTH',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -860,9 +924,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Ancestors followed upwards from a failed job',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d049.
+      END OF gc_d053.
     CONSTANTS:
-      BEGIN OF gc_d050,
+      BEGIN OF gc_d054,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MAX_JOBS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -876,9 +940,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Jobs read per run and kind (cap)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d050.
+      END OF gc_d054.
     CONSTANTS:
-      BEGIN OF gc_d051,
+      BEGIN OF gc_d055,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MAX_LOG_READS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -892,9 +956,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job logs read per run (detection, links, evidence)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d051.
+      END OF gc_d055.
     CONSTANTS:
-      BEGIN OF gc_d052,
+      BEGIN OF gc_d056,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_MAX_MESSAGES',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -908,9 +972,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Error lines of a job log kept per job',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d052.
+      END OF gc_d056.
     CONSTANTS:
-      BEGIN OF gc_d053,
+      BEGIN OF gc_d057,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_NOT_STARTED_MIN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -924,9 +988,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes after the planned start a released job may wait',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d053.
+      END OF gc_d057.
     CONSTANTS:
-      BEGIN OF gc_d054,
+      BEGIN OF gc_d058,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_OVERLAP_MIN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -940,9 +1004,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes re-read before the watermark',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d054.
+      END OF gc_d058.
     CONSTANTS:
-      BEGIN OF gc_d055,
+      BEGIN OF gc_d059,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_PARENT_FIELDS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -956,9 +1020,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE 'X',
         description     TYPE zif_ca_param_types=>ty_description VALUE 'TBTCO fields of parent job name and count (two names)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d055.
+      END OF gc_d059.
     CONSTANTS:
-      BEGIN OF gc_d056,
+      BEGIN OF gc_d060,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_PARENT_PROGRAMS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -972,9 +1036,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Programs of jobs that may start children (blank = any)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d056.
+      END OF gc_d060.
     CONSTANTS:
-      BEGIN OF gc_d057,
+      BEGIN OF gc_d061,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_RESOLVERS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -988,9 +1052,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Parent / child resolvers in order (ZIF_CA_OPS_JOB_RESOLVER)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d057.
+      END OF gc_d061.
     CONSTANTS:
-      BEGIN OF gc_d058,
+      BEGIN OF gc_d062,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'JOB_WAITING_STATUSES',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1004,9 +1068,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job statuses of a job waiting to start',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d058.
+      END OF gc_d062.
     CONSTANTS:
-      BEGIN OF gc_d059,
+      BEGIN OF gc_d063,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'LINK_MAX_DEPTH',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1020,9 +1084,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Levels a link registry walk follows from its start object',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d059.
+      END OF gc_d063.
     CONSTANTS:
-      BEGIN OF gc_d060,
+      BEGIN OF gc_d064,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'LINK_MAX_NODES',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1036,9 +1100,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Objects one link registry walk returns at most',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d060.
+      END OF gc_d064.
     CONSTANTS:
-      BEGIN OF gc_d061,
+      BEGIN OF gc_d065,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'LINK_MAX_ROWS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1052,9 +1116,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Rows one read of a link returns at most (per level)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d061.
+      END OF gc_d065.
     CONSTANTS:
-      BEGIN OF gc_d062,
+      BEGIN OF gc_d066,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'LINK_READ_CHUNK',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1068,9 +1132,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Source rows per database read of a link (IN list or OR)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d062.
+      END OF gc_d066.
     CONSTANTS:
-      BEGIN OF gc_d063,
+      BEGIN OF gc_d067,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'METRIC_TIME_ZONE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1084,9 +1148,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone of month / week of the response-time metrics',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d063.
+      END OF gc_d067.
     CONSTANTS:
-      BEGIN OF gc_d064,
+      BEGIN OF gc_d068,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'PILOT_EXPORT_FILE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1100,9 +1164,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Logical file name of the pilot export (transaction FILE)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d064.
+      END OF gc_d068.
     CONSTANTS:
-      BEGIN OF gc_d065,
+      BEGIN OF gc_d069,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'PILOT_EXPORT_PATH',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1116,9 +1180,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Logical path of the pilot export (transaction FILE)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d065.
+      END OF gc_d069.
     CONSTANTS:
-      BEGIN OF gc_d066,
+      BEGIN OF gc_d070,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'PILOT_FP_REASON',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1132,9 +1196,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Reason code that marks a resolved exception a false positive',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d066.
+      END OF gc_d070.
     CONSTANTS:
-      BEGIN OF gc_d067,
+      BEGIN OF gc_d071,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'PILOT_WINDOW_DAYS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1148,9 +1212,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days the pilot export covers when no date is entered',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d067.
+      END OF gc_d071.
     CONSTANTS:
-      BEGIN OF gc_d068,
+      BEGIN OF gc_d072,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'PURGE_PACKAGE_SIZE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1164,9 +1228,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Rows deleted per purge package',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d068.
+      END OF gc_d072.
     CONSTANTS:
-      BEGIN OF gc_d069,
+      BEGIN OF gc_d073,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_ALERT_LOG',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1180,9 +1244,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of alert log rows (days; at least 30 applied)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d069.
+      END OF gc_d073.
     CONSTANTS:
-      BEGIN OF gc_d070,
+      BEGIN OF gc_d074,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_BREAK',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1196,9 +1260,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of the break analysis snapshots (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d070.
+      END OF gc_d074.
     CONSTANTS:
-      BEGIN OF gc_d071,
+      BEGIN OF gc_d075,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_JOB_EVIDENCE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1212,9 +1276,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of SAP job evidence (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d071.
+      END OF gc_d075.
     CONSTANTS:
-      BEGIN OF gc_d072,
+      BEGIN OF gc_d076,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_REVIEW',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1228,9 +1292,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of daily control sign-offs (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d072.
+      END OF gc_d076.
     CONSTANTS:
-      BEGIN OF gc_d073,
+      BEGIN OF gc_d077,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_RUN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1244,9 +1308,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of runs and findings (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d073.
+      END OF gc_d077.
     CONSTANTS:
-      BEGIN OF gc_d074,
+      BEGIN OF gc_d078,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SHIFT_TIMES_DEFAULT',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'S',
@@ -1260,9 +1324,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Shift start times (HHMMSS rows) of teams without own times',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d074.
+      END OF gc_d078.
     CONSTANTS:
-      BEGIN OF gc_d075,
+      BEGIN OF gc_d079,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SHIFT_TIME_ZONE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1276,9 +1340,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone of the shift start times (TTZZ)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d075.
+      END OF gc_d079.
     CONSTANTS:
-      BEGIN OF gc_d076,
+      BEGIN OF gc_d080,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_DEFAULT',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1292,8 +1356,8 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of an exception when SLA_DAYS_<area>_<sev> blank',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d076.
-    "! Delivered definitions 1-76 (at most 100 per method)
+      END OF gc_d080.
+    "! Delivered definitions 1-80 (at most 100 per method)
     CLASS-METHODS definitions_part_1
       RETURNING
         VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
@@ -1395,6 +1459,10 @@ CLASS zcl_ca_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_d074 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d075 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d076 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d077 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d078 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d079 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d080 ) INTO TABLE rt_definitions.
   ENDMETHOD.
 
 

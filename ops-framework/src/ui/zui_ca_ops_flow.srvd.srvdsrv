@@ -1,0 +1,10 @@
+@EndUserText.label: 'Operations framework: account flow'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSFLOWTILE'
+// Binding to create in ADT: ZUI_CA_OPS_FLOW_O4 (OData V4 - UI). Read-only: no behaviour definition.
+// Account flow reconciliation (build G, 2026-11-15): the tiles above the matrix (overview page KPI cards) and the
+// stages with their control tags (list card); the matrix itself is the analytical query ZC_CA_OpsFlowQry in the
+// multidimensional report - docs/ACCOUNT_FLOW.md.
+define service ZUI_CA_OPS_FLOW {
+  expose ZC_CA_OpsFlowTile  as FlowTile;
+  expose ZC_CA_OpsFlowStage as FlowStage;
+}

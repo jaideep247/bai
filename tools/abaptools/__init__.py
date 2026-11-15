@@ -30,6 +30,8 @@ works unchanged.
                       processes (inactive), catalogue document and activation proposal (--check)
   break_rules         the bucket rules of the clearing-account break analysis (product defaults and a customer
                       overlay): buckets, ordered rules, conditions, layer prefixes, parameters and links named
+  flow_config         the account flows of the reconciliation dashboard (product templates and a customer overlay):
+                      flows, accounts by role, stages, tiles, stage controls, ordered stage rules, inactive delivery
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).
@@ -41,6 +43,7 @@ Modification log:
 2026-11-11 | link_registry (link registry of the operations framework).
 2026-11-11 | process_catalogue (process catalogue of the operations framework).
 2026-11-11 | break_rules (clearing-account break analysis of the operations framework).
+2026-11-15 | flow_config (account flow reconciliation of the operations framework).
 """
 import importlib.util
 import os

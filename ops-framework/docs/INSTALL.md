@@ -235,6 +235,15 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
 3. Pilot pack (`docs/PILOT_PACK.md`): baselines per check (`ZCA_OPS_PILOTBL`), logical path / file for the export
    (`PILOT_EXPORT_PATH`, `PILOT_EXPORT_FILE`).
 
+## 6f. Build G (2026-11-15): account flow reconciliation
+
+1. Binding `ZUI_CA_OPS_FLOW_O4` (OData V4 - UI); republish `ZUI_CA_OPS_CFG_O4` (six new entities).
+2. Seed rows of `config/flows` (product templates `DISB` / `COLL`, inactive) copied into the consumer's area with its
+   accounts by role, the values of its stage rules and the checks of its stages (`docs/ACCOUNT_FLOW.md` §3, §7).
+3. Job `ZCA_OPS_FLOW_RUN` per area after the break analysis and the checks of the day (key date = today); the
+   query `ZC_CA_OpsFlowQry` in the *Multidimensional Reports* app, the cards of `ZUI_CA_OPS_FLOW` on the consumer's
+   overview page; PlanViz FLOW-PV1 ... FLOW-PV5 first (V145-V149).
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

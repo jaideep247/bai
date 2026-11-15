@@ -24,6 +24,7 @@
 *& 2026-11-11 | GET_DOWNTIME: planned downtime API (operations response features, injectable).
 *& 2026-11-11 | GET_CATALOG, GET_CAT_DAO: process catalogue API and its data access (injectable).
 *& 2026-11-11 | GET_BRK_DAO: data access of the clearing-account break analysis (injectable).
+*& 2026-11-15 | GET_FLOW_DAO: data access of the account flow reconciliation (injectable).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven
@@ -104,6 +105,11 @@ CLASS zcl_ca_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_ca_ops_brk_dao.
 
+    "! Data access of the account flow reconciliation (2026-11-15)
+    CLASS-METHODS get_flow_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_ca_ops_flow_dao.
+
     "! Planned downtime API: the windows of an area and "is this planned?" (2026-11-11)
     CLASS-METHODS get_downtime
       RETURNING
@@ -161,6 +167,7 @@ CLASS zcl_ca_ops_factory DEFINITION
     CLASS-DATA go_catalog_double TYPE REF TO zif_ca_ops_catalog.
     CLASS-DATA go_cat_dao_double TYPE REF TO zif_ca_ops_cat_dao.
     CLASS-DATA go_brk_dao_double TYPE REF TO zif_ca_ops_brk_dao.
+    CLASS-DATA go_flow_dao_double TYPE REF TO zif_ca_ops_flow_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
     "! Installed ZCA_PARAM release as seen by CHECK_VERSION (test seam: a double release)
     CLASS-DATA gv_param_version_double TYPE string.
@@ -279,6 +286,12 @@ CLASS zcl_ca_ops_factory IMPLEMENTATION.
   METHOD get_brk_dao.
     ro_dao = COND #( WHEN go_brk_dao_double IS BOUND THEN go_brk_dao_double
                      ELSE NEW zcl_ca_ops_brk_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_flow_dao.
+    ro_dao = COND #( WHEN go_flow_dao_double IS BOUND THEN go_flow_dao_double
+                     ELSE NEW zcl_ca_ops_flow_dao( ) ).
   ENDMETHOD.
 
 

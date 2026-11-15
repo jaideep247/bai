@@ -48,6 +48,7 @@
 *& 2026-11-11 | Explainable, versioned results: TY_FINDING-CFG_VERSION / CFG_RULE (TY_CFG_VERSION, TY_CFG_RULE)
 *&            | and EVENT_AT (pilot metrics); name prefixes BRK_ (clearing-account break analysis) and PILOT_
 *&            | (pilot pack) read in area CA_OPS.
+*& 2026-11-15 | Name prefix FLOW_ read in area CA_OPS (account flow reconciliation).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -166,6 +167,8 @@ INTERFACE zif_ca_ops_types
       break       TYPE ty_param_name VALUE 'BRK_',
       "! Pilot pack / shadow mode (docs/PILOT_PACK.md, 2026-11-11)
       pilot       TYPE ty_param_name VALUE 'PILOT_',
+      "! Account flow reconciliation (ZIF_CA_OPS_FLOW_TYPES=>GC_PARAM, 2026-11-15)
+      flow        TYPE ty_param_name VALUE 'FLOW_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters

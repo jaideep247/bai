@@ -2,6 +2,31 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build G: account flow reconciliation)
+
+Goal (user, 2026-11-15): a reconciliation dashboard "Account flow" - stages as rows, accounts by role as columns,
+debit / credit per cell, Movement, Opening, Closing and Unexplained, expected postings, control tags and tiles; both
+flows (disbursements, collections), analytical query, posting date range; every figure from postings or open items of
+existing checks (`docs/ACCOUNT_FLOW.md`).
+
+### Added
+- Configuration tables `ZCA_OPS_FLOW`, `_FLWACC`, `_FLWSTG`, `_FLWTIL`, `_FLWCTL`, `_FLWRUL` (entities of
+  `ZUI_CA_OPS_CFG`, generated; reserved stage IDs, message 340), evaluation `ZCA_OPS_FLWEVL` / `_FLWEVI`; domains
+  `ZCA_OPS_FLOW_TAG`, `_EVST`, `_ROW`, `_ROLE`.
+- `ZIF_CA_OPS_FLOW_TYPES`, `ZIF_CA_OPS_FLOW_DAO` / `ZCL_CA_OPS_FLOW_DAO`, `ZCL_CA_OPS_FLOW_CONFIG` (cross-row rules),
+  plug-in `ZIF_CA_OPS_FLOW_SOURCE` with the sources `ZCL_CA_OPS_FLOW_SRC_BREAK` (explained breaks),
+  `ZCL_CA_OPS_FLOW_SRC_FICA` (open FI-CA items), `ZCL_CA_OPS_FLOW_SRC_FINDING` (open exceptions of the stage checks),
+  `ZCL_CA_OPS_FLOW_EVAL`, report `ZCA_OPS_FLOW_RUN`; factory `GET_FLOW_DAO`, injector `INJECT_FLOW_DAO`.
+- CDS over the released `I_JournalEntryItem` / `I_CompanyCode` / `I_FiscalCalendarDate` and the FI-CA documents:
+  `ZI_CA_OpsFlowCfg`, `_Acct`, `_GlSig`, `_GlMin`, `_FiLine`, `_FiSig`, `_FiMin`, `_Move`, `_Open`, `_EvlMax`,
+  `_EvlItm`, `_EvlAll`, `_PosU`, `_PosSum`, `_Pos`, `_Exp`, `_Ctl`, `_Tag`, `_StgTag`, `_Fact`, `_TileU`, `_TileS`,
+  text views `_TagT`, `_EvStT`, `_RowT`, `_RoleT`; cube `ZI_CA_OpsFlowCube`, query `ZC_CA_OpsFlowQry`, tiles
+  `ZC_CA_OpsFlowTile` and stage card `ZC_CA_OpsFlowStage` (service `ZUI_CA_OPS_FLOW`), DCLs.
+- Product flows `DISB` / `COLL` (`config/flows`, area `CA_FICA`, inactive, no accounts); offline engine
+  `tools/abaptools/flow_config.py` (check `flow_config`).
+- Parameters `FLOW_LEDGER`, `FLOW_KEY_DATE_LAG`, `FLOW_RETENTION_DAYS`, `FLOW_BREAK_MAX_AGE_DAYS` (prefix `FLOW_`);
+  messages 320-336, 338, 340; ABAP Unit and CDS tests; VERIFY V145-V149; PlanViz FLOW-PV1 ... FLOW-PV5.
+
 ## [Unreleased] - 2026-11-11 (build F: clearing-account break analysis, pilot pack)
 
 Goal (user, 2026-11-11): SAP-native subledger operations and reconciliation evidence - read-only, no matching, no

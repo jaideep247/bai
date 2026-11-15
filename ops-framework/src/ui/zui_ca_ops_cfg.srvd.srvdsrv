@@ -34,4 +34,10 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_BreakRule as BreakRule;
   expose ZC_CA_BreakCondition as BreakCondition;
   expose ZC_CA_PilotBaseline as PilotBaseline;
+  expose ZC_CA_AccountFlow as AccountFlow;
+  expose ZC_CA_FlowAccount as FlowAccount;
+  expose ZC_CA_FlowStage as FlowStage;
+  expose ZC_CA_FlowTileStage as FlowTileStage;
+  expose ZC_CA_FlowStageControl as FlowStageControl;
+  expose ZC_CA_FlowStageRule as FlowStageRule;
 }

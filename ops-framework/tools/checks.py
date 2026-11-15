@@ -52,6 +52,10 @@ Checks
   process_catalogue   the product packages of the process catalogue (config/catalogue) and the worked example of a
                       customer layer are valid and the generated seed rows, monitoring rows and catalogue document are
                       up to date (tools/process_catalogue.py, shared engine tools/abaptools/process_catalogue.py)
+  flow_config         the product account flows (config/flows): known roles, sources, tiles, sides; no reserved stage;
+                      rules of a stage of their flow with criteria of their line source only, unique sequences, prefixes
+                      S4_ / FICA_; no account in the product; controls name checks of the product registries; every
+                      row delivered inactive (shared engine tools/abaptools/flow_config.py)
 
 Modification log:
 2026-11-10 | Copied from the parameter framework's checks and extended for the framework.
@@ -61,6 +65,7 @@ Modification log:
 2026-11-11 | link_registry (link registry: product layers valid, generated outputs up to date).
 2026-11-11 | process_catalogue (process catalogue: product packages valid, generated outputs up to date).
 2026-11-11 | break_rules (clearing-account break analysis: product buckets and bucket rules valid).
+2026-11-15 | flow_config (account flow reconciliation: product flows valid and inactive).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -211,6 +216,15 @@ def check_break_rules(root):
                                      links=links, product={'config/breaks'})
 
 
+def check_flow_config(root):
+    from abaptools import flow_config  # noqa: E402
+    checks = flow_config.check_ids(os.path.join(root, 'config', 'check_registry.csv'),
+                                   os.path.join(root, 'config', 'catalogue', 'monitoring', 'zca_ops_check.csv'))
+    folder = os.path.join(root, 'config', 'flows')
+    return flow_config.check_folders([('config/flows', folder)], product={'config/flows'},
+                                     inactive={'config/flows'}, checks=checks)
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -232,6 +246,7 @@ CHECKS = [
     ('link_registry', check_link_registry),
     ('process_catalogue', check_process_catalogue),
     ('break_rules', check_break_rules),
+    ('flow_config', check_flow_config),
 ]
 
 

@@ -71,7 +71,19 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'BreakCondition', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Break analysis rule conditions', position: 320, targetElement: '_BreakCondition' },
     { id: 'PilotBaseline', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Pilot detection baselines', position: 330, targetElement: '_PilotBaseline' }
+      label: 'Pilot detection baselines', position: 330, targetElement: '_PilotBaseline' },
+    { id: 'AccountFlow', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Account flows', position: 340, targetElement: '_AccountFlow' },
+    { id: 'FlowAccount', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Account flow accounts by role', position: 350, targetElement: '_FlowAccount' },
+    { id: 'FlowStage', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Account flow stages', position: 360, targetElement: '_FlowStage' },
+    { id: 'FlowTileStage', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Account flow tiles from stages', position: 370, targetElement: '_FlowTileStage' },
+    { id: 'FlowStageControl', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Account flow stage controls', position: 380, targetElement: '_FlowStageControl' },
+    { id: 'FlowStageRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Account flow stage rules', position: 390, targetElement: '_FlowStageRule' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

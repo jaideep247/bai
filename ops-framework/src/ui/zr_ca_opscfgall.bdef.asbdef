@@ -47,6 +47,12 @@ authorization master ( global )
   association _BreakRule { create ( features : global ); with draft; }
   association _BreakCondition { create ( features : global ); with draft; }
   association _PilotBaseline { create ( features : global ); with draft; }
+  association _AccountFlow { create ( features : global ); with draft; }
+  association _FlowAccount { create ( features : global ); with draft; }
+  association _FlowStage { create ( features : global ); with draft; }
+  association _FlowTileStage { create ( features : global ); with draft; }
+  association _FlowStageControl { create ( features : global ); with draft; }
+  association _FlowStageRule { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -117,6 +123,18 @@ authorization master ( global )
     validation BreakCondition ~ validateTransport;
     validation PilotBaseline ~ validateFields;
     validation PilotBaseline ~ validateTransport;
+    validation AccountFlow ~ validateFields;
+    validation AccountFlow ~ validateTransport;
+    validation FlowAccount ~ validateFields;
+    validation FlowAccount ~ validateTransport;
+    validation FlowStage ~ validateFields;
+    validation FlowStage ~ validateTransport;
+    validation FlowTileStage ~ validateFields;
+    validation FlowTileStage ~ validateTransport;
+    validation FlowStageControl ~ validateFields;
+    validation FlowStageControl ~ validateTransport;
+    validation FlowStageRule ~ validateFields;
+    validation FlowStageRule ~ validateTransport;
   }
 }
 
@@ -1249,6 +1267,226 @@ etag master LocalLastChangedAt
     BaselineMin = baseline_min;
     Source = source;
     Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_AccountFlow alias AccountFlow
+persistent table zca_ops_flow
+with additional save
+draft table zca_d_flow
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FlowId;
+  field ( mandatory : create ) Area, FlowId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_flow
+  {
+    Area = area;
+    FlowId = flow_id;
+    Description = description;
+    Direction = direction;
+    JrnlLedger = jrnl_ledger;
+    ProcessId = process_id;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_FlowAccount alias FlowAccount
+persistent table zca_ops_flwacc
+with additional save
+draft table zca_d_flwacc
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FlowId, FlowAcct;
+  field ( mandatory : create ) Area, FlowId, FlowAcct;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_flwacc
+  {
+    Area = area;
+    FlowId = flow_id;
+    FlowAcct = flow_acct;
+    Role = role;
+    Bukrs = bukrs;
+    Currency = currency;
+    HkontFrom = hkont_from;
+    HkontTo = hkont_to;
+    LineSource = line_source;
+    Seq = seq;
+    EvalClass = eval_class;
+    EvalCategory = eval_category;
+    Description = description;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_FlowStage alias FlowStage
+persistent table zca_ops_flwstg
+with additional save
+draft table zca_d_flwstg
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FlowId, StageId;
+  field ( mandatory : create ) Area, FlowId, StageId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_flwstg
+  {
+    Area = area;
+    FlowId = flow_id;
+    StageId = stage_id;
+    Seq = seq;
+    Description = description;
+    ExpectFrom = expect_from;
+    ExpectTo = expect_to;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_FlowTileStage alias FlowTileStage
+persistent table zca_ops_flwtil
+with additional save
+draft table zca_d_flwtil
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FlowId, Tile, StageId, Role;
+  field ( mandatory : create ) Area, FlowId, Tile, StageId, Role;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_flwtil
+  {
+    Area = area;
+    FlowId = flow_id;
+    Tile = tile;
+    StageId = stage_id;
+    Role = role;
+    Side = side;
+    Description = description;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_FlowStageControl alias FlowStageControl
+persistent table zca_ops_flwctl
+with additional save
+draft table zca_d_flwctl
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FlowId, StageId, CheckArea, CheckId;
+  field ( mandatory : create ) Area, FlowId, StageId, CheckArea, CheckId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_flwctl
+  {
+    Area = area;
+    FlowId = flow_id;
+    StageId = stage_id;
+    CheckArea = check_area;
+    CheckId = check_id;
+    Description = description;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_FlowStageRule alias FlowStageRule
+persistent table zca_ops_flwrul
+with additional save
+draft table zca_d_flwrul
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FlowId, RuleSeq;
+  field ( mandatory : create ) Area, FlowId, RuleSeq;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_flwrul
+  {
+    Area = area;
+    FlowId = flow_id;
+    RuleSeq = rule_seq;
+    RuleId = rule_id;
+    StageId = stage_id;
+    LineSource = line_source;
+    RefType = ref_type;
+    DocType = doc_type;
+    Origin = origin;
+    MainTrans = main_trans;
+    SubTrans = sub_trans;
+    DebitCredit = debit_credit;
+    Description = description;
+    Active = active;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

@@ -1,0 +1,13 @@
+AREA,FLOW_ID,RULE_SEQ,RULE_ID,STAGE_ID,LINE_SOURCE,REF_TYPE,DOC_TYPE,ORIGIN,MAIN_TRANS,SUB_TRANS,DEBIT_CREDIT,DESCRIPTION,ACTIVE
+CA_FICA,DISB,0050,S4_GL_TRANSFER,GL_TRANSFER,G,FKKSU,,,,,,Journal lines of the FI-CA G/L transfer,
+CA_FICA,DISB,0100,FICA_REQUEST,REQUEST,F,,,,,,,FI-CA document type of the request posting (V146),
+CA_FICA,DISB,0200,FICA_PAYRUN,PAYRUN,F,,,,,,,Origin key of the payment run documents (V146),
+CA_FICA,DISB,0300,S4_BANK_PAID,BANK_PAID,G,,,,,,,Document type of the bank statement posting (V146),
+CA_FICA,DISB,0400,S4_BANK_RETURN,BANK_RETURN,G,,,,,,,Document type of a return on the statement (V146),
+CA_FICA,DISB,0500,FICA_RETURNS_LOT,RETURNS_LOT,F,,,,,,,Origin key of the returns lot documents (V146),
+CA_FICA,COLL,0050,S4_GL_TRANSFER,GL_TRANSFER,G,FKKSU,,,,,,Journal lines of the FI-CA G/L transfer,
+CA_FICA,COLL,0100,FICA_RECEIVABLE,RECEIVABLE,F,,,,,,,FI-CA document type of the receivable (V146),
+CA_FICA,COLL,0200,FICA_PAYMENT_LOT,PAYMENT_LOT,F,,,,,,,Origin key of payment lot / payment run (V146),
+CA_FICA,COLL,0300,S4_SETTLEMENT,SETTLEMENT,G,,,,,,,Document type of the settlement posting (V146),
+CA_FICA,COLL,0400,S4_BANK_CREDIT,BANK_CREDIT,G,,,,,,,Document type of the bank statement posting (V146),
+CA_FICA,COLL,0500,FICA_CLARIFY,CLARIFY,F,,,,,,,Origin key of the clarification postings (V146),

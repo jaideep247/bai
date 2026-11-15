@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -187,6 +187,25 @@ texts <= 73 characters).
 | 301 | Pilot export of area &1: no metrics from &2 to &3 - no file written |
 | 302 | Pilot export: maintain the parameters &1 and &2 (logical path, file) |
 | 303 | Pilot export: file &1 could not be written - no file left |
+| 320 | Account flow &1 (&2) evaluated at &3: &4 account(s) evaluated |
+| 321 | Account &1 of flow &2 not evaluated: &3 |
+| 322 | No source class for account &1: not evaluated (grey, never zero) |
+| 323 | Flow &1 of area &2 skipped: business process &3 is not active |
+| 324 | Flow &1, &2: stage &3 is not an active stage of the flow |
+| 325 | Flow &1 rule &2: criterion &3 does not apply to lines of source &4 |
+| 326 | Flow &1: &2 accounts of role &3 for &4 (expected postings need one) |
+| 327 | Flow &1 has no active stage |
+| 328 | Flow &1 stage &2: no active account has role &3 |
+| 329 | Flow &1 rule &2 has no criterion - it would hide the row OTHER |
+| 330 | Source class &1 cannot be used: &2 |
+| 331 | No break analysis of &1 / &2 with a key date from &3 to &4 |
+| 332 | Break analysis &1 (&2) at &3 is partial - not evaluated |
+| 333 | Flow &1: no check controls a stage that clears role &2 |
+| 334 | Source &1 failed: &2 |
+| 335 | Flow &1: evaluations before &2 removed: &3 |
+| 336 | Area &1: no active account flow &2 |
+| 338 | Source &1 answered nothing for account &2 - not evaluated |
+| 340 | Value &1 of &2 is reserved (reserved: &3) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

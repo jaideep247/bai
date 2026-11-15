@@ -41,5 +41,11 @@ define root view entity ZC_CA_OpsCfgAll
       _BreakBucket : redirected to composition child ZC_CA_BreakBucket,
       _BreakRule : redirected to composition child ZC_CA_BreakRule,
       _BreakCondition : redirected to composition child ZC_CA_BreakCondition,
-      _PilotBaseline : redirected to composition child ZC_CA_PilotBaseline
+      _PilotBaseline : redirected to composition child ZC_CA_PilotBaseline,
+      _AccountFlow : redirected to composition child ZC_CA_AccountFlow,
+      _FlowAccount : redirected to composition child ZC_CA_FlowAccount,
+      _FlowStage : redirected to composition child ZC_CA_FlowStage,
+      _FlowTileStage : redirected to composition child ZC_CA_FlowTileStage,
+      _FlowStageControl : redirected to composition child ZC_CA_FlowStageControl,
+      _FlowStageRule : redirected to composition child ZC_CA_FlowStageRule
 }

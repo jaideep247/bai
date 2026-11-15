@@ -35,6 +35,12 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_BreakRule as _BreakRule
   composition [0..*] of ZR_CA_BreakCondition as _BreakCondition
   composition [0..*] of ZR_CA_PilotBaseline as _PilotBaseline
+  composition [0..*] of ZR_CA_AccountFlow as _AccountFlow
+  composition [0..*] of ZR_CA_FlowAccount as _FlowAccount
+  composition [0..*] of ZR_CA_FlowStage as _FlowStage
+  composition [0..*] of ZR_CA_FlowTileStage as _FlowTileStage
+  composition [0..*] of ZR_CA_FlowStageControl as _FlowStageControl
+  composition [0..*] of ZR_CA_FlowStageRule as _FlowStageRule
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -71,7 +77,13 @@ define root view entity ZR_CA_OpsCfgAll
       _BreakBucket,
       _BreakRule,
       _BreakCondition,
-      _PilotBaseline
+      _PilotBaseline,
+      _AccountFlow,
+      _FlowAccount,
+      _FlowStage,
+      _FlowTileStage,
+      _FlowStageControl,
+      _FlowStageRule
 }
 where
   I_Language.Language = $session.system_language
