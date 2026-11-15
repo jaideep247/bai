@@ -1,0 +1,3 @@
+AREA,FLOW_ID,DESCRIPTION,DIRECTION,JRNL_LEDGER,PROCESS_ID,ACTIVE
+CD_HCK,DISB,Disbursements: payable to the house banks,D,,,
+CD_HCK,COLL,Collections: receivable to the house banks,C,,,

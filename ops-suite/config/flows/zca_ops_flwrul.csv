@@ -1,0 +1,13 @@
+AREA,FLOW_ID,RULE_SEQ,RULE_ID,STAGE_ID,LINE_SOURCE,REF_TYPE,DOC_TYPE,ORIGIN,MAIN_TRANS,SUB_TRANS,DEBIT_CREDIT,DESCRIPTION,ACTIVE
+CD_HCK,DISB,0050,CD_GL_TRANSFER,GL_TRANSFER,G,FKKSU,,,,,,G/L transfer lines (A_GL_TRANSFER PARAM4),
+CD_HCK,DISB,0100,CD_PE_REQUEST,REQUEST,F,,,,,,,Doc type of the payment engine request posting (V151),
+CD_HCK,DISB,0200,CD_FPY1,PAYRUN,F,,,,,,,Origin key of the FPY1 payment documents (V151),
+CD_HCK,DISB,0300,CD_EBS_PAID,BANK_PAID,G,,,,,,,Doc type of the EBS posting of paid items (V151),
+CD_HCK,DISB,0400,CD_EBS_RETURN,BANK_RETURN,G,,,,,,,Doc type of the EBS posting of returns (V151),
+CD_HCK,DISB,0500,CD_RETURNS_LOT,RETURNS_LOT,F,,,,,,,Origin key of the returns lot documents FP09 (V151),
+CD_HCK,COLL,0050,CD_GL_TRANSFER,GL_TRANSFER,G,FKKSU,,,,,,G/L transfer lines (A_GL_TRANSFER PARAM4),
+CD_HCK,COLL,0100,CD_PE_RECEIVABLE,RECEIVABLE,F,,,,,,,Doc type of the payment engine collection posting (V151),
+CD_HCK,COLL,0200,CD_FPY1_COLL,PAYMENT_LOT,F,,,,,,,Origin key of FPY1 / payment lot documents (V151),
+CD_HCK,COLL,0300,CD_STRIPE_PAYOUT,SETTLEMENT,G,,,,,,,Doc type of the Stripe payout posting (V151),
+CD_HCK,COLL,0400,CD_EBS_CREDIT,BANK_CREDIT,G,,,,,,,Doc type of the EBS posting of credits (V151),
+CD_HCK,COLL,0500,CD_CLARIFY,CLARIFY,F,,,,,,,Origin key of the clarification postings (V151),

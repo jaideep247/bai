@@ -1,0 +1,13 @@
+AREA,FLOW_ID,STAGE_ID,SEQ,DESCRIPTION,EXPECT_FROM,EXPECT_TO,ACTIVE
+CD_HCK,DISB,REQUEST,10,Payment request posted (payment engine),,,
+CD_HCK,DISB,PAYRUN,20,Payment run (FPY1),,,
+CD_HCK,DISB,BANK_PAID,30,Bank statement: paid (EBS),,,
+CD_HCK,DISB,BANK_RETURN,40,Bank statement: return (EBS),,,
+CD_HCK,DISB,RETURNS_LOT,50,Returns lot (payable reopened),CLARIFICATION,PAYABLE,
+CD_HCK,DISB,GL_TRANSFER,60,G/L transfer (FPG1),,,
+CD_HCK,COLL,RECEIVABLE,10,Collection request posted (payment engine),,,
+CD_HCK,COLL,PAYMENT_LOT,20,Payment run (FPY1) / payment lot,,,
+CD_HCK,COLL,SETTLEMENT,30,Card settlement (Stripe payout),,,
+CD_HCK,COLL,BANK_CREDIT,40,Bank statement: credit (EBS),,,
+CD_HCK,COLL,CLARIFY,50,Clarification of payment lot items,CLARIFICATION,RECEIVABLE,
+CD_HCK,COLL,GL_TRANSFER,60,G/L transfer (FPG1),,,

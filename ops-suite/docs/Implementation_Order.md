@@ -339,6 +339,13 @@ switched on after V139, code lists (V140), accounts (V141), business process `CD
 its check, control coverage, alert rule and purge target; job `ZCA_OPS_BRK_RUN` before `ZCA_OPS_CHECK_RUN` of `CD_HCK`;
 pilot baselines and export path (V144).
 
+## Build G (2026-11-15): account flow reconciliation
+
+Framework first (`ops-framework/docs/INSTALL.md` §6f); then the overlay (`docs/Account_Flow_Overlay.md`): accounts by
+role (V150), stage rule values (V151) and stage controls (V152) of the flows `DISB` / `COLL` in area `CD_HCK`, each
+flow activated as a whole; job `ZCA_OPS_FLOW_RUN` after `ZCA_OPS_BRK_RUN` and the morning report; PlanViz
+FLOW-PV1 ... FLOW-PV5 first.
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |

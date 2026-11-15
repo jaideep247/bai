@@ -329,3 +329,16 @@ the busiest disbursement clearing account on a 2-million-payment day: rows scann
 links; **BRK-PV4** the snapshot views. Caps make a snapshot partial, never silently complete; the busiest account runs
 in its own job step (`P_ACCT`). VERIFY V135, V141.
 
+## 16. Account flow reconciliation (build G, 2026-11-15)
+
+The dashboard is CDS over the released `I_JournalEntryItem` and the FI-CA document tables; the evaluation job reads
+aggregates only (`ops-framework/docs/ACCOUNT_FLOW.md` §8). Pre-checks on this landscape, before the overlay rows are
+activated (V152):
+
+| ID | Read | Pass criterion |
+|---|---|---|
+| FLOW-PV1 | `ZI_CA_OpsFlowGlSig` - the disbursement flow, a month window, the busiest ACH transit account | ledger / company code / account / posting date predicates on ACDOCA under the released view, aggregation on HANA, rows returned = signatures (tens), runtime recorded |
+| FLOW-PV2 | `ZI_CA_OpsFlowOpen` - "from" in the middle of the fiscal year | carry-forward (period 000) + year-to-date lines only; no scan of earlier years |
+| FLOW-PV3 | `ZI_CA_OpsFlowFiLine` / `_FiSig` on a 2-million-payment day | `DFKKOP` / `DFKKOPK` by company code and account, the clearing branch by clearing date - an index on (BUKRS, HKONT, AUGDT) of `DFKKOP` is the expected outcome if the plan scans |
+| FLOW-PV4 | open FI-CA items of the payable / receivable reconciliation account | aggregated on HANA by company code and account |
+| FLOW-PV5 | break snapshot headers and open findings of the stage checks | few rows; findings by index `OPN` |

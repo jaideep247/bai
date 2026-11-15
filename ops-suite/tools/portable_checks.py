@@ -16,6 +16,7 @@ Modification log:
 2026-11-11 | link_registry (customer overlay of the link registry valid with the product layers, outputs up to date).
 2026-11-11 | process_catalogue (customer layer of the process catalogue valid with the product packages, outputs current).
 2026-11-11 | break_rules (overlay bucket rules of the break analysis valid with the product rules).
+2026-11-15 | flow_config (overlay account flows valid with the product flows, all inactive).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -223,6 +224,22 @@ check('break_rules',
       'The overlay bucket rules config/breaks are valid on top of the product buckets and rules of the framework '
       '(active buckets, prefix CD_, unique sequence per area, known kinds, operators and fields, defined @ '
       'parameters, links of the registry) - tools/abaptools/break_rules.py.')
+
+# Account flow reconciliation (2026-11-15): the overlay flows valid on top of the product templates, all inactive
+from abaptools import flow_config  # noqa: E402
+check('flow_config',
+      flow_config.check_folders(
+          [('ops-framework/config/flows', os.path.join(_FRAMEWORK, 'config', 'flows')),
+           ('config/flows', os.path.join(ROOT, 'config', 'flows'))],
+          product={'ops-framework/config/flows'},
+          inactive={'ops-framework/config/flows', 'config/flows'},
+          checks=flow_config.check_ids(os.path.join(_FRAMEWORK, 'config', 'check_registry.csv'),
+                                       os.path.join(_FRAMEWORK, 'config', 'catalogue', 'monitoring',
+                                                    'zca_ops_check.csv'))),
+      'The overlay account flows config/flows are valid on top of the product templates of the framework (known '
+      'roles, line sources, tiles and sides, no reserved stage, rules of a stage of their flow with criteria of '
+      'their line source, unique sequences, one account per company code and currency of an expected '
+      'counter-posting role, roles held) and every row is delivered inactive - tools/abaptools/flow_config.py.')
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

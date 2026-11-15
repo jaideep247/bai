@@ -1,0 +1,7 @@
+AREA,FLOW_ID,TILE,STAGE_ID,ROLE,SIDE,DESCRIPTION,ACTIVE
+CD_HCK,DISB,REQUESTED,REQUEST,PAYABLE,C,Payables posted by the payment requests,
+CD_HCK,DISB,PAID,BANK_PAID,CASH,C,Paid out of the house bank accounts,
+CD_HCK,DISB,CLEARED,BANK_PAID,CLEARING,D,Clearing accounts matched and cleared,
+CD_HCK,COLL,REQUESTED,RECEIVABLE,RECEIVABLE,D,Receivables posted by the collection requests,
+CD_HCK,COLL,PAID,BANK_CREDIT,CASH,D,Settled into the house bank accounts,
+CD_HCK,COLL,CLEARED,PAYMENT_LOT,RECEIVABLE,C,Receivables matched and cleared,
