@@ -22,6 +22,7 @@
 *& 2026-11-08 | Customer posting area: FICA_REASON is a result of ZRSN (was ZCD_EBS_RSN_MAP) - comment only.
 *& 2026-11-10 | is_lookup_field_approved: ZCD_OPS_TABWL row EBS / LOOKUP for the table and field (R21,
 *& 2026-11-15 | TY_CHECK-CRSTATUS renamed STATE (DFKKCR-STATE).
+*& 2026-11-15 | TY_RETURN_ITEM-AMOUNT is DFKKRP-BETRR (user).
 *&            | DEFAULT IGNORE); get_lookup_rows reads only approved fields with S_TABU_NAM 03.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
@@ -54,7 +55,7 @@ INTERFACE zif_cd_ebs_sap_dao
       lot_stars TYPE ty_status,
       "! Return reason of the item (DFKKRP-RLGRD, VERIFY-SE11) - FEBEP carries no return reason
       rlgrd     TYPE ty_lot_reason,
-      "! Returned amount of the item (DFKKRP-BETRW, VERIFY-DDIC) - the morning report compares it
+      "! Returned amount of the item (DFKKRP-BETRR) - the morning report compares it
       "! with the return line of the bank statement (A_INFLIGHT)
       amount    TYPE zif_ca_ops_types=>ty_amount,
     END OF ty_return_item.

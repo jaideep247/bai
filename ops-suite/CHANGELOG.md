@@ -3,6 +3,12 @@
 Changes of the ops suite (`ops-suite/`) from 2026-11-15 on; earlier changes are in the modification logs of the
 objects, `docs/Class_Purpose_and_Modification_Log.md`, `docs/Implementation_Order.md` and `docs/history/`.
 
+## 2026-11-15 - returned amount from DFKKRP-BETRR
+
+- `DFKKRP` has no `BETRW` (user); the returned amount of a returns lot item is `BETRR`. `ZCL_CD_EBS_SAP_DAO=>GET_RETURN_ITEMS`
+  (morning report `A_INFLIGHT`, payment trace) reads it; test double and type comments updated. V160 closed, row removed
+  from `ddic/open_fields.csv`.
+
 ## 2026-11-15 - cheque status from DFKKCR-STATE
 
 - `DFKKCR` has no `CRSTATUS` (user); the cheque status is `STATE` (B cashed, V voided, blank open). `ZCL_CD_EBS_SAP_DAO`,

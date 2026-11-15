@@ -27,6 +27,7 @@
 *&            | the FI lines on ZI_CD_OpsGlItem (released I_OperationalAcctgDocItem); same data and
 *&            | assertions as with the ACDOCA / BSEG doubles.
 *& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V159 / V160 noted.
+*& 2026-11-15 | Returns lot item amount DFKKRP-BETRR (no BETRW).
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -106,7 +107,7 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     ls_rp-opbel = gc_test-lot_doc.
     ls_rp-selw1 = gc_test-payment.
     ls_rp-rlgrd = gc_test-rlgrd.
-    ls_rp-betrw = '250.00'.
+    ls_rp-betrr = '250.00'.
     INSERT ls_rp INTO TABLE lt_rp.
     go_env->insert_test_data( lt_rp ).
     ls_rk-keyr1 = gc_test-ret_lot.
@@ -148,7 +149,7 @@ CLASS ltc_sap_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-rlgrd exp = gc_test-rlgrd
                                             msg = 'The return reason must come from DFKKRP-RLGRD' ).
         cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-amount exp = '250.00'
-                                            msg = 'Returned amount from DFKKRP-BETRW (VERIFY-DDIC)' ).
+                                            msg = 'Returned amount from DFKKRP-BETRR' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

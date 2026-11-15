@@ -446,7 +446,7 @@ INTERFACE zif_cd_ops_trace_types
       lot_stars TYPE c LENGTH 20,
       "! Return reason DFKKRP-RLGRD (VERIFY-SE11; code only - no text table read)
       rlgrd     TYPE c LENGTH 3,
-      "! Amount of the returns lot item (DFKKRP-BETRW, VERIFY-DDIC; compared with the return line)
+      "! Amount of the returns lot item (DFKKRP-BETRR; compared with the return line)
       amount    TYPE zif_ca_ops_types=>ty_amount,
     END OF ty_return.
   TYPES tt_return TYPE STANDARD TABLE OF ty_return WITH EMPTY KEY.

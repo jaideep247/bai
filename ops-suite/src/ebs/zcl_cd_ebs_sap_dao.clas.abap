@@ -28,6 +28,7 @@
 *&            | ZI_CD_EbsGlLine) - no DCL in a job read; same keys, filters and sums.
 *& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V159 / V160 noted.
 *& 2026-11-15 | Cheque status read from DFKKCR-STATE (DFKKCR has no CRSTATUS, user).
+*& 2026-11-15 | Returned amount from DFKKRP-BETRR (DFKKRP has no BETRW, user; V160 closed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -70,9 +71,9 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " KEYR1_KK, seen on the 2025 reference system; DFKKRK has no OPBEL - the legacy v4 join via OPBEL was wrong)
     " Return reason correction 2026-11-06: the return reason is DFKKRP-RLGRD (RLGRD_KK, seen on the
     " reference system S/4HANA 2025) - read in the same statement, FEBEP carries no return reason.
-    " VERIFY V160: DFKKRP has no BETRW on the reference system (BETRR / BETRH / BETRU) - the returned
-    " amount compared with the return line by the morning report check A_INFLIGHT stays BETRW until decided
-    SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars, rp~rlgrd, rp~betrw AS amount
+    " Returned amount DFKKRP-BETRR (BETRR_KK; user 2026-11-15 - DFKKRP has no BETRW), compared with the
+    " return line by the morning report check A_INFLIGHT
+    SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars, rp~rlgrd, rp~betrr AS amount
       FROM dfkkrp AS rp
       LEFT OUTER JOIN dfkkrk AS rk ON rk~keyr1 = rp~keyr1
       FOR ALL ENTRIES IN @it_docno
