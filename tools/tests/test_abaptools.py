@@ -106,6 +106,19 @@ class SerializerSettingsTest(unittest.TestCase):
             self.assertIn('<STARTING_FOLDER>/component/src/</STARTING_FOLDER>', stage.pending[path])
             self.assertNotIn('CHANGELOG', stage.pending[path])
 
+    def test_extend_view_entity_is_serialized(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.component(root, '| 001 | Text |\n')
+            write(root, 'src/zxx_x_exc_c.ddls.asddls',
+                  "// Extension: XX extension of ZC_CA_OpsException\nextend view entity ZC_CA_OpsException with\n"
+                  "{\n  @EndUserText.label: 'Feeder system'\n  ZZXX_Feeder\n}\n")
+            self.assertEqual(ser.main([], root), 0)
+            with open(os.path.join(root, 'src', 'zxx_x_exc_c.ddls.xml'), encoding='utf-8') as fh:
+                xml = fh.read()
+            self.assertIn(f'<SOURCE_TYPE>{ser.EXTEND_SOURCE_TYPE}</SOURCE_TYPE>', xml)
+            self.assertIn('<DDTEXT>XX extension of ZC_CA_OpsException</DDTEXT>', xml)
+            self.assertNotIn('Feeder system', xml)
+
     def test_problem_writes_nothing(self):
         with tempfile.TemporaryDirectory() as root:
             self.component(root, '| 001 | Text |\n')

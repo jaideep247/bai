@@ -103,4 +103,8 @@
 | ZI_CD_PAYMETHODCLS-MethodClass | confirmed | - | - | payment model payment (active) |
 | ZI_CD_PAYMETHODCLS-PaymentMethod | confirmed | CD_PAY_METHOD_CLS | CD_PAYRUN_TO_CLASS_C (to, active)<br/>CD_PAYRUN_TO_CLASS_D (to, active)<br/>CD_PAYRUN_TO_CLASS_C (target key)<br/>CD_PAYRUN_TO_CLASS_D (target key) | payment model payment (active): join CD_PAYRUN_TO_CLASS_C<br/>payment model payment (active): join CD_PAYRUN_TO_CLASS_D |
 | ZI_CD_PAYWORKSTATE-ClearingDoc | confirmed | CD_PAY_WORK_STATE | CD_PAYRUN_TO_WORK_STATE (to, active)<br/>CD_PAYRUN_TO_WORK_STATE (target key) | payment model payment (active): join CD_PAYRUN_TO_WORK_STATE |
+| ZI_CD_PAYWORKSTATE-Finding | confirmed | - | - | payment model payment (active) |
+| ZI_CD_PAYWORKSTATE-IsLate | confirmed | - | - | payment model payment (active) |
+| ZI_CD_PAYWORKSTATE-Outcome | confirmed | - | - | payment model payment (active) |
+| ZI_CD_PAYWORKSTATE-SourceSystem | confirmed | - | - | payment model payment (active) |
 | ‹ACK TABLE›-‹payment key field› | VERIFY V121 | CD_BANK_ACK | CD_PAYMENT_TO_ACK (to, pending (VERIFY))<br/>CD_PAYMENT_TO_ACK (target key) | - |

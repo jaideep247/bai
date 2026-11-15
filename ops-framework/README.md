@@ -229,6 +229,13 @@ ENDCLASS.
    `INJECT_AUTH`, `INJECT_CLOCK`, ..., `RESET` in `teardown`); `NEW zcl_ca_ops_param_seed( )` is an in-memory
    parameter store over the real ZCA_PARAM logic (areas `ZT_OPS_A` / `_B` for tests). The demo's test
    include shows all of it without a database.
+10. **Customer data on top** (2026-11-15). Every place where the consumer adds its own data is an extension point
+    of `config/extension_points.json` - a configuration row, the customer layer of the link registry, a spec the
+    product generates from, a plug-in class, or a CDS extension of a product view (exceptions, breaks and their
+    lines, account flow and its stage card, area dashboard, process catalogue, control review). For the views the
+    consumer declares its columns in `config/extensions/*.json` (a registry link or a key of its own table, its
+    fields with their sensitivity) and `../tools/abaptools/extensions.py` generates the `extend view entity`
+    sources into the consumer's package - no product object changes (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`).
 
 ## Documentation
 
@@ -243,6 +250,7 @@ ENDCLASS.
 | `docs/JOB_MONITORING.md` | SAP job monitor: failures of every job of the client, parent / child links and their evidence quality, granularity chain kept as evidence, window and caps, board, performance, purge, adoption |
 | `docs/OPERATIONS_FEATURES.md` | operations response features (2026-11-11): runbook links, planned downtime, escalation until acknowledged, alert correlation, response-time metrics, shift handover - configuration, rules, decisions, objects |
 | `docs/CONTROL_REVIEW.md` | control register and daily control review: which findings belong to a control, derived status, sign-off, awaiting / overdue review, review app |
+| `docs/EXTENDING_WITH_CUSTOMER_DATA.md` | one customer extension contract: the matrix module x standard data source x extension point x mechanism (generated from `config/extension_points.json`), which mechanism for which need, CDS extensions of the product views (anchors, rules, statuses, fallbacks), the customer pack, worked example |
 | `docs/VERIFY.md` | what offline checks cannot prove |
 | `CHANGELOG.md` | changes, releases |
 
@@ -257,6 +265,8 @@ ENDCLASS.
 | `tools/abapgit_serialize.py` | writes all abapGit XML from `ddic/`, `config/`, the sources and the text elements |
 | `tools/param_definitions.py` | the framework's profile of the parameter seed generator (seed class `ZCL_CA_OPS_PARAM_SEED`) |
 | `tools/rap_generate.py` | the framework's profile of the RAP generator (app `ZUI_CA_OPS_CFG`) |
+| `config/extension_points.json` | inventory of the extension points (checked against the views and documents by `tools/extensions.py`); `config/extensions/examples/xx` worked example of a customer pack |
+| `tools/extensions.py` | the framework's profile of the extension engine: inventory, matrix block of `docs/EXTENDING_WITH_CUSTOMER_DATA.md`, worked example `docs/extensions/example_xx.md` |
 | `tools/checks.py` | house checks incl. messages, test paths, layering (no consumer reference), customer wording, packaging, completeness of registered processes (`process_onboarding`) |
 
 The files in `tools/` are thin wrappers: the engines are the shared tools of the repository
@@ -272,6 +282,7 @@ npx @abaplint/cli@2.120.92 abaplint.json        # syntax and house rules (v758),
 python3 tools/abapgit_serialize.py --check      # abapGit metadata up to date
 python3 tools/param_definitions.py --check      # parameter definitions and seed class
 python3 tools/rap_generate.py --check           # configuration app generated from ddic/
+python3 tools/extensions.py --check             # extension points and the worked example of a customer pack
 python3 tools/checks.py                         # house checks
 python3 -m unittest discover -s tools/tests     # tool tests
 ```

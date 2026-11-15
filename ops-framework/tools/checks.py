@@ -56,6 +56,11 @@ Checks
                       rules of a stage of their flow with criteria of their line source only, unique sequences, prefixes
                       S4_ / FICA_; no account in the product; controls name checks of the product registries; every
                       row delivered inactive (shared engine tools/abaptools/flow_config.py)
+  extensions          the inventory of extension points (config/extension_points.json) matches the product: files
+                      and documents exist, every view of a CDS extension point carries exactly the extensibility
+                      annotations and its anchor elements, no other view is extensible; the matrix of
+                      docs/EXTENDING_WITH_CUSTOMER_DATA.md and the worked example of a customer pack are up to date
+                      (tools/extensions.py, shared engine tools/abaptools/extensions.py)
 
 Modification log:
 2026-11-10 | Copied from the parameter framework's checks and extended for the framework.
@@ -66,6 +71,7 @@ Modification log:
 2026-11-11 | process_catalogue (process catalogue: product packages valid, generated outputs up to date).
 2026-11-11 | break_rules (clearing-account break analysis: product buckets and bucket rules valid).
 2026-11-15 | flow_config (account flow reconciliation: product flows valid and inactive).
+2026-11-15 | extensions (build H: inventory of extension points, extensible views, worked example of a pack).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -225,6 +231,12 @@ def check_flow_config(root):
                                      inactive={'config/flows'}, checks=checks)
 
 
+def check_extensions(root):
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import extensions  # noqa: E402
+    return extensions._engine.check(root, extensions.PROFILE)
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -247,6 +259,7 @@ CHECKS = [
     ('process_catalogue', check_process_catalogue),
     ('break_rules', check_break_rules),
     ('flow_config', check_flow_config),
+    ('extensions', check_extensions),
 ]
 
 

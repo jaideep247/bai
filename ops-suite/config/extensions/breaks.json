@@ -1,0 +1,21 @@
+{
+  "_comment": "Payment engine data next to the clearing-account breaks (docs/Extensions_Overlay.md). The assignment of a clearing-account line carries the payment document (AUGBL) - confirmed for ACH and card, open for cheque (V139) - so the break group joins the worklist state of that payment (CD_PAY_WORK_STATE, ZI_CD_PayWorkState, one row per payment document): the source system of its requests, the open outcome and finding, late. Pending until V139 is closed. A single break line reaches no request: a clearing-account line is a G/L transfer of many FI-CA items or a bank posting, and the overlay has no to-one link from a journal line to the request log (decision D-H3).",
+  "extensions": [
+    {"id": "CD_BRK_WORK_STATE", "point": "BRK_GROUP", "anchor": "ASSIGNMENT",
+     "description": "Source system and worklist state of the payment",
+     "object": "CD_PAY_WORK_STATE", "keys": {"ClearingDoc": "Assignment"},
+     "association": "_ZZCDWorkState", "also": ["BRKGRP_CUBE", "BRKGRP_QRY"], "verify": "V139",
+     "fields": [
+       {"field": "SourceSystem", "element": "ZZCD_SourceSystem", "label": "Source system of the payment"},
+       {"field": "Outcome", "element": "ZZCD_Outcome", "label": "Open outcome of the payment"},
+       {"field": "Finding", "element": "ZZCD_Finding", "label": "Open finding of the payment"},
+       {"field": "IsLate", "element": "ZZCD_IsLate", "label": "Payment late"}]},
+    {"id": "CD_BRK_LINE_REQUEST", "point": "BRK_LINE", "anchor": "JOURNAL_ITEM", "status": "blocked",
+     "description": "Request number and source system of a break line",
+     "reason": "No to-one link journal line -> request log (D-H3)",
+     "object": "CD_PAYM_REQ_LOG",
+     "fields": [
+       {"field": "‹FIN number field›", "element": "ZZCD_RequestNo", "label": "Request number"},
+       {"field": "SOURCE", "element": "ZZCD_RequestSource", "label": "Source system of the request"}]}
+  ]
+}

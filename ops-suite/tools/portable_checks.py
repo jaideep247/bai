@@ -17,6 +17,7 @@ Modification log:
 2026-11-11 | process_catalogue (customer layer of the process catalogue valid with the product packages, outputs current).
 2026-11-11 | break_rules (overlay bucket rules of the break analysis valid with the product rules).
 2026-11-15 | flow_config (overlay account flows valid with the product flows, all inactive).
+2026-11-15 | extensions (customer plug-in pack: extensions of the framework views valid, generated files current).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -240,6 +241,17 @@ check('flow_config',
       'roles, line sources, tiles and sides, no reserved stage, rules of a stage of their flow with criteria of '
       'their line source, unique sequences, one account per company code and currency of an expected '
       'counter-posting role, roles held) and every row is delivered inactive - tools/abaptools/flow_config.py.')
+
+# Customer extensions (2026-11-15): the pack config/extensions valid against the framework's extension points and the
+# link registry, generated extensions (src/ext, config/extensions/pending) and the report current
+import extensions  # noqa: E402
+check('extensions', extensions._engine.check(ROOT, extensions.PROFILE),
+      'The customer pack config/extensions is valid against the inventory of extension points of the framework '
+      '(ops-framework/config/extension_points.json) and the link registry: known points and anchors, prefix CD_, '
+      'elements ZZCD_, "to one" links leaving the anchor\'s object, key objects of the overlay with every key mapped, '
+      'registry fields only, no hidden field, masked fields masked, quota; VERIFY items keep an extension pending; '
+      'the generated extend view entity sources and docs/extensions/extensions.md are up to date '
+      '(tools/extensions.py).')
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

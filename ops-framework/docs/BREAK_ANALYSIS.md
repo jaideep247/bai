@@ -128,3 +128,7 @@ busiest landscape (`P_ACCT`).
 3. The registered check (`ZCA_OPS_CHECK_RUN` of the area) raises the unexplained breaks as exceptions.
 
 VERIFY: V134-V138 (`docs/VERIFY.md`).
+
+## Related: customer data on top (2026-11-15)
+
+A customer adds columns from its own tables to the break list `ZR_CA_OpsBrkGroup` (passed on to `ZC_CA_OpsBrkGroup`, and on request to the cube `ZI_CA_OpsBrkCube` and a copy of the query `ZC_CA_OpsBrkQry`) and the break lines `ZR_CA_OpsBrkItem` (passed on to `ZC_CA_OpsBrkItem`); anchors: company code, the journal line (its key, or company code, ledger, account and assignment of the group) and the assignment as the key of a customer object - extension points `BRK_GROUP` and `BRK_LINE` of `config/extension_points.json`. It declares them in its folder (`config/extensions/*.json`); `tools/extensions.py` checks them against the inventory and the link registry and generates the `extend view entity` sources into the customer package. No product object changes. `docs/EXTENDING_WITH_CUSTOMER_DATA.md`; VERIFY V153-V157.

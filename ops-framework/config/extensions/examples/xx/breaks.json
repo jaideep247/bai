@@ -1,0 +1,15 @@
+{
+  "_comment": "Feeder of the request in the assignment of a break group, in the list, the cube and a copy of the query (link anchor JOURNAL_GROUP: the customer's link clearing line -> request, inactive until the element names of the released journal view are confirmed). A break line keeps the product's columns: the customer's case table is keyed by group, so no to-one link leads from a single line to a case (blocked, with its reason).",
+  "extensions": [
+    {"id": "XX_BRK_GROUP_REQ", "point": "BRK_GROUP", "anchor": "JOURNAL_GROUP",
+     "description": "Feeder of the request in the assignment",
+     "link": "XX_GLITEM_TO_REQUEST", "association": "_ZZXXBrkReq", "also": ["BRKGRP_CUBE", "BRKGRP_QRY"],
+     "fields": [
+       {"field": "FEEDER", "element": "ZZXX_BrkFeeder", "label": "Feeder system"}]},
+    {"id": "XX_BRK_LINE_CASE", "point": "BRK_LINE", "anchor": "JOURNAL_ITEM", "status": "blocked",
+     "description": "Investigation case of a break line",
+     "reason": "The case table is keyed by group, not by line",
+     "object": "XX_CASE",
+     "fields": [{"field": "CASE_ID", "element": "ZZXX_CaseId", "label": "Investigation case"}]}
+  ]
+}

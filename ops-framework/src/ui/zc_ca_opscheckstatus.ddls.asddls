@@ -8,10 +8,19 @@
 //                   2026-11-10 | Overview card counters (CheckCount, StaleCount, IsAttention), summed by default.
 //                   2026-11-11 | Planned downtime mark of the area (operations response features).
 //                   2026-11-11 | Process catalogue: catalogue process and dashboard card of the check's process.
+// Extension point CHECK_STATUS (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          passes the elements of the base view on; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Area dashboard: status per check'
 @Metadata.allowExtensions: true
 @Search.searchable: true
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: false
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define root view entity ZC_CA_OpsCheckStatus
   provider contract transactional_query
   as projection on ZR_CA_OpsCheckStatus

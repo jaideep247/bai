@@ -203,6 +203,8 @@ active check of the group is `CHECKS_NOT_REGISTERED` (error).
 - [ ] DV1 rows in `ZUI_CA_OPS_CFG` and the parameter app; transport
 - [ ] Job `ZCA_OPS_CHECK_RUN` per schedule group; test mode run first
 - [ ] Offline `process_onboarding` green; next morning no onboarding finding
+- [ ] Own data the business wants next to the findings or the dashboard rows: declared at an extension point
+      (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`), `tools/extensions.py --check` green - never a change of a product view
 
 ## 10. Worked example — a collections request lifecycle with a card refund (fictitious)
 
@@ -299,3 +301,7 @@ A business process registers checks; the **payment model** gives the same custom
 its payments and requests (persona overview pages, payment and request object pages, business-date trend) from a
 mapping spec and the product templates - `docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md`. The two are independent: a
 process's findings appear in the payment model's exception trend when its area is listed in the spec (`model.areas`).
+
+## Related: customer data on top (2026-11-15)
+
+A customer adds columns from its own tables to the area dashboard `ZR_CA_OpsCheckStatus` (passed on to `ZC_CA_OpsCheckStatus`); anchors: company code and the check (area, check ID) - extension point `CHECK_STATUS` of `config/extension_points.json`. It declares them in its folder (`config/extensions/*.json`); `tools/extensions.py` checks them against the inventory and the link registry and generates the `extend view entity` sources into the customer package. No product object changes. `docs/EXTENDING_WITH_CUSTOMER_DATA.md`; VERIFY V153-V157.

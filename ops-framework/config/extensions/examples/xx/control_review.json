@@ -1,0 +1,12 @@
+{
+  "_comment": "Audit reference and tester of a control next to the daily control review (key anchor CONTROL: the customer's audit register is keyed by area and control).",
+  "extensions": [
+    {"id": "XX_CTL_AUDIT_REF", "point": "CTL_REVIEW", "anchor": "CONTROL",
+     "description": "Audit reference and tester of the control",
+     "object": "XX_CTL_REGISTER", "keys": {"AREA": "Area", "CONTROL_ID": "ControlId"},
+     "association": "_ZZXXCtlReg",
+     "fields": [
+       {"field": "AUDIT_REF", "element": "ZZXX_AuditRef", "label": "Audit reference"},
+       {"field": "TESTER", "element": "ZZXX_Tester", "label": "Tester", "sensitivity": "M"}]}
+  ]
+}

@@ -32,6 +32,9 @@ works unchanged.
                       overlay): buckets, ordered rules, conditions, layer prefixes, parameters and links named
   flow_config         the account flows of the reconciliation dashboard (product templates and a customer overlay):
                       flows, accounts by role, stages, tiles, stage controls, ordered stage rules, inactive delivery
+  extensions          the inventory of the framework's extension points (checked against its views and documents)
+                      and a customer's CDS extensions of the product views from its declarations: validation against
+                      the inventory and the link registry, extend view entity sources, query copies, report (--check)
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).
@@ -44,6 +47,7 @@ Modification log:
 2026-11-11 | process_catalogue (process catalogue of the operations framework).
 2026-11-11 | break_rules (clearing-account break analysis of the operations framework).
 2026-11-15 | flow_config (account flow reconciliation of the operations framework).
+2026-11-15 | extensions (customer extensions of the operations framework).
 """
 import importlib.util
 import os

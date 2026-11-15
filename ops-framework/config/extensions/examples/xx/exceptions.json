@@ -1,0 +1,13 @@
+{
+  "_comment": "Feeder, received date and member of the request an exception is about (key anchor OBJECT: the customer's request check writes object type XXREQ and the request number as object key).",
+  "extensions": [
+    {"id": "XX_EXC_REQUEST", "point": "EXC", "anchor": "OBJECT",
+     "description": "Request of the exception: feeder, received, member",
+     "object": "XX_REQUEST", "keys": {"REQ_ID": "ObjectKey"}, "discriminator": "XXREQ",
+     "association": "_ZZXXRequest",
+     "fields": [
+       {"field": "FEEDER", "element": "ZZXX_ReqFeeder", "label": "Feeder system"},
+       {"field": "RECEIVED_ON", "element": "ZZXX_ReceivedOn", "label": "Request received on"},
+       {"field": "MEMBER_ID", "element": "ZZXX_Member", "label": "Member", "sensitivity": "M"}]}
+  ]
+}

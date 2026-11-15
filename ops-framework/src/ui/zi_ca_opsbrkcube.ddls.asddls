@@ -7,12 +7,22 @@
 // Modification log: 2026-11-11 | Initial version (build F: clearing-account break analysis).
 // VERIFY-ADT: @Analytics.dataCategory #CUBE over a root view entity with joins (7.58), #MAX aggregation of AgeDays,
 //             currency as dimension of DEC measures (no @Semantics.amount on DEC) - as the ledger model cube (V136).
+// Extension point BRK_GROUP (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          passes the elements of the base view on; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Clearing account breaks - cube'
 @Analytics.dataCategory: #CUBE
 @VDM.viewType: #COMPOSITE
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #L, dataClass: #TRANSACTIONAL }
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: false
+@AbapCatalog.extensibility.dataSources: [ 'Grp' ]
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define view entity ZI_CA_OpsBrkCube
   as select from ZR_CA_OpsBrkGroup as Grp
 {

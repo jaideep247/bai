@@ -80,3 +80,7 @@ of `PILOT_EXPORT_PATH` (a path of the RTB share, V144). Alerts of the pilot area
 | V140 | Business / bank | The code lists: `BRK_BTC_NEW` (143, 452 - new / unmapped), `BRK_BTC_REDEPOSIT` (468), `BRK_BTC_CUMULATED` (143, 165, 166), `BRK_BTC_CHEQUE` (paid / stop codes of the cheque banks - not delivered); D-F3 / D-F4 decided |
 | V141 | Configuration / PlanViz | One account row per active `ZCD_HCK_RCSET` set (company code, clearing account); `BRK_LOOKBACK_DAYS` covers the oldest open line of the busiest account; BRK-PV1 / BRK-PV2 on the busiest disbursement clearing account on a 2-million-payment day |
 | V144 | Configuration | Pilot: baselines of the pilot checks in `ZCA_OPS_PILOTBL` with their source; logical path / file of `PILOT_EXPORT_PATH` / `PILOT_EXPORT_FILE` on the RTB share; `S_DATASET` of the job user |
+
+Related (2026-11-15, build H): closing V139 also turns the pack's extension `CD_BRK_WORK_STATE` active - the source
+system and worklist state of the payment in the assignment as columns of the break list, the cube and the query copy
+`ZC_CD_BrkQry` (`Extensions_Overlay.md`).

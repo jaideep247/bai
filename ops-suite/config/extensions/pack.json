@@ -1,0 +1,11 @@
+{
+  "_comment": "Customer plug-in pack of the ops suite: its data on top of the product views of ZCA_OPS (ops-framework/docs/EXTENDING_WITH_CUSTOMER_DATA.md, docs/Extensions_Overlay.md). Declarations in this folder, joins through the overlay of the link registry (config/links/overlay.json); tools/extensions.py generates the extend view entity sources into src/ext (active) or config/extensions/pending (waiting for a VERIFY item, never imported) and the report docs/extensions/extensions.md.",
+  "prefix": "CD",
+  "layer": "CD",
+  "links": ["config/links/overlay.json"],
+  "since": "2026-11-15",
+  "package_folder": "src/ext",
+  "pending_folder": "config/extensions/pending",
+  "package_text": "Ops suite: extensions of the framework views",
+  "report": "docs/extensions/extensions.md"
+}

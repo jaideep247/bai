@@ -61,7 +61,11 @@
     {"id": "CD_PAY_WORK_STATE", "source": "ZI_CD_PayWorkState", "kind": "V", "keys": ["ClearingDoc"],
      "description": "Source, outcome and finding of a payment (worklist)",
      "fields": [
-       {"name": "ClearingDoc", "evidence": "C", "description": "Payment document"}
+       {"name": "ClearingDoc", "evidence": "C", "description": "Payment document"},
+       {"name": "SourceSystem", "evidence": "C", "description": "Source system of its requests (MAX of several)"},
+       {"name": "Outcome", "evidence": "C", "description": "Open outcome (IN_FLIGHT, UNDETERMINED ...)"},
+       {"name": "Finding", "evidence": "C", "description": "Open finding of the worklist"},
+       {"name": "IsLate", "evidence": "C", "description": "Late: finding PAYMENT_NOT_CLEARED"}
      ]},
     {"id": "CD_RC_BANK_LINE", "source": "ZI_CD_HckRcBankLine", "kind": "V", "keys": ["Kukey", "Esnum"],
      "description": "Bank line with the payment engine account (view)",

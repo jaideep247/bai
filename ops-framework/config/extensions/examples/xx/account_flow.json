@@ -1,0 +1,18 @@
+{
+  "_comment": "Service level and owner team of a stage, on the stage card and in the account flow cube with a copy of the query (key anchor STAGE: the customer's table is keyed by flow and stage; the area is not part of its key).",
+  "extensions": [
+    {"id": "XX_FLOW_STAGE_SLA", "point": "FLOW_STAGE", "anchor": "STAGE",
+     "description": "Service level and owner team of the stage",
+     "object": "XX_STAGE_SLA", "keys": {"FLOW_ID": "FlowId", "STAGE_ID": "StageId"},
+     "association": "_ZZXXStageSla",
+     "fields": [
+       {"field": "SLA_HOURS", "element": "ZZXX_SlaHours", "label": "Service level (hours)"},
+       {"field": "TEAM", "element": "ZZXX_Team", "label": "Owner team"}]},
+    {"id": "XX_FLOW_STAGE_TEAM", "point": "FLOW", "anchor": "STAGE",
+     "description": "Owner team of the stage in the flow cube and query",
+     "object": "XX_STAGE_SLA", "keys": {"FLOW_ID": "FlowId", "STAGE_ID": "StageId"},
+     "association": "_ZZXXFlowSla", "also": ["FLOW_QRY"],
+     "fields": [
+       {"field": "TEAM", "element": "ZZXX_StageTeam", "label": "Owner team of the stage"}]}
+  ]
+}

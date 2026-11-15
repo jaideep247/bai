@@ -185,3 +185,7 @@ confirmed) and one rule per other stage **without values** - the document types 
 
 Parameters: `FLOW_LEDGER` (0L), `FLOW_KEY_DATE_LAG` (0), `FLOW_RETENTION_DAYS` (400), `FLOW_BREAK_MAX_AGE_DAYS` (2) -
 `docs/PARAMETERS.md`. Messages 320-338, 340 (`config/zca_ops_messages.md`). VERIFY: V145-V149 (`docs/VERIFY.md`).
+
+## Related: customer data on top (2026-11-15)
+
+A customer adds columns from its own tables to the cube `ZI_CA_OpsFlowCube` (on request a copy of the query `ZC_CA_OpsFlowQry`) and the stage card `ZC_CA_OpsFlowStage`; anchors: company code, the stage (area, flow, stage) and the account column (area, flow, account) - extension points `FLOW` and `FLOW_STAGE` of `config/extension_points.json`. It declares them in its folder (`config/extensions/*.json`); `tools/extensions.py` checks them against the inventory and the link registry and generates the `extend view entity` sources into the customer package. No product object changes. `docs/EXTENDING_WITH_CUSTOMER_DATA.md`; VERIFY V153-V157.

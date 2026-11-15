@@ -7,10 +7,20 @@
 //          and its transaction code). Navigation to the released journal entry line. Read-only.
 // Modification log: 2026-11-11 | Initial version (build F: clearing-account break analysis).
 // VERIFY-ADT: association to the released view I_JournalEntryItem by its key (V136); its DCL is not evaluated here.
+// Extension point BRK_LINE (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          base view; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view. Anchors COMPANY, JOURNAL_ITEM: their elements stay stable.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Clearing account break lines'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #L, dataClass: #TRANSACTIONAL }
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: true
+@AbapCatalog.extensibility.dataSources: [ 'Itm' ]
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define root view entity ZR_CA_OpsBrkItem
   as select from    zca_ops_brkitm   as Itm
     inner join      zca_ops_brkrun   as Run on Run.snap_id = Itm.snap_id
