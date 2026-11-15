@@ -1,0 +1,42 @@
+@EndUserText.label : 'Kontrollinformationen für Buchungssummen'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkksumc {
+
+  key mandt : mandt not null;
+  key fikey : fikey_kk not null;
+  fikst     : fikst_kk;
+  fikvs     : fikvs_kk;
+  sumsz     : sumsz_kk;
+  cpudt     : cpudt_kk;
+  xerro     : xerro_kk;
+  korlv     : korlv_kk;
+  uebis     : uebis_kk;
+  ueklv     : ueklv_kk;
+  xuevo     : xuevo_kk;
+  xclos     : xclos_kk;
+  resob     : resob_kk;
+  resky     : resky_kk;
+  xarch     : xarch_kk;
+  ernam     : usnam_kk;
+  cldat     : cldat_kk;
+  cltim     : cltim_kk;
+  clnam     : clnam_kk;
+  uecpu     : uecpu_kk;
+  blcnt     : blcnt_kk;
+  cocnt     : cocnt_kk;
+  xuecopa   : xuecopa_kk;
+  xmiss     : xmiss_kk;
+  complete  : complete_kk;
+  xextkont  : xextkont_kk;
+  xkorr     : xkorr_kk;
+  uebpanr   : rkeobjnr;
+  uebpadat  : datum;
+  limitem   : lim_item_kk;
+  limrecon  : lim_recon_kk;
+  xdirtr    : xdirtr_fikey_kk;
+  ndabl     : ndabl_kk;
+
+}

@@ -1,0 +1,879 @@
+@EndUserText.label : 'Belegsegment Buchhaltung'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table bseg {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt               : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = bseg.mandt;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key bukrs               : bukrs not null
+    with foreign key [0..*,1] t001
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs;
+  key belnr               : belnr_d not null;
+  key gjahr               : gjahr not null;
+  key buzei               : buzei not null;
+  buzid                   : buzid;
+  augdt                   : augdt;
+  augcp                   : augcp;
+  augbl                   : augbl;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  bschl                   : bschl
+    with foreign key [0..*,1] tbsl
+      where mandt = bseg.mandt
+        and bschl = bseg.bschl;
+  koart                   : koart;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  umskz                   : umskz
+    with foreign key [0..*,0..1] t074u
+      where mandt = bseg.mandt
+        and umskz = bseg.umskz;
+  umsks                   : umsks;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  zumsk                   : dzumsk
+    with foreign key [0..*,0..1] t074u
+      where mandt = bseg.mandt
+        and koart = bseg.koart
+        and umskz = bseg.zumsk;
+  shkzg                   : shkzg;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  gsber                   : gsber
+    with foreign key [0..*,0..1] tgsb
+      where mandt = bseg.mandt
+        and gsber = bseg.gsber;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  pargb                   : pargb
+    with foreign key [0..*,0..1] tgsb
+      where mandt = bseg.mandt
+        and gsber = bseg.pargb;
+  tax_country             : fot_tax_country;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  mwskz                   : mwskz
+    with foreign key [0..*,0..1] t007a
+      where mandt = bseg.mandt
+        and kalsm = t005.kalsm
+        and mwskz = bseg.mwskz;
+  txdat_from              : fot_txdat_from;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  qsskz                   : qsskz
+    with foreign key [0..*,0..1] t059q
+      where mandt = bseg.mandt
+        and land1 = t001.land1
+        and qsskz = bseg.qsskz;
+  @Semantics.amount.currencyCode : 't001.waers'
+  dmbtr                   : dmbtr;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  wrbtr                   : wrbtr;
+  @Semantics.amount.currencyCode : 'bseg.rfccur'
+  fcsl                    : fins_vfccur12;
+  rfccur                  : fins_currfc;
+  @Semantics.amount.currencyCode : 'bkpf.hwaer'
+  kzbtr                   : kzbtr_fi;
+  @Semantics.amount.currencyCode : 'bseg.pswsl'
+  pswbt                   : pswbt;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  pswsl                   : pswsl
+    with foreign key [0..*,1] tcurc
+      where mandt = bseg.mandt
+        and waers = bseg.pswsl;
+  @Semantics.amount.currencyCode : 't001.waers'
+  txbhw                   : txbhw;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  txbfw                   : txbfw;
+  @Semantics.amount.currencyCode : 't001.waers'
+  mwsts                   : mwsts;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  wmwst                   : wmwst;
+  @Semantics.amount.currencyCode : 't005.waers'
+  lwsts                   : lwsts;
+  @Semantics.amount.currencyCode : 't005.waers'
+  lwbtr                   : lwbtx;
+  @Semantics.amount.currencyCode : 't001.waers'
+  hwbas                   : hwbas;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  fwbas                   : fwbas;
+  @Semantics.amount.currencyCode : 't001.waers'
+  hwzuz                   : hwzuz;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  fwzuz                   : fwzuz;
+  shzuz                   : shzuz;
+  stekz                   : char2;
+  mwart                   : mwart;
+  txgrp                   : txgrp;
+  ktosl                   : ktosl;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  qsshb                   : qsshb;
+  kursr                   : kursr;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  gbetr                   : gbetr;
+  @Semantics.amount.currencyCode : 't001.waers'
+  bdiff                   : bdiff;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  bdif2                   : bdif2;
+  valut                   : valut;
+  zuonr                   : dzuonr;
+  sgtxt                   : sgtxt;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : false
+  zinkz                   : dzinkz
+    with foreign key [0..*,1] t056e
+      where mandt = bseg.mandt
+        and zinkz = bseg.zinkz;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  vbund                   : rassc
+    with foreign key [0..*,0..1] t880
+      where mandt = bseg.mandt
+        and rcomp = bseg.vbund;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  bewar                   : rmvct
+    with foreign key [0..*,0..1] t856
+      where mandt = bseg.mandt
+        and trtyp = bseg.bewar;
+  altkt                   : bilkt_ska1;
+  vorgn                   : vorgn;
+  @AbapCatalog.foreignKey.screenCheck : true
+  fdlev                   : fdlev
+    with foreign key [0..*,0..1] t036
+      where mandt = bseg.mandt
+        and ebene = bseg.fdlev;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  fdgrp                   : fdgrp
+    with foreign key [0..*,0..1] t035
+      where mandt = bseg.mandt
+        and grupp = bseg.fdgrp;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  fdwbt                   : fdwbt;
+  fdtag                   : fdtag;
+  fkont                   : fipls;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kokrs                   : kokrs
+    with foreign key [0..*,0..1] tka01
+      where mandt = bseg.mandt
+        and kokrs = bseg.kokrs;
+  kostl                   : kostl
+    with value help kost
+      where kostl = bseg.kostl;
+  projn                   : projn;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  aufnr                   : aufnr
+    with foreign key [0..*,0..1] aufk
+      where mandt = bseg.mandt
+        and aufnr = bseg.aufnr;
+  vbeln                   : vbeln_vf;
+  vbel2                   : vbeln_va;
+  posn2                   : posnr_va
+    with value help cobl_ex_vmpc2
+      where posnr = bseg.posn2
+        and vbeln = bseg.vbel2;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  eten2                   : etenr
+    with foreign key [0..*,0..1] vbep
+      where mandt = bseg.mandt
+        and vbeln = bseg.vbel2
+        and posnr = bseg.posn2
+        and etenr = bseg.eten2;
+  service_doc_type        : fco_srvdoc_type;
+  service_doc_id          : fco_srvdoc_id;
+  service_doc_item_id     : fco_srvdoc_item_id;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  anln1                   : anln1
+    with foreign key [0..*,0..1] i_masterfixedasset
+      where companycode = bseg.bukrs
+        and masterfixedasset = bseg.anln1
+    with value help aanl
+      where anln1 = bseg.anln1
+        and anln2 = bseg.anln2
+        and bukrs = bseg.bukrs;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  anln2                   : anln2
+    with foreign key [0..*,0..1] i_fixedasset
+      where companycode = bseg.bukrs
+        and masterfixedasset = bseg.anln1
+        and fixedasset = bseg.anln2
+    with value help aanl
+      where anln1 = bseg.anln1
+        and anln2 = bseg.anln2
+        and bukrs = bseg.bukrs;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  anbwa                   : anbwa
+    with foreign key [0..*,0..1] tabw
+      where mandt = bseg.mandt
+        and bwasl = bseg.anbwa;
+  bzdat                   : bzdat;
+  pernr                   : pernr_d;
+  xumsw                   : xumsw;
+  xhres                   : xhres;
+  xkres                   : xkres;
+  xopvw                   : xopvw;
+  xcpdd                   : xcpdd;
+  xskst                   : xskst;
+  xsauf                   : xsauf;
+  xspro                   : xspro;
+  xserg                   : xserg;
+  xfakt                   : xfakt;
+  xuman                   : xuman;
+  xanet                   : xanet;
+  xskrl                   : xskrl;
+  xinve                   : xinve;
+  xpanz                   : xpanz;
+  xauto                   : xauto;
+  xncop                   : xncop;
+  xzahl                   : xzahl;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  saknr                   : saknr
+    with foreign key [0..*,1] skb1
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and saknr = bseg.saknr;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  hkont                   : hkont
+    with foreign key [0..*,1] skb1
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and saknr = bseg.hkont;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kunnr                   : kunnr
+    with foreign key [0..*,0..1] kna1
+      where mandt = bseg.mandt
+        and kunnr = bseg.kunnr;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  lifnr                   : lifnr
+    with foreign key [0..*,0..1] lfa1
+      where mandt = bseg.mandt
+        and lifnr = bseg.lifnr;
+  filkd                   : filkd;
+  xbilk                   : xbilk;
+  gvtyp                   : gvtyp;
+  hzuon                   : hzuon;
+  zfbdt                   : dzfbdt;
+  zterm                   : dzterm;
+  zbd1t                   : dzbd1t;
+  zbd2t                   : dzbd2t;
+  zbd3t                   : dzbd3t;
+  zbd1p                   : dzbd1p;
+  zbd2p                   : dzbd2p;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  skfbt                   : skfbt;
+  @Semantics.amount.currencyCode : 't001.waers'
+  sknto                   : sknto;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  wskto                   : wskto;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  zlsch                   : schzw_bseg
+    with foreign key [0..*,0..1] t042z
+      where mandt = bseg.mandt
+        and land1 = t001.land1
+        and zlsch = bseg.zlsch;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  zlspr                   : dzlspr
+    with foreign key [0..*,0..1] t008
+      where mandt = bseg.mandt
+        and zahls = bseg.zlspr;
+  zbfix                   : dzbfix;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  hbkid                   : hbkid
+    with foreign key [0..*,0..1] t012
+      where mandt = bseg.mandt
+        and bukrs = t042.zbukr
+        and hbkid = bseg.hbkid;
+  bvtyp                   : bvtyp;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  nebtr                   : nebtr;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  mwsk1                   : mwskx
+    with foreign key [0..*,0..1] t007a
+      where mandt = bseg.mandt
+        and kalsm = t005.kalsm
+        and mwskz = bseg.mwsk1;
+  txdat_from1             : fot_txdat_fromx;
+  tax_country1            : fot_tax_countryx;
+  @Semantics.amount.currencyCode : 't001.waers'
+  dmbt1                   : dmbtx;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  wrbt1                   : wrbtx;
+  hist_tax_factor1        : fot_hist_factor_for_tax_amount;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  mwsk2                   : mwskx
+    with foreign key [0..*,0..1] t007a
+      where mandt = bseg.mandt
+        and kalsm = t005.kalsm
+        and mwskz = bseg.mwsk2;
+  txdat_from2             : fot_txdat_fromx;
+  tax_country2            : fot_tax_countryx;
+  @Semantics.amount.currencyCode : 't001.waers'
+  dmbt2                   : dmbtx;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  wrbt2                   : wrbtx;
+  hist_tax_factor2        : fot_hist_factor_for_tax_amount;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  mwsk3                   : mwskx
+    with foreign key [0..*,0..1] t007a
+      where mandt = bseg.mandt
+        and kalsm = t005.kalsm
+        and mwskz = bseg.mwsk3;
+  txdat_from3             : fot_txdat_fromx;
+  tax_country3            : fot_tax_countryx;
+  @Semantics.amount.currencyCode : 't001.waers'
+  dmbt3                   : dmbtx;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  wrbt3                   : wrbtx;
+  hist_tax_factor3        : fot_hist_factor_for_tax_amount;
+  hist_tax_factor         : fot_hist_factor_for_tax_amount;
+  rebzg                   : rebzg;
+  rebzj                   : rebzj;
+  rebzz                   : rebzz;
+  rebzt                   : rebzt;
+  zollt                   : dzollt;
+  zolld                   : dzolld;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  lzbkz                   : lzbkz
+    with foreign key [0..*,0..1] t015l
+      where mandt = bseg.mandt
+        and lzbkz = bseg.lzbkz;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  landl                   : landl
+    with foreign key [0..*,0..1] t005
+      where mandt = bseg.mandt
+        and land1 = bseg.landl;
+  diekz                   : diekz;
+  samnr                   : samnr;
+  abper                   : abper_rf;
+  vrskz                   : vrskz;
+  vrsdt                   : vrsdt;
+  disbn                   : disbn;
+  disbj                   : disbj;
+  disbz                   : disbz;
+  wverw                   : wverw;
+  anfbn                   : anfbn;
+  anfbj                   : anfbj;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  anfbu                   : anfbu
+    with foreign key [0..*,0..1] t001
+      where mandt = bseg.mandt
+        and bukrs = bseg.anfbu;
+  anfae                   : anfae;
+  @Semantics.amount.currencyCode : 't001.waers'
+  blnbt                   : blnbt;
+  blnkz                   : blnkz;
+  blnpz                   : blnpz;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  mschl                   : mschl
+    with foreign key [0..*,0..1] t040
+      where mandt = bseg.mandt
+        and mschl = bseg.mschl;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  mansp                   : mansp
+    with foreign key [0..*,0..1] t040s
+      where mandt = bseg.mandt
+        and mansp = bseg.mansp;
+  madat                   : madat;
+  manst                   : mahns_d;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  maber                   : maber
+    with foreign key [0..*,0..1] t047m
+      where mandt = bseg.mandt
+        and bukrs = bkpf.bukrs
+        and maber = bseg.maber;
+  esrnr                   : esrnr;
+  esrre                   : esrre;
+  esrpz                   : esrpz;
+  @Semantics.amount.currencyCode : 't014.waers'
+  klibt                   : klibt;
+  qsznr                   : qsznr;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  qbshb                   : qbshb;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  qsfbt                   : qsfbt;
+  @Semantics.amount.currencyCode : 't001.waers'
+  navhw                   : navhw;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  navfw                   : navfw;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  matnr                   : matnr
+    with foreign key [0..*,0..1] mara
+      where mandt = bseg.mandt
+        and matnr = bseg.matnr;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  werks                   : werks_d
+    with foreign key [0..*,0..1] t001w
+      where mandt = bseg.mandt
+        and werks = bseg.werks;
+  @Semantics.quantity.unitOfMeasure : 'bseg.meins'
+  menge                   : menge_d;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  meins                   : meins
+    with foreign key [0..*,0..1] t006
+      where mandt = bseg.mandt
+        and msehi = bseg.meins;
+  @Semantics.quantity.unitOfMeasure : 'bseg.erfme'
+  erfmg                   : erfmg;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  erfme                   : erfme
+    with foreign key [0..*,0..1] t006
+      where mandt = bseg.mandt
+        and msehi = bseg.erfme;
+  @Semantics.quantity.unitOfMeasure : 'bseg.bprme'
+  bpmng                   : bpmng;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  bprme                   : bprme
+    with foreign key [0..*,0..1] t006
+      where mandt = bseg.mandt
+        and msehi = bseg.bprme;
+  ebeln_logsys            : ebeln_logsys;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  ebeln                   : ebeln
+    with foreign key [0..*,0..1] ekko
+      where mandt = bseg.mandt
+        and ebeln = bseg.ebeln;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  ebelp                   : ebelp
+    with foreign key [0..*,0..1] ekpo
+      where mandt = bseg.mandt
+        and ebeln = bseg.ebeln
+        and ebelp = bseg.ebelp;
+  zekkn                   : dzekkn;
+  elikz                   : elikz;
+  vprsv                   : vprsv;
+  peinh                   : peinh;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  bwkey                   : bwkey
+    with foreign key [0..*,0..1] t001k
+      where mandt = bseg.mandt
+        and bwkey = bseg.bwkey;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  bwtar                   : bwtar_d
+    with foreign key [0..*,0..1] t149d
+      where mandt = bseg.mandt
+        and bwtar = bseg.bwtar;
+  bustw                   : bustw;
+  @Semantics.amount.currencyCode : 't001.waers'
+  rewrt                   : reewr;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  rewwr                   : rewwr;
+  @Semantics.amount.currencyCode : 't001.waers'
+  bonfb                   : bonfb;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  bualt                   : bualt;
+  psalt                   : psalt;
+  @Semantics.amount.currencyCode : 't001.waers'
+  nprei                   : nprei;
+  tbtkz                   : tbtkz;
+  spgrp                   : spgrp;
+  spgrm                   : spgrm;
+  spgrt                   : spgrt;
+  spgrg                   : spgrg;
+  spgrv                   : spgrv;
+  spgrq                   : spgrq;
+  stceg                   : stceg;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  egbld                   : egbld
+    with foreign key [0..*,0..1] t005
+      where mandt = bseg.mandt
+        and land1 = bseg.egbld;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  eglld                   : eglld
+    with foreign key [0..*,0..1] t005
+      where mandt = bseg.mandt
+        and land1 = bseg.eglld;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  rstgr                   : rstgr
+    with foreign key [0..*,0..1] t053r
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and rstgr = bseg.rstgr;
+  ryacq                   : ryacq;
+  rpacq                   : rpacq;
+  @Semantics.amount.currencyCode : 't001.waers'
+  rdiff                   : rdiff;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  rdif2                   : rdif2;
+  prctr                   : prctr;
+  xhkom                   : xhkom;
+  fs_product_group        : ffs_product_group;
+  branch_id               : ffs_branch_id;
+  datasource_id           : ffs_datasource_id;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  vname                   : jv_name
+    with foreign key [0..*,0..1] t8jv
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and vname = bseg.vname;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  recid                   : jv_recind
+    with foreign key [0..*,0..1] t8jj
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and recid = bseg.recid;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  egrup                   : jv_egroup
+    with foreign key [0..*,0..1] t8jf
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and vname = bseg.vname
+        and egrup = bseg.egrup;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  vptnr                   : jv_part
+    with foreign key [0..*,0..1] kna1
+      where mandt = bseg.mandt
+        and kunnr = bseg.vptnr;
+  vertt                   : rantyp;
+  vertn                   : ranl;
+  vbewa                   : sbewart;
+  depot                   : rldepo;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  txjcd                   : txjcd
+    with foreign key [0..*,0..1] ttxj
+      where mandt = bseg.mandt
+        and kalsm = t005.kalsm
+        and txjcd = bseg.txjcd;
+  imkey                   : imkey
+    with value help reclfxcaimkey
+      where imkey = bseg.imkey;
+  dabrz                   : dabrbez;
+  popts                   : poptsatz;
+  fipos                   : fipos;
+  kstrg                   : kstrg;
+  nplnr                   : nplnr;
+  aufpl                   : aufpl_ch;
+  aplzl                   : aplzl_ch;
+  projk                   : ps_psp_pnr;
+  paobjnr                 : rkeobjnr;
+  pasubnr                 : rkesubnr;
+  spgrs                   : spgrs;
+  spgrc                   : spgrc;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  btype                   : jv_bilind
+    with foreign key [0..*,0..1] t8ja
+      where mandt = bseg.mandt
+        and bilind = bseg.btype;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  etype                   : jv_etype
+    with foreign key [0..*,0..1] t8je
+      where mandt = bseg.mandt
+        and bukrs = bkpf.bukrs
+        and etype = bseg.etype;
+  xegdr                   : xegdr;
+  lnran                   : lnran;
+  hrkft                   : hrkft;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  dmbe2                   : dmbe2;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  dmbe3                   : dmbe3;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  dmb21                   : dmb2x;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  dmb22                   : dmb2x;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  dmb23                   : dmb2x;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  dmb31                   : dmb3x;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  dmb32                   : dmb3x;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  dmb33                   : dmb3x;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  mwst2                   : mwst2;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  mwst3                   : mwst3;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  navh2                   : navh2;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  navh3                   : navh3;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  sknt2                   : sknt2;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  sknt3                   : sknt3;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  bdif3                   : bdif3;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  rdif3                   : rdif3;
+  hwmet                   : hwmet;
+  glupm                   : glupm;
+  xragl                   : xragl;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  uzawe                   : uzawe
+    with foreign key [0..*,0..1] t042f
+      where mandt = bseg.mandt
+        and uzawe = bseg.uzawe;
+  lokkt                   : altkt_skb1;
+  fistl                   : fistl;
+  geber                   : bp_geber;
+  stbuk                   : stbuk;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  txbh2                   : txbh2;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  txbh3                   : txbh3;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : false
+  pprct                   : pprctr
+    with foreign key [0..*,0..1] cepc
+      where mandt = bseg.mandt
+        and prctr = bseg.pprct
+        and datbi = bkpf.budat
+    with value help ficepc
+      where prctr = bseg.pprct;
+  xref1                   : xref1;
+  xref2                   : xref2;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kblnr                   : kblnr_fi
+    with foreign key [0..*,0..1] kblk
+      where mandt = bseg.mandt
+        and belnr = bseg.kblnr
+    with value help fmrr
+      where belnr = bseg.kblnr
+        and blpos = bseg.kblpos;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kblpos                  : kblpos
+    with foreign key [0..*,0..1] kblp
+      where mandt = bseg.mandt
+        and belnr = bseg.kblnr
+        and blpos = bseg.kblpos;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  sttax                   : sttax;
+  fkber                   : fkber_short;
+  obzei                   : obzei;
+  xnegp                   : xnegp;
+  rfzei                   : rfzei_cc;
+  ccbtc                   : ccbtc;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kkber                   : kkber
+    with foreign key [0..*,1] t014
+      where mandt = bseg.mandt
+        and kkber = bseg.kkber;
+  empfb                   : empfb;
+  xref3                   : xref3;
+  dtws1                   : dtat16;
+  dtws2                   : dtat17;
+  dtws3                   : dtat18;
+  dtws4                   : dtat19;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  gricd                   : j_1agicd_d
+    with foreign key [0..*,0..1] j_1agicd
+      where mandt = bseg.mandt
+        and land1 = t001.land1
+        and j_1agicd = bseg.gricd;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  grirg                   : regio
+    with foreign key [0..*,0..1] t005s
+      where mandt = bseg.mandt
+        and land1 = t001.land1
+        and bland = bseg.grirg;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  gityp                   : j_1adtyp_d
+    with foreign key [0..*,0..1] j_1adtyp
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and j_1adtyp = bseg.gityp;
+  xpypr                   : xpypr;
+  kidno                   : kidno;
+  @Semantics.amount.currencyCode : 't014.waers'
+  absbt                   : absbt;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  idxsp                   : j_1aindxsp
+    with foreign key [0..*,1] j_1ainft20
+      where mandt = bseg.mandt
+        and j_1aindx = bseg.idxsp;
+  linfv                   : j_1alinfvl;
+  kontt                   : kontt_fi;
+  kontl                   : kontl_fi;
+  uebgdat                 : uebgdatum;
+  txdat                   : txdat;
+  agzei                   : agzei;
+  @AbapCatalog.foreignKey.screenCheck : true
+  pycur                   : pycur
+    with foreign key [0..*,1] tcurc
+      where mandt = bseg.mandt
+        and waers = bseg.pycur;
+  @Semantics.amount.currencyCode : 'bseg.pycur'
+  pyamt                   : pyamt;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  bupla                   : bupla
+    with foreign key [0..*,1] pbusinessplace
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and branch = bseg.bupla
+    with value help glo_sh_bupla_id
+      where bukrs = bseg.bukrs
+        and bupla = bseg.bupla;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  secco                   : secco
+    with foreign key [0..*,1] seccode
+      where mandt = bseg.mandt
+        and bukrs = bseg.bukrs
+        and seccode = bseg.secco
+    with value help seccode
+      where bplace = bseg.bupla
+        and bukrs = bseg.bukrs
+        and seccode = bseg.secco;
+  lstar                   : lstar;
+  @AbapCatalog.foreignKey.screenCheck : true
+  cession_kz              : cession_kz
+    with foreign key tcession
+      where client = bseg.mandt
+        and company = bseg.bukrs
+        and cession_kz = bseg.cession_kz;
+  prznr                   : co_prznr;
+  @Semantics.amount.currencyCode : 't001.waers'
+  ppdiff                  : ppdiff;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  ppdif2                  : ppdif2;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  ppdif3                  : ppdif3;
+  @Semantics.amount.currencyCode : 'bkpf.hwaer'
+  penlc1                  : penalty1;
+  @Semantics.amount.currencyCode : 'bkpf.hwae2'
+  penlc2                  : penalty2;
+  @Semantics.amount.currencyCode : 'bkpf.hwae3'
+  penlc3                  : penalty3;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  penfc                   : penalty;
+  pendays                 : pdays;
+  penrc                   : penrc;
+  grant_nbr               : gm_grant_nbr;
+  @Semantics.amount.currencyCode : 'bkpf.waers'
+  sctax                   : sctax;
+  fkber_long              : fkber;
+  gmvkz                   : fm_gmvkz;
+  srtype                  : fm_srtype;
+  intreno                 : vvintreno;
+  measure                 : fm_measure;
+  auggj                   : auggj;
+  ppa_ex_ind              : exclude_flg;
+  docln                   : docln6;
+  segment                 : fb_segment;
+  psegment                : fb_psegment;
+  pfkber                  : sfkber;
+  @AbapCatalog.foreignKey.screenCheck : true
+  hktid                   : hktid
+    with foreign key t012k
+      where mandt = bseg.mandt
+        and bukrs = t042.zbukr
+        and hbkid = bseg.hbkid
+        and hktid = bseg.hktid;
+  kstar                   : kstar;
+  xlgclr                  : xlgclr;
+  taxps                   : tax_posnr;
+  pays_prov               : com_wec_payment_srv_provider;
+  pays_tran               : fps_transaction;
+  mndid                   : sepa_mndid;
+  xfrge_bseg              : xfrge_bseg;
+  awtyp                   : awtyp;
+  awkey                   : awkey;
+  awsys                   : awsys;
+  posnr                   : posnr_acc;
+  buzei_sender            : buzei_sender;
+  h_monat                 : monat;
+  h_bstat                 : bstat_d;
+  h_budat                 : budat;
+  h_bldat                 : bldat;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  h_waers                 : waers
+    with foreign key [0..*,1] tcurc
+      where mandt = bseg.mandt
+        and waers = bseg.h_waers;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  h_blart                 : blart
+    with foreign key [0..*,1] t003
+      where mandt = bseg.mandt
+        and blart = bseg.h_blart
+    with value help csh_t003
+      where blart = bseg.h_blart;
+  h_hwaer                 : hwaer;
+  h_hwae2                 : hwae2;
+  h_hwae3                 : hwae3;
+  sk1dt                   : sk1dt;
+  sk2dt                   : sk2dt;
+  prctr_drvtn_source_type : finoc_prctr_drvtn_source_type;
+  @AbapCatalog.foreignKey.screenCheck : true
+  payt_rsn                : farp_payt_rsn
+    with foreign key farp_payt_rsn_t
+      where mandt = bseg.mandt
+        and payt_rsn = bseg.payt_rsn
+    with value help h_farp_payt_rsn
+      where paymentreason = bseg.payt_rsn;
+  rbl_fincg_status        : farp_rbl_fincg_status;
+  index_clr               : index_clr;
+  _dataaging              : data_temperature;
+  include fqm_bseg;
+  include fin_s_gkont;
+  squan                   : sign_quantity;
+  include faa_s_doc_item_pn with suffix _pn;
+  jei                     : include incl_eew_acdoc;
+  cob                     : include incl_eew_cobl;
+  include cobl_incl_nopa;
+  include acdoc_si_acr;
+  include acdoc_si_val;
+  sdm_version             : fins_sdm_version_bseg;
+  ext_glo                 : include fac_bseg_ext_glo;
+
+}

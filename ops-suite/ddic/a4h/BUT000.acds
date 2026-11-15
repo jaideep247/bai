@@ -1,0 +1,37 @@
+@EndUserText.label : 'GP: Allgemeine Daten I'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table but000 {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key client  : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = but000.client;
+  key partner : bu_partner not null;
+  include bus000_dat
+    @AbapCatalog.foreignKey.keyType : #NON_KEY
+    @AbapCatalog.foreignKey.screenCheck : true
+    extend augrp :
+      with foreign key [0..*,1] tb037
+        where client = but000.client
+          and auobj = 'BUPA'
+          and augrp = but000.augrp
+    extend cntax :
+      remove foreign key
+    @AbapCatalog.foreignKey.keyType : #KEY
+    @AbapCatalog.foreignKey.screenCheck : true
+    extend source :
+      with foreign key [0..*,1] tb005
+        where client = but000.client
+          and source = but000.source;
+  include bus000_int;
+  valid_from  : bu_bp_valid_from;
+  valid_to    : bu_bp_valid_to;
+  xpcpt       : bu_xpcpt not null;
+  include bus000_data_ctrlr;
+  include bus000_scr;
+
+}

@@ -1,0 +1,171 @@
+@EndUserText.label : 'Einzelposten des Elektronischen Kontoauszugs'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table febep {
+
+  @AbapCatalog.foreignKey.label : 'Mandant'
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt                      : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = febep.mandt;
+  key kukey                      : kukey_eb not null;
+  key esnum                      : esnum_eb not null;
+  eperl                          : eperl_eb;
+  vb1ok                          : vb1ok_eb;
+  vb2ba                          : vb2ba_eb;
+  vb2ok                          : vb2ok_eb;
+  pipre                          : pipre_eb;
+  grpnr                          : grpnr_eb;
+  estat                          : estat_eb;
+  belnr                          : belnr_d;
+  gjahr                          : gjahr;
+  bvdat                          : bvdat_eb;
+  budat                          : budat_eb;
+  valut                          : valut_eb;
+  butim                          : butim_eb;
+  vozei                          : vozei_eb;
+  kwaer                          : kwaer_eb;
+  @Semantics.amount.currencyCode : 'febep.kwaer'
+  kwbtr                          : kwbtr_eb;
+  @Semantics.amount.currencyCode : 'febep.kwaer'
+  spesk                          : spesk_eb;
+  @AbapCatalog.foreignKey.label : 'Fremdwährung ( NotEqual Kontenwährung)'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  fwaer                          : fwaer_eb
+    with foreign key [0..*,1] tcurc
+      where mandt = febep.mandt
+        and waers = febep.fwaer;
+  @Semantics.amount.currencyCode : 'febep.fwaer'
+  fwbtr                          : fwbtr_eb;
+  @Semantics.amount.currencyCode : 'febep.fwaer'
+  spesf                          : spesf_eb;
+  vorgc                          : vorgc_eb;
+  texts                          : texts_eb;
+  vgext                          : vgext_eb;
+  vgman                          : vgman_eb;
+  @AbapCatalog.foreignKey.label : 'Wertehilfe für die Buchungsregel (den internen Vorgang)'
+  @AbapCatalog.foreignKey.screenCheck : true
+  vgint                          : vgint_eb
+    with foreign key t028d
+      where mandt = febep.mandt
+        and vgint = febep.vgint;
+  vgdef                          : vgdef_eb;
+  kfmod                          : kfmod_eb;
+  vgsap                          : vgsap_eb;
+  butxt                          : butxt_eb;
+  anzsp                          : anzsp_eb;
+  xblnr                          : xblnr1;
+  zuonr                          : dzuonr;
+  @AbapCatalog.foreignKey.label : 'Bankland Partnerbank'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  pabks                          : pabks_eb
+    with foreign key t005
+      where mandt = febep.mandt
+        and land1 = febep.pabks;
+  pablz                          : pablz_eb;
+  paswi                          : paswi_eb;
+  pakto                          : pakto_eb;
+  partn                          : partn_eb;
+  busab                          : busab_eb;
+  kostl                          : kostl_eb;
+  gsber                          : gsber_eb;
+  prctr                          : prctr;
+  vertn                          : ranl;
+  vertt                          : rantyp;
+  pnota                          : pnota_eb;
+  chect                          : chect;
+  stavv                          : stavv_eb;
+  txtvv                          : txtvv_eb;
+  epvoz                          : epvoz_eb;
+  info1                          : info1_eb;
+  info2                          : info2_eb;
+  avsid                          : avsid;
+  intag                          : intag_eb;
+  nbbln                          : nbbln_eb;
+  ak1bl                          : akbln_eb;
+  akbln                          : akbln_eb;
+  knrza                          : knrza;
+  avkoa                          : koart_av;
+  avkon                          : ktonr_av;
+  batch                          : batch_eb;
+  itmnr                          : itmnr_flb;
+  kursf                          : kursf_eb;
+  sgtxt                          : sgtxt;
+  jpdat                          : jpdat_eb;
+  posag                          : posag_eb;
+  sdoc2                          : sdoc2_eb;
+  vgref                          : refbk;
+  xbenr                          : awkey;
+  xbtyp                          : awtyp;
+  @Semantics.amount.currencyCode : 'febep.kwaer'
+  arrsk                          : arrsk_eb;
+  pform                          : pform_eb;
+  kidno                          : kidno;
+  kkref                          : refnr_eb;
+  kkrf2                          : refnr_eb;
+  mansp                          : mansp;
+  fnam1                          : bdc_fnam;
+  fval1                          : bdc_fval;
+  fkoa1                          : koart_bdc;
+  fnam2                          : bdc_fnam;
+  fval2                          : bdc_fval;
+  fkoa2                          : koart_bdc;
+  fnam3                          : bdc_fnam;
+  fval3                          : bdc_fval;
+  fkoa3                          : koart_bdc;
+  idenr                          : idenr;
+  b1app                          : applk_bf;
+  b1err                          : estat_eb;
+  b1std                          : addst_eb;
+  b1doc                          : doc_number;
+  b1typ                          : awtyp;
+  b2app                          : applk_bf;
+  b2err                          : estat_eb;
+  b2std                          : addst_eb;
+  b2doc                          : doc_number;
+  b2typ                          : awtyp;
+  piban                          : piban_eb;
+  n2pch                          : feb_n2pchgind;
+  svbuk                          : bukrs;
+  svkoa                          : koart_av;
+  svkon                          : ktonr_av;
+  svavs                          : avsid;
+  repro                          : repro_eb;
+  trnid                          : eb_transid;
+  accdoc_tmp_doc_id              : fdc_accdoc_tmp_doc_id;
+  chect_orig                     : chect;
+  chect_type                     : chect_type;
+  ml_status                      : feb_ml_status;
+  pr_status                      : feb_pr_status;
+  ak1bl_gjahr                    : ak1bl_gjahr;
+  akbln_gjahr                    : akbln_gjahr;
+  belnr_gjahr                    : belnr_gjahr;
+  nbbln_gjahr                    : nbbln_gjahr;
+  sdoc2_gjahr                    : sdoc2_gjahr;
+  postingruleuuid                : far_pstrl_node_key;
+  bankstmtitem_ar_incl_eew_ps    : include bankstmtitem_ar_incl_eew_ps;
+  bp_id_category                 : bu_id_category;
+  bp_id_number                   : bu_id_number;
+  additional_info                : additional_info_eb;
+  keypp                          : keypp_eb;
+  ml_status_accdet               : feb_ml_status_ad;
+  part_appl_status               : feb_part_appl_status;
+  advcassignmentrepetitionstatus : feb_adv_assignment_rep_status;
+  repetitionstartdate            : repetitionstartdate;
+  repetitionenddate              : repetitionenddate;
+  repetitionjoblastrundatetime   : repetitionjoblastrundatetime;
+  semobjbyprocessingapplication  : far_bs_itm_sem_obj_proc_app;
+  refbyprocessingapplication     : far_bs_itm_ref_by_proc_app;
+  bankstmntprocessingapplication : far_bs_itm_processing_app;
+  accountservicerreference       : feb_acct_servicer_ref;
+  processed_kukey                : farp_kukey_processed;
+  processed_esnum                : farp_esnum_processed;
+  bank_status_code               : far_bs_item_bank_status_code;
+  bankstmntitmprocessingcategory : far_bs_item_processing_cat;
+
+}

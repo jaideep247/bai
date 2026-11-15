@@ -1,0 +1,66 @@
+@EndUserText.label : 'Rückläuferhistorie'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkrh {
+
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt : mandt not null
+    with foreign key t000
+      where mandt = dfkkrh.mandt;
+  key gpart : gpart_kk not null;
+  key vkont : vkont_kk not null;
+  key rlbel : rlbel_kk not null;
+  keyr1     : keyr1_kk
+    with value help fkkrs
+      where keyr1 = dfkkrh.keyr1;
+  posra     : posra_kk;
+  opbel     : opbel_kk;
+  urbel     : urbel_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  betrwr    : betrwr_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  betrr     : betrr_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  btrb1     : btrb1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  btrb2     : btrb2_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  stbb1     : stbb1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  stbb2     : stbb2_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  btrv1     : btrv1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  btrv2     : btrv2_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  stbv1     : stbv1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrh.waers'
+  stbv2     : stbv2_kk;
+  waers     : waers;
+  budat     : budat_kk;
+  bldat     : bldat;
+  valut     : valut;
+  rlgrd     : rlgrd_kk;
+  bankl     : gpbanks;
+  bankk     : gpbankk;
+  bankn     : gpbankn;
+  iban      : iban;
+  checf     : checf_kk;
+  nrzas     : nrzas_kk;
+  hbkid     : hbkid;
+  hktid     : hktid;
+  rlmod     : rlmod_kk;
+  stodt     : stodt_kk;
+  stblg     : stblg_kk;
+  xstor     : xstor_kk;
+  include fkkrh_act;
+  include si_rdfkkrh;
+  include si_vdfkkrh;
+  include si_tdfkkrh;
+  include si_sdfkkrh;
+  include ci_zdfkkrh;
+  swift     : swift;
+
+}

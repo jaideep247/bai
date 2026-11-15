@@ -1,0 +1,35 @@
+@EndUserText.label : 'Ausbuchungshistorie'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkwoh {
+
+  key mandt : mandt not null;
+  key abbel : abbel_kk not null;
+  key opbel : opbel_kk not null;
+  key opupw : opupw_kk not null;
+  key opupk : opupk_kk not null;
+  key opupz : opupz_kk not null;
+  bukrs     : bukrs;
+  gpart     : gpart_kk;
+  vkont     : vkont_kk;
+  waers     : waers_kk;
+  @Semantics.amount.currencyCode : 'dfkkwoh.waers'
+  betrw     : betrw_kk;
+  abgrd     : abgrd_kk;
+  abdat     : datum;
+  stakz     : stakz_kk;
+  herkf     : herkf_kk;
+  blart     : blart_kk;
+  xrvsd     : xrvsd_kk;
+  include si_dfkkwohr;
+  include si_dfkkwoht;
+  include si_dfkkwohv;
+  include si_dfkkwohs;
+  include si_dfkkwohc_cloud;
+  include ci_dfkkwoh;
+  laufd     : laufd_kk;
+  laufi     : mlfid_kk;
+
+}

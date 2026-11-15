@@ -1,0 +1,30 @@
+@EndUserText.label : 'Ausgleichs-/Rücknahmehistorie (Belegpositionsebene)'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkrapt {
+
+  key mandt : mandt not null;
+  key opbel : opbel_kk not null;
+  key opupw : opupw_kk not null;
+  key opupk : opupk_kk not null;
+  key augbl : augbl_kk not null;
+  key stblg : stblg_kk not null;
+  augdt     : augdt_kk;
+  augrd     : augrd_kk;
+  augwa     : augwa_kk;
+  @Semantics.amount.currencyCode : 'dfkkrapt.augwa'
+  augbt     : augbt_kk;
+  @Semantics.amount.currencyCode : 't001.waers'
+  betrh     : betrh_kk;
+  @Semantics.amount.currencyCode : 'dfkkrapt.waers'
+  betrw     : betrw_kk;
+  bukrs     : bukrs;
+  waers     : blwae_kk;
+  stdat     : stordat_kk;
+  @Semantics.amount.currencyCode : 'dfkkrapt.pswsl'
+  pswbt     : pswbt_kk;
+  pswsl     : pswsl_kk;
+
+}

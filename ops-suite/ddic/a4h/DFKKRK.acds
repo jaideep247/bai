@@ -1,0 +1,173 @@
+@EndUserText.label : 'Rückläuferstapel: Kopfdaten'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkrk {
+
+  key mandt      : mandt not null;
+  key keyr1      : keyr1_kk not null
+    with value help fkkrs
+      where keyr1 = dfkkrk.keyr1
+        and keyr2 = dfkkrk.keyr2
+        and stars = dfkkrk.stars;
+  keyr2          : keyr2_kk;
+  applk          : applk_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  herkf          : herkf_kk
+    with foreign key tfk001
+      where herkf = dfkkrk.herkf;
+  fikey          : fikey_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  rlsko          : rlsko_kk
+    with foreign key [1..*,1] tfk012
+      where mandt = dfkkrk.mandt
+        and bukrs = dfkkrk.bukrs
+        and bvrko = dfkkrk.rlsko
+    with value help rlsko_kk
+      where bukrs = dfkkrk.bukrs
+        and hbkid = dfkkrk.hbkid
+        and hktid = dfkkrk.hktid
+        and rlsko = dfkkrk.rlsko;
+  geako          : geako_kk;
+  geeko          : geeko_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  bukrs          : bukrs
+    with foreign key [0..*,1] t001
+      where mandt = dfkkrk.mandt
+        and bukrs = dfkkrk.bukrs;
+  @AbapCatalog.foreignKey.screenCheck : true
+  gsber          : gsber
+    with foreign key [0..*,1] tgsb
+      where mandt = dfkkrk.mandt
+        and gsber = dfkkrk.gsber;
+  prctr          : prctr_rl_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  blart          : blart_kk
+    with foreign key [1..*,1] tfk003
+      where mandt = dfkkrk.mandt
+        and applk = dfkkrk.applk
+        and blart = dfkkrk.blart;
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers          : waers
+    with foreign key [0..*,1] tcurc
+      where mandt = dfkkrk.mandt
+        and waers = dfkkrk.waers;
+  kursf          : kursf;
+  budat          : budat_kk;
+  bldat          : bldat;
+  valut          : valut;
+  xeiph          : xeiph_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  augrd          : augrd_kk
+    with foreign key [0..*,1] tfk001a
+      where augrd = dfkkrk.augrd;
+  @AbapCatalog.foreignKey.screenCheck : true
+  selt1          : seltv_kk
+    with foreign key [0..*,1] tfk004
+      where mandt = dfkkrk.mandt
+        and applk = dfkkrk.applk
+        and seltx = dfkkrk.selt1;
+  anzpo          : anzpo_kk;
+  @Semantics.amount.currencyCode : 'dfkkrk.sumwa'
+  summs          : summs;
+  @Semantics.amount.currencyCode : 'dfkkrk.sumwa'
+  summh          : summh;
+  @AbapCatalog.foreignKey.screenCheck : true
+  sumwa          : sumwa_kk
+    with foreign key [0..*,1] tcurc
+      where mandt = dfkkrk.mandt
+        and waers = dfkkrk.sumwa;
+  ernam          : ernam;
+  erdat          : erdat;
+  ertim          : ertim_kk;
+  aenam          : aenam not null;
+  aedat          : aedat;
+  aetim          : aetim_kk;
+  stars          : stars_kk;
+  xsteb          : xsteb_kk;
+  xrlsb          : xrlsb_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzb1          : skzb1_kk
+    with foreign key t007a
+      where mandt = dfkkrk.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrk.skzb1;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzb2          : skzb2_kk
+    with foreign key t007a
+      where mandt = dfkkrk.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrk.skzb2;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzv1          : skzv1_kk
+    with foreign key t007a
+      where mandt = dfkkrk.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrk.skzv1;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzv2          : skzv2_kk
+    with foreign key t007a
+      where mandt = dfkkrk.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrk.skzv2;
+  @AbapCatalog.foreignKey.screenCheck : true
+  bankl          : banks
+    with foreign key t005
+      where mandt = dfkkrk.mandt
+        and land1 = dfkkrk.bankl;
+  @AbapCatalog.foreignKey.screenCheck : true
+  bankk          : bankk
+    with foreign key [0..*,1] bnka
+      where mandt = dfkkrk.mandt
+        and banks = dfkkrk.bankl
+        and bankl = dfkkrk.bankk;
+  bankn          : bankn;
+  @AbapCatalog.foreignKey.screenCheck : true
+  hbkid          : hbkid
+    with foreign key t012
+      where mandt = dfkkrk.mandt
+        and bukrs = dfkkrk.bukrs
+        and hbkid = dfkkrk.hbkid
+    with value help h_t012_rkk
+      where bankl = dfkkrk.bankk
+        and banks = dfkkrk.bankl
+        and bukrs = dfkkrk.bukrs
+        and hbkid = dfkkrk.hbkid
+        and hktid = dfkkrk.hktid
+        and rlsko = dfkkrk.rlsko;
+  @AbapCatalog.foreignKey.screenCheck : true
+  hktid          : hktid
+    with foreign key t012k
+      where mandt = dfkkrk.mandt
+        and bukrs = dfkkrk.bukrs
+        and hbkid = dfkkrk.hbkid
+        and hktid = dfkkrk.hktid
+    with value help h_t012_rkk
+      where bankl = dfkkrk.bankk
+        and banks = dfkkrk.bankl
+        and bukrs = dfkkrk.bukrs
+        and hbkid = dfkkrk.hbkid
+        and hktid = dfkkrk.hktid
+        and rlsko = dfkkrk.rlsko;
+  jobname        : btcjob;
+  xcalcgeb       : xrlscalcgeb_kk;
+  xacceptcharges : xacceptcharges_kk;
+  flags          : flagpool32;
+  rlmod          : rlmod_kk;
+  @Semantics.amount.currencyCode : 'dfkkrk.waers'
+  ksums          : ktsus_kk;
+  @Semantics.amount.currencyCode : 'dfkkrk.waers'
+  ksumh          : ktsuh_kk;
+  ksump          : ksump_kk;
+  xerwr          : xerwr_kk;
+  rlgrd          : rlgrd_kk;
+  xrtps          : xrtps_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  tax_country    : fot_tax_country
+    with foreign key fot_txa_registn
+      where mandt = dfkkrk.mandt
+        and comp_code = dfkkrk.bukrs
+        and tax_country = dfkkrk.tax_country;
+
+}

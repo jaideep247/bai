@@ -1,0 +1,22 @@
+@EndUserText.label : 'FI-CA: Tabelle mit Zinshistorie'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkih {
+
+  key mandt  : mandt not null;
+  key opbel  : opbel_kk not null;
+  key opupw  : opupw_kk not null;
+  key opupk  : opupk_kk not null;
+  key opupz  : opupz_kk not null;
+  key iopbel : iopbel_kk not null;
+  key ropbel : ropbel_kk not null;
+  key lfdnr  : lfdnr_kk not null;
+  abdat      : abdat_kk not null;
+  bisdat     : bisdt_kk;
+  stokz      : stokz_kk;
+  ityp       : ityp_kk;
+  ikeyd      : ikeyd_kk;
+
+}

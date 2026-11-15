@@ -1,0 +1,25 @@
+@EndUserText.label : 'Transportsystem: Header von Aufträgen/Aufgaben'
+@AbapCatalog.enhancement.category : #NOT_CLASSIFIED
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.activationType : #ADAPT_C_STRUCTURES
+@AbapCatalog.deliveryClass : #W
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table e070 {
+
+  key trkorr : trkorr not null;
+  trfunction : trfunction;
+  trstatus   : trstatus;
+  tarsystem  : tr_target;
+  korrdev    : trcateg;
+  as4user    : tr_as4user
+    with value help user_addr
+      where bname = e070.as4user;
+  as4date    : as4date;
+  as4time    : as4time;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  strkorr    : strkorr
+    with foreign key [0..*,1] e070
+      where trkorr = e070.strkorr;
+
+}

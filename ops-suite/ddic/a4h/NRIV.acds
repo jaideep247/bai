@@ -1,0 +1,28 @@
+@EndUserText.label : 'Nummernkreisintervalle'
+@AbapCatalog.enhancement.category : #NOT_CLASSIFIED
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table nriv {
+
+  @AbapCatalog.foreignKey.label : 'Mandant'
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key client    : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = nriv.client;
+  @AbapCatalog.foreignKey.label : 'Nummernkreisobjekte'
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key object    : nrobj not null
+    with foreign key [0..*,1] tnro
+      where object = nriv.object;
+  key subobject : nrsobj not null;
+  key nrrangenr : nrnr not null;
+  key toyear    : nryear not null;
+  fromnumber    : nrfrom;
+  tonumber      : nrto;
+  nrlevel       : nrlevel;
+  externind     : nrind;
+
+}

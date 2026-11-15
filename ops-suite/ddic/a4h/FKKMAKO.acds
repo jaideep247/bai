@@ -1,0 +1,131 @@
+@EndUserText.label : 'Mahnhistorie Kopf'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table fkkmako {
+
+  key mandt       : mandt not null;
+  key laufd       : laufd_kk not null;
+  key laufi       : mlfid_kk not null;
+  @AbapCatalog.foreignKey.label : 'Geschäftspartner'
+  @AbapCatalog.foreignKey.screenCheck : true
+  key gpart       : gpart_kk not null
+    with foreign key [0..*,1] but000
+      where client = fkkmako.mandt
+        and partner = fkkmako.gpart;
+  key vkont       : vkont_kk not null;
+  key mazae       : mazae_kk not null;
+  ausdt           : ausdt_kk;
+  mdrkd           : mdrkd_kk;
+  mahnv           : mahnv_kk not null;
+  mgrup           : mgrup_kk;
+  vkontgrp        : vkgrp_cm_kk;
+  vtrefgrp        : vtgrp_cm_kk;
+  itemgrp         : itemgrp_cm_kk;
+  itemgrp_last    : itemgrp_last_cm_kk;
+  grpfield        : grpfield_cm_kk;
+  grpfield_last   : grpfield_last_cm_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  strat           : strat_cm_kk
+    with foreign key tfk047x
+      where mandt = fkkmako.mandt
+        and strat = fkkmako.strat;
+  @AbapCatalog.foreignKey.screenCheck : true
+  step            : step_cm_kk
+    with foreign key tfk047u
+      where mandt = fkkmako.mandt
+        and step = fkkmako.step;
+  @AbapCatalog.foreignKey.screenCheck : true
+  step_last       : step_last_cm_kk
+    with foreign key tfk047u
+      where mandt = fkkmako.mandt
+        and step = fkkmako.step_last;
+  @AbapCatalog.foreignKey.screenCheck : true
+  step_replaced   : step_repl_cm_kk
+    with foreign key tfk047u
+      where mandt = fkkmako.mandt
+        and step = fkkmako.step_replaced;
+  strat_champ     : strat_champ_cm_kk;
+  tests           : tests_cm_kk;
+  limited         : limited_cm_kk;
+  relea           : relea_cm_kk;
+  reldate         : reldate_cm_kk;
+  relgroup        : relgroup_cm_kk;
+  nexdt           : nexdt_cm_kk;
+  opbuk           : opbuk_kk;
+  stdbk           : bukrs;
+  gsber           : gsber;
+  spart           : spart;
+  vtref           : vtref_kk
+    with value help shlp_vtref
+      where gpart = fkkmako.gpart
+        and vkont = fkkmako.vkont
+        and vtref = fkkmako.vtref;
+  subap           : subap_kk;
+  vknt1           : vknt1_kk;
+  abwma           : abwma_kk;
+  mahns           : mahns_kk
+    with value help fkk_mahns
+      where mahns = fkkmako.mahns
+        and mahnv = fkkmako.mahnv;
+  @AbapCatalog.foreignKey.screenCheck : true
+  mstyp           : mstyp_kk
+    with foreign key tfk047g
+      where mandt = fkkmako.mandt
+        and mstyp = fkkmako.mstyp;
+  @AbapCatalog.foreignKey.label : 'Waehrungsschluessel'
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers           : waers
+    with foreign key [0..*,1] tcurc
+      where mandt = fkkmako.mandt
+        and waers = fkkmako.waers;
+  @Semantics.amount.currencyCode : 'fkkmako.waers'
+  msalm           : msalm_kk;
+  msalh           : unused_kk;
+  @Semantics.amount.currencyCode : 'fkkmako.waers'
+  rsalm           : rsalm_kk;
+  chgid           : chgid_kk;
+  @Semantics.amount.currencyCode : 'fkkmako.waers'
+  mge1m           : mge1m_kk;
+  mg1bl           : mg1bl_kk;
+  mg1ty           : mg1ty_kk;
+  post1           : cpost_kk;
+  @Semantics.amount.currencyCode : 'fkkmako.waers'
+  mge2m           : mge2m_kk;
+  mg2bl           : mg2bl_kk;
+  mg2ty           : mg2ty_kk;
+  post2           : cpost_kk;
+  @Semantics.amount.currencyCode : 'fkkmako.waers'
+  mge3m           : mge3m_kk;
+  mg3bl           : mg3bl_kk;
+  mg3ty           : mg3ty_kk;
+  post3           : cpost_kk;
+  @Semantics.amount.currencyCode : 'fkkmako.waers'
+  mintm           : mintm_kk;
+  mibel           : mibel_kk;
+  bonit           : bondu_kk;
+  xmsto           : xmsto_kk;
+  nrzas           : nrzas_kk;
+  xinfo           : xinfg_kk;
+  frdat           : frdat_kk not null;
+  cokey           : cokey_kk;
+  xcoll           : xcoll_kk;
+  rfzas           : rfzas_kk;
+  todat           : todat_kk;
+  stakz           : stakz_kk;
+  checkbox        : ckbox_kk;
+  debt_set_number : dcm_debt_set_number_kk;
+  ml_risk_score   : ml_risk_score_cm_kk;
+  include fkkmako_succ;
+  cologrp         : cologrp_bp_kk;
+  include si_fkkmakor;
+  include si_fkkmakov;
+  include si_fkkmakot;
+  include si_fkkmakos;
+  include ci_fkkmako;
+  include si_vvkkmhist;
+  include si_valuevector;
+  include si_fkkmako_ps;
+
+}

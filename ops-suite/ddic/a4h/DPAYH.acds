@@ -1,0 +1,214 @@
+@EndUserText.label : 'Zahlungsprogramm - Daten zur Zahlung'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dpayh {
+
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt       : mandt not null
+    with foreign key t000
+      where mandt = dpayh.mandt;
+  key laufd       : laufd_kk not null;
+  key laufi       : laufi_pay not null;
+  key orign       : orign_pay not null;
+  key xvorl       : xvorl not null;
+  key payno       : payno_pay not null;
+  key subno       : subno_pay not null;
+  grpno           : grpno_pay;
+  pmf_key         : pmfkey_pay;
+  srtf1           : srtf1_pay;
+  srtf2           : srtf2_pay;
+  xavis           : xavis_pay;
+  org1t           : org1t_pay;
+  org1r           : org1r_pay;
+  org2t           : org2t_pay;
+  org2r           : org2r_pay;
+  gpa1t           : gpa1t_pay;
+  gpa1r           : gpa1r_pay;
+  acc1t           : acc1t_pay;
+  acc1r           : acc1r_pay;
+  doc1t           : doc1t_pay;
+  doc1r           : doc1r_pay;
+  mastt           : mastt_kk;
+  mastr           : mastr_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  nrzaa           : nrzaa_kk
+    with foreign key dfkkza
+      where mandt = dpayh.mandt
+        and nrzaa = dpayh.nrzaa;
+  @AbapCatalog.foreignKey.screenCheck : true
+  zadnr           : ad_addrnum
+    with foreign key adrc
+      where client = dpayh.mandt
+        and addrnumber = dpayh.zadnr;
+  znme1           : namez_kk;
+  znme2           : namez_kk;
+  @AbapCatalog.textLanguage
+  @AbapCatalog.foreignKey.screenCheck : true
+  zspra           : spras
+    with foreign key t002
+      where spras = dpayh.zspra;
+  @AbapCatalog.foreignKey.screenCheck : true
+  zland           : land1
+    with foreign key t005
+      where mandt = syst.mandt
+        and land1 = dpayh.zland;
+  @AbapCatalog.foreignKey.screenCheck : true
+  zregi           : regio
+    with foreign key t005s
+      where mandt = syst.mandt
+        and land1 = dpayh.zland
+        and bland = dpayh.zregi;
+  zort1           : ad_city1;
+  zort2           : ad_city2;
+  zortp           : ad_pobxloc;
+  zpst1           : ad_pstcd1;
+  zpst2           : ad_pstcd2;
+  zpst3           : ad_pstcd3;
+  zpfac           : ad_pobx;
+  zstra           : ad_street;
+  zstr1           : ad_hsnm1;
+  zstr2           : ad_hsnm2;
+  ztel1           : ad_tlnmbr;
+  ztel2           : ad_tlxtns;
+  zfax1           : ad_fxnmbr;
+  zfax2           : ad_fxxtns;
+  @AbapCatalog.foreignKey.screenCheck : true
+  zbnks           : banks
+    with foreign key t005
+      where mandt = syst.mandt
+        and land1 = dpayh.zbnks;
+  zbnky           : dzbnky;
+  zbnkl           : dzbnkl;
+  zswif           : swift;
+  zbnkn           : dzbnkn;
+  zbkon           : dzbkon;
+  zbkrf           : bkref;
+  zbkin           : koinh_kk;
+  zpayment_system : payee_payment_system_kk;
+  zalias_type     : payee_alias_type_kk;
+  zbank_alias     : payee_bank_alias_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  bbukr           : bukrs_pay
+    with foreign key t001
+      where mandt = syst.mandt
+        and bukrs = dpayh.bbukr;
+  @AbapCatalog.foreignKey.screenCheck : true
+  bgsbr           : gsber_pay
+    with foreign key tgsb
+      where mandt = syst.mandt
+        and gsber = dpayh.bgsbr;
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers           : waers
+    with foreign key tcurc
+      where mandt = syst.mandt
+        and waers = dpayh.waers;
+  @Semantics.amount.currencyCode : 't001.waers'
+  rbetr           : rbetr_cs;
+  @Semantics.amount.currencyCode : 'dpayh.waers'
+  rwbtr           : rwbtr_cs;
+  @Semantics.amount.currencyCode : 't001.waers'
+  rskon           : rskon_cs;
+  @Semantics.amount.currencyCode : 'dpayh.waers'
+  rwskt           : rwskt_cs;
+  zaldt           : dzaldt_zhl;
+  @Semantics.amount.currencyCode : 'dpayh.waers'
+  diffb           : diffb_kk;
+  ausfd           : ausfd;
+  valut           : valut;
+  @AbapCatalog.foreignKey.screenCheck : true
+  rzawe           : pymet_kk
+    with foreign key tfk042z
+      where mandt = syst.mandt
+        and land1 = t001.land1
+        and zlsch = dpayh.rzawe;
+  @AbapCatalog.foreignKey.screenCheck : true
+  uzawe           : uzawe
+    with foreign key t042f
+      where mandt = syst.mandt
+        and uzawe = dpayh.uzawe;
+  avisg           : avisg;
+  rpost           : rpost;
+  rtext           : rtext_d;
+  pygrp           : pygrp_kk;
+  paygr           : paygr_pay;
+  eigbv           : eigbv_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  hbkid           : hbkid
+    with foreign key t012
+      where mandt = syst.mandt
+        and bukrs = t001.bukrs
+        and hbkid = dpayh.hbkid;
+  @AbapCatalog.foreignKey.screenCheck : true
+  hktid           : hktid
+    with foreign key t012k
+      where mandt = syst.mandt
+        and bukrs = t001.bukrs
+        and hbkid = dpayh.hbkid
+        and hktid = dpayh.hktid;
+  @AbapCatalog.foreignKey.screenCheck : true
+  ubnks           : banks
+    with foreign key t005
+      where mandt = syst.mandt
+        and land1 = dpayh.ubnks;
+  ubnky           : ubnky;
+  ubnkl           : ubnkl;
+  ubknt           : ubknt;
+  ubkon           : ubkon;
+  @AbapCatalog.foreignKey.screenCheck : true
+  ubhkt           : ubhkt
+    with foreign key ska1
+      where mandt = syst.mandt
+        and ktopl = t001.ktopl
+        and saknr = dpayh.ubhkt;
+  @AbapCatalog.foreignKey.screenCheck : true
+  dtaws           : dtaws
+    with foreign key tfk015w
+      where mandt = dpayh.mandt
+        and land1 = dpayh.zland
+        and zlsch = dpayh.rzawe
+        and dtaws = dpayh.dtaws;
+  dtams           : dtams;
+  txtsl           : txtsl_042z;
+  txerg           : txerg;
+  uetr            : fpm_uetr;
+  @AbapCatalog.foreignKey.screenCheck : false
+  ccins           : cc_institute
+    with foreign key tb033
+      where mandt = dpayh.mandt
+        and ccins = dpayh.ccins;
+  ccnum           : ccnum;
+  include ccard_mask_kk;
+  @Semantics.amount.currencyCode : 'dpayh.waers'
+  rqstw           : rqstw;
+  @Semantics.amount.currencyCode : 't001.waers'
+  rqsth           : rqsth;
+  @Semantics.amount.currencyCode : 'dpayh.waers'
+  rqsew           : rqsew;
+  @Semantics.amount.currencyCode : 't001.waers'
+  rqseh           : rqseh;
+  oribd           : oribd_kk;
+  xnolc           : xnolc_kk;
+  ziban           : iban;
+  pdkey           : pdkey_kk;
+  pdref           : pdref_kk;
+  ppkey           : ppkey_kk;
+  prdat           : prodt_kk;
+  mguid           : guid16;
+  include ccard_enc_kk;
+  include payhmnd;
+  include payhrsp;
+  prqno           : prqno_kk;
+  prqno_logsys    : logsys;
+  include si_payhr;
+  include si_payhv;
+  include si_payht;
+  include si_payhs;
+  include si_payhp;
+  include si_payhm;
+  include si_payhc_cloud;
+  include ci_payh;
+  include si_payh_loc;
+
+}

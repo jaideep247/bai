@@ -1,0 +1,41 @@
+@EndUserText.label : 'Hausbanken'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table t012 {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = t012.mandt;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key bukrs : bukrs not null
+    with foreign key [0..*,1] t001
+      where mandt = t012.mandt
+        and bukrs = t012.bukrs;
+  key hbkid : hbkid not null;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  banks     : banks
+    with foreign key [0..*,1] t005
+      where mandt = t012.mandt
+        and land1 = t012.banks;
+  bankl     : bankk
+    with value help f4_bl_bank
+      where bankl = t012.bankl
+        and banks = t012.banks;
+  telf1     : telf1;
+  stcd1     : stcd1;
+  name1     : name1_a;
+  @AbapCatalog.textLanguage
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  spras     : spras
+    with foreign key [0..*,1] t002
+      where spras = t012.spras;
+  include si_t012;
+
+}

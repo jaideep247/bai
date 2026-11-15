@@ -1,0 +1,24 @@
+@EndUserText.label : 'Korrespondenz - Korrespondenzdaten'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkcod {
+
+  key mandt  : mandt not null;
+  @AbapCatalog.foreignKey.label : 'Korrespondenzart'
+  @AbapCatalog.foreignKey.screenCheck : true
+  key cotyp  : cotyp_kk not null
+    with foreign key tfk070a
+      where cotyp = dfkkcod.cotyp;
+  key cokey  : cokey_kk not null;
+  key bloid  : bloid_kk not null;
+  key blocn  : blocn_kk not null;
+  key entid  : entid_kk not null;
+  key entcn  : entcn_kk not null;
+  key enttcn : enttcn_kk not null;
+  key tname  : tabname not null;
+  key fname  : fieldname not null;
+  cdata      : cdata_kk;
+
+}

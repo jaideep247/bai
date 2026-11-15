@@ -1,0 +1,28 @@
+@EndUserText.label : 'Positionen des Abrechnungsbelegs'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkinvbill_i {
+
+  key mandt        : mandt not null;
+  @AbapCatalog.foreignKey.screenCheck : true
+  key billdocno    : billdocno_kk not null
+    with foreign key dfkkinvbill_h
+      where mandt = dfkkinvbill_i.mandt
+        and billdocno = dfkkinvbill_i.billdocno;
+  key billdocitem  : billdocitem_kk not null;
+  data             : include fkkinvbill_i_data;
+  quantity_pdp     : quantity_pdp_kk;
+  quantity_adp     : quantity_adp_kk;
+  appl_t           : include si_fkkinvbill_i_t;
+  appl_p           : include si_fkkinvbill_i_p;
+  appl_r           : include si_fkkinvbill_i_r;
+  appl_s           : include si_fkkinvbill_i_s;
+  appl_v           : include si_fkkinvbill_i_v;
+  include si_fkkinvbill_i_c_cloud;
+  customer         : include ci_fkkinvbill_i;
+  customer_mapping : include ci_m_fkkinvbill_i;
+  cfd              : include cinv_invbill_i_incl_eew_ps;
+
+}

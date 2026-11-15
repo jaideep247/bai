@@ -1,0 +1,15 @@
+@EndUserText.label : 'NOC-Rückläuferstapel: Kopfdaten'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkknrk {
+
+  key mandt : mandt not null;
+  key keyn1 : keyn1_kk not null;
+  include fkknrk_tech;
+  include fkknrk_data
+    extend flins :
+      remove foreign key;
+
+}

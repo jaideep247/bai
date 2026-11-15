@@ -1,0 +1,194 @@
+@EndUserText.label : 'Rückläuferstapel: Daten zur Zahlung'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkrp {
+
+  key mandt      : mandt not null;
+  key keyr1      : keyr1_kk not null
+    with value help fkkrs
+      where keyr1 = dfkkrp.keyr1;
+  key posra      : posra_kk not null;
+  @AbapCatalog.foreignKey.screenCheck : false
+  selt1          : seltx_kk
+    with foreign key [0..*,1] tfk004
+      where mandt = dfkkrp.mandt
+        and applk = dfkkrk.applk
+        and seltx = dfkkrp.selt1;
+  selw1          : selop_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  betrr          : betrr_kk;
+  @Semantics.amount.currencyCode : 't001.waers'
+  betrh          : betrh_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waeru'
+  betru          : betru_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  btrb1          : btrb1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  btrb2          : btrb2_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  btrv1          : btrv1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  btrv2          : btrv2_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  stbb1          : stbb1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  stbb2          : stbb2_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  stbv1          : stbv1_kk;
+  @Semantics.amount.currencyCode : 'dfkkrp.waers'
+  stbv2          : stbv2_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzb1          : skzb1_kk
+    with foreign key [0..*,1] t007a
+      where mandt = dfkkrp.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrp.skzb1;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzb2          : skzb2_kk
+    with foreign key [0..*,1] t007a
+      where mandt = dfkkrp.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrp.skzb2;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzv1          : skzv1_kk
+    with foreign key [0..*,1] t007a
+      where mandt = dfkkrp.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrp.skzv1;
+  @AbapCatalog.foreignKey.screenCheck : true
+  skzv2          : skzv2_kk
+    with foreign key [0..*,1] t007a
+      where mandt = dfkkrp.mandt
+        and kalsm = t005.kalsm
+        and mwskz = dfkkrp.skzv2;
+  @AbapCatalog.foreignKey.screenCheck : true
+  fikey          : fikey_kk
+    with foreign key [0..*,1] dfkksumc
+      where mandt = dfkkrp.mandt
+        and fikey = dfkkrp.fikey;
+  @AbapCatalog.foreignKey.screenCheck : false
+  rlsko          : rlsko_kk
+    with foreign key [1..*,1] tfk012
+      where mandt = dfkkrp.mandt
+        and bukrs = dfkkrp.bukrs
+        and bvrko = dfkkrp.rlsko
+    with value help rlsko_kk
+      where bukrs = dfkkrp.bukrs
+        and hbkid = dfkkrp.hbkid
+        and hktid = dfkkrp.hktid
+        and rlsko = dfkkrp.rlsko;
+  @AbapCatalog.foreignKey.screenCheck : true
+  bukrs          : bukrs
+    with foreign key t001
+      where mandt = dfkkrp.mandt
+        and bukrs = dfkkrp.bukrs;
+  @AbapCatalog.foreignKey.screenCheck : true
+  gsber          : gsber
+    with foreign key tgsb
+      where mandt = dfkkrp.mandt
+        and gsber = dfkkrp.gsber;
+  prctr          : prctr_rl_kk;
+  @AbapCatalog.foreignKey.screenCheck : false
+  blart          : blart_kk
+    with foreign key tfk003
+      where mandt = dfkkrp.mandt
+        and applk = dfkkrk.applk
+        and blart = dfkkrp.blart;
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers          : waers
+    with foreign key tcurc
+      where mandt = dfkkrp.mandt
+        and waers = dfkkrp.waers;
+  @AbapCatalog.foreignKey.screenCheck : true
+  waeru          : waeru_kk
+    with foreign key tcurc
+      where mandt = dfkkrp.mandt
+        and waers = dfkkrp.waeru;
+  kursf          : kursf;
+  budat          : budat_kk;
+  bldat          : bldat;
+  valut          : valut;
+  xeiph          : xeiph_kk;
+  @AbapCatalog.foreignKey.label : 'Rückläufergrund'
+  @AbapCatalog.foreignKey.screenCheck : false
+  rlgrd          : rlgrd_kk
+    with foreign key [0..*,1] tfk045a
+      where mandt = dfkkrp.mandt
+        and rlgrd = dfkkrp.rlgrd
+        and hbkid = dfkkrp.hbkid;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : false
+  rlhbk          : rlhbk_kk
+    with foreign key [0..*,1] tfk045d
+      where mandt = dfkkrp.mandt
+        and bukrs = dfkkrk.bukrs
+        and hbkid = t012.hbkid
+        and rlhbk = dfkkrp.rlhbk;
+  aenam          : aenam;
+  aedat          : aedat;
+  aetim          : aetim_kk;
+  opbel          : opzbel_kk;
+  rlbel          : rlbel_kk;
+  urbel          : urbel_kk;
+  txtvw          : txtvw_kk;
+  bankl          : gpbanks;
+  bankk          : gpbankk;
+  bankn          : gpbankn;
+  iban           : iban;
+  @AbapCatalog.foreignKey.screenCheck : false
+  hbkid          : hbkid
+    with foreign key t012
+      where mandt = dfkkrp.mandt
+        and bukrs = dfkkrp.bukrs
+        and hbkid = dfkkrp.hbkid
+    with value help h_t012_rkk
+      where banks = dfkkrp.tax_country
+        and bukrs = dfkkrp.bukrs
+        and hbkid = dfkkrp.hbkid
+        and hktid = dfkkrp.hktid
+        and rlsko = dfkkrp.rlsko;
+  @AbapCatalog.foreignKey.screenCheck : false
+  hktid          : hktid
+    with foreign key t012k
+      where mandt = dfkkrp.mandt
+        and bukrs = dfkkrp.bukrs
+        and hbkid = dfkkrp.hbkid
+        and hktid = dfkkrp.hktid
+    with value help h_t012_rkk
+      where banks = dfkkrp.tax_country
+        and bukrs = dfkkrp.bukrs
+        and hbkid = dfkkrp.hbkid
+        and hktid = dfkkrp.hktid
+        and rlsko = dfkkrp.rlsko;
+  checf          : checf_kk;
+  xacceptcharges : xacceptcharges_kk;
+  rlmod          : rlmod_kk;
+  flags          : flagpool32;
+  xerwr          : xerwr_kk;
+  xklae          : xkrae_kk;
+  klaeb          : kraeb_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  klaeh          : kraeh_kk
+    with foreign key ska1
+      where mandt = dfkkrp.mandt
+        and saknr = dfkkrp.klaeh;
+  klaed          : klaed_rl_kk;
+  xvoid          : xvoid_kk;
+  kukey          : kukey_kk;
+  esnum          : esnum_eb;
+  kukey_logsys   : logsys;
+  include ci_dfkkrp_brazil;
+  swift          : swift;
+  ltype          : fqm_linktype;
+  lnkid          : fqm_linkid;
+  @AbapCatalog.foreignKey.screenCheck : true
+  tax_country    : fot_tax_country
+    with foreign key fot_txa_registn
+      where mandt = dfkkrp.mandt
+        and comp_code = dfkkrp.bukrs
+        and tax_country = dfkkrp.tax_country;
+  include ci_dfkkrp;
+
+}

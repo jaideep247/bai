@@ -1,0 +1,42 @@
+@EndUserText.label : 'Konten bei Hausbanken'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #RESTRICTED
+@AbapCatalog.replacementObject : 'v_t012k_ddl'
+define table t012k {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = t012k.mandt;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key bukrs : bukrs not null
+    with foreign key [0..*,1] t001
+      where mandt = t012k.mandt
+        and bukrs = t012k.bukrs;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key hbkid : hbkid not null
+    with foreign key [0..*,1] t012
+      where mandt = t012k.mandt
+        and bukrs = t012k.bukrs
+        and hbkid = t012k.hbkid;
+  key hktid : hktid not null;
+  bankn     : bankn;
+  bkont     : bkont;
+  @AbapCatalog.foreignKey.label : 'Währung, in der das Bankkonto geführt wird'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers     : waers
+    with foreign key [1..*,1] tcurc
+      where mandt = t012k.mandt
+        and waers = t012k.waers;
+  refzl     : refzl;
+  dtaai     : dtaai;
+  bnkn2     : bnkn2;
+  include si_t012k;
+
+}

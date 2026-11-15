@@ -1,0 +1,21 @@
+@EndUserText.label : 'Positionen des Fakturierungsbelegs'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkinvdoc_i {
+
+  key mandt      : mandt not null;
+  key invdocno   : invdocno_kk not null;
+  key invdocitem : invdocitem_kk not null;
+  include fkkinvdoc_i_data;
+  include si_fkkinvdoc_i_t;
+  include si_fkkinvdoc_i_p;
+  include si_trm_invdoc_i;
+  include si_fkkinvdoc_i_r;
+  include si_fkkinvdoc_i_s;
+  include si_fkkinvdoc_i_c_cloud;
+  include ci_fkkinvdoc_i;
+  cfd            : include cinv_invdoc_i_incl_eew_ps;
+
+}

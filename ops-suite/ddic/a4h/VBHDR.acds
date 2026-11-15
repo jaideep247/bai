@@ -1,0 +1,34 @@
+@EndUserText.label : 'Verbuchungs-Header'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #L
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table vbhdr {
+
+  key vbkey        : vbkey_d not null;
+  vbmandt          : vbmandt not null;
+  vbusr            : vbbname not null;
+  vbaccnt          : vbaccnt not null;
+  vbreport         : vbreport not null;
+  vbtcode          : vbtcode not null;
+  vbenqkey         : enqkey not null;
+  vbrc             : vbrc not null;
+  vbname           : vbname not null;
+  vbcontext        : vbcontext not null;
+  vbstate          : vbstate not null;
+  vbcliinfo        : thraw1 not null;
+  @AbapCatalog.textLanguage
+  vblang           : xulangu;
+  vbdatfm          : char1;
+  vbdcpfm          : char1;
+  vbdate           : vbdate;
+  vbtransid        : pftransid;
+  vbetransid       : pftransid;
+  vbetransln       : txetransln;
+  vbcliname        : vbname;
+  vbzonlo          : vbzonlo;
+  vbtimoff         : vbtimoff;
+  temperature      : data_temperature;
+  memory_exemption : char1;
+
+}

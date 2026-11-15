@@ -1,0 +1,85 @@
+@EndUserText.label : 'Mahnhistorie Belegzeilen'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table fkkmaze {
+
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt : mandt not null
+    with foreign key t000
+      where mandt = fkkmaze.mandt;
+  key laufd : laufd_kk not null;
+  key laufi : mlfid_kk not null;
+  key gpart : gpart_kk not null;
+  key vkont : vkont_kk not null;
+  key mazae : mazae_kk not null;
+  @AbapCatalog.foreignKey.screenCheck : true
+  key opbel : opbel_kk not null
+    with foreign key dfkkko
+      where mandt = fkkmaze.mandt
+        and opbel = fkkmaze.opbel;
+  key opupw : opupw_kk not null;
+  key opupk : opupk_kk not null;
+  key opupz : opupz_kk not null;
+  bukrs     : bukrs;
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers     : waers
+    with foreign key [0..*,1] tcurc
+      where mandt = fkkmaze.mandt
+        and waers = fkkmaze.waers;
+  @Semantics.amount.currencyCode : 'fkkmaze.waers'
+  mbetm     : mbetm_kk;
+  mbeth     : unused_kk;
+  faedn     : faedn_kk;
+  mibel     : mibel_kk;
+  @Semantics.amount.currencyCode : 'fkkmaze.waers'
+  mintm     : mintm_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  mahns     : mahns_kk
+    with foreign key [0..*,1] tfk047b
+      where mandt = fkkmaze.mandt
+        and mahnv = fkkmaze.mahnv
+        and mahns = fkkmaze.mahns;
+  @AbapCatalog.foreignKey.screenCheck : true
+  mstyp     : mstyp_kk
+    with foreign key tfk047g
+      where mandt = fkkmaze.mandt
+        and mstyp = fkkmaze.mstyp;
+  @AbapCatalog.foreignKey.screenCheck : true
+  mahnn     : mahnn_kk
+    with foreign key [0..*,1] tfk047b
+      where mandt = fkkmaze.mandt
+        and mahnv = fkkmaze.mahnv
+        and mahns = fkkmaze.mahnn;
+  @AbapCatalog.foreignKey.screenCheck : true
+  mansp     : mansp_kk
+    with foreign key tfk047s
+      where mandt = fkkmaze.mandt
+        and mansp = fkkmaze.mansp;
+  xmfak     : xmfak_kk;
+  xmsus     : xmsus_kk;
+  xmsto     : xmsto_kk;
+  xinfo     : xinfo_kk;
+  mdrkd     : mdrkd_kk;
+  stakz     : stakz_kk;
+  xmvkt     : xmvkt_kk;
+  vtref     : vtref_kk;
+  subap     : subap_kk;
+  segment   : segmt_kk;
+  prctr     : prctr;
+  mahnv     : mahnv_kk;
+  ausdt     : ausdt_kk;
+  spart     : spart_kk;
+  xtaus     : xtaus_kk;
+  mopupz    : mopupz_kk;
+  higherdl  : higherdl_kk;
+  dalin     : dalin_kk;
+  include si_fkkmazer;
+  include si_fkkmazev;
+  include si_fkkmazet;
+  include si_fkkmazes;
+  include ci_fkkmaze;
+  include si_fbnum_ps;
+
+}

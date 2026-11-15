@@ -1,0 +1,14 @@
+@EndUserText.label : 'NOC-Rückläuferstapel: Positionsdaten'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkknrp {
+
+  key mandt : mandt not null;
+  key keyn1 : keyn1_kk not null;
+  key posna : posna_kk not null;
+  include fkknrp_tech;
+  include fkknrp_data;
+
+}

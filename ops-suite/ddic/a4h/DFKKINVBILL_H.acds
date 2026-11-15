@@ -1,0 +1,21 @@
+@EndUserText.label : 'Abrechnungsbelegkopf'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkinvbill_h {
+
+  key mandt        : mandt not null;
+  key billdocno    : billdocno_kk not null;
+  data             : include fkkinvbill_h_data;
+  appl_t           : include si_fkkinvbill_h_t;
+  appl_p           : include si_fkkinvbill_h_p;
+  appl_r           : include si_fkkinvbill_h_r;
+  appl_s           : include si_fkkinvbill_h_s;
+  appl_v           : include si_fkkinvbill_h_v;
+  appl_c_cloud     : include si_fkkinvbill_h_c_cloud;
+  customer         : include ci_fkkinvbill_h;
+  customer_mapping : include ci_m_fkkinvbill_h;
+  cfd              : include cinv_invbill_h_incl_eew_ps;
+
+}

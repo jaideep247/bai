@@ -1,0 +1,75 @@
+@EndUserText.label : 'Universal Journal Entry Line Items'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table acdoca {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key rclnt             : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = acdoca.rclnt;
+  @AbapCatalog.foreignKey.screenCheck : true
+  @AbapCatalog.foreignKey.messageClass : 'FAGL_LEDGER_CUST'
+  @AbapCatalog.foreignKey.messageNumber : '019'
+  key rldnr             : fins_ledger not null
+    with foreign key finsc_ledger
+      where mandt = acdoca.rclnt
+        and rldnr = acdoca.rldnr;
+  @AbapCatalog.foreignKey.screenCheck : true
+  key rbukrs            : bukrs not null
+    with foreign key t001
+      where mandt = syst.mandt
+        and bukrs = acdoca.rbukrs;
+  key gjahr             : gjahr not null;
+  key belnr             : belnr_d not null;
+  key docln             : docln6 not null;
+  ryear                 : gjahr_pos;
+  docnr_ld              : fins_docnr_ld;
+  rrcty                 : rrcty not null;
+  transaction_curr_unit : include acdoc_si_00 not null;
+  @AbapCatalog.foreignKey.screenCheck : true
+  racct                 : racct not null
+    with foreign key skb1
+      where mandt = syst.mandt
+        and bukrs = acdoca.rbukrs
+        and saknr = acdoca.racct;
+  acct_assignment       : include acdoc_si_gl_accas not null;
+  value_data            : include acdoc_si_value_data;
+  fix                   : include acdoc_si_fix not null
+    extend usnam :
+      remove foreign key;
+  fincs                 : include acdoc_si_fincs not null;
+  subledger_shared      : include acdoc_si_gen not null;
+  subledger_fi          : include acdoc_si_fi not null;
+  subledger_aa          : include acdoc_si_faa not null;
+  subledger_ml          : include acdoc_si_ml not null;
+  include acdoc_si_cfin not null;
+  subledger_co          : include acdoc_si_co not null
+    extend pkdpos :
+      remove foreign key;
+  include acdoc_si_log not null;
+  include acdoc_si_log_act not null;
+  subledger_copa        : include acdoc_si_copa not null;
+  include acdoc_si_ps not null;
+  include acdoc_si_fs not null;
+  include acdoc_si_jva not null;
+  include acdoc_si_re not null;
+  include acdoc_si_acr not null
+    extend acrobj_id :
+      with value help acr_obj_id
+        where acrobjtype = acdoca.acrobjtype
+          and acrobj_id = acdoca.acrobj_id
+          and rbukrs = acdoca.rbukrs
+    extend acrsobj_id :
+      with value help acr_subobj_id
+        where acrobjtype = acdoca.acrobjtype
+          and acrobj_id = acdoca.acrobj_id
+          and acrsobj_id = acdoca.acrsobj_id
+          and rbukrs = acdoca.rbukrs;
+  include acdoc_si_val not null;
+  ext                   : include acdoc_si_ext;
+  include acdoc_si_tech not null;
+
+}

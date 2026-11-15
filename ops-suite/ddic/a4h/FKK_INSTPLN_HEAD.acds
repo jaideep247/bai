@@ -1,0 +1,62 @@
+@EndUserText.label : 'Kopfdaten des Ratenplans'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table fkk_instpln_head {
+
+  key mandt  : mandt not null;
+  key rpnum  : rpbel_kk not null;
+  rprci      : rprci_kk;
+  rprda      : rprda_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  rpcat      : rpcat_kk
+    with foreign key tfk062a
+      where mandt = fkk_instpln_head.mandt
+        and rpcat = fkk_instpln_head.rpcat;
+  deadt      : deadt_kk;
+  deman      : deman_kk;
+  @Semantics.amount.currencyCode : 'fkk_instpln_head.waers'
+  deoff      : deoff_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers      : waers_kk
+    with foreign key tcurc
+      where mandt = fkk_instpln_head.mandt
+        and waers = fkk_instpln_head.waers;
+  @AbapCatalog.foreignKey.screenCheck : true
+  deagd      : deagd_kk
+    with foreign key tfk061a
+      where mandt = fkk_instpln_head.mandt
+        and deagd = fkk_instpln_head.deagd;
+  sttdt      : stardat_kk;
+  enddt      : endedat_kk;
+  ninst      : ninst_kk;
+  vkont      : vkont_kk;
+  gpart      : gpart_kk;
+  vtref      : vtref_kk;
+  drcdt      : drcdt_kk;
+  bukrs      : bukrs;
+  dzins      : dzins_kk;
+  gzver      : gzver_kk;
+  faein      : faein_kk;
+  dpudt      : dpudt_kk;
+  dputm      : dputm_kk;
+  c4eye      : c4eye_kk;
+  c4eyp      : c4eyp_kk;
+  subap      : subap_kk;
+  anzintrt   : anzintrt;
+  sttin      : stdtint_kk;
+  invip      : invip_kk;
+  orig_rpnum : orig_rpnum_kk;
+  gwval      : gwval_kk;
+  cpudt      : cpudt_kk;
+  cputm      : cputm_kk;
+  abwvb_orig : abwvb_orig_kk;
+  abwvb_stat : abwvb_stat_kk;
+  include si_fkk_instpln_r;
+  include si_fkk_instpln_v;
+  include si_fkk_instpln_t;
+  include si_fkk_instpln_p;
+  include si_fkk_instpln_s;
+
+}

@@ -1,0 +1,141 @@
+@EndUserText.label : 'Buchungssummen aus dem Massenkontokorrent'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkksum {
+
+  key mandt        : mandt not null;
+  @AbapCatalog.foreignKey.screenCheck : false
+  key bukrs        : bukrs not null
+    with foreign key [0..*,1] t001
+      where mandt = dfkksum.mandt
+        and bukrs = dfkksum.bukrs;
+  @AbapCatalog.foreignKey.screenCheck : false
+  key fikey        : fikey_kk not null
+    with foreign key [0..*,1] dfkksumc
+      where mandt = dfkksum.mandt
+        and fikey = dfkksum.fikey;
+  key shkzg        : shkzg not null;
+  @AbapCatalog.foreignKey.screenCheck : false
+  key hkont        : hkont not null
+    with foreign key [0..*,1] ska1
+      where mandt = dfkksum.mandt
+        and ktopl = t001.ktopl
+        and saknr = dfkksum.hkont;
+  @AbapCatalog.foreignKey.screenCheck : false
+  key gsber        : gsber not null
+    with foreign key [0..*,1] tgsb
+      where mandt = dfkksum.mandt
+        and gsber = dfkksum.gsber;
+  key khash        : khash_kk not null;
+  key sumsz        : sumsz_kk not null;
+  @AbapCatalog.foreignKey.screenCheck : false
+  waers            : waers
+    with foreign key [0..*,1] tcurc
+      where mandt = dfkksum.mandt
+        and waers = dfkksum.waers;
+  pswsl            : pswsl_kk;
+  budat            : budat_kk not null;
+  @AbapCatalog.foreignKey.screenCheck : false
+  opbel            : opbel_kk
+    with foreign key [0..*,1] dfkkko
+      where mandt = dfkksum.mandt
+        and opbel = dfkksum.opbel;
+  opupk            : opupk_kk;
+  xeiei            : xeiei_kk;
+  bupla            : bupla;
+  segment          : segmt_kk;
+  kostl            : kostl;
+  prctr            : prctr;
+  aufnr            : aufnr;
+  kdauf            : kdauf;
+  kdpos            : kdpos;
+  kdein            : kdein;
+  ps_psp_pnr       : ps_psp_pnr;
+  paobjnr          : rkeobjnr;
+  pasubnr          : rkesubnr;
+  fdlev            : fdlev_kk;
+  mwskz            : mwskz;
+  xstez            : xstez_kk;
+  ktosl            : ktosl;
+  stprz            : stprz_kk;
+  txjcd            : txjcd;
+  txjco            : txjco_kk;
+  txdat            : txdat_kk;
+  txcnt            : txcnt_kk;
+  kschl            : kschl;
+  bldat            : bldat;
+  valut            : valut;
+  vbund            : rassc;
+  kontt            : kontt_kk;
+  kontl            : kontl_kk;
+  xnegp            : xnegp_kk;
+  hbbla            : hbbla_kk;
+  ldgrp            : ldgrp_kk;
+  xcsha            : xcsha_kk;
+  reacc            : reacc_kk;
+  rebuk            : rebuk_kk;
+  @Semantics.amount.currencyCode : 't001.waers'
+  betrh            : betrh_long_kk;
+  @Semantics.amount.currencyCode : 'dfkksum.waers'
+  betrw            : betrw_long_kk;
+  @Semantics.amount.currencyCode : 'x001.hwae2'
+  betr2            : betr2_long_kk;
+  @Semantics.amount.currencyCode : 'x001.hwae3'
+  betr3            : betr3_long_kk;
+  @Semantics.amount.currencyCode : 'dfkksum.pswsl'
+  pswbt            : pswbt_long_kk;
+  @Semantics.amount.currencyCode : 't001.waers'
+  sbash            : sbash_long_kk;
+  @Semantics.amount.currencyCode : 'dfkksum.waers'
+  sbasw            : sbasw_long_kk;
+  @Semantics.amount.currencyCode : 'dfkksum.waers'
+  ndtax            : ndtax_long_kk;
+  @Semantics.amount.currencyCode : 't001.waers'
+  ndtxh            : ndtxh_long_kk;
+  xndtx            : xndtx_kk;
+  @Semantics.amount.currencyCode : 'dfkksum.waers'
+  sttax            : sttax_kk;
+  @Semantics.amount.currencyCode : 't001.waers'
+  sctax            : sctax_kk;
+  @Semantics.quantity.unitOfMeasure : 'dfkksum.meins'
+  menge            : menge_d;
+  meins            : meins;
+  squan            : sign_quantity;
+  include ifkkfmobj;
+  korrl            : korrl_kk;
+  uebud            : uebud_kk;
+  snper            : snper_kk;
+  xkontneu         : xkontneu_kk;
+  revsr            : revsr_kk;
+  xnegk            : xnegp_kk;
+  vatdate          : vatdate_kk;
+  wnper            : wnper_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  hbkid            : hbkid
+    with foreign key t012
+      where mandt = dfkksum.mandt
+        and bukrs = dfkksum.bukrs
+        and hbkid = dfkksum.hbkid;
+  @AbapCatalog.foreignKey.screenCheck : true
+  hktid            : hktid
+    with foreign key t012k
+      where mandt = dfkksum.mandt
+        and bukrs = dfkksum.bukrs
+        and hbkid = dfkksum.hbkid
+        and hktid = dfkksum.hktid;
+  xdirtr           : xdirtr_kk;
+  blcnt            : rblcnt_kk;
+  txdat_from       : fot_txdat_from;
+  @AbapCatalog.foreignKey.screenCheck : true
+  tax_country      : fot_tax_country
+    with foreign key fot_txa_registn
+      where mandt = dfkksum.mandt
+        and comp_code = dfkksum.bukrs
+        and tax_country = dfkksum.tax_country;
+  taxc_factor_numc : taxc_factor_numc_kk;
+  include fkk_sum_add_fields_opk;
+  include fkksum_incl_eew_ps;
+
+}

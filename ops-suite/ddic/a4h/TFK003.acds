@@ -1,0 +1,24 @@
+@EndUserText.label : 'Belegarten'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table tfk003 {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = tfk003.mandt;
+  key applk : applk_kk not null;
+  key blart : blart_kk not null;
+  numkr     : numkd_kk
+    with value help fkk_numkr_003
+      where nrrangenr = tfk003.numkr;
+  bllfz     : bllfz_kk;
+  arclfz    : arclfz_kk;
+  xgsub     : xgsub_kk;
+  xintf     : xintf_kk;
+  negbl     : negbl_kk;
+
+}

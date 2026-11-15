@@ -1,0 +1,68 @@
+@EndUserText.label : 'Job-Zustandsübersichtstabelle'
+@AbapCatalog.enhancement.category : #NOT_CLASSIFIED
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.activationType : #ADAPT_C_STRUCTURES
+@AbapCatalog.deliveryClass : #L
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table tbtco {
+
+  key jobname  : btcjob not null;
+  key jobcount : btcjobcnt not null;
+  jobgroup     : btcjobgrp;
+  intreport    : btcrep;
+  stepcount    : btcstepcnt;
+  sdlstrtdt    : btcsdate;
+  sdlstrttm    : btcstime;
+  btcsystem    : btctgtsys;
+  sdldate      : btcsdldate;
+  sdltime      : btcsdltime;
+  sdluname     : btcsdlnm;
+  lastchdate   : btcjchdate;
+  lastchtime   : btcjchtime;
+  lastchname   : btcjchnm;
+  reldate      : btcreldt;
+  reltime      : btcreltm;
+  reluname     : btcrelnm;
+  strtdate     : btcxdate;
+  strttime     : btcxtime;
+  enddate      : btcxdate;
+  endtime      : btcxtime;
+  prdmins      : btcpmin;
+  prdhours     : btcphour;
+  prddays      : btcpday;
+  prdweeks     : btcpweek;
+  prdmonths    : btcpmnth;
+  periodic     : btcpflag;
+  delanfrep    : btcdelflag;
+  emergmode    : btceflag;
+  status       : btcstatus;
+  newflag      : btcnewflag;
+  authcknam    : btcauthnam;
+  authckman    : btcauthman;
+  succnum      : btcsnum;
+  prednum      : btcpnum;
+  joblog       : rstsoname;
+  laststrtdt   : btclsdate;
+  laststrttm   : btclstime;
+  wpnumber     : btcwpno;
+  wpprocid     : btcwppid;
+  eventid      : btceventid;
+  eventparm    : btcevtparm;
+  btcsysreax   : btctgtsys;
+  jobclass     : btcjobclas;
+  priority     : btcjobprio;
+  eventcount   : btcevtcnt;
+  checkstat    : btcckstat;
+  calendarid   : btccalid;
+  prdbehav     : btcprdbhv;
+  execserver   : btcsrvname;
+  eomcorrect   : btceomcorr;
+  calcorrect   : btceomcorr;
+  reaxserver   : btcsrvname;
+  reclogsys    : logsys;
+  recobjtype   : swo_objtyp;
+  recobjkey    : swo_typeid;
+  recdescrib   : swo_descrb;
+  tgtsrvgrp    : bpsrvgrpn;
+
+}

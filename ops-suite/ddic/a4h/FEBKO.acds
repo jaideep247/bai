@@ -1,0 +1,128 @@
+@EndUserText.label : 'Kopfsätze des Elektronischen Kontoauszugs'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table febko {
+
+  @AbapCatalog.foreignKey.label : 'Mandant'
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt                      : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = febko.mandt;
+  key anwnd                      : anwnd_ebko not null;
+  key absnd                      : absnd_eb not null;
+  key azidt                      : azidt_eb not null;
+  key emkey                      : emkey_eb not null;
+  kukey                          : kukey_eb;
+  astat                          : astat_eb;
+  dstat                          : dstat_eb;
+  vb1ok                          : vb1ok_ebko;
+  vb2ok                          : vb2ok_ebko;
+  kipre                          : kipre_eb;
+  vfdat                          : vfdat_eb;
+  grp01                          : grp01_eb;
+  xkep1                          : xkep1_eb;
+  grp02                          : grp02_eb;
+  xkep2                          : xkep2_eb;
+  wvdat                          : wvdat_eb;
+  wvtim                          : wvtim_eb;
+  wvart                          : wvart_eb;
+  @AbapCatalog.foreignKey.label : 'Hauptbuchkonto der Sachkontenbuchhaltung'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : false
+  hkont                          : hkont
+    with foreign key [0..*,1] skb1
+      where mandt = febko.mandt
+        and bukrs = febko.bukrs
+        and saknr = febko.hkont;
+  ktonr                          : bankn;
+  ktoih                          : ktoih_eb;
+  ktosb                          : ktosb_eb;
+  aznum                          : aznum_lg_eb;
+  azsnr                          : azsnr_eb;
+  azdat                          : azdat_eb;
+  @AbapCatalog.foreignKey.label : 'Buchungskreis'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  bukrs                          : bukrs
+    with foreign key [0..*,1] t001
+      where mandt = febko.mandt
+        and bukrs = febko.bukrs;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  ktopl                          : ktopl
+    with foreign key [0..*,1] t004
+      where mandt = febko.mandt
+        and ktopl = febko.ktopl;
+  @AbapCatalog.foreignKey.label : 'Währungsschlüssel'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers                          : waers
+    with foreign key [0..*,1] tcurc
+      where mandt = febko.mandt
+        and waers = febko.waers;
+  sstyp                          : sstyp_eb;
+  ssvoz                          : ssvoz_eb;
+  @Semantics.amount.currencyCode : 'febko.waers'
+  ssbtr                          : ssbtr_eb;
+  @Semantics.amount.currencyCode : 'febko.waers'
+  sumso                          : sumso_eb;
+  @Semantics.amount.currencyCode : 'febko.waers'
+  sumha                          : sumha_eb;
+  estyp                          : estyp_eb;
+  esvoz                          : esvoz_eb;
+  @Semantics.amount.currencyCode : 'febko.waers'
+  esbtr                          : esbtr_eb;
+  @Semantics.amount.currencyCode : 't001.waers'
+  esdmb                          : esdmb_eb;
+  blauf                          : blauf_eb;
+  elauf                          : elauf_eb;
+  hzins                          : hzins_eb;
+  teiln                          : teiln_eb;
+  bktoa                          : bktoa_eb;
+  anzes                          : anzes_eb;
+  vgtyp                          : vgtyp_eb;
+  efart                          : efart_eb;
+  hbkid                          : hbkid
+    with value help h_t012
+      where bukrs = febko.bukrs
+        and hbkid = febko.hbkid;
+  hktid                          : hktid
+    with value help h_t012k
+      where bukrs = febko.bukrs
+        and hbkid = febko.hbkid
+        and hktid = febko.hktid;
+  euser                          : euser_eb;
+  edate                          : edate_eb;
+  etime                          : etime_eb;
+  bkref                          : bkref;
+  xfdis                          : xfdis_eb;
+  dsart                          : dsart;
+  xverd                          : ffdisxverd;
+  xbenr                          : awkey;
+  xbtyp                          : awtyp;
+  seq_number                     : seq_number;
+  seq_status                     : seq_status;
+  input_format                   : input_format;
+  siban                          : siban_eb;
+  azpgno                         : azpgno_eb;
+  filehash                       : filehash_eb;
+  @Semantics.amount.currencyCode : 'febko.waers'
+  closing_available_balance      : feb_closing_available_balance;
+  bankstmt_ar_incl_eew_ps        : include bankstmt_ar_incl_eew_ps;
+  bsimp_psetid                   : far_bsimp_psetid;
+  supfincor                      : supfincor;
+  cashupd                        : cashupd;
+  cashupdok                      : cashupdok;
+  file_format                    : febformat;
+  file_format_mapping            : febformat_long;
+  azdattim                       : far_bs_timestamp_on;
+  semobjbyprocessingapplication  : far_bs_itm_sem_obj_proc_app;
+  refbyprocessingapplication     : far_bs_itm_ref_by_proc_app;
+  bankstmntprocessingapplication : far_bs_itm_processing_app;
+  bankstatementimportmessageuuid : far_mbc_guid;
+  bankstatementimportmessageid   : far_mbc_msg_id;
+
+}

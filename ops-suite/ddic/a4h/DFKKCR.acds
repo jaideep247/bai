@@ -1,0 +1,57 @@
+@EndUserText.label : 'Scheck-Repository'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table dfkkcr {
+
+  @AbapCatalog.foreignKey.screenCheck : false
+  key mandt : mandt not null
+    with foreign key t000
+      where mandt = dfkkcr.mandt;
+  key herkf : crherkf not null;
+  key org1t : org1t_pay not null;
+  key org1r : org1r_pay not null;
+  @AbapCatalog.foreignKey.screenCheck : false
+  key hbkid : hbkid not null
+    with foreign key t012
+      where mandt = dfkkcr.mandt
+        and bukrs = dfkkcr.bbukr
+        and hbkid = dfkkcr.hbkid;
+  @AbapCatalog.foreignKey.screenCheck : false
+  key hktid : hktid not null
+    with foreign key t012k
+      where mandt = dfkkcr.mandt
+        and bukrs = dfkkcr.bbukr
+        and hbkid = dfkkcr.hbkid
+        and hktid = dfkkcr.hktid;
+  key ztart : crztkind not null;
+  key ztnum : crztnum not null;
+  laufd     : laufd;
+  laufi     : laufi;
+  include fkkcrpayref;
+  include fkkcrpaydoc
+    @AbapCatalog.foreignKey.screenCheck : false
+    extend bbukr :
+      with foreign key t001
+        where mandt = dfkkcr.mandt
+          and bukrs = dfkkcr.bbukr
+    @AbapCatalog.foreignKey.screenCheck : false
+    extend bgsbr :
+      with foreign key tgsb
+        where mandt = dfkkcr.mandt
+          and gsber = dfkkcr.bgsbr
+    @AbapCatalog.foreignKey.screenCheck : true
+    extend ewaer :
+      with foreign key tcurc
+        where mandt = dfkkcr.mandt
+          and waers = dfkkcr.ewaer
+    @AbapCatalog.foreignKey.screenCheck : false
+    extend waers :
+      with foreign key tcurc
+        where mandt = dfkkcr.mandt
+          and waers = dfkkcr.waers;
+  include fkkcrcheck;
+  include fkkcrref;
+
+}

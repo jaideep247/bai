@@ -1,0 +1,221 @@
+@EndUserText.label : 'Belegkopf für Buchhaltung'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table bkpf {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt                : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = bkpf.mandt;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key bukrs                : bukrs not null
+    with foreign key [0..*,1] t001
+      where mandt = bkpf.mandt
+        and bukrs = bkpf.bukrs;
+  key belnr                : belnr_d not null;
+  key gjahr                : gjahr not null;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  blart                    : blart
+    with foreign key [0..*,1] t003
+      where mandt = bkpf.mandt
+        and blart = bkpf.blart;
+  bldat                    : bldat;
+  budat                    : budat;
+  monat                    : monat;
+  cpudt                    : cpudt;
+  cputm                    : cputm;
+  aedat                    : aedat_bkpf;
+  upddt                    : upddt;
+  wwert                    : wwert_d;
+  usnam                    : usnam;
+  tcode                    : tcode;
+  bvorg                    : bvorg;
+  xblnr                    : xblnr1;
+  dbblg                    : dbblg;
+  dbblg_gjahr              : dbblg_gjahr;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  dbblg_bukrs              : dbblg_bukrs
+    with foreign key [0..*,1] t001
+      where mandt = bkpf.mandt
+        and bukrs = bkpf.dbblg_bukrs;
+  stblg                    : stblg;
+  stjah                    : stjah;
+  bktxt                    : bktxt;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  waers                    : waers
+    with foreign key [0..*,1] tcurc
+      where mandt = bkpf.mandt
+        and waers = bkpf.waers;
+  kursf                    : kursf
+    with value help fi_help_kursf
+      where blart = bkpf.blart
+        and bldat = bkpf.bldat
+        and budat = bkpf.budat
+        and bukrs = bkpf.bukrs
+        and kursf = bkpf.kursf
+        and waers = bkpf.waers
+        and wwert = bkpf.wwert;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kzwrs                    : kzwrs
+    with foreign key [0..*,1] tcurc
+      where mandt = bkpf.mandt
+        and waers = bkpf.kzwrs;
+  kzkrs                    : kzkrs;
+  bstat                    : bstat_d;
+  xnetb                    : xnetb;
+  @Semantics.amount.currencyCode : 't001.waers'
+  frath                    : frath;
+  xrueb                    : xrueb;
+  glvor                    : glvor;
+  grpid                    : grpid_bkpf;
+  dokid                    : dokid_bkpf;
+  arcid                    : extid_bkpf;
+  iblar                    : iblar;
+  awtyp                    : awtyp;
+  awkey                    : awkey;
+  fikrs                    : fikrs;
+  hwaer                    : hwaer;
+  hwae2                    : hwae2;
+  hwae3                    : hwae3;
+  kurs2                    : kurs2;
+  kurs3                    : kurs3;
+  basw2                    : cursr;
+  basw3                    : cursr;
+  umrd2                    : umrd2;
+  umrd3                    : umrd3;
+  xstov                    : xstov;
+  stodt                    : stodt;
+  xmwst                    : xmwst;
+  curt2                    : curt2;
+  curt3                    : curt3;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kuty2                    : kurst
+    with foreign key [0..*,0..1] tcurv
+      where mandt = bkpf.mandt
+        and kurst = bkpf.kuty2;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kuty3                    : kurst
+    with foreign key [0..*,0..1] tcurv
+      where mandt = bkpf.mandt
+        and kurst = bkpf.kuty3;
+  xsnet                    : xsnet;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  ausbk                    : ausbk
+    with foreign key [0..*,0..1] t001
+      where mandt = bkpf.mandt
+        and bukrs = bkpf.ausbk;
+  xusvr                    : xusvr_bkpf;
+  duefl                    : duefl_bkpf;
+  awsys                    : logsystem;
+  txkrs                    : txkrs_bkpf;
+  ctxkrs                   : ctxkrs;
+  lotkz                    : pso_lotkz;
+  xwvof                    : xwvof;
+  @AbapCatalog.foreignKey.screenCheck : false
+  stgrd                    : stgrd
+    with foreign key [0..*,1] t041c
+      where mandt = bkpf.mandt
+        and stgrd = bkpf.stgrd;
+  ppnam                    : ppnam;
+  ppdat                    : ppdate;
+  pptme                    : pptme;
+  pptcod                   : pptcod;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  brnch                    : j_1abrnch
+    with foreign key [0..*,1] pbusinessplace
+      where mandt = bkpf.mandt
+        and bukrs = bkpf.bukrs
+        and branch = bkpf.brnch
+    with value help glo_sh_brnch_id
+      where branch = bkpf.brnch
+        and bukrs = bkpf.bukrs;
+  numpg                    : j_1anopg;
+  adisc                    : j_1adisc;
+  xref1_hd                 : xref1_hd;
+  xref2_hd                 : xref2_hd;
+  xreversal                : xreversal;
+  reindat                  : reindat;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  rldnr                    : fins_ledger
+    with foreign key finsc_ld_cmp
+      where mandt = bkpf.mandt
+        and rldnr = bkpf.rldnr
+        and bukrs = bkpf.bukrs
+    with value help fagl_rldnr
+      where rldnr = bkpf.rldnr;
+  @AbapCatalog.foreignKey.screenCheck : true
+  ldgrp                    : fagl_ldgrp
+    with foreign key fagl_tldgrp
+      where mandt = bkpf.mandt
+        and ldgrp = bkpf.ldgrp;
+  propmano                 : re_mandat;
+  xblnr_alt                : xblnr_alt;
+  vatdate                  : vatdate;
+  fulfilldate              : fot_fulfilldate;
+  doccat                   : document_category;
+  xsplit                   : split_posting;
+  cash_alloc               : fagl_cash_alloc;
+  follow_on                : fagl_follow_on;
+  xreorg                   : fagl_r_xdoc_reorg;
+  subset                   : acc_subset;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  kurst                    : kurst
+    with foreign key [0..*,0..1] tcurv
+      where mandt = bkpf.mandt
+        and kurst = bkpf.kurst;
+  kursx                    : gle_fxr_dte_ratex28;
+  kur2x                    : gle_fxr_dte_rate2x28;
+  kur3x                    : gle_fxr_dte_rate3x28;
+  xmca                     : gle_dte_mca_xmca;
+  resubmission             : fm_resubdat;
+  logsystem_sender         : logsystem_sender;
+  bukrs_sender             : bukrs_sender;
+  belnr_sender             : belnr_sender;
+  gjahr_sender             : gjahr_sender;
+  intsubid                 : intsubid;
+  aworg_rev                : aworg_rev;
+  awref_rev                : awref_rev;
+  xreversing               : co_stflg;
+  xreversed                : co_stokz;
+  glbtgrp                  : fins_glbtgrp;
+  co_vrgng                 : co_vorgang;
+  co_refbt                 : co_refbt;
+  co_alebn                 : co_alebn;
+  co_valdt                 : co_valdt;
+  co_belnr_sender          : cobelnr_sender;
+  kokrs_sender             : kokrs_sender;
+  acc_principle            : accounting_principle;
+  _dataaging               : data_temperature;
+  include faa_s_doc_header_pn with suffix _pn;
+  xsecondary               : fins_secondary_entry;
+  reprocessing_status_code : fins_reprocessing_status_code;
+  trr_partial_ind          : fins_trr_partial_ind;
+  item_removal_status      : fins_item_removal_status;
+  penrc                    : penrc;
+  ext_glo                  : include fac_bkpf_ext_glo;
+  ev_postng_ctrl           : fins_entry_view_postng_control;
+  whtdate                  : whtdate;
+  cbttype                  : fins_custbttype;
+  closingstep              : fins_closingstep;
+  xdiffledgervalues        : fins_xdiffledgervalues;
+  xledgermissing           : fins_xledgermissing;
+  xuniquecvtyps            : fins_xuniquecvtyps;
+  tax_country_hd           : fot_tax_country_hd;
+  last_change_datetime     : fis_chng_tstamp;
+  fdtr                     : include fdtr_s_doc_origin;
+
+}

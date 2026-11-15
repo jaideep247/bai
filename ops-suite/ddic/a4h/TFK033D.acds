@@ -1,0 +1,40 @@
+@EndUserText.label : 'Kontenfindung: Daten'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table tfk033d {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = tfk033d.mandt;
+  key applk : applk_kk not null;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key buber : buber_kk not null
+    with foreign key [0..1,1] tfk033f
+      where buber = tfk033d.buber;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key ktopl : ktopl not null
+    with foreign key [0..1,1] t004
+      where mandt = tfk033d.mandt
+        and ktopl = tfk033d.ktopl;
+  key key01 : keynn_kk not null;
+  key key02 : keynn_kk not null;
+  key key03 : keynn_kk not null;
+  key key04 : keynn_kk not null;
+  key key05 : keynn_kk not null;
+  key key06 : keynn_kk not null;
+  key key07 : keynn_kk not null;
+  key key08 : keynn_kk not null;
+  fun01     : funnn_kk;
+  fun02     : funnn_kk;
+  fun03     : funnn_kk;
+  fun04     : funnn_kk;
+  fun05     : funnn_kk;
+  fun06     : funnn_kk;
+
+}

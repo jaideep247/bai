@@ -1,0 +1,71 @@
+@EndUserText.label : 'Korrespondenz - Korrespondenzhistorie'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkcohi {
+
+  key mandt      : mandt not null;
+  @AbapCatalog.foreignKey.label : 'Korrespondenzart'
+  @AbapCatalog.foreignKey.screenCheck : true
+  key cotyp      : cotyp_kk not null
+    with foreign key tfk070a
+      where cotyp = dfkkcohi.cotyp
+    with value help cotyp_kk
+      where cotyp = dfkkcohi.cotyp;
+  key gpart      : crec_gp_kk not null
+    with value help bupa
+      where partner = dfkkcohi.gpart;
+  key vkont      : corr_vkont_kk not null;
+  key cokey      : cokey_kk not null;
+  gpart_guid     : crec_gp_guid_kk;
+  org_gpart      : crec_org_gp_kk
+    with value help bupa
+      where partner = dfkkcohi.org_gpart;
+  org_gpart_guid : crec_org_gp_guid_kk;
+  vtref          : corr_vtref_kk;
+  cdate          : cocdt_kk not null;
+  coidt          : coidt_kk;
+  coitm          : coitm_kk;
+  coisststmp     : cocretstmp_kk;
+  coisststmpnew  : coisststmp_kk;
+  coissuser      : coissuser_kk;
+  copri          : copri_kk;
+  copritstmp     : copritstmp_kk;
+  copriuser      : copriuser_kk;
+  cocyr          : cocyr_kk;
+  coper          : coper_kk;
+  copnr          : copnr_kk;
+  coemp          : coemp_kk;
+  @AbapCatalog.foreignKey.label : 'Währung'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  salwa          : corr_waers_kk
+    with foreign key [0..*,1] tcurc
+      where mandt = dfkkcohi.mandt
+        and waers = dfkkcohi.salwa;
+  @Semantics.amount.currencyCode : 'dfkkcohi.salwa'
+  salbe          : corr_betrh_kk;
+  umbuch         : corr_umbuch_kk;
+  bukrs          : corr_bukrs
+    with value help corr_bukrs
+      where corr_bukrs = dfkkcohi.bukrs
+        and waers = dfkkcohi.salwa;
+  @AbapCatalog.foreignKey.screenCheck : true
+  corr_status    : corr_status_kk
+    with foreign key tfk070p
+      where mandt = dfkkcohi.mandt
+        and corr_status = dfkkcohi.corr_status;
+  include fkk_incoming_corr;
+  copri_laufd    : copri_laufd_kk;
+  copri_laufi    : copri_laufid_kk;
+  include si_dfkkcohi_b;
+  subap          : corr_subap_kk;
+  xtrial         : xtrial_kk;
+  tech_status    : corr_tech_status_kk;
+  formkey        : formkey;
+  formkey_rdi    : formkey_rdi;
+  sendcontrol    : sendcontrol;
+  include afx_status_data_ext;
+
+}

@@ -1,0 +1,43 @@
+@EndUserText.label : 'Step-Uebersicht eines Batch-Jobs'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #L
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table tbtcp {
+
+  key jobname   : btcjob not null;
+  key jobcount  : btcjobcnt not null;
+  key stepcount : btcstepcnt not null;
+  progname      : btcprog;
+  progfromln    : btcsrcline;
+  progtoln      : btcsrcline;
+  sdldate       : btcsdldate;
+  sdltime       : btcsdltime;
+  sdluname      : btcsdlnm;
+  variant       : btcvariant;
+  authcknam     : btcauthnam;
+  listident     : btclistid;
+  xpgpid        : btcxpgpid;
+  xpgtgtsys     : btctgtsys;
+  xpgrfcdest    : rfcdest;
+  xpgprog       : btcxpgpgm;
+  xpgparams     : btcxpgpar;
+  xpgflag       : btcsteptyp;
+  conncntl      : btcxpgcntl;
+  stdincntl     : btcxpgcntl;
+  stdoutcntl    : btcxpgcntl;
+  stderrcntl    : btcxpgcntl;
+  tracecntl     : btcxpgcntl;
+  termcntl      : btcxpgcntl;
+  status        : btcpstatus;
+  exitcode      : btcxpgexit;
+  @AbapCatalog.textLanguage
+  language      : spras;
+  extcmd        : sxpglogcmd;
+  opsystem      : syopsys;
+  include pri_parold;
+  include arc_params;
+  priparkey     : syprkey;
+  convid        : gwy_convid;
+
+}

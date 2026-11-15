@@ -1,0 +1,19 @@
+@EndUserText.label : 'Fakturierungsbelegkopf'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkinvdoc_h {
+
+  key mandt    : mandt not null;
+  key invdocno : invdocno_kk not null;
+  include fkkinvdoc_h_data;
+  include si_fkkinvdoc_h_t;
+  include si_fkkinvdoc_h_p;
+  include si_fkkinvdoc_h_r;
+  include si_fkkinvdoc_h_s;
+  appl_c_cloud : include si_fkkinvdoc_h_c_cloud;
+  include ci_fkkinvdoc_h;
+  cfd          : include cinv_invdoc_h_incl_eew_ps;
+
+}

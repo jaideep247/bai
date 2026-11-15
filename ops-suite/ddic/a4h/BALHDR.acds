@@ -1,0 +1,80 @@
+@EndUserText.label : 'Anwendungs-Log: Protokollkopf'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #L
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table balhdr {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandant         : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = balhdr.mandant;
+  key lognumber       : balognr not null;
+  @AbapCatalog.foreignKey.label : 'Action-Log: Objekt'
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  object              : balobj_d not null
+    with foreign key [0..*,1] balobj
+      where object = balhdr.object;
+  @AbapCatalog.foreignKey.label : 'Action-Log: Unterobjekt'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  subobject           : balsubobj not null
+    with foreign key [0..*,0..1] balsub
+      where object = balhdr.object
+        and subobject = balhdr.subobject;
+  extnumber           : balnrext not null;
+  aldate              : baldate not null;
+  altime              : baltime not null;
+  aluser              : baluser not null;
+  @AbapCatalog.foreignKey.label : 'Transaktionscode'
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  altcode             : baltcode not null
+    with foreign key [0..*,0..1] tstc
+      where tcode = balhdr.altcode;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  alprog              : balprog not null
+    with foreign key [0..*,0..1] trdir
+      where name = balhdr.alprog;
+  almode              : balmode not null;
+  altext              : baltext not null;
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  userexitp           : baluep not null
+    with foreign key [0..*,0..1] trdir
+      where name = balhdr.userexitp;
+  userexitf           : baluef not null;
+  probclass           : balprobclh not null;
+  aldate_del          : aldate_del not null;
+  del_before          : del_before not null;
+  alstate             : alstate not null;
+  userexitt           : baluet;
+  alchdate            : balchdate;
+  alchtime            : balchtime;
+  alchuser            : balchuser;
+  log_handle          : balloghndl;
+  tabname             : baltabname;
+  msg_cnt_al          : baldbcntal;
+  msg_cnt_a           : baldbcnta;
+  msg_cnt_e           : baldbcnte;
+  msg_cnt_w           : baldbcntw;
+  msg_cnt_i           : baldbcnti;
+  msg_cnt_s           : baldbcnts;
+  last_msgnr          : bal_lastnr;
+  tim_stmp            : balcontsmp;
+  db_version          : baldbver;
+  msg_cnt_p1          : baldbcntp1;
+  msg_cnt_p2          : baldbcntp2;
+  msg_cnt_p3          : baldbcntp3;
+  msg_cnt_p4          : baldbcntp4;
+  client_cre          : balclientc;
+  char_size           : balcharsiz;
+  _dataaging          : data_temperature;
+  epp_root_context_id : epp_root_context_id;
+  epp_connection_id   : epp_connection_id;
+  epp_transaction_id  : epp_transaction_id;
+
+}

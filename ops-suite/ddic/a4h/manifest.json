@@ -1,0 +1,280 @@
+{
+ "tables": {
+  "ACDOCA": {
+   "fields": 545,
+   "found": true,
+   "indexes": 7,
+   "source": "ok"
+  },
+  "BALHDR": {
+   "fields": 43,
+   "found": true,
+   "indexes": 6,
+   "source": "ok"
+  },
+  "BKPF": {
+   "fields": 198,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "BSEG": {
+   "fields": 456,
+   "found": true,
+   "indexes": 3,
+   "source": "ok"
+  },
+  "BUT000": {
+   "fields": 140,
+   "found": true,
+   "indexes": 9,
+   "source": "ok"
+  },
+  "DFKKCOD": {
+   "fields": 11,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKCOH": {
+   "fields": 99,
+   "found": true,
+   "indexes": 3,
+   "source": "ok"
+  },
+  "DFKKCOHI": {
+   "fields": 56,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "DFKKCR": {
+   "fields": 55,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKIH": {
+   "fields": 13,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKINVBILL_H": {
+   "fields": 71,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "DFKKINVBILL_I": {
+   "fields": 95,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKINVDOC_H": {
+   "fields": 80,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKINVDOC_I": {
+   "fields": 98,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKKO": {
+   "fields": 70,
+   "found": true,
+   "indexes": 3,
+   "source": "ok"
+  },
+  "DFKKNRK": {
+   "fields": 24,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKNRP": {
+   "fields": 49,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKOP": {
+   "fields": 260,
+   "found": true,
+   "indexes": 5,
+   "source": "ok"
+  },
+  "DFKKOPK": {
+   "fields": 127,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "DFKKRAPT": {
+   "fields": 17,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKRH": {
+   "fields": 81,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "DFKKRK": {
+   "fields": 55,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "DFKKRP": {
+   "fields": 67,
+   "found": true,
+   "indexes": 3,
+   "source": "ok"
+  },
+  "DFKKSUM": {
+   "fields": 94,
+   "found": true,
+   "indexes": 6,
+   "source": "ok"
+  },
+  "DFKKSUMC": {
+   "fields": 33,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "DFKKWOH": {
+   "fields": 25,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "DFKKZK": {
+   "fields": 65,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "DFKKZP": {
+   "fields": 91,
+   "found": true,
+   "indexes": 3,
+   "source": "ok"
+  },
+  "DPAYH": {
+   "fields": 134,
+   "found": true,
+   "indexes": 1,
+   "source": "ok"
+  },
+  "DPAYP": {
+   "fields": 76,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "E070": {
+   "fields": 9,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "FEBEP": {
+   "fields": 144,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "FEBKO": {
+   "fields": 78,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "FKKMAKO": {
+   "fields": 127,
+   "found": true,
+   "indexes": 1,
+   "source": "ok"
+  },
+  "FKKMAZE": {
+   "fields": 58,
+   "found": true,
+   "indexes": 1,
+   "source": "ok"
+  },
+  "FKK_INSTPLN_HEAD": {
+   "fields": 40,
+   "found": true,
+   "indexes": 2,
+   "source": "ok"
+  },
+  "NRIV": {
+   "fields": 9,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "T000": {
+   "fields": 17,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "T012": {
+   "fields": 13,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "T012K": {
+   "fields": 25,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "TBTCO": {
+   "fields": 58,
+   "found": true,
+   "indexes": 19,
+   "source": "ok"
+  },
+  "TBTCP": {
+   "fields": 73,
+   "found": true,
+   "indexes": 6,
+   "source": "ok"
+  },
+  "TFK003": {
+   "fields": 9,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "TFK033D": {
+   "fields": 18,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "TFK042Z": {
+   "fields": 26,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  },
+  "VBHDR": {
+   "fields": 24,
+   "found": true,
+   "indexes": 0,
+   "source": "ok"
+  }
+ }
+}

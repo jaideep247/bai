@@ -1,0 +1,53 @@
+@EndUserText.label : 'Zahlprogramm: Zusatzangaben zu den Zahlwegen'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table tfk042z {
+
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key mandt : mandt not null
+    with foreign key [0..*,1] t000
+      where mandt = tfk042z.mandt;
+  @AbapCatalog.foreignKey.keyType : #KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key land1 : land1 not null
+    with foreign key [0..*,1] t005
+      where mandt = tfk042z.mandt
+        and land1 = tfk042z.land1;
+  key zlsch : pymet_kk not null;
+  xbkkt     : xbkkt;
+  xstra     : xstra;
+  xeinz     : xeinz;
+  xpgir     : xpgir_pay;
+  xschk     : xschk_042z;
+  xeuro     : xeuro;
+  xverr     : xverr_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  @AbapCatalog.foreignKey.messageClass : '>2'
+  @AbapCatalog.foreignKey.messageNumber : '601'
+  formi     : formi_pay
+    with foreign key tfk042f
+      where formi = tfk042z.formi;
+  @AbapCatalog.foreignKey.screenCheck : true
+  formz     : formz_pay
+    with foreign key tfk042fz
+      where formi = tfk042z.formi
+        and formz = tfk042z.formz;
+  xnopo     : xnopo_kk;
+  xebpp     : xebpp_kk;
+  xesrd     : xesrd_kk;
+  xaddr     : xaddr_kk;
+  bolty     : bolty_kk;
+  ddaty     : ddaty_kk;
+  xiban     : xiban_kk;
+  xsepa     : xsepa_kk;
+  pnopt     : pnopt_kk;
+  rtpty     : rtpty_kk;
+  xinpa     : xinpa_kk;
+  xalias    : xalias_kk;
+  xddma     : xddma_kk;
+  ddm_proc  : ddma_proc;
+
+}

@@ -1,0 +1,95 @@
+@EndUserText.label : 'Korrespondenz - Korrespondenzkopf'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkcoh {
+
+  key mandt        : mandt not null;
+  @AbapCatalog.foreignKey.label : 'Korrespondenzart'
+  @AbapCatalog.foreignKey.screenCheck : true
+  key cotyp        : cotyp_kk not null
+    with foreign key tfk070a
+      where cotyp = dfkkcoh.cotyp
+    with value help cotyp_kk
+      where cotyp = dfkkcoh.cotyp;
+  key cokey        : cokey_kk not null;
+  uname            : syuname;
+  cdate            : cocdt_kk;
+  ctime            : coctm_kk;
+  gpart            : crec_gp_kk;
+  gpart_guid       : crec_gp_guid_kk;
+  gpart_adr_kind   : corr_adr_kind_kk;
+  org_gpart        : crec_org_gp_kk;
+  org_gpart_guid   : crec_org_gp_guid_kk;
+  add_gpart        : crec_gp_add_kk;
+  add_gpart_guid   : crec_gp_add_guid_kk;
+  add_gpart_cat    : crec_gp_add_cat_kk;
+  vkont            : corr_vkont_kk;
+  vtref            : corr_vtref_kk;
+  adr_valid_on     : crec_ad_valid_on_kk;
+  adrnr            : crec_ad_kk;
+  adr_guid         : crec_ad_guid_kk;
+  adrnr_indep_comm : crec_ad_indep_comm_kk;
+  agpart           : csen_gp_kk;
+  agpart_guid      : csen_gp_guid_kk;
+  agpart_adr_kind  : corr_adr_kind_kk;
+  aadrnr           : csen_ad_kk;
+  aadr_guid        : csen_ad_guid_kk;
+  formkey          : formkey;
+  formkey_rdi      : formkey;
+  entid1           : entid_kk;
+  data1            : cdata_kk;
+  entid2           : entid_kk;
+  data2            : cdata_kk;
+  entid3           : entid_kk;
+  data3            : cdata_kk;
+  entid4           : entid_kk;
+  data4            : cdata_kk;
+  csort            : csort_kk;
+  xcodt            : xcodt_kk;
+  xcodt_clust      : xcodt_clust_kk;
+  laufd            : corr_laufd_kk;
+  laufi            : corr_laufi_kk;
+  xtest            : xtest_kk;
+  copri            : copri_kk;
+  coidt            : coidt_kk;
+  coitm            : coitm_kk;
+  @AbapCatalog.textLanguage
+  spras            : spras;
+  salwa            : corr_blwae_kk;
+  @Semantics.amount.currencyCode : 'dfkkcoh.salwa'
+  salbe            : corr_betrh_kk;
+  @AbapCatalog.foreignKey.label : 'Versandsteuerung'
+  @AbapCatalog.foreignKey.screenCheck : true
+  sendcontrol      : sendcontrol
+    with foreign key esendcontrol
+      where client = dfkkcoh.mandt
+        and sendcontrol = dfkkcoh.sendcontrol;
+  persnumber       : ad_persnum;
+  apersnumber      : ad_persnum;
+  bukrs            : corr_bukrs
+    with value help corr_bukrs
+      where corr_bukrs = dfkkcoh.bukrs
+        and waers = dfkkcoh.salwa;
+  @AbapCatalog.foreignKey.screenCheck : true
+  corr_role        : corr_role_kk
+    with foreign key tfk070m
+      where mandt = dfkkcoh.mandt
+        and corr_role = dfkkcoh.corr_role;
+  copri_laufd      : copri_laufd_kk;
+  copri_laufi      : copri_laufid_kk;
+  process_id_      : corr_process_id_kk;
+  no_docparts      : corr_no_docparts_kk;
+  docpart_role     : corr_docpart_role_kk;
+  xtrial           : xtrial_kk;
+  xreprint         : xreprint_kk;
+  include si_dfkkcoh_b;
+  subap            : corr_subap_kk;
+  xdelete          : x_corr_delete_kk;
+  print_mode       : print_mode_kk;
+  x_no_arc         : x_no_arc_kk;
+  x_docpart_list   : x_docpart_list_kk;
+  lock_status      : corr_lock_status_kk;
+
+}
