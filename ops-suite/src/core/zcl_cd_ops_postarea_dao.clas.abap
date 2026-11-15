@@ -31,7 +31,7 @@ CLASS zcl_cd_ops_postarea_dao IMPLEMENTATION.
   METHOD zif_cd_ops_postarea_dao~read_entries.
     " TFK033D on the reference system S/4HANA 2025 (ddic/a4h): key APPLK, BUBER, KTOPL, KEY01..KEY08 (KEYNN_KK,
     " CHAR 12), results FUN01..FUN06 (FUNNN_KK, CHAR 12) - there is no FUN07 / FUN08. FUN07 (ZBTM disposition,
-    " the 7th result of the layout) stays read until the layout is decided (VERIFY V155, ddic/open_fields.csv).
+    " the 7th result of the layout) stays read until the layout is decided (VERIFY V161, ddic/open_fields.csv).
     " CHAR values into strings - trailing blanks dropped, nothing truncated
     SELECT key01, key02, key03, key04, key05, key06, key07, key08,
            fun01, fun02, fun03, fun04, fun05, fun06, fun07

@@ -7,7 +7,7 @@ Nothing of ZCA_OPS has been activated or run in an SAP system. Each item is conf
 recorded in the release pack. Numbers are never reused: V44 / V45 are items of the first consumer, so the
 process onboarding (2026-11-10) continues at V46; the SAP job monitor (2026-11-11) uses V58-V66 (V67-V69 are
 items of the first consumer); the operations response features (2026-11-11, `docs/OPERATIONS_FEATURES.md`)
-use V70-V79 (V80 / V81: the first consumer's); V153-V155 (2026-11-15, fields a consumer's code reads that the
+use V70-V79 (V80 / V81: the first consumer's); V159-V161 (2026-11-15, fields a consumer's code reads that the
 reference system does not have) are the first consumer's.
 
 **Customer items are not kept here (2026-11-11).** This list names only the product's objects and SAP standard

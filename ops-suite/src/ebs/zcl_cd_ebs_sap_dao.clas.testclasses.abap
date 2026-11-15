@@ -26,7 +26,7 @@
 *& 2026-11-11 | D-C8: the G/L balance lines are doubled on ZI_CD_EbsGlLine (released I_JournalEntryItem),
 *&            | the FI lines on ZI_CD_OpsGlItem (released I_OperationalAcctgDocItem); same data and
 *&            | assertions as with the ACDOCA / BSEG doubles.
-*& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V153 / V154 noted.
+*& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V159 / V160 noted.
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

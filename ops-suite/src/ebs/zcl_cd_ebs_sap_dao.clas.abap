@@ -26,7 +26,7 @@
 *& 2026-11-11 | Decision D-C8 extended: get_fi_lines reads the released entry view I_OperationalAcctgDocItem
 *&            | (through ZI_CD_OpsGlItem), get_gl_balances the released I_JournalEntryItem (through
 *&            | ZI_CD_EbsGlLine) - no DCL in a job read; same keys, filters and sums.
-*& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V153 / V154 noted.
+*& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V159 / V160 noted.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -69,7 +69,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " KEYR1_KK, seen on the 2025 reference system; DFKKRK has no OPBEL - the legacy v4 join via OPBEL was wrong)
     " Return reason correction 2026-11-06: the return reason is DFKKRP-RLGRD (RLGRD_KK, seen on the
     " reference system S/4HANA 2025) - read in the same statement, FEBEP carries no return reason.
-    " VERIFY V154: DFKKRP has no BETRW on the reference system (BETRR / BETRH / BETRU) - the returned
+    " VERIFY V160: DFKKRP has no BETRW on the reference system (BETRR / BETRH / BETRU) - the returned
     " amount compared with the return line by the morning report check A_INFLIGHT stays BETRW until decided
     SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars, rp~rlgrd, rp~betrw AS amount
       FROM dfkkrp AS rp
@@ -203,7 +203,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     CHECK it_ztnum IS NOT INITIAL.
     " Confirmed: DFKKCR-ZTNUM = FEBEP-CHECT, DFKKCR-DOC1R = DFKKOP-AUGBL.
     " DFKKCR-RWBTR (amount) seen on the reference system S/4HANA 2025; CRSTATUS (legacy v4 581/255) is not a
-    " field there - VERIFY V153 (ddic/open_fields.csv; the company code of a cheque is DFKKCR-BBUKR);
+    " field there - VERIFY V159 (ddic/open_fields.csv; the company code of a cheque is DFKKCR-BBUKR);
     " HBKID/HKTID returned so rules scope a check number to its house bank account
     " A07: optional company-code field (EBS_DFKKCR_BUKRS_FIELD), validated against the DDIC
     DATA(lv_fields) = gc_check_fields.

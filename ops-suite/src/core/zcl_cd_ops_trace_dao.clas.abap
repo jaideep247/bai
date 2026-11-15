@@ -34,7 +34,7 @@
 *&            | released entry view I_OperationalAcctgDocItem (ZI_CD_OpsGlItem), the company code's country
 *&            | from the released I_CompanyCode (ZI_CD_OpsCompanyCode) - no DCL in a job read.
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
-*&            | currency). CRSTATUS open (V153).
+*&            | currency). CRSTATUS open (V159).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -316,7 +316,7 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
     CHECK it_docno IS NOT INITIAL.
     " Confirmed: DFKKCR-DOC1R = DFKKOP-AUGBL; STATE = cheque status (B cashed, V voided, blank
     " open; user 2026-11-07, read for the morning report check A_INFLIGHT); RWBTR seen on the reference
-    " system S/4HANA 2025. VERIFY V153: CRSTATUS is not a field of DFKKCR there (as the EBS read)
+    " system S/4HANA 2025. VERIFY V159: CRSTATUS is not a field of DFKKCR there (as the EBS read)
     SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus, state
       FROM dfkkcr
       FOR ALL ENTRIES IN @it_docno

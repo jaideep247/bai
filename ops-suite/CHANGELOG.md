@@ -12,7 +12,7 @@ field present there is used (noted as seen on the reference system); a field mis
 - Portable check `ddic_fields` (`tools/portable_checks.py`): the link registry, process catalogue and code field
   references (ABAP SQL, typed structures, CDS) exist in every table export of `ddic/`
   (`tools/abaptools/ddic_export.py`); `ddic/open_fields.csv` lists the fields that stay read under a VERIFY item.
-- `docs/VERIFY_Suite.md` §4: V153 (`DFKKCR-CRSTATUS`), V154 (`DFKKRP-BETRW`), V155 (`TFK033D-FUN07`, ZBTM layout).
+- `docs/VERIFY_Suite.md` §4: V159 (`DFKKCR-CRSTATUS`), V160 (`DFKKRP-BETRW`), V161 (`TFK033D-FUN07`, ZBTM layout).
 - `docs/Performance_Review.md` §17: the indexes of the reference system for the suite's access paths
   (recommendations only).
 
