@@ -13,14 +13,14 @@
 | DFKKCR-ZTNUM | confirmed | FICA_CHEQUE | CD_CHEQUE_TO_STATUS_HIST (from, inactive (VERIFY))<br/>FICA_CHEQUE_TO_STMT_LINE (from, active)<br/>FICA_STMT_LINE_TO_CHEQUE (to, active)<br/>CD_GLITEM_TO_CHEQUE (target key)<br/>FICA_PAYMENT_TO_CHEQUE (target key)<br/>FICA_STMT_LINE_TO_CHEQUE (target key) | - |
 | DFKKKO-FIKEY | confirmed | - | FICA_HDR_TO_SUMMARY (from, active)<br/>FICA_SUMMARY_TO_HDRS (to, active) | payment model ledger_item (active) |
 | DFKKKO-OPBEL | confirmed | FICA_DOC_HEADER | CD_BANKLINE_TO_CLEARING (to, active)<br/>FICA_CLEARING_TO_ITEMS (from, active)<br/>FICA_HDR_TO_ITEMS (from, active)<br/>FICA_ITEM_TO_CLEARING_HDR (to, active)<br/>FICA_ITEM_TO_HDR (to, active)<br/>CD_BANKLINE_TO_CLEARING (target key)<br/>FICA_ITEM_TO_CLEARING_HDR (target key)<br/>FICA_ITEM_TO_HDR (target key)<br/>FICA_SUMMARY_TO_HDRS (target key) | payment model ledger_item (active): join FICA_ITEM_TO_CLEARING_HDR<br/>payment model recon_bank_line (active): join CD_BANKLINE_TO_CLEARING |
-| DFKKKO-STBEL | VERIFY V117 | - | - | payment model recon_bank_line (active) |
+| DFKKKO-STBEL | confirmed | - | - | payment model recon_bank_line (active) |
 | DFKKNRP-INFOF | confirmed | - | FICA_PAYMENT_TO_NOC (to, active) | - |
 | DFKKNRP-KEYN1 | confirmed | FICA_NOC_ITEM | FICA_PAYMENT_TO_NOC (target key) | - |
 | DFKKNRP-POSNA | confirmed | FICA_NOC_ITEM | FICA_PAYMENT_TO_NOC (target key) | - |
 | DFKKOP-AUGBL | confirmed | - | CD_PAYMENT_TO_ACK (from, pending (VERIFY))<br/>FICA_CHEQUE_TO_PAYMENT (to, active)<br/>FICA_CLEARING_TO_ITEMS (to, active)<br/>FICA_CLEARING_TO_RUN (from, active)<br/>FICA_ITEM_TO_CLEARING_HDR (from, active)<br/>FICA_PAYMENT_TO_CHEQUE (from, active)<br/>FICA_PAYMENT_TO_NOC (from, active)<br/>FICA_PAYMENT_TO_RETURN (from, active)<br/>FICA_PAYMENT_TO_STMT_LINE (from, active)<br/>FICA_RUN_TO_CLEARED_ITEMS (to, active)<br/>FICA_STMT_LINE_TO_PAYMENT (to, active) | payment model ledger_item (active)<br/>payment model ledger_item (active): join FICA_ITEM_TO_CLEARING_HDR<br/>payment model payment_request (active) |
-| DFKKOP-AUGRD | VERIFY V117 | - | - | payment model ledger_item (active) |
-| DFKKOP-BUKRS | VERIFY V117 | - | - | payment model ledger_item (active)<br/>payment model payment_request (active) |
-| DFKKOP-GPART | VERIFY V117 | - | FICA_PARTNER_TO_ITEMS (to, inactive (VERIFY)) | payment model ledger_item (active) |
+| DFKKOP-AUGRD | confirmed | - | - | payment model ledger_item (active) |
+| DFKKOP-BUKRS | confirmed | - | - | payment model ledger_item (active)<br/>payment model payment_request (active) |
+| DFKKOP-GPART | confirmed | - | FICA_PARTNER_TO_ITEMS (to, inactive (VERIFY)) | payment model ledger_item (active) |
 | DFKKOP-OPBEL | confirmed | FICA_OPEN_ITEM | CD_ITEM_TO_CLEAR_HIST (from, pending (VERIFY))<br/>FICA_HDR_TO_ITEMS (to, active)<br/>FICA_ITEM_TO_HDR (from, active)<br/>CD_REQ_TO_OPEN_ITEMS (target key)<br/>FICA_CHEQUE_TO_PAYMENT (target key)<br/>FICA_CLEARING_TO_ITEMS (target key)<br/>FICA_HDR_TO_ITEMS (target key)<br/>FICA_PARTNER_TO_ITEMS (target key)<br/>FICA_RUN_TO_CLEARED_ITEMS (target key)<br/>FICA_STMT_LINE_TO_PAYMENT (target key) | payment model ledger_item (active) |
 | DFKKOP-ZZ_BILLPLANID | confirmed | - | - | - |
 | DFKKOP-ZZ_FIN_TRANS_NUM | confirmed | - | CD_ITEM_TO_REQUEST (from, pending (VERIFY))<br/>CD_REQ_TO_OPEN_ITEMS (to, pending (VERIFY)) | payment model ledger_item (active)<br/>payment model payment_request (active) |

@@ -5,14 +5,14 @@ FICA_CHEQUE,HKTID,FICA,DFKKCR,,,V,V117,Account ID of the house bank
 FICA_CHEQUE,ZTNUM,FICA,DFKKCR,,,C,,Cheque number
 FICA_DOC_HEADER,FIKEY,FICA,DFKKKO,,,C,,Reconciliation key of the document
 FICA_DOC_HEADER,OPBEL,FICA,DFKKKO,,,C,,Document number (key of the header)
-FICA_DOC_HEADER,STBEL,FICA,DFKKKO,,,V,V117,Reversal document
+FICA_DOC_HEADER,STBEL,FICA,DFKKKO,,,C,,Reversal document
 FICA_NOC_ITEM,INFOF,FICA,DFKKNRP,,,C,,Payment document or payment reference
 FICA_NOC_ITEM,KEYN1,FICA,DFKKNRP,,,C,,Lot
 FICA_NOC_ITEM,POSNA,FICA,DFKKNRP,,,C,,Item of the lot
 FICA_OPEN_ITEM,AUGBL,FICA,DFKKOP,,,C,,Clearing (payment) document of the item
-FICA_OPEN_ITEM,AUGRD,FICA,DFKKOP,,,V,V117,Clearing reason
-FICA_OPEN_ITEM,BUKRS,FICA,DFKKOP,BUKRS,,V,V117,Company code
-FICA_OPEN_ITEM,GPART,FICA,DFKKOP,,M,V,V117,Business partner (masked)
+FICA_OPEN_ITEM,AUGRD,FICA,DFKKOP,,,C,,Clearing reason
+FICA_OPEN_ITEM,BUKRS,FICA,DFKKOP,BUKRS,,C,,Company code
+FICA_OPEN_ITEM,GPART,FICA,DFKKOP,,M,C,,Business partner (masked)
 FICA_OPEN_ITEM,OPBEL,FICA,DFKKOP,,,C,,Document number of the item
 FICA_PAYMENT_RUN,BUKRS,FICA,DPAYH,BUKRS,,V,V117,Company code
 FICA_PAYMENT_RUN,DOC1R,FICA,DPAYH,,,C,,Payment document (blank: no payment yet)

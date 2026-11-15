@@ -1,0 +1,5 @@
+# Tables of the payment engine landscape that are not SAP standard (exported from DV1 / QA1, not from a demo system).
+# Input of tools/abaptools/ddic_export.py together with ops-framework/config/ddic/standard_tables.txt.
+ZCD_PAYM_REQ_LOG
+ZCD_SPE_EXCP_LOG
+ZCD_CHECK_HIST

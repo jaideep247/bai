@@ -1,0 +1,63 @@
+# SAP standard tables the product reads or names (link registry, process catalogue, checks, account flow, breaks).
+# Input of tools/abaptools/ddic_export.py: export their definitions, fields and indexes from a landscape, then
+# compare them with the repository's field references. One table per line; '#' starts a comment.
+# A table may not exist on every release or without its industry component (FI-CA tables need S/4HANA with FI-CA).
+
+# General ledger and documents (read through released views where one exists; the tables are the reference)
+ACDOCA
+BKPF
+BSEG
+# Bank statement
+FEBKO
+FEBEP
+# House bank
+T012
+T012K
+# Business partner
+BUT000
+# FI-CA documents and items
+DFKKKO
+DFKKOP
+DFKKOPK
+TFK003            # FI-CA document types (foreign key of DFKKKO-BLART)
+# FI-CA reconciliation keys and G/L transfer
+DFKKSUM
+DFKKSUMC
+# FI-CA payment run, payment methods, cheques, returns, notification of change
+DPAYH
+DPAYP
+TFK042Z
+TFK033D
+DFKKCR
+DFKKRK
+DFKKRP
+DFKKRH
+DFKKRAPT
+DFKKNRK
+DFKKNRP
+# FI-CA payment lots
+DFKKZK
+DFKKZP
+# FI-CA mass activities
+FKKMAKO
+FKKMAZE
+# FI-CA invoicing and billing
+DFKKINVDOC_H
+DFKKINVDOC_I
+DFKKINVBILL_H
+DFKKINVBILL_I
+# FI-CA interest, write-off, instalment plans, correspondence
+DFKKIH
+DFKKWOH
+FKK_INSTPLN_HEAD
+DFKKCOH
+DFKKCOHI
+DFKKCOD
+# Basis: jobs, application log, update requests, transports, number ranges, clients
+TBTCO
+TBTCP
+BALHDR
+VBHDR
+E070
+NRIV
+T000

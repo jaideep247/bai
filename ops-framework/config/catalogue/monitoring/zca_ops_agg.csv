@@ -16,7 +16,7 @@ CA_FICA,FICA_LOT_CLARIF,R1,Lot items in clarification,DFKKZP,COUNT,‹lot item d
 CA_FICA,FICA_RET_OPEN,R1,Oldest returns lot not closed,DFKKRH,AGE,‹lot creation date field›,1,0,,,‹lot status field›,NE,‹closed value›,,,,1,3,RETURNS_LOT_NOT_CLOSED,
 CA_FICA,FICA_REV_DAY,R1,Reversed documents of the last day,DFKKKO,COUNT,‹entry date field›,0,1,,,STBEL,NE,,,,,‹amber count›,‹red count›,REVERSAL_VOLUME,
 CA_FICA,FICA_WO_LIMIT,R1,Write-offs above the limit,DFKKOP,COUNT,AUGDT,0,1,,BUKRS,AUGRD,EQ,‹write-off clearing reason›,BETRH,GT,‹write-off limit›,1,1,WRITEOFF_ABOVE_LIMIT,
-CA_FICA,FICA_WO_REASON,R1,Write-offs with an unlisted reason,DFKKOP,COUNT,AUGDT,0,1,,BUKRS,AUGRD,EQ,‹write-off clearing reason›,ABGRD,NI,‹approved write-off reasons›,1,1,WRITEOFF_REASON_UNLISTED,
+CA_FICA,FICA_WO_REASON,R1,Write-offs with an unlisted reason,DFKKOP,COUNT,AUGDT,0,1,,BUKRS,AUGRD,EQ,‹write-off clearing reason›,‹write-off reason field›,NI,‹approved write-off reasons›,1,1,WRITEOFF_REASON_UNLISTED,
 CA_FSCD,FSCD_BRO_OPEN,R1,Oldest broker report not posted,‹broker report header›,AGE,‹report date field›,1,0,,,‹report status field›,NE,‹posted value›,,,,2,5,BROKER_REPORT_OPEN,
 CA_FSCD,FSCD_CLM_STUCK,R1,Oldest claim payment request not paid,‹claims payment request table›,AGE,‹request date field›,1,0,,,‹request status field›,NE,‹paid value›,,,,1,3,CLAIM_PAYMENT_STUCK,
 CA_FSCD,FSCD_COINS_OPEN,R1,Shares not settled,‹coinsurance share items›,COUNT,‹period end date field›,1,0,,,‹settlement status field›,NE,‹settled value›,,,,1,‹red count›,COINSURANCE_NOT_SETTLED,

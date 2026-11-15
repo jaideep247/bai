@@ -1,0 +1,100 @@
+@EndUserText.label : 'Kopfdaten zum Kontokorrentbeleg'
+@AbapCatalog.enhancement.category : #EXTENSIBLE_CHARACTER_NUMERIC
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table dfkkko {
+
+  key mandt    : mandt not null;
+  key opbel    : opbel_kk not null;
+  fikey        : fikey_kk;
+  applk        : applk_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  blart        : blart_kk
+    with foreign key tfk003
+      where mandt = dfkkko.mandt
+        and applk = dfkkko.applk
+        and blart = dfkkko.blart;
+  herkf        : herkf_kk;
+  ernam        : ernam;
+  cpudt        : cpudt;
+  cputm        : cputm;
+  waers        : blwae_kk;
+  bldat        : bldat;
+  budat        : budat_kk;
+  wwert        : wwert_d;
+  xblnr        : xblnr_kk;
+  rlgrd        : rlgrd_kk;
+  abgrd        : bugrd_kk;
+  xeibh        : xeibh_kk;
+  xbwer        : xbwer_kk;
+  awtyp        : awtyp;
+  awkey        : awkey;
+  stbel        : stbel_kk;
+  stmet        : stmet_int_kk;
+  bltyp        : bltyp_kk;
+  aginf        : aginf_kk;
+  stbuk        : stbuk_kk;
+  storb        : storb_kk;
+  appdx        : appdx_kk;
+  awsys        : awsys;
+  versn        : versn_kk;
+  c4eye        : c4eye_kk;
+  c4eyp        : c4eyp_kk;
+  tatyp        : tatyp_kk;
+  hbbla        : hbbla_kk;
+  xcsha        : xcsha_kk;
+  utloc        : utloc_ut_kk;
+  xtxch        : xtxch_kk;
+  vatdate      : vatdate_kk;
+  fulfilldate  : vatdate2_kk;
+  wnper        : wnper_kk;
+  xsing        : xsing_kk;
+  keypp        : keypp_kk;
+  _dataaging   : data_temperature;
+  xdaag        : xdaag_kk;
+  trsla        : trsla_kk;
+  locok        : locok_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  bttype       : fins_bttype
+    with foreign key finsc_bttype
+      where mandt = dfkkko.mandt
+        and bttype = dfkkko.bttype;
+  @AbapCatalog.foreignKey.screenCheck : true
+  cbttype      : fins_custbttype
+    with foreign key finsc_custbttype
+      where mandt = dfkkko.mandt
+        and cbttype = dfkkko.cbttype;
+  @AbapCatalog.foreignKey.screenCheck : true
+  closingstep  : fins_closingstep
+    with foreign key finsc_clsngstep
+      where mandt = dfkkko.mandt
+        and closingstep = dfkkko.closingstep;
+  chdate       : aedat;
+  chtime       : aetim_kk;
+  @AbapCatalog.foreignKey.screenCheck : true
+  cadoctype    : cadoctype_kk
+    with foreign key tfk2605
+      where cadoctype = dfkkko.cadoctype;
+  @AbapCatalog.foreignKey.screenCheck : true
+  invdocno     : invdocno_kk
+    with foreign key dfkkinvdoc_h
+      where mandt = dfkkko.mandt
+        and invdocno = dfkkko.invdocno;
+  include fkkko_ext_glo;
+  @AbapCatalog.foreignKey.screenCheck : false
+  prqno        : prqno_kk
+    with foreign key payrq
+      where mandt = dfkkko.mandt
+        and keyno = dfkkko.prqno;
+  prqno_logsys : logsys;
+  include si_fkkkor;
+  include si_fkkkov;
+  include si_fkkkot;
+  include si_fkkkop;
+  include si_fkkkos;
+  include si_fkkkoc_cloud;
+  include ci_fkkko;
+  include fkkko_incl_eew_ps;
+
+}

@@ -275,7 +275,7 @@ Carries the generic write-off risk checks: write-offs above an amount limit and 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
 | FICA_WO_LIMIT | Risk: write-offs of the last day above the limit | R1: COUNT `DFKKOP`, date AUGDT (<= 1 d), AUGRD EQ ‹write-off clearing reason›, BETRH GT ‹write-off limit›, per BUKRS, amber 1 / red 1 | V V129 |
-| FICA_WO_REASON | Risk: write-offs of the last day outside the reason list | R1: COUNT `DFKKOP`, date AUGDT (<= 1 d), AUGRD EQ ‹write-off clearing reason›, ABGRD NI ‹approved write-off reasons›, per BUKRS, amber 1 / red 1 | V V129 |
+| FICA_WO_REASON | Risk: write-offs of the last day outside the reason list | R1: COUNT `DFKKOP`, date AUGDT (<= 1 d), AUGRD EQ ‹write-off clearing reason›, ‹write-off reason field› NI ‹approved write-off reasons›, per BUKRS, amber 1 / red 1 | V V129 |
 
 ### FICA_INSTALMENT - Instalment plans
 

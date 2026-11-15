@@ -12,11 +12,12 @@
 //          Not filtered here: ZI_CA_OpsFlowFiSig restricts company code, account range and posting window (HANA pushes
 //          the predicates into each branch). Read-only.
 // Modification log: 2026-11-15 | Initial version (build G: account flow reconciliation).
-// VERIFY-SE11 (V146): DFKKKO-BLART (FI-CA document type), DFKKKO-HERKF (origin key), DFKKKO-WAERS; DFKKOP-AUGDT
-//          (clearing date); DFKKOPK-BUKRS, -HKONT, -BETRW and its sign (debit +); DFKKOP-BETRW signed as the
-//          receivable; a partial clearing splits the item (the cleared part carries AUGBL) - otherwise branch C
-//          over-counts. Confirmed in the repository: DFKKOP-BUKRS / HKONT / WAERS / BETRW / BUDAT / AUGBL / HVORG /
-//          TVORG / OPBEL, DFKKKO-OPBEL / BUDAT. VERIFY-ADT: a standard FI-CA CDS view for documents and items on
+//                   2026-11-15 | Comment: fields seen in the table definitions (V146).
+// VERIFY-SE11 (V146): the sign of DFKKOPK-BETRW (debit +) and of DFKKOP-BETRW (signed as the receivable); a partial
+//          clearing splits the item (the cleared part carries AUGBL) - otherwise branch C over-counts. Seen in the
+//          landscape's table definitions (2026-11-15): DFKKKO-BLART / HERKF / WAERS / BUDAT, DFKKOP-AUGDT / BUKRS /
+//          HKONT / WAERS / BETRW / BUDAT / AUGBL / HVORG / TVORG, DFKKOPK-BUKRS / HKONT / BETRW (no currency field:
+//          the currency of the G/L items is DFKKKO-WAERS). VERIFY-ADT: a standard FI-CA CDS view for documents and items on
 //          S/4HANA 2023 (none is confirmed in the repository; when one is C1 released, the branches move to it).
 //          UNION ALL of typed literals (V112). PlanViz FLOW-PV3: DFKKOP / DFKKOPK by company code and account, the
 //          clearing branch by clearing date - an index on (BUKRS, HKONT, AUGDT) may be needed.

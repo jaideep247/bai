@@ -8,16 +8,16 @@
      "fields": [
        {"name": "OPBEL", "evidence": "C", "description": "Document number (key of the header)"},
        {"name": "FIKEY", "evidence": "C", "description": "Reconciliation key of the document"},
-       {"name": "STBEL", "evidence": "V", "verify": "V117", "description": "Reversal document"}
+       {"name": "STBEL", "evidence": "C", "description": "Reversal document"}
      ]},
     {"id": "FICA_OPEN_ITEM", "source": "DFKKOP", "kind": "T", "keys": ["OPBEL"],
      "description": "Subledger items (walked per document)",
      "fields": [
        {"name": "OPBEL", "evidence": "C", "description": "Document number of the item"},
        {"name": "AUGBL", "evidence": "C", "description": "Clearing (payment) document of the item"},
-       {"name": "AUGRD", "evidence": "V", "verify": "V117", "description": "Clearing reason"},
-       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "V", "verify": "V117", "description": "Company code"},
-       {"name": "GPART", "sensitivity": "M", "evidence": "V", "verify": "V117", "description": "Business partner (masked)"}
+       {"name": "AUGRD", "evidence": "C", "description": "Clearing reason"},
+       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "C", "description": "Company code"},
+       {"name": "GPART", "sensitivity": "M", "evidence": "C", "description": "Business partner (masked)"}
      ]},
     {"id": "FICA_SUMMARY_RECORD", "source": "DFKKSUMC", "kind": "T", "keys": ["FIKEY"],
      "description": "Summary records of a reconciliation key (G/L transfer)",

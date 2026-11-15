@@ -2,6 +2,26 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (table definitions from the landscape)
+
+### Added
+- `tools/abaptools/ddic_export.py`: `export` fetches the definition, the fields (DD03L, incl. includes and appends)
+  and the indexes (DD17S) of a list of tables through the system's ADT interface (dictionary metadata only, run on a
+  machine that reaches the system); `compare` checks the field references of the link registry and the process
+  catalogue against the exports (exists / missing / may sit in an include). Table list of the product:
+  `config/ddic/standard_tables.txt`. Not yet run against a system (the ADT data preview answer format is read
+  generically; correct the parser if a release differs).
+
+### Changed
+- Fields seen in the landscape's definitions of `DFKKKO`, `DFKKOP`, `DFKKOPK`: link registry fields
+  `DFKKKO-STBEL`, `DFKKOP-AUGRD / BUKRS / GPART` evidence C (V117); V128 and V146 record what is confirmed and what
+  stays open (sign of `BETRW`, partial clearing, stage rule values).
+
+### Fixed
+- Process catalogue `FICA_WO_REASON`: the write-off reason was read from `DFKKOP-ABGRD`; `ABGRD` is a field of the
+  document header `DFKKKO`. The condition field is a placeholder until a source with reason and company code is
+  chosen (V128); the check was delivered inactive and stays so.
+
 ## [Unreleased] - 2026-11-15 (build G: account flow reconciliation)
 
 Goal (user, 2026-11-15): a reconciliation dashboard "Account flow" - stages as rows, accounts by role as columns,

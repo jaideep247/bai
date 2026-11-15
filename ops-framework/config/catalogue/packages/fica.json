@@ -745,7 +745,7 @@
        "status_field": "AUGRD",
        "status_op": "EQ",
        "status_value": "‹write-off clearing reason›",
-       "cond_field": "ABGRD",
+       "cond_field": "‹write-off reason field›",
        "cond_op": "NI",
        "cond_value": "‹approved write-off reasons›",
        "amber": 1,

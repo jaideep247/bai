@@ -12,14 +12,14 @@
 | DFKKCR-ZTNUM | confirmed | FICA_CHEQUE | FICA_CHEQUE_TO_STMT_LINE (from, active)<br/>FICA_STMT_LINE_TO_CHEQUE (to, active)<br/>FICA_PAYMENT_TO_CHEQUE (target key)<br/>FICA_STMT_LINE_TO_CHEQUE (target key) | - |
 | DFKKKO-FIKEY | confirmed | - | FICA_HDR_TO_SUMMARY (from, active)<br/>FICA_SUMMARY_TO_HDRS (to, active) | - |
 | DFKKKO-OPBEL | confirmed | FICA_DOC_HEADER | FICA_CLEARING_TO_ITEMS (from, active)<br/>FICA_HDR_TO_ITEMS (from, active)<br/>FICA_ITEM_TO_CLEARING_HDR (to, active)<br/>FICA_ITEM_TO_HDR (to, active)<br/>FICA_ITEM_TO_CLEARING_HDR (target key)<br/>FICA_ITEM_TO_HDR (target key)<br/>FICA_SUMMARY_TO_HDRS (target key) | - |
-| DFKKKO-STBEL | VERIFY V117 | - | - | - |
+| DFKKKO-STBEL | confirmed | - | - | - |
 | DFKKNRP-INFOF | confirmed | - | FICA_PAYMENT_TO_NOC (to, active) | - |
 | DFKKNRP-KEYN1 | confirmed | FICA_NOC_ITEM | FICA_PAYMENT_TO_NOC (target key) | - |
 | DFKKNRP-POSNA | confirmed | FICA_NOC_ITEM | FICA_PAYMENT_TO_NOC (target key) | - |
 | DFKKOP-AUGBL | confirmed | - | FICA_CHEQUE_TO_PAYMENT (to, active)<br/>FICA_CLEARING_TO_ITEMS (to, active)<br/>FICA_CLEARING_TO_RUN (from, active)<br/>FICA_ITEM_TO_CLEARING_HDR (from, active)<br/>FICA_PAYMENT_TO_CHEQUE (from, active)<br/>FICA_PAYMENT_TO_NOC (from, active)<br/>FICA_PAYMENT_TO_RETURN (from, active)<br/>FICA_PAYMENT_TO_STMT_LINE (from, active)<br/>FICA_RUN_TO_CLEARED_ITEMS (to, active)<br/>FICA_STMT_LINE_TO_PAYMENT (to, active) | - |
-| DFKKOP-AUGRD | VERIFY V117 | - | - | - |
-| DFKKOP-BUKRS | VERIFY V117 | - | - | - |
-| DFKKOP-GPART | VERIFY V117 | - | FICA_PARTNER_TO_ITEMS (to, inactive (VERIFY)) | - |
+| DFKKOP-AUGRD | confirmed | - | - | - |
+| DFKKOP-BUKRS | confirmed | - | - | - |
+| DFKKOP-GPART | confirmed | - | FICA_PARTNER_TO_ITEMS (to, inactive (VERIFY)) | - |
 | DFKKOP-OPBEL | confirmed | FICA_OPEN_ITEM | FICA_HDR_TO_ITEMS (to, active)<br/>FICA_ITEM_TO_HDR (from, active)<br/>FICA_CHEQUE_TO_PAYMENT (target key)<br/>FICA_CLEARING_TO_ITEMS (target key)<br/>FICA_HDR_TO_ITEMS (target key)<br/>FICA_PARTNER_TO_ITEMS (target key)<br/>FICA_RUN_TO_CLEARED_ITEMS (target key)<br/>FICA_STMT_LINE_TO_PAYMENT (target key) | - |
 | DFKKRP-RLGRD | confirmed | - | - | - |
 | DFKKRP-SELW1 | confirmed | FICA_RETURN_ITEM | FICA_PAYMENT_TO_RETURN (to, active)<br/>FICA_PAYMENT_TO_RETURN (target key) | - |
