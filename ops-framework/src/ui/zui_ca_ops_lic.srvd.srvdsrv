@@ -1,0 +1,10 @@
+@EndUserText.label: 'Operations framework: licence'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSLICMODULE'
+// Binding to create in ADT: ZUI_CA_OPS_LIC_O4 (OData V4 - UI). Read-only: no behaviour definition.
+// Licensing (2026-11-15): the licensable modules with what the active licence grants (overview list card and list
+// report) and the installed licences with their history - docs/LICENSING.md. Installing a licence is the report
+// ZCA_OPS_LICENSE_INSTALL, never this service.
+define service ZUI_CA_OPS_LIC {
+  expose ZC_CA_OpsLicModule as LicenseModule;
+  expose ZC_CA_OpsLicense   as License;
+}

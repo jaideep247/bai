@@ -7,7 +7,7 @@ Area `CA_OPS` (`config/param_areas.csv`); definitions `config/param_definitions.
 `ZCL_CA_OPS_PARAM_SEED` by `tools/param_definitions.py` (check `param_definitions` of `tools/checks.py`).
 Read through `ZCL_CA_OPS_FACTORY=>GET_PARAMS( )`: a name with prefix `ALERT_`, `SLA_`, `RETENTION_` or
 `PURGE_`, `CONTROL_`, `EXC_`, `CHECK_` or `JOB_` - and, for the operations response features (2026-11-11), `RUNBOOK_`,
-`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - and, for build F (2026-11-11), `BRK_` (break analysis) and `PILOT_` (pilot pack) - and, for build G (2026-11-15), `FLOW_` (account flow reconciliation) - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
+`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - and, for build F (2026-11-11), `BRK_` (break analysis) and `PILOT_` (pilot pack) - and, for build G (2026-11-15), `FLOW_` (account flow reconciliation) - and, for licensing (2026-11-15), `LIC_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
 wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS( )`, never silent.
 
 | Name | Type | Default | Read by | Meaning |
@@ -31,6 +31,10 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 | `FLOW_KEY_DATE_LAG` | INT 0-31 | 0 | `ZCA_OPS_FLOW_RUN` | Evaluation without key date: today minus these days (0: the open items of now answer the dashboard's "to" = today) |
 | `FLOW_RETENTION_DAYS` | INT 0-3660 | 400 | `ZCL_CA_OPS_FLOW_EVAL` | Evaluations of a flow older than this many days before the key date are removed (0 = never) |
 | `FLOW_BREAK_MAX_AGE_DAYS` | INT 0-31 | 2 | `ZCL_CA_OPS_FLOW_SRC_BREAK` | A break snapshot at most this many days before the key date accounts for a clearing account |
+| `LIC_ENFORCE` | CHAR (`W\|X`) | W | `ZCL_CA_OPS_LICENSE` (`docs/LICENSING.md`) | W = warn only (default of this release: every module runs, the licence states are reported); X = a module the licence does not cover is refused (CORE never) |
+| `LIC_WARN_DAYS` | INT 0-365 | 30 | `ZCL_CA_OPS_LIC_POLICY`, `ZI_CA_OpsLicCfg` | Days before a module ends from which it is reported as expiring (exception `LICENSE_EXPIRING`, dashboard amber) |
+| `LIC_SSF_PROFILE` | CHAR | SAPZCAOPS.pse | `ZCL_CA_OPS_LIC_PLATFORM` | PSE of the SSF application that holds the vendor's certificate (STRUST, V166) |
+| `LIC_FILE_PATH` / `LIC_FILE_NAME` | CHAR | - | `ZCA_OPS_LICENSE_INSTALL` | Logical path / file (transaction FILE) of a licence file on the application server |
 | `RETENTION_DAYS_BREAK` | INT ≥ 30 | 400 | purge target `BREAK` | Break analysis snapshots (the latest per account is kept) |
 | `PILOT_FP_REASON` | CHAR | NOT_AN_ISSUE | pilot CDS (`ZI_CA_OpsPilotCfg`) | Reason code that marks a resolved exception a false positive (`docs/PILOT_PACK.md`) |
 | `PILOT_WINDOW_DAYS` | INT 1-400 | 30 | `ZCA_OPS_PILOT_EXPORT` | Days the export covers without a from date |

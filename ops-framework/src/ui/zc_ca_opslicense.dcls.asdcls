@@ -1,0 +1,10 @@
+// Artifact: zc_ca_opslicense.dcls.asdcls
+// Purpose: Read access to the installed licences (service ZUI_CA_OPS_LIC): authorization object ZCA_OPS with
+//          ZCA_PARAR = the framework's own area CA_OPS (element Area) and ACTVT 03 (docs/auth_zca_ops.md).
+// Modification log: 2026-11-15 | Initial version (licensing).
+@EndUserText.label: 'Installed licences - read access'
+@MappingRole: true
+define role ZC_CA_OpsLicense {
+  grant select on ZC_CA_OpsLicense
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+}

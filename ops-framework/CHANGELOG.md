@@ -2,6 +2,47 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build J: licensing)
+
+Goal (user, 2026-11-15): different processes can be activated or deactivated so that a customer runs a functionality
+only when it pays for its licence - a vendor licence layer above the customer's own activation
+(`docs/LICENSING.md`).
+
+### Added
+- Licensable modules `config/licensing/modules.json` (CORE - always included, never refused - CONTROL, ONBOARD, JOBS,
+  RESPONSE, LINKS, CATALOGUE_FICA / _FSCD / _FSRI, PAYMODEL, BREAKS, FLOW) with entry points, check classes,
+  configuration entities and gates; `license_module` of the catalogue packages (S4CORE -> CORE, FICA, FSCD; the FS-RI
+  process on its own); generated module map `ZCL_CA_OPS_LIC_MAP` and `docs/licensing/modules.md`
+  (`tools/licensing.py`, house check `licensing`, shared engine `../tools/abaptools/licensing.py`).
+- Licence runtime: `ZIF_CA_OPS_LIC_TYPES`, `ZIF_CA_OPS_LICENSE` / `ZCL_CA_OPS_LICENSE` (factory `GET_LICENSE`,
+  injector `INJECT_LICENSE`; verified once per run), pure decision `ZCL_CA_OPS_LIC_POLICY` (licensed / expiring / grace
+  / expired / not licensed / binding / version / signature / missing), file reader `ZCL_CA_OPS_LIC_FILE` (PEM, asJSON
+  payload), SSF / system adapter `ZIF_CA_OPS_LIC_PLATFORM` / `ZCL_CA_OPS_LIC_PLATFORM` (`SSF_KRN_VERIFY`,
+  `SLIC_GET_LICENCE_NUMBER`, VERIFY V162 / V163), data access `ZIF_CA_OPS_LIC_DAO` / `ZCL_CA_OPS_LIC_DAO`; tables
+  `ZCA_OPS_LIC` (active licence and history), `ZCA_OPS_LICM`, `ZCA_OPS_LICMOD` (display copies for the dashboard).
+- Report `ZCA_OPS_LICENSE_INSTALL` (frontend or application server, test mode, `ZCA_OPS` 03 / 01 for `CA_OPS`).
+- Licence check `ZCL_CA_OPS_CHK_LICENSE` (registry row `CA_OPS / LICENSE`, active): missing, invalid, expiring within
+  `LIC_WARN_DAYS`, in grace, expired - owned exceptions alerted by the existing router; recommended alert rule
+  `config/licensing/alert_rules_license.csv` (inactive).
+- Dashboard `ZUI_CA_OPS_LIC`: `ZC_CA_OpsLicModule` (overview card: module, valid to, days left, state) and
+  `ZC_CA_OpsLicense` (active licence and history), `ZI_CA_OpsLicCfg`, DCLs.
+- Vendor tools `../tools/licensing/issue_license.py` (payload from arguments / JSON, validated against the module
+  catalogue, signed with `openssl cms -sign -nodetach`, no key inside the repository) and `verify_license.py` (offline
+  verification and the state per module); tests `../tools/tests/test_licensing.py` (throwaway key in a temporary
+  directory, skipped without openssl).
+- Parameters `LIC_ENFORCE` (W), `LIC_WARN_DAYS` (30), `LIC_SSF_PROFILE`, `LIC_FILE_PATH`, `LIC_FILE_NAME` (prefix
+  `LIC_` in area `CA_OPS`); messages 350-366; VERIFY V162-V168.
+
+### Changed
+- Gates (refused only under `LIC_ENFORCE = X`; CORE never): `ZCL_CA_OPS_CHECK_RUNNER` (a check of an unlicensed module
+  not run - `LICENSE_REFUSED`, its exceptions stay open; under W one warning `LICENSE_UNLICENSED` per run),
+  `ZCL_CA_OPS_BRK_ANALYZER`, `ZCL_CA_OPS_FLOW_EVAL`, `ZCA_OPS_ESCALATE`, `ZCA_OPS_PILOT_EXPORT` (352 and a recorded red
+  run, `ZCL_CA_OPS_RUN_GUARD=>REFUSE_LICENSE`), the sign-off of the daily control review.
+- `ZUI_CA_OPS_CFG` (generated): activation of a row of an unlicensed module refused on save (350) - new check kind
+  `module` of the shared RAP generator, checks `ZCL_CA_OPS_CFG_CHECKS=>MODULE_LICENSED`, `CAT_PROCESS_LICENSED`,
+  `CLASS_LICENSED`, `PACKAGE_LICENSED`; deactivation always allowed.
+- Stored data stays readable after a licence ends: no read app, no exception action and no stored result is blocked.
+
 ## [Unreleased] - 2026-11-15 (table definitions from the landscape)
 
 ### Added

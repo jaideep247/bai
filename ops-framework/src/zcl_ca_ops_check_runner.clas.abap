@@ -21,6 +21,11 @@
 *& 2026-11-11 | Explainable, versioned results: every finding of a check carries the configuration version of
 *&            | the run (ZCL_CA_OPS_CFG_VERSION over the registry row and, when the check implements
 *&            | ZIF_CA_OPS_CHECK_CONFIG, its own configuration rows) unless the check set one itself.
+*& 2026-11-15 | Licensing: the modules a check needs (its class, the catalogue package of its business process;
+*&            | ZIF_CA_OPS_LICENSE, verified once per run). Under LIC_ENFORCE = X a check of a module the licence
+*&            | does not cover is not run - one finding LICENSE_REFUSED (message 351, error) instead, its open
+*&            | exceptions stay open; under W it runs and the run gets one warning LICENSE_UNLICENSED (353) naming
+*&            | the modules used but not covered by an installed licence. CORE is never refused.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - generic check runner</p>
 "! Report ZCA_OPS_CHECK_RUN (one job per area and schedule group). No check, no business table
@@ -68,6 +73,23 @@ CLASS zcl_ca_ops_check_runner DEFINITION
       IMPORTING
         is_check          TYPE zif_ca_ops_chk_types=>ty_check
         ix_error          TYPE REF TO cx_root
+      RETURNING
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
+
+    "! Error finding of a check that is not run because the licence refuses a module it needs
+    METHODS refused
+      IMPORTING
+        is_check          TYPE zif_ca_ops_chk_types=>ty_check
+        is_decision       TYPE zif_ca_ops_lic_types=>ty_decision
+      RETURNING
+        VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
+
+    "! Warning of the run: modules used by its checks that the installed licence does not cover (W only)
+    METHODS unlicensed
+      IMPORTING
+        is_run            TYPE zif_ca_ops_types=>ty_run
+        it_modules        TYPE zif_ca_ops_lic_types=>tt_module
+        iv_license_id     TYPE zif_ca_ops_lic_types=>ty_license_id
       RETURNING
         VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
@@ -141,6 +163,7 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
   METHOD execute.
     DATA lt_groups TYPE zif_ca_ops_types=>tt_group.
     DATA lv_items TYPE i.
+    DATA lt_uncovered TYPE zif_ca_ops_lic_types=>tt_module.
 
     DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     rs_result-run = lo_store->start_run( iv_area      = iv_area
@@ -174,10 +197,32 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
         " Activation (process catalogue): the business processes of the area not in effect today
         DATA(lt_off) = zcl_ca_ops_factory=>get_catalog( )->inactive_onboarded( iv_area = iv_area
                                                                                iv_date = ls_context-today ).
+        " Licence (verified once for the run): the modules each check needs
+        DATA(lo_license) = zcl_ca_ops_factory=>get_license( ).
         LOOP AT lt_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
           IF <ls_check>-process_id IS NOT INITIAL AND line_exists( lt_off[ table_line = <ls_check>-process_id ] ).
             " not run, not reconciled: its earlier exceptions stay open
             INSERT skipped( <ls_check> ) INTO TABLE rs_result-findings.
+            CONTINUE.
+          ENDIF.
+          DATA(lv_refused) = abap_false.
+          DATA(lt_modules) = lo_license->modules_of_check( <ls_check> ).
+          LOOP AT lt_modules ASSIGNING FIELD-SYMBOL(<lv_module>).
+            DATA(ls_decision) = lo_license->decide( <lv_module> ).
+            IF ls_decision-allowed = abap_false.
+              " not run, not reconciled (LIC_ENFORCE = X): its earlier exceptions stay open
+              INSERT refused( is_check = <ls_check> is_decision = ls_decision ) INTO TABLE rs_result-findings.
+              lv_refused = abap_true.
+              EXIT.
+            ENDIF.
+            " W: runs; reported once per run when an installed licence does not cover it
+            IF ls_decision-lic_state = zif_ca_ops_lic_types=>gc_lic_state-valid
+               AND ( ls_decision-state = zif_ca_ops_lic_types=>gc_state-unlicensed
+                  OR ls_decision-state = zif_ca_ops_lic_types=>gc_state-expired ).
+              INSERT <lv_module> INTO TABLE lt_uncovered.
+            ENDIF.
+          ENDLOOP.
+          IF lv_refused = abap_true.
             CONTINUE.
           ENDIF.
           DATA(ls_one) = run_check( is_check   = <ls_check>
@@ -191,6 +236,11 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
           ENDIF.
         ENDLOOP.
 
+        IF lt_uncovered IS NOT INITIAL.
+          INSERT unlicensed( is_run        = rs_result-run
+                             it_modules    = lt_uncovered
+                             iv_license_id = lo_license->status( )-license_id ) INTO TABLE rs_result-findings.
+        ENDIF.
         lo_store->save_findings( EXPORTING it_findings = rs_result-findings
                                  CHANGING  cs_run      = rs_result-run ).
         IF lt_groups IS NOT INITIAL.
@@ -257,6 +307,41 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
                      iv_version  = zcl_ca_ops_cfg_version=>of_check( is_check )
            CHANGING  ct_findings = lt_one ).
     rs_finding = lt_one[ 1 ].
+  ENDMETHOD.
+
+
+  METHOD refused.
+    DATA lt_one TYPE zif_ca_ops_types=>tt_finding.
+    INSERT VALUE #( object_type = zif_ca_ops_chk_types=>gc_object_type-check
+                    object_key  = is_check-check_id
+                    rule_id     = zif_ca_ops_lic_types=>gc_rule_id
+                    check_code  = zif_ca_ops_lic_types=>gc_code-refused
+                    severity    = zif_ca_ops_types=>gc_severity-error
+                    action      = zif_ca_ops_types=>gc_action-notify
+                    reference   = is_decision-module
+                    message     = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_lic_types=>gc_msg-check_refused
+                                                         iv_v1    = is_check-check_id
+                                                         iv_v2    = is_decision-module
+                                                         iv_v3    = is_decision-state ) ) INTO TABLE lt_one.
+    stamp( EXPORTING is_check    = is_check
+                     iv_version  = zcl_ca_ops_cfg_version=>of_check( is_check )
+           CHANGING  ct_findings = lt_one ).
+    rs_finding = lt_one[ 1 ].
+  ENDMETHOD.
+
+
+  METHOD unlicensed.
+    rs_finding = VALUE #( object_type = zif_ca_ops_lic_types=>gc_object_type-license
+                          object_key  = |{ is_run-area }/{ is_run-variant }|
+                          group1      = is_run-area
+                          rule_id     = zif_ca_ops_lic_types=>gc_rule_id
+                          check_code  = zif_ca_ops_lic_types=>gc_code-unlicensed
+                          severity    = zif_ca_ops_types=>gc_severity-warning
+                          action      = zif_ca_ops_types=>gc_action-notify
+                          reference   = iv_license_id
+                          message     = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_lic_types=>gc_msg-unlicensed
+                                                               iv_v1    = concat_lines_of( table = it_modules sep = `,` )
+                                                               iv_v2    = iv_license_id ) ).
   ENDMETHOD.
 
 

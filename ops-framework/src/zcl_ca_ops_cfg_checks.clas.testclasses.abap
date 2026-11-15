@@ -18,6 +18,7 @@
 *&            | in-memory parameter store), runbook link (control register of the daily review).
 *& 2026-11-11 | LTC_RESPONSE_CHECK: runbook link of an active row, correlation key fields and window.
 *& 2026-11-11 | LTC_LINK_REF: TABLE-FIELD references of the link registry conditions (T000 metadata).
+*& 2026-11-15 | ltc_licence: MODULE_LICENSED and the derived checks with a licence double (licensing).
 *&---------------------------------------------------------------------*
 "! Alert configuration from memory: only the channels are read by the checks
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
@@ -707,6 +708,84 @@ CLASS ltc_link_ref IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltd_cfg_license DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_license PARTIALLY IMPLEMENTED.
+    "! The module refused (every other module is allowed)
+    DATA mv_refused TYPE zif_ca_ops_lic_types=>ty_module.
+ENDCLASS.
+
+CLASS ltd_cfg_license IMPLEMENTATION.
+  METHOD zif_ca_ops_license~decide.
+    rs_decision = VALUE #( module = iv_module allowed = xsdbool( iv_module <> mv_refused ) ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_license~module_of_cat_process.
+    rv_module = COND #( WHEN iv_cat_process = 'FICA_PAYRUN' THEN zif_ca_ops_lic_types=>gc_module-catalogue_fica ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_license~module_of_class.
+    rv_module = COND #( WHEN iv_class = 'ZCL_CA_OPS_CHK_JOB_FAIL' THEN zif_ca_ops_lic_types=>gc_module-jobs ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_license~module_of_package.
+    rv_module = COND #( WHEN iv_pkg_id = 'FICA' THEN zif_ca_ops_lic_types=>gc_module-catalogue_fica ).
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltc_licence DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    DATA mo_license TYPE REF TO ltd_cfg_license.
+    METHODS setup.
+    METHODS teardown.
+    METHODS refused_module_rejected   FOR TESTING.
+    METHODS derived_modules_checked   FOR TESTING.
+    METHODS no_module_always_allowed  FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_licence IMPLEMENTATION.
+
+  METHOD setup.
+    mo_license = NEW #( ).
+    zcl_ca_ops_injector=>inject_license( mo_license ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_ca_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  METHOD refused_module_rejected.
+    mo_license->mv_refused = zif_ca_ops_lic_types=>gc_module-flow.
+    cl_abap_unit_assert=>assert_false( zcl_ca_ops_cfg_checks=>module_licensed( 'FLOW' ) ).
+    cl_abap_unit_assert=>assert_true( zcl_ca_ops_cfg_checks=>module_licensed( 'BREAKS' ) ).
+  ENDMETHOD.
+
+
+  METHOD derived_modules_checked.
+    mo_license->mv_refused = zif_ca_ops_lic_types=>gc_module-catalogue_fica.
+    cl_abap_unit_assert=>assert_false( zcl_ca_ops_cfg_checks=>cat_process_licensed( 'FICA_PAYRUN' ) ).
+    cl_abap_unit_assert=>assert_false( zcl_ca_ops_cfg_checks=>package_licensed( 'FICA' ) ).
+    mo_license->mv_refused = zif_ca_ops_lic_types=>gc_module-jobs.
+    cl_abap_unit_assert=>assert_false( zcl_ca_ops_cfg_checks=>class_licensed( 'ZCL_CA_OPS_CHK_JOB_FAIL' ) ).
+  ENDMETHOD.
+
+
+  METHOD no_module_always_allowed.
+    mo_license->mv_refused = zif_ca_ops_lic_types=>gc_module-jobs.
+    " a customer's own process, class or layer has no module of its own
+    cl_abap_unit_assert=>assert_true( zcl_ca_ops_cfg_checks=>cat_process_licensed( 'ZT_OWN' ) ).
+    cl_abap_unit_assert=>assert_true( zcl_ca_ops_cfg_checks=>class_licensed( 'ZCL_T_OWN' ) ).
+    cl_abap_unit_assert=>assert_true( zcl_ca_ops_cfg_checks=>package_licensed( 'ZT' ) ).
+    cl_abap_unit_assert=>assert_true( zcl_ca_ops_cfg_checks=>module_licensed( '' ) ).
   ENDMETHOD.
 
 ENDCLASS.

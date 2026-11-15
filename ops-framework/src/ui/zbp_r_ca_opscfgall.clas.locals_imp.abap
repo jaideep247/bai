@@ -33,6 +33,7 @@ INTERFACE lif_c.
       bukrsfield                     TYPE string VALUE `BUKRSFIELD`,
       bukrspattern                   TYPE string VALUE `BUKRSPATTERN`,
       cardinality                    TYPE string VALUE `CARDINALITY`,
+      catprocess                     TYPE string VALUE `CATPROCESS`,
       checkarea                      TYPE string VALUE `CHECKAREA`,
       checkpattern                   TYPE string VALUE `CHECKPATTERN`,
       classname                      TYPE string VALUE `CLASSNAME`,
@@ -76,6 +77,7 @@ INTERFACE lif_c.
       paramname                      TYPE string VALUE `PARAMNAME`,
       pkgid                          TYPE string VALUE `PKGID`,
       pkgkind                        TYPE string VALUE `PKGKIND`,
+      processid                      TYPE string VALUE `PROCESSID`,
       quality                        TYPE string VALUE `QUALITY`,
       quietfrom                      TYPE string VALUE `QUIETFROM`,
       quietto                        TYPE string VALUE `QUIETTO`,
@@ -155,6 +157,15 @@ INTERFACE lif_c.
       zif_ca_ops_flow_source         TYPE string VALUE `ZIF_CA_OPS_FLOW_SOURCE`,
       zif_ca_ops_purge_target        TYPE string VALUE `ZIF_CA_OPS_PURGE_TARGET`,
     END OF gc_if,
+    BEGIN OF gc_mod,
+      breaks                         TYPE string VALUE `BREAKS`,
+      control                        TYPE string VALUE `CONTROL`,
+      flow                           TYPE string VALUE `FLOW`,
+      jobs                           TYPE string VALUE `JOBS`,
+      links                          TYPE string VALUE `LINKS`,
+      onboard                        TYPE string VALUE `ONBOARD`,
+      response                       TYPE string VALUE `RESPONSE`,
+    END OF gc_mod,
     BEGIN OF gc_tab,
       accountflow                    TYPE string VALUE `ZCA_OPS_FLOW`,
       aggregatecheck                 TYPE string VALUE `ZCA_OPS_AGG`,
@@ -239,13 +250,21 @@ INTERFACE lif_c.
       schedulerjob_criticality       TYPE string VALUE `H,M,L`,
     END OF gc_val,
     BEGIN OF gc_when,
+      accountflow_active_x           TYPE string VALUE `X`,
+      aggregatecheck_active_x        TYPE string VALUE `X`,
+      approvedtable_active_x         TYPE string VALUE `X`,
+      breakaccount_active_x          TYPE string VALUE `X`,
       breakcondition_cond_kind_field TYPE string VALUE `FIELD,GROUP,DAYS`,
       breakcondition_cond_kind_link  TYPE string VALUE `LINK`,
       breakrule_active_x             TYPE string VALUE `X`,
+      catalogactivation_active_x     TYPE string VALUE `X`,
+      catalogpackage_active_x        TYPE string VALUE `X`,
       catalogprocess_evidence_v      TYPE string VALUE `V`,
       catalogstep_evidence_v         TYPE string VALUE `V`,
       catalogtable_evidence_c        TYPE string VALUE `C`,
       catalogtable_evidence_v        TYPE string VALUE `V`,
+      control_active_x               TYPE string VALUE `X`,
+      correlationrule_active_x       TYPE string VALUE `X`,
       flowaccount_active_x           TYPE string VALUE `X`,
       flowstage_active_x             TYPE string VALUE `X`,
       flowstagerule_active_x         TYPE string VALUE `X`,
@@ -256,7 +275,12 @@ INTERFACE lif_c.
       linkcondition_cond_kind_eq     TYPE string VALUE `EQ`,
       linkcondition_cond_kind_notini TYPE string VALUE `NOTINIT`,
       linkfield_evidence_v           TYPE string VALUE `V`,
+      linklayer_active_x             TYPE string VALUE `X`,
+      linklayer_layer_kind_c         TYPE string VALUE `C`,
+      process_active_x               TYPE string VALUE `X`,
+      registeredcheck_active_x       TYPE string VALUE `X`,
       runbooklink_active_x           TYPE string VALUE `X`,
+      schedulerjob_active_x          TYPE string VALUE `X`,
     END OF gc_when.
 ENDINTERFACE.
 
@@ -1049,6 +1073,13 @@ CLASS lhc_control IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-url_invalid v1 = ls_row-RunbookUrl
                         element = lif_c=>gc_el-runbookurl ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-control_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-control ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-control
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-control.
@@ -1411,6 +1442,13 @@ CLASS lhc_process IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-url_invalid v1 = ls_row-RunbookUrl
                         element = lif_c=>gc_el-runbookurl ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-process_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>cat_process_licensed( ls_row-CatProcess ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = ls_row-CatProcess
+                          element = lif_c=>gc_el-catprocess ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-process.
@@ -1529,6 +1567,13 @@ CLASS lhc_registeredcheck IMPLEMENTATION.
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_ca_ops_check ) ) = abap_false.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-class_invalid v1 = ls_row-ClassName v2 = lif_c=>gc_if-zif_ca_ops_check
                         element = lif_c=>gc_el-classname ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-registeredcheck_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>class_licensed( ls_row-ClassName ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = ls_row-ClassName
+                          element = lif_c=>gc_el-classname ) INTO TABLE lt_msg.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
@@ -1696,6 +1741,13 @@ CLASS lhc_aggregatecheck IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-CondField v2 = ls_row-Tabname
                         element = lif_c=>gc_el-condfield ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-aggregatecheck_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-onboard ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-onboard
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-aggregatecheck.
@@ -1817,6 +1869,13 @@ CLASS lhc_approvedtable IMPLEMENTATION.
       IF zcl_ca_ops_cfg_checks=>user_valid( ls_row-ApprovedBy ) = abap_false.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-user_invalid v1 = ls_row-ApprovedBy
                         element = lif_c=>gc_el-approvedby ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-approvedtable_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-onboard ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-onboard
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
@@ -2162,6 +2221,13 @@ CLASS lhc_schedulerjob IMPLEMENTATION.
                         v2 = lif_c=>gc_el-criticality v3 = lif_c=>gc_val-schedulerjob_criticality
                         element = lif_c=>gc_el-criticality ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-schedulerjob_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-jobs ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-jobs
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-schedulerjob.
@@ -2286,6 +2352,13 @@ CLASS lhc_runbooklink IMPLEMENTATION.
         IF zcl_ca_ops_cfg_checks=>link_valid( ls_row-RunbookUrl ) = abap_false.
           INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-url_invalid v1 = ls_row-RunbookUrl
                           element = lif_c=>gc_el-runbookurl ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-runbooklink_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-response ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-response
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
         ENDIF.
       ENDIF.
 
@@ -2417,6 +2490,13 @@ CLASS lhc_correlationrule IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-corr_window_invalid v1 = ls_row-WindowMin
                         element = lif_c=>gc_el-windowmin ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-correlationrule_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-response ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-response
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-correlationrule.
@@ -2530,6 +2610,16 @@ CLASS lhc_linklayer IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-LayerKind
                         v2 = lif_c=>gc_el-layerkind v3 = lif_c=>gc_val-linklayer_layerkind
                         element = lif_c=>gc_el-layerkind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-LayerKind )
+                                        iv_list  = lif_c=>gc_when-linklayer_layer_kind_c ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                          iv_list  = lif_c=>gc_when-linklayer_active_x ) = abap_true.
+          IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-links ) = abap_false.
+            INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-links
+                            element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+          ENDIF.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
@@ -3327,6 +3417,13 @@ CLASS lhc_catalogpackage IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-MonArea
                         element = lif_c=>gc_el-monarea ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-catalogpackage_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>package_licensed( ls_row-PkgId ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = ls_row-PkgId
+                          element = lif_c=>gc_el-pkgid ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogpackage.
@@ -3956,6 +4053,13 @@ CLASS lhc_catalogactivation IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-approver_invalid v1 = ls_row-ApprovedBy
                         element = lif_c=>gc_el-approvedby ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-catalogactivation_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>cat_process_licensed( ls_row-ProcessId ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = ls_row-ProcessId
+                          element = lif_c=>gc_el-processid ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-catalogactivation.
@@ -4068,6 +4172,13 @@ CLASS lhc_breakaccount IMPLEMENTATION.
                                            iv_any_allowed = abap_false ) = abap_false.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
                         element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-breakaccount_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-breaks ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-breaks
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
@@ -4640,6 +4751,13 @@ CLASS lhc_accountflow IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Direction
                         v2 = lif_c=>gc_el-direction v3 = lif_c=>gc_val-accountflow_direction
                         element = lif_c=>gc_el-direction ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-accountflow_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-flow ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-flow
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

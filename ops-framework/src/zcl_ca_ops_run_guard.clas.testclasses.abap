@@ -11,6 +11,8 @@
 *& 2026-11-10 | Refusal saved in its own LUW and ALERT_FAILED on a failing dispatch; abort( ): rollback,
 *&            | aborted run with RUN_ABORTED (trace, error class), durable before the ON_ABORT dispatch.
 *& 2026-11-10 | Moved from ZCL_CD_OPS_RUN_GUARD to the reusable framework ZCA_OPS (test include).
+*& 2026-11-15 | refuse_license: persisted, aborted run of the module with LICENSE_REFUSED, committed before
+*&            | it is alerted (licensing).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -34,6 +36,11 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
+  METHOD zif_ca_ops_store~start_run.
+    rs_run-area    = iv_area.
+    rs_run-variant = iv_variant.
+    rs_run-status  = zif_ca_ops_types=>gc_run_status-running.
+  ENDMETHOD.
   METHOD zif_ca_ops_store~save_findings.
     INSERT LINES OF it_findings INTO TABLE mt_saved.
     cs_run-finding_count += lines( it_findings ).
@@ -110,6 +117,7 @@ CLASS ltc_run_guard DEFINITION FINAL FOR TESTING
     METHODS abort_keeps_trace_and_class FOR TESTING.
     METHODS abort_durable_before_alert FOR TESTING.
     METHODS abort_alert_failure_kept   FOR TESTING.
+    METHODS licence_refusal_persisted  FOR TESTING.
 
     METHODS abort_run
       RETURNING
@@ -311,6 +319,25 @@ CLASS ltc_run_guard IMPLEMENTATION.
     INSERT ls_finding INTO TABLE lt_findings.
     cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_run_guard=>was_refused( lt_findings )
                                        msg = 'Other findings are not a refusal' ).
+  ENDMETHOD.
+
+  METHOD licence_refusal_persisted.
+    DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse_license(
+                         iv_area     = ms_run-area
+                         is_decision = VALUE #( module    = zif_ca_ops_lic_types=>gc_module-breaks
+                                                state     = zif_ca_ops_lic_types=>gc_state-expired
+                                                lic_state = zif_ca_ops_lic_types=>gc_lic_state-valid )
+                         iv_entry    = 'ZCA_OPS_BRK_RUN' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-status exp = zif_ca_ops_types=>gc_run_status-aborted ).
+    cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-rag exp = zif_ca_ops_types=>gc_rag-red ).
+    cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-variant exp = 'BREAKS' ).
+    cl_abap_unit_assert=>assert_equals( act = lines( mo_store->mt_saved ) exp = 1 ).
+    cl_abap_unit_assert=>assert_equals( act = mo_store->mt_saved[ 1 ]-check_code
+                                        exp = zif_ca_ops_lic_types=>gc_code-refused ).
+    cl_abap_unit_assert=>assert_equals( act = ls_refusal-findings[ 1 ]-reference exp = 'ZCA_OPS_BRK_RUN' ).
+    " durable before notified, alerted once
+    cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatch_calls exp = 1 ).
+    cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_commits_at_dispatch exp = 1 ).
   ENDMETHOD.
 
 ENDCLASS.

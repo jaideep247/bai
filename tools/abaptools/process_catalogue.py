@@ -13,8 +13,11 @@ Packages (one JSON spec per package, ranked; a higher rank may depend on and swi
   C  customer layer     the customer's own processes and its activation rows
 
 Spec (JSON) of a package:
-  package     {id, kind S|I|C, rank, prefix, mon_area, description, owner, active, auth_role}
+  package     {id, kind S|I|C, rank, prefix, mon_area, description, owner, active, auth_role,
+               license_module (product packages: the licensable module of ops-framework/config/licensing/modules.json
+               the package belongs to - validated by tools/abaptools/licensing.py, not here)}
   processes   [{id, name, component, card, owner_role, schedule, default_active, verify, seq,
+               license_module (optional: a process licensed on its own, e.g. FSCD_FSRI),
                steps [{kind T|P|M|J|E, name, description, verify}],
                tables [{name, role H|I|L|S|C, link_object, description, verify}],
                depends_on [{id, kind H|S, description}],
@@ -50,6 +53,7 @@ out-of-date output.
 
 Modification log:
 2026-11-11 | Initial version (process catalogue with activation).
+2026-11-15 | Spec keys license_module of a product package / process (licensing, read by licensing.py). Output unchanged.
 """
 import csv
 import importlib.util

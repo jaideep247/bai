@@ -16,6 +16,8 @@
 *& written. Read-only towards business data: no posting, no clearing.
 *& Modification log:
 *& 2026-11-11 | Initial version (build F: clearing-account break analysis).
+*& 2026-11-15 | Licensing: module BREAKS gated at the start (ZIF_CA_OPS_LICENSE=>GATE; refused under LIC_ENFORCE =
+*&            | X with message 352 and a recorded refused run, nothing read or written).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - clearing-account break analysis</p>
 "! Memory is bounded by BRK_MAX_GROUPS groups and BRK_MAX_ITEMS lines per account; the busiest account is read
@@ -120,6 +122,10 @@ CLASS zcl_ca_ops_brk_analyzer IMPLEMENTATION.
   METHOD analyze.
     zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
                                             iv_area     = iv_area ).
+    " licence of the module (refused only under LIC_ENFORCE = X: 352, recorded as a refused run)
+    zcl_ca_ops_factory=>get_license( )->gate( iv_module = zif_ca_ops_lic_types=>gc_module-breaks
+                                              iv_area   = iv_area
+                                              iv_entry  = 'ZCA_OPS_BRK_RUN' ).
     DATA(lo_dao) = zcl_ca_ops_factory=>get_brk_dao( ).
     DATA(ls_config) = read_config( iv_area ).
     DATA(lt_off) = zcl_ca_ops_factory=>get_catalog( )->inactive_onboarded(

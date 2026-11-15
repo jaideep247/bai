@@ -17,6 +17,7 @@
 *& 2026-11-11 | INJECT_CATALOG, INJECT_CAT_DAO (process catalogue).
 *& 2026-11-11 | INJECT_BRK_DAO (clearing-account break analysis).
 *& 2026-11-15 | INJECT_FLOW_DAO (account flow reconciliation).
+*& 2026-11-15 | INJECT_LICENSE (licensing).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - test injector for the factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -89,6 +90,11 @@ CLASS zcl_ca_ops_injector DEFINITION
     CLASS-METHODS inject_flow_dao
       IMPORTING
         io_dao TYPE REF TO zif_ca_ops_flow_dao.
+
+    "! Licence API (2026-11-15)
+    CLASS-METHODS inject_license
+      IMPORTING
+        io_license TYPE REF TO zif_ca_ops_license.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -188,6 +194,11 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_license.
+    zcl_ca_ops_factory=>go_license_double = io_license.
+  ENDMETHOD.
+
+
   METHOD inject_plugin.
     DATA(lv_name) = CONV zif_ca_ops_types=>ty_class_name( to_upper( condense( CONV string( iv_class_name ) ) ) ).
     DELETE zcl_ca_ops_factory=>gt_plugin_double
@@ -220,6 +231,7 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
            zcl_ca_ops_factory=>go_cat_dao_double,
            zcl_ca_ops_factory=>go_brk_dao_double,
            zcl_ca_ops_factory=>go_flow_dao_double,
+           zcl_ca_ops_factory=>go_license_double,
            zcl_ca_ops_factory=>gt_plugin_double,
            zcl_ca_ops_factory=>gv_param_version_double,
            zcl_ca_ops_factory=>gv_version_ok,

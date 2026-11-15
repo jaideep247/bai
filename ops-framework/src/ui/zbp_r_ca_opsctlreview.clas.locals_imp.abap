@@ -13,6 +13,8 @@
 *& 2026-11-10 | Company-code isolation: a row is a slice (control, date, company code); the sign-off needs
 *&            | ZCA_OPS 02 for the area and, for a company-code slice, that BUKRS (ZCL_CA_OPS_EXC_POLICY=>
 *&            | MAY_ACT); lock and save per slice.
+*& 2026-11-15 | Licensing: the sign-off is work of the module CONTROL - refused under LIC_ENFORCE = X while the
+*&            | licence does not cover it (message 352); reading the review is never refused.
 *&---------------------------------------------------------------------*
 CLASS lhc_review DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -74,7 +76,21 @@ CLASS lhc_review IMPLEMENTATION.
       ENTITY Review ALL FIELDS WITH CORRESPONDING #( keys )
       RESULT DATA(lt_reviews).
     DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
+    " licence of the module CONTROL (refused only under LIC_ENFORCE = X); the review stays readable
+    DATA(ls_licence) = zcl_ca_ops_factory=>get_license( )->decide( zif_ca_ops_lic_types=>gc_module-control ).
     LOOP AT lt_reviews INTO DATA(ls_review).
+      IF ls_licence-allowed = abap_false.
+        INSERT VALUE #( %tky = ls_review-%tky ) INTO TABLE failed-review.
+        INSERT VALUE #( %tky = ls_review-%tky
+                        %msg = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                            number   = zif_ca_ops_lic_types=>gc_msg-gate_refused
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'markReviewed'
+                                            v2       = ls_licence-module
+                                            v3       = ls_licence-state ) )
+          INTO TABLE reported-review.
+        CONTINUE.
+      ENDIF.
       DATA(ls_key) = keys[ KEY id %tky = ls_review-%tky ].
       DATA(ls_input) = VALUE zif_ca_ops_ctl_types=>ty_review_input( derived_status = ls_review-ControlStatus
                                                                      review_result  = ls_key-%param-ReviewResult

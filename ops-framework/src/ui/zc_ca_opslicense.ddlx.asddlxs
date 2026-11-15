@@ -1,0 +1,67 @@
+// UI annotations: installed licences (service ZUI_CA_OPS_LIC, 2026-11-15)
+// List report of the active licence and its history (replaced licences are kept): what it binds, who installed it.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Installed licence', typeNamePlural: 'Installed licences',
+                  title: { type: #STANDARD, value: 'LicenseId' }, description: { value: 'Customer' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'InstalledAt', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsLicense with
+{
+  @UI.hidden: true
+  LicenseUuid;
+  @UI.hidden: true
+  Area;
+  @EndUserText.label: 'Licence'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  LicenseId;
+  @EndUserText.label: 'Customer'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 20 } ]
+  Customer;
+  @EndUserText.label: 'Active'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, criticality: 'ActiveCriticality' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  IsActive;
+  @EndUserText.label: 'State at installation'
+  @UI.identification: [ { position: 30 } ]
+  StateAtInstall;
+  @EndUserText.label: 'Installations'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  Installations;
+  @EndUserText.label: 'Systems (SID/client)'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  Systems;
+  @EndUserText.label: 'Product version from'
+  @UI.identification: [ { position: 60 } ]
+  VersionFrom;
+  @EndUserText.label: 'Product version to'
+  @UI.identification: [ { position: 70 } ]
+  VersionTo;
+  @EndUserText.label: 'Grace days'
+  @UI.identification: [ { position: 80 } ]
+  GraceDays;
+  @EndUserText.label: 'Issued at'
+  @UI.identification: [ { position: 90 } ]
+  IssuedAt;
+  @EndUserText.label: 'Signer'
+  @UI.identification: [ { position: 100 } ]
+  Signer;
+  @EndUserText.label: 'File'
+  @UI.identification: [ { position: 110 } ]
+  FileName;
+  @EndUserText.label: 'Installed by'
+  @UI.lineItem: [ { position: 60, importance: #LOW } ]
+  InstalledBy;
+  @EndUserText.label: 'Installed at'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  InstalledAt;
+  @EndUserText.label: 'Replaced at'
+  @UI.lineItem: [ { position: 80, importance: #LOW } ]
+  ReplacedAt;
+  @UI.hidden: true
+  ActiveCriticality;
+}

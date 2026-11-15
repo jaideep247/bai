@@ -9,7 +9,8 @@
   "description": "Industry package: SAP FS-CD standard processes",
   "owner": "OPS FRAMEWORK",
   "active": true,
-  "auth_role": "‹PFCG role of the area›"
+  "auth_role": "‹PFCG role of the area›",
+  "license_module": "CATALOGUE_FSCD"
  },
  "processes": [
   {
@@ -380,6 +381,7 @@
   },
   {
    "id": "FSCD_FSRI",
+   "license_module": "CATALOGUE_FSRI",
    "name": "Reinsurance integration (FS-RI)",
    "component": "FS-CD",
    "card": "INSURANCE",

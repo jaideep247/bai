@@ -40,6 +40,8 @@ Modification log:
            | profile's PREFIX) required - no consumer prefix as default. Output unchanged.
 2026-11-11 | Spec key of the app's parameter / authorisation area is now 'area' (the old key named a
            | consumer-specific abbreviation). Output unchanged.
+2026-11-15 | Check kind 'module' (licence of the operations framework: activation of a row of an unlicensed
+           | module refused on save, message license_refused). Output unchanged for apps without it.
 """
 import os, re
 
@@ -82,6 +84,11 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         (ZCL_CA_OPS_CFG_CHECKS=>AREA_VALID; one area register) - message 435 (framework app)
 #         ('param', area_field, name_field): the parameter is defined in ZCA_PARAM
 #         (ZCL_CA_OPS_CFG_CHECKS=>PARAM_EXISTS) - message 434 (framework app)
+#         ('module', code): licence of the operations framework (2026-11-15) - only inside a 'when'
+#         (usually ('when', 'active', 'X', ...)): the row may be saved so only while the module is licensed
+#         (ZCL_CA_OPS_CFG_CHECKS=>MODULE_LICENSED; refused under LIC_ENFORCE = X only) - message
+#         gc_msg-license_refused on the element of the enclosing condition. A row whose module follows from a
+#         field uses ('valid', field, 'zcl_ca_ops_cfg_checks=><x>_licensed', 'license_refused') instead
 #         ('approved', field, table_field): the field of the table must be approved in the
 #         consumer's approved-table list (field-level lookup approval of the consumer's
 #         ZCL_<p>_OPS_CFG_CHECKS=>LOOKUP_APPROVED, the runtime check; consumer apps only) - message 812
@@ -573,6 +580,12 @@ def abap_check(t, chk, root, when=None):
                 f"                                           iv_name = ls_row-{n} ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}param_invalid v1 = ls_row-{n} v2 = ls_row-{a}",
                 f"                      element = {el(n)} ) INTO TABLE lt_msg.",
+                '    ENDIF.']
+    if kind == 'module':
+        code = const('mod', chk[1], chk[1])
+        return [f"    IF zcl_ca_ops_cfg_checks=>module_licensed( {code} ) = abap_false.",
+                f"      INSERT VALUE #( number = {msg}license_refused v1 = {code}",
+                f"                      element = {el(when[0])} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'positive':
         e = fmap[chk[1]]

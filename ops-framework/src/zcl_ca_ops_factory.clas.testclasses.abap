@@ -14,6 +14,7 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | injected_check_dao_returned, real_check_dao_created (check registry, process onboarding).
 *& 2026-11-11 | injected_downtime_returned, real_downtime_created (planned downtime API).
+*& 2026-11-15 | injected_license_returned (licensing).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -65,6 +66,15 @@ CLASS ltd_downtime IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS ltd_license DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_license PARTIALLY IMPLEMENTED.
+ENDCLASS.
+
+CLASS ltd_license IMPLEMENTATION.
+ENDCLASS.
+
+
 CLASS ltc_factory DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -83,6 +93,7 @@ CLASS ltc_factory DEFINITION FINAL FOR TESTING
     METHODS real_check_dao_created       FOR TESTING.
     METHODS injected_downtime_returned   FOR TESTING.
     METHODS real_downtime_created        FOR TESTING.
+    METHODS injected_license_returned    FOR TESTING.
     METHODS unrelated_class_not_created  FOR TESTING.
     METHODS matching_interface_creates   FOR TESTING.
     METHODS unknown_interface_refused    FOR TESTING.
@@ -202,6 +213,18 @@ CLASS ltc_factory IMPLEMENTATION.
     zcl_ca_ops_injector=>inject_downtime( lo_double ).
     cl_abap_unit_assert=>assert_equals( act = zcl_ca_ops_factory=>get_downtime( ) exp = lo_double
                                         msg = 'Injected downtime double must be returned' ).
+  ENDMETHOD.
+
+
+  " The licence API is injectable: the double is returned while injected, the real class after the reset
+  METHOD injected_license_returned.
+    DATA(lo_double) = NEW ltd_license( ).
+    zcl_ca_ops_injector=>inject_license( lo_double ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_ca_ops_factory=>get_license( ) exp = lo_double
+                                        msg = 'Injected licence double must be returned' ).
+    zcl_ca_ops_injector=>reset( ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( zcl_ca_ops_factory=>get_license( ) IS INSTANCE OF zcl_ca_ops_license )
+                                      msg = 'The real licence API after the reset' ).
   ENDMETHOD.
 
 

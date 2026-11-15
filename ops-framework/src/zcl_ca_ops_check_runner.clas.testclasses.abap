@@ -16,6 +16,8 @@
 *&            | finding PROCESS_INACTIVE, not reconciled); the catalogue is a local double.
 *& 2026-11-11 | Explainable, versioned results: the configuration version of the run on every finding (registry
 *&            | row and the check's own rows), another version when a row changes, a version set by the check kept.
+*& 2026-11-15 | Licensing: a check of a module the licence refuses (X) is not run - LICENSE_REFUSED, not reconciled;
+*&            | under W it runs and the run warns once (LICENSE_UNLICENSED); the licence is a local double.
 *&---------------------------------------------------------------------*
 CLASS ltd_check DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -72,6 +74,28 @@ CLASS ltd_catalog IMPLEMENTATION.
   METHOD zif_ca_ops_catalog~inactive_onboarded.
     mv_date = iv_date.
     rt_processes = mt_off.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_license DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_license PARTIALLY IMPLEMENTED.
+    "! Modules every check needs and the decision for them (default: nothing needed)
+    DATA mt_modules TYPE zif_ca_ops_lic_types=>tt_module.
+    DATA ms_decision TYPE zif_ca_ops_lic_types=>ty_decision.
+ENDCLASS.
+
+CLASS ltd_license IMPLEMENTATION.
+  METHOD zif_ca_ops_license~modules_of_check.
+    rt_modules = mt_modules.
+  ENDMETHOD.
+  METHOD zif_ca_ops_license~decide.
+    rs_decision = ms_decision.
+    rs_decision-module = iv_module.
+  ENDMETHOD.
+  METHOD zif_ca_ops_license~status.
+    rs_status-license_id = 'ZT-LIC-0001'.
   ENDMETHOD.
 ENDCLASS.
 
@@ -231,6 +255,7 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
     DATA mo_auth TYPE REF TO ltd_auth.
     DATA mo_lock TYPE REF TO ltd_lock.
     DATA mo_catalog TYPE REF TO ltd_catalog.
+    DATA mo_license TYPE REF TO ltd_license.
 
     METHODS setup.
     METHODS teardown.
@@ -256,6 +281,8 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
     METHODS active_process_runs          FOR TESTING.
     METHODS config_version_stamped       FOR TESTING.
     METHODS own_version_kept             FOR TESTING.
+    METHODS unlicensed_check_refused     FOR TESTING.
+    METHODS unlicensed_check_warns_w     FOR TESTING.
 ENDCLASS.
 
 
@@ -271,6 +298,8 @@ CLASS ltc_runner IMPLEMENTATION.
     mo_auth  = NEW #( ).
     mo_lock  = NEW #( ).
     mo_catalog = NEW #( ).
+    mo_license = NEW #( ).
+    zcl_ca_ops_injector=>inject_license( mo_license ).
     zcl_ca_ops_injector=>inject_check_dao( mo_dao ).
     zcl_ca_ops_injector=>inject_catalog( mo_catalog ).
     zcl_ca_ops_injector=>inject_store( mo_store ).
@@ -527,6 +556,59 @@ CLASS ltc_runner IMPLEMENTATION.
         run( ).
         cl_abap_unit_assert=>assert_equals( act = mo_store->mt_saved[ 1 ]-cfg_version exp = 'SNAPSHOT_VERSION'
                                             msg = 'Version of the check kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Rule: under LIC_ENFORCE = X a check of a module the licence does not cover is not run - one error finding
+  " LICENSE_REFUSED naming the module, no reconcile (its open exceptions stay open)
+  METHOD unlicensed_check_refused.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        mo_license->mt_modules = VALUE #( ( zif_ca_ops_lic_types=>gc_module-jobs ) ).
+        mo_license->ms_decision = VALUE #( state     = zif_ca_ops_lic_types=>gc_state-expired
+                                           lic_state = zif_ca_ops_lic_types=>gc_lic_state-valid
+                                           allowed   = abap_false ).
+        DATA(ls_result) = run( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ok->mv_calls exp = 0 msg = 'The refused check did not run' ).
+        DATA(ls_refused) = mo_store->mt_saved[ check_code = zif_ca_ops_lic_types=>gc_code-refused ].
+        cl_abap_unit_assert=>assert_equals( act = ls_refused-severity exp = zif_ca_ops_types=>gc_severity-error
+                                            msg = 'A refusal is an error of the run' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_refused-reference exp = 'JOBS' msg = 'It names the module' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_refused-group2 exp = gc-check_ok msg = 'It names its check' ).
+        cl_abap_unit_assert=>assert_false( act = mo_store->mv_reconciled msg = 'Open exceptions stay open' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-check_count exp = 0 msg = 'No check counted as run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: under W (the delivered default) the check runs; the run warns once that an installed licence does not
+  " cover the module
+  METHOD unlicensed_check_warns_w.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        mo_license->mt_modules = VALUE #( ( zif_ca_ops_lic_types=>gc_module-jobs ) ).
+        mo_license->ms_decision = VALUE #( state     = zif_ca_ops_lic_types=>gc_state-unlicensed
+                                           lic_state = zif_ca_ops_lic_types=>gc_lic_state-valid
+                                           allowed   = abap_true
+                                           warn      = abap_true ).
+        run( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ok->mv_calls exp = 1 msg = 'The check ran' ).
+        DATA(ls_warning) = mo_store->mt_saved[ check_code = zif_ca_ops_lic_types=>gc_code-unlicensed ].
+        cl_abap_unit_assert=>assert_equals( act = ls_warning-severity exp = zif_ca_ops_types=>gc_severity-warning
+                                            msg = 'A warning' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_warning-action exp = zif_ca_ops_types=>gc_action-notify
+                                            msg = 'No owned exception' ).
+        " no licence installed at all: no per-run warning (the licence check reports it)
+        CLEAR mo_store->mt_saved.
+        mo_license->ms_decision-lic_state = zif_ca_ops_lic_types=>gc_lic_state-missing.
+        run( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_ca_ops_lic_types=>gc_code-unlicensed ] ) )
+          msg = 'No warning per run while no licence is installed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

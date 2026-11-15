@@ -11,6 +11,7 @@
 *& job cancelled.
 *& Modification log:
 *& 2026-11-11 | Initial version (operations response features: escalation until acknowledged).
+*& 2026-11-15 | Licensing: module RESPONSE gated first (refused only under LIC_ENFORCE = X, message 352).
 *&---------------------------------------------------------------------*
 REPORT zca_ops_escalate.
 
@@ -27,6 +28,10 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD main.
     TRY.
+        " licence of the module RESPONSE (refused only under LIC_ENFORCE = X: 352, recorded as a refused run)
+        zcl_ca_ops_factory=>get_license( )->gate( iv_module = zif_ca_ops_lic_types=>gc_module-response
+                                                  iv_area   = p_area
+                                                  iv_entry  = sy-repid ).
         DATA(ls_result) = zcl_ca_ops_factory=>get_alert( )->escalate( p_area ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
         " in background the job ends cancelled (scheduler red), never green
