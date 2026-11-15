@@ -351,7 +351,7 @@ its own export or SE11 shows them. Index proposals below are **recommendations o
 
 | Table | Secondary indexes on the reference system | What it means for section 8 | Recommendation |
 |---|---|---|---|
-| `FEBEP` | none (key KUKEY, ESNUM) | No index on CHECT: the EBS / trace / dashboard reads by CHECT are column scans | Index on CHECT if ST05 / PlanViz shows a scan at volume |
+| `FEBEP` | none (key KUKEY, ESNUM) | No index on CHECT, which carries the cheque number on cheque lines (user, 2026-11-15) and the payment reference on transfer lines: the EBS / trace / dashboard reads by CHECT are column scans | Index on CHECT if ST05 / PlanViz shows a scan at volume |
 | `DPAYH` | H8H: DOC1R (key LAUFD, LAUFI, ORIGN, XVORL, PAYNO, SUBNO) | DOC1R index exists (R07, payment outcome, `A_INFLIGHT` by document); run date reads use the key (V68: the run key LAUFD + LAUFI is the start of the primary key) | - |
 | `DFKKCR` | none (key HERKF, ORG1T, ORG1R, HBKID, HKTID, ZTART, ZTNUM) | No index on DOC1R; ZTNUM is the last key field (a read by ZTNUM alone is not a key read) | Index on DOC1R (and on ZTNUM if the cheque search is slow) |
 | `DFKKRP` | 001 KLAEB, 002 OPBEL, 003 RLBEL (key KEYR1, POSRA) | No index on SELW1 (R07R / R07L, `GET_BANK_DAYS_NO_LOT` anti-join, dashboard returns) | Index on SELW1 |
