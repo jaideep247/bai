@@ -40,6 +40,26 @@ different results; a failed query is "not evaluated", never "OK".
 | P1 | FI-CA collections and standard FS-CD pack | dunning / clarification and two standard FS-CD flows; one insurance overlay through the extension points | later |
 | P2 | Utilities, telecom and PS-CD pilots | one industry at a time on a representative landscape | later |
 
+## 2a. Review coverage (every point of the review, where it is handled)
+
+| Review point | Handled by | Gap still open |
+|---|---|---|
+| Blank-slate install, versioned delivery, collisions, import order, upgrade, rollback (finding 1, P0) | build M | SAP run of the install harness on A4H, then DV1 |
+| V161 posting-area mapping (finding 2) | build L (ZBTM on a typed table, user decision) | - |
+| Expected / observed / unknown on **every** control; alert delivery confirmed separately from submission (finding 3) | builds K and N for their own controls | **O**: framework-wide evaluation state (expected scope, freshness, watermark, completeness, last valid result, reason) for all existing checks; delivery confirmation of alerts; monitor-coverage state when a licensed module is impaired or disabled |
+| Customer extensions proven before more screens; identity beyond a shared document number (system, client, company code, fiscal year); ambiguous matches shown (finding 4, P0 gates) | build H (contract), build K (second setup) | **Q**: intake flow and payment reference added by configuration for customer XX; ambiguous-match view in the walker; authorisation and cardinality tests |
+| Reference insurance implementation gaps: ECT pending, BlackLine extract monitoring, base-rejected and missing-check-ID controls, returns source notification (finding 5) | - | **R**: first customer's pilot acceptance items (suite only) |
+| Batch: expected runs when the scheduler never starts SAP; FI-CA mass-activity intervals and their document output (scorecard 1) | - | **P**: expected-run evidence from the scheduler adapter; mass-activity interval check (FKKMAKO / FKKMAZE) with partial-output detection |
+| Payment file lifecycle, acknowledgement granularity, reissue and duplicate exposure (P0) | build K | SAP proof |
+| Cash controls: payment run, lots, returns, statement, clearing reset, G/L transfer (P0) | build N | three-way reconciliation and account flow already exist; SAP proof |
+| Configuration preview and rollback, missing DDIC objects, two-user isolation across Fiori, exports, alerts and ticket links, volume (P0 gates) | builds M / N in part | **Q** (preview / rollback, missing DDIC, isolation across exports and ticket links); volume in QA1 |
+| Responder acknowledgement separate from assignment; ticket synchronisation; repeat incidents (daily operations, P1) | - | R1-D5, then P1 |
+| Bank statement parser qualified by message version and bank profile | - | P1 (bank profile matrix) |
+| Request, attempt, payment, file and journal line kept as distinct objects; one-to-many navigation (payment trace) | payment trace, build K evidence rows | check during build K merge |
+| Catalogue milestones tracked apart: catalogue entry, runnable check, platform-validated, customer-activated | - | part of **O** (a status column per catalogue process) |
+| FI-CA collections, FS-CD pack (P1); IS-U, BRIM, PS-CD (P2) | - | after Release 1 |
+| Redistribution review of the shipped set (finding 1) | build M blank-slate check (technical part) | R1-D3 (legal part) |
+
 ## 3. Acceptance: the demo scorecard (review section 5)
 
 The same fixtures run against this product and any shortlisted alternative.
