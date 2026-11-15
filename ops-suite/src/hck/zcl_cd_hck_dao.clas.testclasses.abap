@@ -30,6 +30,8 @@
 *& 2026-11-11 | jobs_monitored_by_area (SAP job monitor, area CD_JOBS: de-duplication of E_JOBS).
 *& 2026-11-11 | D-C8: gl_gap_per_company_and_type doubles the G/L document header on ZI_CD_OpsJrnlEntry
 *&            | (released I_JournalEntry) instead of BKPF; same documents and assertions.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -120,7 +122,7 @@ CLASS ltc_dao IMPLEMENTATION.
                                                                             ( 'ZCA_OPS_RUN' )
                                                                             ( 'TBTCO' )
                                                                             ( 'TBTCP' )
-                                                                            ( 'DFKKSUMC' )
+                                                                            ( 'DFKKSUM' )
                                                                             ( 'DFKKKO' )
                                                                             ( 'ZI_CD_OPSJRNLENTRY' )
                                                                             ( 'ZCD_OPS_TABWL' )
@@ -628,8 +630,8 @@ CLASS ltc_dao IMPLEMENTATION.
   " Audit A43: a GL document only closes the gap for its company code, of the transfer
   " reference type, unreversed; the total count ignores the display cap
   METHOD gl_gap_per_company_and_type.
-    DATA lt_sumc TYPE STANDARD TABLE OF dfkksumc WITH EMPTY KEY.
-    DATA ls_sumc TYPE dfkksumc.
+    DATA lt_sum TYPE STANDARD TABLE OF dfkksum WITH EMPTY KEY.
+    DATA ls_sum TYPE dfkksum.
     DATA lt_kko TYPE STANDARD TABLE OF dfkkko WITH EMPTY KEY.
     DATA ls_kko TYPE dfkkko.
     DATA lt_docs TYPE STANDARD TABLE OF zi_cd_opsjrnlentry WITH EMPTY KEY.
@@ -637,17 +639,17 @@ CLASS ltc_dao IMPLEMENTATION.
     CONSTANTS lc_awtyp TYPE awtyp VALUE 'FKKSU'.
     TRY.
         " K1 transferred for US01 only; K2 only by a document of another type; K3 reversed
-        ls_sumc-fikey = 'K1'.
-        ls_sumc-bukrs = 'US01'.
-        INSERT ls_sumc INTO TABLE lt_sumc.
-        ls_sumc-bukrs = 'US02'.
-        INSERT ls_sumc INTO TABLE lt_sumc.
-        ls_sumc-fikey = 'K2'.
-        ls_sumc-bukrs = 'US01'.
-        INSERT ls_sumc INTO TABLE lt_sumc.
-        ls_sumc-fikey = 'K3'.
-        INSERT ls_sumc INTO TABLE lt_sumc.
-        go_env->insert_test_data( lt_sumc ).
+        ls_sum-fikey = 'K1'.
+        ls_sum-bukrs = 'US01'.
+        INSERT ls_sum INTO TABLE lt_sum.
+        ls_sum-bukrs = 'US02'.
+        INSERT ls_sum INTO TABLE lt_sum.
+        ls_sum-fikey = 'K2'.
+        ls_sum-bukrs = 'US01'.
+        INSERT ls_sum INTO TABLE lt_sum.
+        ls_sum-fikey = 'K3'.
+        INSERT ls_sum INTO TABLE lt_sum.
+        go_env->insert_test_data( lt_sum ).
         ls_kko-budat = gc_today.
         ls_kko-fikey = 'K1'.
         INSERT ls_kko INTO TABLE lt_kko.

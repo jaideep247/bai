@@ -8,7 +8,7 @@
 *& posting document), the G/L line view ZI_CD_HckRcGlLine over the released
 *& I_JournalEntryItem (per day and reference procedure), ACDOCA (deposit
 *& documents per assignment, assignment sums, groups that do not net to
-*& zero with the cap; the same journal lines in both doubles), DFKKSUMC and
+*& zero with the cap; the same journal lines in both doubles), DFKKSUM and
 *& DPAYH; empty key lists read nothing.
 *& No real database read; does not prove live SAP runtime behavior
 *& (VERIFY-DDIC field names, VERIFY-ADT: CDS entity and JOIN @itab doubles).
@@ -20,6 +20,9 @@
 *&            | - RECON / BAI2 entries only, never a lifecycle entry or a '*' entry.
 *& 2026-11-11 | D-C8: get_gl_days on ZI_CD_HckRcGlLine (released I_JournalEntryItem);
 *&            | the journal lines are inserted field by field into its double too.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency). A credit total (SHKZG H). DPAYH paying company code BBUKR and method RZAWE (DPAYH has no
+*&            | BUKRS / PYMET; reference system S/4HANA 2025).
 *&---------------------------------------------------------------------*
 CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -137,7 +140,7 @@ CLASS ltc_recon_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_HCK_RCSET' ) ( 'ZI_CD_HCKRCBANKLINE' ) ( 'ZI_CD_HCKRCGLLINE' )
-                                   ( 'DFKKRP' ) ( 'ACDOCA' ) ( 'DFKKSUMC' ) ( 'DPAYH' ) ) ).
+                                   ( 'DFKKRP' ) ( 'ACDOCA' ) ( 'DFKKSUM' ) ( 'DPAYH' ) ) ).
   ENDMETHOD.
 
 
@@ -325,29 +328,32 @@ CLASS ltc_recon_dao IMPLEMENTATION.
 
 
   METHOD insert_subledger.
-    DATA lt_sumc TYPE STANDARD TABLE OF dfkksumc WITH EMPTY KEY.
-    DATA ls_sumc TYPE dfkksumc.
+    DATA lt_sum TYPE STANDARD TABLE OF dfkksum WITH EMPTY KEY.
+    DATA ls_sum TYPE dfkksum.
     DATA lt_dpayh TYPE STANDARD TABLE OF dpayh WITH EMPTY KEY.
     DATA ls_dpayh TYPE dpayh.
-    ls_sumc-fikey = 'FK0001'.
-    ls_sumc-bukrs = gc_test-bukrs.
-    ls_sumc-hkont = gc_test-hkont.
-    ls_sumc-waers = gc_test-waers.
-    ls_sumc-budat = gc_test-day1.
-    ls_sumc-betrw = 100.
-    INSERT ls_sumc INTO TABLE lt_sumc.
-    ls_sumc-fikey = 'FK0002'.
-    ls_sumc-betrw = 30.
-    INSERT ls_sumc INTO TABLE lt_sumc.
-    ls_sumc-fikey = 'FK0003'.
-    ls_sumc-hkont = gc_test-other_gl.
-    INSERT ls_sumc INTO TABLE lt_sumc.
-    go_env->insert_test_data( lt_sumc ).
+    ls_sum-fikey = 'FK0001'.
+    ls_sum-bukrs = gc_test-bukrs.
+    ls_sum-hkont = gc_test-hkont.
+    ls_sum-waers = gc_test-waers.
+    ls_sum-budat = gc_test-day1.
+    ls_sum-shkzg = 'S'.
+    ls_sum-betrw = 100.
+    INSERT ls_sum INTO TABLE lt_sum.
+    ls_sum-fikey = 'FK0002'.
+    " a credit total: summed negative whatever the sign of the stored amount
+    ls_sum-shkzg = 'H'.
+    ls_sum-betrw = 30.
+    INSERT ls_sum INTO TABLE lt_sum.
+    ls_sum-fikey = 'FK0003'.
+    ls_sum-hkont = gc_test-other_gl.
+    INSERT ls_sum INTO TABLE lt_sum.
+    go_env->insert_test_data( lt_sum ).
 
     ls_dpayh-laufd = gc_test-day1.
     ls_dpayh-laufi = 'R00001'.
     ls_dpayh-doc1r = '000000300001'.
-    ls_dpayh-bukrs = gc_test-bukrs.
+    ls_dpayh-bbukr = gc_test-bukrs.
     ls_dpayh-hbkid = gc_test-hbkid.
     ls_dpayh-hktid = gc_test-hktid.
     ls_dpayh-waers = gc_test-waers.
@@ -481,7 +487,7 @@ CLASS ltc_recon_dao IMPLEMENTATION.
     TRY.
         DATA(lt_days) = mo_cut->get_fica_days( it_keys = keys( ) iv_from = gc_test-from iv_to = gc_test-to ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_days ) exp = 1 msg = 'One day of the account' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_days[ 1 ]-amount exp = 130 msg = 'Two keys summed' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_days[ 1 ]-amount exp = 70 msg = 'Debit 100 less credit 30 (SHKZG H)' ).
         cl_abap_unit_assert=>assert_equals( act = lt_days[ 1 ]-line_count exp = 2 msg = 'Two rows' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

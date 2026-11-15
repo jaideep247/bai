@@ -7,6 +7,8 @@
 *& DOC1R without proposal runs). Read-only.
 *& Modification log:
 *& 2026-11-11 | Initial version (reversal and reset-clearing tracking, build C).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - document-change reads (SQL)</p>
 CLASS zcl_cd_hck_docchg_dao DEFINITION
@@ -29,10 +31,10 @@ CLASS zcl_cd_hck_docchg_dao IMPLEMENTATION.
     ENDIF.
     " Reversal evidence of the trace and the snapshot source REVERSALS: DFKKKO-STBEL on the payment
     " document's header. VERIFY-SE11: DFKKKO-STBEL / CPUDT / FIKEY (index on CPUDT as the snapshot,
-    " Performance_Review.md section 10); DPAYH-XVORL / BUKRS / RWBTR / WAERS / ZZ_PAYMENT_STATUS by DOC1R
+    " Performance_Review.md section 10); DPAYH-XVORL / BBUKR / RWBTR / WAERS / ZZ_PAYMENT_STATUS by DOC1R
     " (index VERIFY-SE11, as the runtime DAO). One statement, no SELECT per payment.
     SELECT o~opbel AS payment_doc, o~stbel AS reversal_doc, r~fikey, r~cpudt AS reversed_on,
-           p~laufd, p~laufi, p~bukrs, p~zz_payment_status AS status, p~rwbtr AS amount, p~waers AS currency
+           p~laufd, p~laufi, p~bbukr AS bukrs, p~zz_payment_status AS status, p~rwbtr AS amount, p~waers AS currency
       FROM dfkkko AS o
       INNER JOIN dfkkko AS r ON r~opbel = o~stbel
       INNER JOIN dpayh AS p ON p~doc1r = o~opbel

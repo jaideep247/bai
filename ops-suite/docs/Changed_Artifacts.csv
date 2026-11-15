@@ -1,4 +1,5 @@
 Artifact,Type,Purpose
+CHANGELOG.md,Doc,
 README.md,Doc,
 abaplint.atc.json,Doc,
 abaplint.json,Doc,
@@ -114,6 +115,7 @@ config/samples/bai2_sample.txt,Config,
 config/samples/camt053_sample.xml,abapGit,
 config/samples/camt054_returns_sample.xml,abapGit,
 ddic/README.md,Doc,
+ddic/open_fields.csv,Doc,
 ddic/a4h/ACDOCA.acds,Other,
 ddic/a4h/ACDOCA.fields.csv,Doc,
 ddic/a4h/ACDOCA.indexes.csv,Doc,

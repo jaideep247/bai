@@ -49,6 +49,8 @@
 *& 2026-11-11 | Decision D-C8 extended: get_fikeys_without_gl / count_fikeys_without_gl test the G/L document on
 *&            | the released I_JournalEntry (through ZI_CD_OpsJrnlEntry, no DCL in a job read) - same reference
 *&            | type, key, company code and reversal rule.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -693,17 +695,19 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_fikeys_without_gl.
-    " confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY. A43: the GL document must be
+    " confirmed path DFKKSUM-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY. A43: the GL document must be
     " of the transfer reference type, for the same company code, and not reversed - an
     " unrelated document or the transfer of another company code no longer hides a gap.
-    "VERIFY-DDIC: DFKKSUMC-BUKRS, DFKKKO-BUDAT
+    " DFKKSUM = totals of a reconciliation key per company code (DFKKSUMC is the key and its status
+    " and has no company code); DFKKSUM-BUKRS / FIKEY, DFKKKO-BUDAT seen on the reference system
+    " S/4HANA 2025 (DFKKSUM index 1: FIKEY, BUKRS, BUDAT)
     "VERIFY-DDIC: AWTYP of the payment engine GL transfer (PARAM4, default FKKSU)
     " G/L document header on the released view I_JournalEntry through ZI_CD_OpsJrnlEntry (decision D-C8;
     " no DCL in a job read - a document filtered away would be a false gap): reference type / key / company
     " code / reverse document = BKPF AWTYP / AWKEY / BUKRS / STBLG; the predicate of the ledger model's
     " ZI_CD_LedgGlDoc. VERIFY-ADT element names: ZI_CD_OpsJrnlEntry; PlanViz GLV-PV2 (Performance_Review.md)
     SELECT DISTINCT s~fikey, s~bukrs
-      FROM dfkksumc AS s
+      FROM dfkksum AS s
       WHERE EXISTS ( SELECT fikey FROM dfkkko
                        WHERE fikey = s~fikey
                          AND budat BETWEEN @iv_from AND @iv_to )
@@ -721,7 +725,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~count_fikeys_without_gl.
     " same population as get_fikeys_without_gl, without the display cap (keys only)
     SELECT DISTINCT s~fikey, s~bukrs
-      FROM dfkksumc AS s
+      FROM dfkksum AS s
       WHERE EXISTS ( SELECT fikey FROM dfkkko
                        WHERE fikey = s~fikey
                          AND budat BETWEEN @iv_from AND @iv_to )

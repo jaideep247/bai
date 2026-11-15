@@ -4,8 +4,8 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-15"
   },
-  "passed": 34,
-  "total": 34,
+  "passed": 35,
+  "total": 35,
   "abap_files": 373,
   "declared_unit_methods": 1587,
   "measured_coverage": null,
@@ -79,7 +79,7 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (4048 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (4049 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
@@ -200,6 +200,12 @@
       "name": "extensions",
       "passed": true,
       "detail": "The customer pack config/extensions is valid against the inventory of extension points of the framework (ops-framework/config/extension_points.json) and the link registry: known points and anchors, prefix CD_, elements ZZCD_, \"to one\" links leaving the anchor's object, key objects of the overlay with every key mapped, registry fields only, no hidden field, masked fields masked, quota; VERIFY items keep an extension pending; the generated extend view entity sources and docs/extensions/extensions.md are up to date (tools/extensions.py).",
+      "failures": []
+    },
+    {
+      "name": "ddic_fields",
+      "passed": true,
+      "detail": "Field references compared with the table exports ddic/a4h, ddic/landscape_2026-11-15 (tools/abaptools/ddic_export.py compare): 73 customer field, 2252 exists, 4 missing, open; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.",
       "failures": []
     },
     {

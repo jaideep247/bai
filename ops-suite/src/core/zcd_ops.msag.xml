@@ -2670,7 +2670,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>732</MSGNR>
-     <TEXT>FIKEY &amp;1 has no summary record in DFKKSUMC</TEXT>
+     <TEXT>FIKEY &amp;1 has no totals record in DFKKSUM</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

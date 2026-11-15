@@ -8,6 +8,8 @@
 *& Tables DFKKKO and DPAYH are doubled; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-11 | Initial version (reversal and reset-clearing tracking, build C).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 CLASS ltc_docchg_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -84,7 +86,7 @@ CLASS ltc_docchg_dao IMPLEMENTATION.
     ls_run-laufi = iv_doc+6(6).
     ls_run-doc1r = iv_doc.
     ls_run-xvorl = iv_xvorl.
-    ls_run-bukrs = gc-bukrs.
+    ls_run-bbukr = gc-bukrs.
     INSERT ls_run INTO TABLE lt_runs.
     go_env->insert_test_data( lt_runs ).
   ENDMETHOD.

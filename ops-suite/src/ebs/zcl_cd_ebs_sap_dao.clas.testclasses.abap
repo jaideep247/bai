@@ -26,6 +26,7 @@
 *& 2026-11-11 | D-C8: the G/L balance lines are doubled on ZI_CD_EbsGlLine (released I_JournalEntryItem),
 *&            | the FI lines on ZI_CD_OpsGlItem (released I_OperationalAcctgDocItem); same data and
 *&            | assertions as with the ACDOCA / BSEG doubles.
+*& 2026-11-15 | Returns lot DFKKRK joined on its key KEYR1 (DFKKRK has no OPBEL); V159 / V160 noted.
 *&---------------------------------------------------------------------*
 CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -52,6 +53,7 @@ CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
         payment TYPE zif_cd_ebs_sap_dao=>ty_docno VALUE '000000012345',
         lot_doc TYPE zif_cd_ebs_sap_dao=>ty_docno VALUE '000000099999',
         noc_lot TYPE c LENGTH 12 VALUE 'NOC000000001',
+        ret_lot TYPE c LENGTH 12 VALUE 'RET000000001',
         rlgrd   TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE 'R01',
         flgrd   TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE 'C01',
         other_ref TYPE zif_cd_ebs_sap_dao=>ty_infof VALUE 'OTHER-REF',
@@ -99,13 +101,15 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     DATA ls_nrp TYPE dfkknrp.
 
     go_env->clear_doubles( ).
+    ls_rp-keyr1 = gc_test-ret_lot.
+    ls_rp-posra = 1.
     ls_rp-opbel = gc_test-lot_doc.
     ls_rp-selw1 = gc_test-payment.
     ls_rp-rlgrd = gc_test-rlgrd.
     ls_rp-betrw = '250.00'.
     INSERT ls_rp INTO TABLE lt_rp.
     go_env->insert_test_data( lt_rp ).
-    ls_rk-opbel = gc_test-lot_doc.
+    ls_rk-keyr1 = gc_test-ret_lot.
     ls_rk-stars = '5'.
     INSERT ls_rk INTO TABLE lt_rk.
     go_env->insert_test_data( lt_rk ).

@@ -14,6 +14,8 @@
 *& 2026-11-08 | Customer posting areas: TY_BTC_ROLE is an entry of ZBTR usage RECON.
 *& 2026-11-10 | TOLERANCE_SET (set tolerance maintained), tolerance source SET / PARAMETER, evidence metrics
 *&            | RC_BANK / RC_GL / RC_FICA / RC_TOLERANCE_SET / RC_TOLERANCE_PARAM per group-day, message 838.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency). Constant GC_SHKZG_CREDIT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation types</p>
 "! Shared by ZCL_CD_HCK_C_RECON3 (check), ZCL_CD_HCK_RECON_EVAL (pure rules) and
@@ -130,7 +132,7 @@ INTERFACE zif_cd_hck_recon_types
     END OF ty_gl_day.
   TYPES tt_gl_day TYPE STANDARD TABLE OF ty_gl_day WITH EMPTY KEY.
 
-  "! Payment engine G/L transfer totals (DFKKSUMC) of a clearing account per posting day
+  "! Payment engine G/L transfer totals (DFKKSUM) of a clearing account per posting day
   TYPES:
     BEGIN OF ty_fica_day,
       bukrs      TYPE ty_bukrs,
@@ -316,6 +318,8 @@ INTERFACE zif_cd_hck_recon_types
   CONSTANTS gc_check_id TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_RECON_3WAY'.
   "! Separator of the group key BUKRS/HKONT/WAERS (DIM1) and of finding object keys
   CONSTANTS gc_key_sep TYPE c LENGTH 1 VALUE '/'.
+  "! Debit / credit indicator SHKZG of a G/L transfer totals record (DFKKSUM): H = credit, summed negative
+  CONSTANTS gc_shkzg_credit TYPE c LENGTH 1 VALUE 'H'.
   "! Separator of the bucket list in a finding text
   CONSTANTS gc_list_sep TYPE string VALUE `,`.
   "! Last part of a finding object key <group>/<day or descriptor>/<leg>

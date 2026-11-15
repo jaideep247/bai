@@ -2,6 +2,7 @@
 
 Modification log:
 2026-11-15 | Initial version (table definitions from a landscape; repository field references checked against them).
+2026-11-15 | Code scanner (ABAP SQL, typed structures, CDS), open-fields list, several export folders.
 """
 import csv
 import json
@@ -99,13 +100,15 @@ class Compare(unittest.TestCase):
                     {'table': 'ZTAB', 'field': 'ABGRD', 'evidence': 'V', 'where': 'b'},
                     {'table': 'ZFULL', 'field': 'ZZ_REF', 'evidence': 'V', 'where': 'c'},
                     {'table': 'ZFULL', 'field': 'NOPE', 'evidence': 'C', 'where': 'd'},
-                    {'table': 'OTHER', 'field': 'X', 'evidence': 'V', 'where': 'e'}]
+                    {'table': 'OTHER', 'field': 'X', 'evidence': 'V', 'where': 'e'},
+                    {'table': 'ZFULL', 'field': '‹A FIELD›', 'evidence': 'V', 'where': 'f'}]
             states = {r['where']: r['state'] for r in ddic_export.compare(exports, refs)}
         self.assertEqual(states['a'], 'exists')
         self.assertTrue(states['b'].startswith('not in definition (may be in an include: CI_ZTAB'))
         self.assertEqual(states['c'], 'exists')            # a field list has includes and appends resolved
         self.assertEqual(states['d'], 'MISSING')
         self.assertEqual(states['e'], 'table not exported')
+        self.assertEqual(states['f'], 'placeholder (not compared)')   # a placeholder never fails
 
     def test_report_lists_missing_first_and_counts_the_rest(self):
         rows = [{'table': 'T', 'field': 'A', 'evidence': 'V', 'state': 'exists', 'where': 'w1'},
@@ -129,6 +132,224 @@ class Compare(unittest.TestCase):
         self.assertEqual([r for r in rows if r['state'] == 'MISSING'], [])
 
 
+TABLES = {'DPAYH', 'DFKKOP', 'DFKKKO', 'TFK042Z'}
+
+ABAP_SQL = """CLASS zcl_x IMPLEMENTATION.
+  METHOD read.
+    " a comment naming p~pymet is not code
+    SELECT p~laufd, p~pymet, z~xeinz, 'p~bukrs' AS lit
+      FROM dpayh AS p
+      INNER JOIN tfk042z AS z ON z~zlsch = p~pymet
+      WHERE p~xvorl = @space
+        AND EXISTS ( SELECT opbel FROM dfkkop WHERE augbl = p~doc1r AND budat > @lv_day )
+      INTO TABLE @DATA(lt_rows).
+    SELECT laufd, bukrs, COUNT(*) AS n
+      FROM dpayh
+      WHERE laufi IN @lt_ids
+      GROUP BY laufd, bukrs
+      ORDER BY laufd, n
+      INTO CORRESPONDING FIELDS OF TABLE @rt_rows.
+    SELECT (lv_fields) FROM dpayh INTO TABLE @rt_any.
+  ENDMETHOD.
+ENDCLASS.
+"""
+
+
+class CodeScanner(unittest.TestCase):
+    def refs(self, text, scan=ddic_export.scan_abap, tables=TABLES):
+        return {(r['table'], r['field'], int(r['where'].rsplit(':', 1)[1]), bool(r['candidates']))
+                for r in scan(text, 'x', tables)}
+
+    def test_cleaning_keeps_positions_and_drops_comments_and_literals(self):
+        text = "* full line p~a\nSELECT 'x~y' \"p~b\n FROM t."
+        clean = ddic_export.clean_abap(text)
+        self.assertEqual(len(clean), len(text))
+        self.assertNotIn('p~a', clean)
+        self.assertNotIn('x~y', clean)
+        self.assertNotIn('p~b', clean)
+        self.assertIn('from t', clean)
+
+    def test_aliases_joins_subqueries_and_single_table_lists(self):
+        refs = self.refs(ABAP_SQL)
+        self.assertIn(('DPAYH', 'PYMET', 4, False), refs)        # alias~field in the list
+        self.assertIn(('DPAYH', 'PYMET', 6, False), refs)        # in the ON condition
+        self.assertIn(('TFK042Z', 'XEINZ', 4, False), refs)
+        self.assertIn(('DFKKOP', 'OPBEL', 8, False), refs)       # subquery with one source
+        self.assertIn(('DFKKOP', 'BUDAT', 8, False), refs)       # left-hand side of its WHERE
+        self.assertIn(('DPAYH', 'DOC1R', 8, False), refs)        # outer alias inside the subquery
+        self.assertIn(('DPAYH', 'BUKRS', 10, False), refs)       # unqualified, one source
+        self.assertIn(('DPAYH', 'LAUFI', 12, False), refs)
+        self.assertIn(('DPAYH', 'BUKRS', 13, False), refs)       # GROUP BY
+        fields = {f for _t, f, _l, _c in refs}
+        self.assertNotIn('AUGBL', {f for t, f, _l, _c in refs if t == 'DPAYH'})
+        self.assertNotIn('N', fields)                            # ORDER BY a result name
+        self.assertNotIn('LV_FIELDS', fields)                    # dynamic field list
+        self.assertNotIn('LT_IDS', fields)
+        self.assertNotIn(('DPAYH', 'BUKRS', 4, False), refs)     # literal and comment
+
+    def test_select_list_items_are_marked_for_a_result_name(self):
+        rows = ddic_export.scan_abap(ABAP_SQL, 'x', TABLES)
+        item = {(r['field'], int(r['where'].rsplit(':', 1)[1])): r['item'] for r in rows}
+        self.assertTrue(item[('PYMET', 4)])
+        self.assertFalse(item[('PYMET', 6)])
+        self.assertTrue(item[('BUKRS', 10)])
+
+    def test_an_alias_of_two_tables_is_unresolved(self):
+        text = """CLASS c IMPLEMENTATION.
+  METHOD m.
+    SELECT a~opbel FROM dfkkop AS a
+      WHERE EXISTS ( SELECT a~opbel FROM dfkkko AS a WHERE a~fikey = @lv )
+      INTO TABLE @DATA(lt).
+  ENDMETHOD.
+ENDCLASS.
+"""
+        refs = self.refs(text)
+        self.assertTrue(refs)
+        self.assertTrue(all(c for _t, _f, _l, c in refs if _f in ('OPBEL', 'FIKEY')))
+
+    def test_joins_without_qualification_are_not_judged(self):
+        text = """CLASS c IMPLEMENTATION.
+  METHOD m.
+    SELECT laufd FROM dpayh INNER JOIN dfkkop ON dfkkop~augbl = dpayh~doc1r INTO TABLE @DATA(lt).
+  ENDMETHOD.
+ENDCLASS.
+"""
+        refs = self.refs(text)
+        self.assertNotIn('LAUFD', {f for _t, f, _l, _c in refs})
+        self.assertIn(('DFKKOP', 'AUGBL', 3, False), refs)
+
+    def test_typed_structures_tables_rows_value_and_parameters(self):
+        text = """CLASS ltc DEFINITION FOR TESTING.
+  PRIVATE SECTION.
+    METHODS run_of IMPORTING iv TYPE i RETURNING VALUE(rs_run) TYPE dpayh.
+    DATA ms_item TYPE dfkkop.
+ENDCLASS.
+CLASS ltc IMPLEMENTATION.
+  METHOD run_of.
+    rs_run-pymet = iv.
+    ms_item-augbl = space.
+  ENDMETHOD.
+  METHOD insert.
+    DATA lt_runs TYPE STANDARD TABLE OF dpayh WITH EMPTY KEY.
+    DATA: ls_run TYPE dpayh,
+          lv_x   TYPE dpayh-bukrs.
+    ls_run-bukrs = 'X'.
+    lt_runs = VALUE #( ( laufd = sy-datum bukrs = 'A' )
+                       ( laufd = sy-datum zz_status = 'B' ) ).
+    LOOP AT lt_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+      <ls_run>-xvorl = space.
+    ENDLOOP.
+    DATA(ls_item) = VALUE dfkkop( opbel = '1' ).
+  ENDMETHOD.
+  METHOD other.
+    DATA ls_run TYPE zcd_other.
+    ls_run-bukrs = 'Y'.
+  ENDMETHOD.
+ENDCLASS.
+"""
+        refs = self.refs(text)
+        for exp in [('DPAYH', 'PYMET', 8), ('DFKKOP', 'AUGBL', 9), ('DPAYH', 'BUKRS', 14), ('DPAYH', 'BUKRS', 15),
+                    ('DPAYH', 'LAUFD', 16), ('DPAYH', 'BUKRS', 16), ('DPAYH', 'ZZ_STATUS', 17),
+                    ('DPAYH', 'XVORL', 19), ('DFKKOP', 'OPBEL', 21)]:
+            self.assertIn(exp + (False,), refs)
+        self.assertNotIn(('DPAYH', 'BUKRS', 25, False), refs)    # same name, other type in another method
+
+    def test_a_variable_of_two_types_is_unresolved(self):
+        text = """FORM f.
+  DATA ls TYPE dpayh.
+  DATA ls TYPE zother.
+  ls-bukrs = 1.
+ENDFORM.
+"""
+        self.assertEqual(self.refs(text), {('DPAYH', 'BUKRS', 4, True)})
+
+    def test_cds_aliases_joins_associations_and_single_source(self):
+        text = """// a comment Pay.bukrs
+@EndUserText.label: 'x'
+define view entity ZI_X
+  as select from    dpayh as Pay
+    left outer join dpayh as Newer on Newer.doc1r = Pay.doc1r
+  association [0..1] to tfk042z as _Method on _Method.zlsch = Pay.rzawe
+{
+  key Pay.laufd as RunDate,
+      Pay.bukrs as CompanyCode,
+      abs( Pay.rwbtr ) as Amount,
+      _Method
+}
+where Pay.xvorl = ' '
+"""
+        refs = self.refs(text, ddic_export.scan_cds)
+        for exp in [('DPAYH', 'DOC1R', 5), ('TFK042Z', 'ZLSCH', 6), ('DPAYH', 'RZAWE', 6), ('DPAYH', 'LAUFD', 8),
+                    ('DPAYH', 'BUKRS', 9), ('DPAYH', 'RWBTR', 10), ('DPAYH', 'XVORL', 13)]:
+            self.assertIn(exp + (False,), refs)
+        self.assertNotIn(1, {line for _t, _f, line, _c in refs})
+        single = """define view entity ZI_Y as select from dfkkop
+{
+  @Semantics.amount.currencyCode: 'Currency'
+  key opbel,
+      cast( betrw as abap.dec( 23, 2 ) ) as Amount,
+      waers as Currency
+}
+where augbl <> ' ' and budat >= $session.system_date
+"""
+        refs = self.refs(single, ddic_export.scan_cds)
+        self.assertEqual({f for _t, f, _l, _c in refs}, {'OPBEL', 'BETRW', 'WAERS', 'AUGBL', 'BUDAT'})
+        union = """define view entity ZI_Z as select from dpayh as A { A.laufd as D }
+union all select from dfkkop as A { A.augdt as D }
+"""
+        refs = self.refs(union, ddic_export.scan_cds)
+        self.assertEqual(refs, {('DPAYH', 'LAUFD', 1, False), ('DFKKOP', 'AUGDT', 2, False)})
+
+    def test_only_exported_tables_are_reported(self):
+        self.assertEqual(self.refs(ABAP_SQL, tables={'TFK042Z'}), {('TFK042Z', 'XEINZ', 4, False),
+                                                                    ('TFK042Z', 'ZLSCH', 6, False)})
+
+    def test_states_open_list_and_report(self):
+        exports = {'DPAYH': {'fields': {'LAUFD', 'BBUKR'}, 'complete': True, 'includes': []}}
+        refs = [{'table': 'DPAYH', 'field': f, 'where': f'x:{n}', 'kind': 'sql', 'candidates': c, 'pos': 0,
+                 'item': False}
+                for n, (f, c) in enumerate([('LAUFD', []), ('BUKRS', []), ('ZZ_STATUS', []), ('PYMET', []),
+                                            ('LAUFD', ['DPAYH', 'DFKKOP'])])]
+        rows = ddic_export.compare_code(exports, refs)
+        self.assertEqual([r['state'] for r in rows],
+                         ['exists', 'MISSING', 'customer field (not in this export)', 'MISSING',
+                          'unresolved (DPAYH | DFKKOP)'])
+        rows = ddic_export.apply_open(rows, {('DPAYH', 'PYMET'): 'V999'})
+        self.assertEqual(rows[3]['state'], 'missing, open V999')
+        text = ddic_export.report_code(rows)
+        self.assertEqual(text.splitlines()[2].split('|')[2].strip(), 'BUKRS')    # MISSING first
+        self.assertIn('1 MISSING', text)
+        self.assertIn('1 missing, open', text)
+
+    def test_compare_exits_non_zero_on_a_missing_code_field(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo, exp = Path(d, 'repo'), Path(d, 'exp')
+            (repo / 'x' / 'src').mkdir(parents=True)
+            exp.mkdir()
+            (repo / 'x' / 'src' / 'zcl_a.clas.abap').write_text(
+                "CLASS zcl_a IMPLEMENTATION.\n  METHOD m.\n    SELECT bukrs FROM dpayh INTO TABLE @DATA(lt).\n"
+                "  ENDMETHOD.\nENDCLASS.\n", encoding='utf-8')
+            with Path(exp, 'DPAYH.fields.csv').open('w', newline='', encoding='utf-8') as fh:
+                w = csv.DictWriter(fh, fieldnames=['FIELDNAME'])
+                w.writeheader()
+                w.writerows([{'FIELDNAME': 'LAUFD'}, {'FIELDNAME': 'BBUKR'}])
+            out = Path(d, 'open.csv')
+            out.write_text('TABLE,FIELD,VERIFY,NOTE\nDPAYH,BUKRS,V999,later\n', encoding='utf-8')
+            with open(os.devnull, 'w') as null:
+                stdout, sys.stdout = sys.stdout, null
+                try:
+                    failed = ddic_export.main(['compare', '--exports', str(exp), '--repo', str(repo)])
+                    accepted = ddic_export.main(['compare', '--exports', str(exp), '--repo', str(repo),
+                                                 '--open', str(out)])
+                finally:
+                    sys.stdout = stdout
+            fails, counts = ddic_export.check_folders(repo, ddic_export.export_folders(d), ())
+        self.assertEqual(failed, 1)
+        self.assertEqual(accepted, 0)
+        self.assertEqual(fails, ['exp: DPAYH-BUKRS x/src/zcl_a.clas.abap:3'])
+        self.assertEqual(counts, {'MISSING': 1})
+
+
 class Export(unittest.TestCase):
     def test_export_writes_files_and_manifest(self):
         class Fake:
@@ -144,6 +365,18 @@ class Export(unittest.TestCase):
             self.assertFalse(manifest['tables']['NONE']['found'])
             self.assertTrue(Path(d, 'ZTAB.acds').exists())
             self.assertEqual(json.loads(Path(d, 'manifest.json').read_text())['tables']['ZTAB']['fields'], 2)
+
+
+class HiddenFolders(unittest.TestCase):
+    def test_sources_in_hidden_folders_are_not_scanned(self):
+        with tempfile.TemporaryDirectory() as d:
+            for sub in ('src', '.claude/worktrees/x/src'):
+                Path(d, sub).mkdir(parents=True)
+                Path(d, sub, 'zr.ddls.asddls').write_text(
+                    'define view entity ZR as select from ztab as T { T.docno, T.nope }\n', encoding='utf-8')
+            refs = ddic_export.code_references(d, {'ZTAB'})
+        self.assertTrue(refs)
+        self.assertFalse([r for r in refs if '.claude' in r['where']])
 
 
 if __name__ == '__main__':

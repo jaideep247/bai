@@ -11,6 +11,7 @@
 *& per missing key is not wanted in a batch read (Implementation_Order.md).
 *& Modification log:
 *& 2026-11-08 | Initial version (customer posting areas ZRSN, ZPMC, ZBTM, ZBTR).
+*& 2026-11-15 | FUN08 no longer read (TFK033D has FUN01..FUN06, reference system S/4HANA 2025).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - customer posting areas: SQL (TFK033D)</p>
 CLASS zcl_cd_ops_postarea_dao DEFINITION
@@ -28,10 +29,12 @@ ENDCLASS.
 CLASS zcl_cd_ops_postarea_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_postarea_dao~read_entries.
-    " VERIFY-DDIC: TFK033D fields APPLK, BUBER, KTOPL, KEY01..KEY08, FUN01..FUN08 (SE11 in DV1);
+    " TFK033D on the reference system S/4HANA 2025 (ddic/a4h): key APPLK, BUBER, KTOPL, KEY01..KEY08 (KEYNN_KK,
+    " CHAR 12), results FUN01..FUN06 (FUNNN_KK, CHAR 12) - there is no FUN07 / FUN08. FUN07 (ZBTM disposition,
+    " the 7th result of the layout) stays read until the layout is decided (VERIFY V161, ddic/open_fields.csv).
     " CHAR values into strings - trailing blanks dropped, nothing truncated
     SELECT key01, key02, key03, key04, key05, key06, key07, key08,
-           fun01, fun02, fun03, fun04, fun05, fun06, fun07, fun08
+           fun01, fun02, fun03, fun04, fun05, fun06, fun07
       FROM tfk033d
       WHERE applk = @iv_applk
         AND buber = @iv_area

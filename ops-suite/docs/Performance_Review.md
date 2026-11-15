@@ -120,7 +120,7 @@ Cost: the distinct-name read scans the date window of TBTCO instead of a name pr
 | DFKKOP | AUGBL; ZZ_FIN_TRANS_NUM (**blocking pre-check 0.8 of `Implementation_Order.md`**, 2026-11-10: read by every snapshot package at 200 000-400 000 payments a day) | trace, HCK payment request rules, payment worklist snapshot (FIN items) |
 | BKPF | AWTYP + AWKEY | HCK G/L transfer gaps, payment trace G/L documents - read since 2026-11-11 through `I_JournalEntry` (`ZI_CD_OpsJrnlEntry`, D-C8; the index must be reached under the view - GLV-PV2 / GLV-PV3, §14) |
 | DFKKKO | BUDAT | HCK G/L transfer gaps |
-| DFKKSUMC | FIKEY | HCK G/L transfer gaps; ledger model batch key level (build C, §13) |
+| DFKKSUM | FIKEY | HCK G/L transfer gaps; ledger model batch key level (build C, §13) |
 | DFKKKO | FIKEY (**V102**) | ledger model: items of a batch key (build C, §13) |
 | ACDOCA | primary key (RCLNT, RLDNR, RBUKRS, GJAHR, BELNR, DOCLN); RLDNR + RBUKRS + RACCT + BUDAT (aggregates of the reconciled accounts) | ledger model journal lines and account / day legs (build C, §13); A_RECON_3WAY |
 | BSEG | BUKRS + XREF2 (**V106**, not created) | the G/L clearing line of a bank line - not mapped until the index exists |
@@ -157,7 +157,7 @@ Every leg is **one set-based statement per run** (bank, G/L, subledger, payments
 | R2 | `GET_BANK_LAST_DAYS` | same view, `MAX( BookingDate )` per account | Window from the first day to the report date | As R1 |
 | R3 | `GET_BANK_DAYS_NO_LOT` | same view, `NOT EXISTS ( SELECT … FROM dfkkrp WHERE selw1 = BankReference )`, REDEPOSIT codes only | Window + code IN list; anti-join on DFKKRP by SELW1 (index of §8) | Semi-join uses the SELW1 index, not a DFKKRP scan; CHECT / SELW1 in the same form |
 | R4 | `GET_GL_DAYS` | **Released view since 2026-11-11 (D-C8):** `ZI_CD_HckRcGlLine` (over `I_JournalEntryItem`, no DCL) `INNER JOIN @keys` (company code, account, transaction currency) `WHERE ledger = AND postingdate BETWEEN` `GROUP BY` …, day, ReferenceDocumentType | Ledger + company code + account + posting date - a straight aggregate, pushed through the view stack to the ACDOCA column store (no secondary index needed on HANA) | Statement runtime for the clearing accounts of all sets over the window equal to the former ACDOCA statement (**LDG-PV6**, §13); JOIN @itab pushed to HANA (as EBS R18, fix 6) |
-| R5 | `GET_FICA_DAYS` | DFKKSUMC `INNER JOIN @keys` `WHERE budat BETWEEN` `GROUP BY` …, day | Posting date of the summary records (VERIFY-SE11 DFKKSUMC-BUDAT; index FIKEY of §8 does not help a date read) | Date predicate is a column scan of DFKKSUMC - record runtime; if slow, drive by the window's reconciliation keys (DFKKSUM / DFKKKO-BUDAT, index of §8) |
+| R5 | `GET_FICA_DAYS` | DFKKSUM `INNER JOIN @keys` `WHERE budat BETWEEN` `GROUP BY` …, day | Posting date of the summary records (VERIFY-SE11 DFKKSUM-BUDAT; index FIKEY of §8 does not help a date read) | Date predicate is a column scan of DFKKSUM - record runtime; if slow, drive by the window's reconciliation keys (DFKKSUMC / DFKKKO-BUDAT, index of §8) |
 | R6 | `GET_PAYMENT_DAYS` | DPAYH `INNER JOIN @banks` `WHERE laufd BETWEEN AND xvorl = space AND doc1r <> space` `GROUP BY` …, run date | Run date window (as `A_INFLIGHT`) | Same access as the in-flight payment read |
 | R7 | `GET_DEPOSITS` | `ZI_CD_HckRcBankLine` DEPOSIT codes `GROUP BY` posting document | As R1, code IN list | As R1 |
 | R8 | `GET_DOC_ASSIGNMENTS` | ACDOCA `INNER JOIN @docs` (BUKRS, BELNR, GJAHR) on the Stripe clearing account `GROUP BY` …, ZUONR, DRCRK | Primary key of ACDOCA (document) - a few deposit documents | Key access. **Stays on ACDOCA (D-C8):** a document-key read, not an account / date aggregate - through the released view the RLDNR key prefix depends on the view's ledger derivation; switch only after **LDG-PV7** shows key access |
@@ -271,17 +271,17 @@ No bank, G/L or payment engine line is read for the variance card (results of `A
 
 > **First principle:** the universal journal is read only by its primary key from keys in hand, or aggregated by company code, account and posting date for a few configured accounts - never searched by a reference or a text.
 
-**Released views (decision D-C8, changed 2026-11-11).** The ledger model's G/L side reads `I_JournalEntryItem` (lines), `I_JournalEntry` (header: reference type / key, reverse document), `I_CompanyCode` and `I_GLAccountText` instead of ACDOCA / BKPF / BSEG / T001 / SKAT; the subledger side stays on tables (no released views for DFKKOP, DFKKKO, DFKKSUMC, DPAYH). The access paths below are those of the tables **under** the released views: the views must not add a scan. That is what the pre-checks LDG-PV1 ... LDG-PV4 and LDG-PV6 / LDG-PV7 prove on the released views (V113, V115). The posting key comes from `I_JournalEntryItem`-PostingKey (no BSEG join any more; fallback V110).
+**Released views (decision D-C8, changed 2026-11-11).** The ledger model's G/L side reads `I_JournalEntryItem` (lines), `I_JournalEntry` (header: reference type / key, reverse document), `I_CompanyCode` and `I_GLAccountText` instead of ACDOCA / BKPF / BSEG / T001 / SKAT; the subledger side stays on tables (no released views for DFKKOP, DFKKKO, DFKKSUM, DPAYH). The access paths below are those of the tables **under** the released views: the views must not add a scan. That is what the pre-checks LDG-PV1 ... LDG-PV4 and LDG-PV6 / LDG-PV7 prove on the released views (V113, V115). The posting key comes from `I_JournalEntryItem`-PostingKey (no BSEG join any more; fallback V110).
 
 | Read | Access path | Volume | Bound / pre-check |
 |---|---|---|---|
-| Payment -> its ledger (`ZR_CD_PaymLedger`, navigation from one payment) | DFKKOP by AUGBL (index V88) -> DFKKKO by OPBEL (primary key) -> DFKKSUMC by FIKEY (index, §8) -> `I_JournalEntry` by ReferenceDocumentType + OriginalReferenceDocument + CompanyCode (BKPF AWTYP + AWKEY index, §8) -> `I_JournalEntryItem` by Ledger / CompanyCode / FiscalYear / AccountingDocument (ACDOCA primary key prefix RCLNT / RLDNR / RBUKRS / GJAHR / BELNR) | a few items, one to three summary rows, one G/L document with its lines | navigation only (key filter); PlanViz **LDG-PV1** |
-| Batch key level (`ZR_CD_LedgBatch`, list with a posting date) | DFKKSUMC grouped by FIKEY / BUKRS / HKONT / WAERS with the BUDAT predicate (column scan of a day on HANA, VERIFY index), `I_JournalEntry` by reference type + key, `I_JournalEntryItem` by key | keys of a day (hundreds to thousands) x accounts | posting date mandatory; PlanViz **LDG-PV2** on the largest day |
+| Payment -> its ledger (`ZR_CD_PaymLedger`, navigation from one payment) | DFKKOP by AUGBL (index V88) -> DFKKKO by OPBEL (primary key) -> DFKKSUM by FIKEY (index, §8) -> `I_JournalEntry` by ReferenceDocumentType + OriginalReferenceDocument + CompanyCode (BKPF AWTYP + AWKEY index, §8) -> `I_JournalEntryItem` by Ledger / CompanyCode / FiscalYear / AccountingDocument (ACDOCA primary key prefix RCLNT / RLDNR / RBUKRS / GJAHR / BELNR) | a few items, one to three summary rows, one G/L document with its lines | navigation only (key filter); PlanViz **LDG-PV1** |
+| Batch key level (`ZR_CD_LedgBatch`, list with a posting date) | DFKKSUM grouped by FIKEY / BUKRS / HKONT / WAERS with the BUDAT predicate (column scan of a day on HANA, VERIFY index), `I_JournalEntry` by reference type + key, `I_JournalEntryItem` by key | keys of a day (hundreds to thousands) x accounts | posting date mandatory; PlanViz **LDG-PV2** on the largest day |
 | Items of a batch key (`_Items`) | DFKKKO by FIKEY (index **V102**) -> DFKKOP by AUGBL | items of one key (up to the payments of a run) | navigation, paged |
 | Journal lines of a batch key / payment (`_Journal`) | `I_JournalEntry` by reference type + key (+ company code; BKPF AWTYP + AWKEY index), then `I_JournalEntryItem` by its key (header `I_JournalEntry`, text `I_GLAccountText` by key) | lines of one or two G/L documents | navigation only |
 | Group reconciliation journal leg (`ZI_CD_LedgAcctDay`) | `I_JournalEntryItem` aggregated by Ledger + CompanyCode + GLAccount + PostingDate (+ TransactionCurrency; ACDOCA RLDNR + RBUKRS + RACCT + BUDAT + RWCUR under the view) for the accounts of the active `ZCD_HCK_RCSET` sets (inner join, a handful) - the same source and predicate as A_RECON_3WAY's `GET_GL_DAYS` (`ZI_CD_HckRcGlLine`) | one aggregate row per account / currency / day | business date mandatory; **LDG-PV3** (compare with `GET_GL_DAYS` ST05) |
 | Lines of an account and day (`_Journal` of a reconciliation row) | the same `I_JournalEntryItem` predicate (company code, account, posting date, ledger), paged (`$top`) | the clearing account's lines of a day (tens of thousands on a peak day) | paged list only; never without the row's keys |
-| Subledger leg (`ZI_CD_LedgSubDay`) | DFKKSUMC grouped per account and posting day for the RCSET accounts | aggregate rows | business date mandatory |
+| Subledger leg (`ZI_CD_LedgSubDay`) | DFKKSUM grouped per account and posting day for the RCSET accounts | aggregate rows | business date mandatory |
 | Stored results (`ZI_CD_LedgRcDay`) | ZCD_HCK_METRIC by METRIC (RC_BANK / RC_GL / RC_FICA) and DIM1 / DIM2 (index HST), findings by RUN_ID + AREA + OBJECT_KEY (index OBJ) | group-days of the reconciliation window | results only, no line |
 | Bank lines of an account and day (`ZI_CD_LedgBankLn`) | FEBEP / FEBKO of the account of the set (XBLNR account derived per line of the bounded statement set, as `ZI_CD_HckRcBankLine`), DFKKKO by OPBEL = CHECT (primary key) | lines of a statement day | business date mandatory; the BSEG-XREF2 clearing line is **not** joined (no index, V106) |
 | Change timeline (`ZR_CD_PaymChange`, one payment) | DFKKKO by OPBEL (key) and STBEL -> DFKKKO by OPBEL; `I_JournalEntry` of the batch's G/L documents and of their reversal documents by key | a few rows | navigation only |
@@ -342,3 +342,33 @@ activated (V152):
 | FLOW-PV3 | `ZI_CA_OpsFlowFiLine` / `_FiSig` on a 2-million-payment day | `DFKKOP` / `DFKKOPK` by company code and account, the clearing branch by clearing date - an index on (BUKRS, HKONT, AUGDT) of `DFKKOP` is the expected outcome if the plan scans |
 | FLOW-PV4 | open FI-CA items of the payable / receivable reconciliation account | aggregated on HANA by company code and account |
 | FLOW-PV5 | break snapshot headers and open findings of the stage checks | few rows; findings by index `OPN` |
+
+## 17. Indexes of the reference system (2026-11-15, `ddic/a4h`)
+
+Facts from the dictionary export of the reference system (S/4HANA 2025 with FI-CA, `<TABLE>.indexes.csv`, DD17S;
+the primary key is not listed there). The landscape (S/4HANA 2023) may differ - the items of section 8 stay open until
+its own export or SE11 shows them. Index proposals below are **recommendations only**; none is created by the suite.
+
+| Table | Secondary indexes on the reference system | What it means for section 8 | Recommendation |
+|---|---|---|---|
+| `FEBEP` | none (key KUKEY, ESNUM) | No index on CHECT: the EBS / trace / dashboard reads by CHECT are column scans | Index on CHECT if ST05 / PlanViz shows a scan at volume |
+| `DPAYH` | H8H: DOC1R (key LAUFD, LAUFI, ORIGN, XVORL, PAYNO, SUBNO) | DOC1R index exists (R07, payment outcome, `A_INFLIGHT` by document); run date reads use the key (V68: the run key LAUFD + LAUFI is the start of the primary key) | - |
+| `DFKKCR` | none (key HERKF, ORG1T, ORG1R, HBKID, HKTID, ZTART, ZTNUM) | No index on DOC1R; ZTNUM is the last key field (a read by ZTNUM alone is not a key read) | Index on DOC1R (and on ZTNUM if the cheque search is slow) |
+| `DFKKRP` | 001 KLAEB, 002 OPBEL, 003 RLBEL (key KEYR1, POSRA) | No index on SELW1 (R07R / R07L, `GET_BANK_DAYS_NO_LOT` anti-join, dashboard returns) | Index on SELW1 |
+| `DFKKRK` | none (key KEYR1) | The lot status is read by the lot key - no index needed | - |
+| `DFKKNRP` | none (key KEYN1, POSNA) | No index on INFOF (R05, trace NOC evidence) | Index on INFOF |
+| `DFKKOP` | H1P VKONT, H66 GPART, HTH AUGBL, HUD VTREF, HXN ABWBL | AUGBL index exists (V88); none on ZZ_FIN_TRANS_NUM (customer field - pre-check 0.8 stays), BUDAT, AUGDT or BUKRS + HKONT | Pre-check 0.8 unchanged; an index (BUKRS, HKONT, AUGDT) only if FLOW-PV3 needs it |
+| `DFKKKO` | H0O AWKEY, HKR FIKEY, HP0 XBLNR | FIKEY index exists (V102 index part); none on BUDAT or CPUDT (HCK G/L transfer gaps by BUDAT, snapshot by CPUDT) | Record the column scan in PlanViz before proposing one |
+| `DFKKSUM` | 1: FIKEY, BUKRS, BUDAT; 2: OPBEL | The G/L transfer gap reads (FIKEY + BUKRS) are index reads; `GET_FICA_DAYS` by BUDAT is not | - |
+| `DFKKSUMC` | H1N RESKY, HQ3 ERNAM (key FIKEY) | The key status is read by FIKEY (primary key) | - |
+| `DFKKOPK` | HKR FIKEY, HS9 PAOBJNR | - | - |
+| `FEBKO` | 1: KUKEY (key ANWND, ABSND, AZIDT, EMKEY) | No index on (BUKRS, HBKID, HKTID, AZDAT): the R22 history / prior header reads are scans of the header table (small) | Measure first |
+| `ACDOCA` | ANL, AWR (AWREF), BEL, ONR, POB, RAC, SRC | No secondary index on RACCT or ZUONR (BRK-PV1 / -PV2, LDG-PV6: column store, predicates pushed down) | - |
+| `BSEG` | H7Y LIFNR, H82 HKONT, HSE KUNNR | No index on XREF2 (V106 stays: secondary index BUKRS + XREF2 is a recommendation) | Index BUKRS + XREF2 before the XREF2 search goes live |
+| `BKPF` | H0O AWKEY, HP0 XBLNR | AWKEY index exists (G/L document by reference key; AWTYP is not part of it) | - |
+| `BUT000` | FS1, FS2, H6Z BPEXT, H7D, H7M, HED, HHT, HLT, HOL | BPEXT index exists (payment request -> partner) | - |
+| `TBTCO` | 1 SDLUNAME + AUTHCKMAN, 3 STATUS + JOBNAME, 5 EVENTID + EVENTPARM, 7 STATUS + WPPROCID + BTCSYSREAX, 8 STRTDATE + STRTTIME + STATUS, 9 SDLSTRTDT + SDLSTRTTM + STATUS + SDLUNAME + JOBNAME, C ENDDATE + ENDTIME | No STATUS + ENDDATE index (index C serves an end-date window) and none on SDLDATE | Read windows on ENDDATE / STRTDATE / SDLSTRTDT |
+| `BALHDR` | 3 EXTNUMBER, 4 ALDATE, 5-7 EPP ids, HWV LOG_HANDLE | ALDATE index exists | - |
+| `DFKKZK` / `DFKKZP` | HJ3 KEYZ2, HQ5 INFOF / HFS OPBEL, HMF KLAEB, HS0 CHCKN | - | - |
+| `FKKMAKO`, `FKKMAZE`, `DFKKCOH`, `DFKKCOHI`, `DFKKINVBILL_H`, `DFKKWOH`, `FKK_INSTPLN_HEAD` | partner / account / contract indexes only (VKONT, GPART, VTREF, REFDOCNO, ORG_GPART, DATA1) | None on the date or status fields of the catalogue aggregates (V128 / V129) | An index for every aggregate before its row is switched on (V129) |
+| `DFKKRAPT`, `DFKKIH`, `DFKKINVDOC_H` / `_I`, `DFKKINVBILL_I`, `DFKKCOD`, `TFK033D`, `TFK042Z`, `T012K`, `NRIV`, `VBHDR`, `E070` | none | Reads by key only | - |

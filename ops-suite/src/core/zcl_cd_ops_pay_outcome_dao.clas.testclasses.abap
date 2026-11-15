@@ -30,6 +30,8 @@
 *& 2026-11-11 | D-C8: the company code's country is doubled on ZI_CD_OpsCompanyCode (released
 *&            | I_CompanyCode) instead of T001; same rows and assertions (BKPF / BSEG doubles kept - the
 *&            | GL source stays on the tables).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -511,8 +513,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     ls_payment-laufd             = iv_laufd.
     ls_payment-laufi             = gc-run.
     ls_payment-doc1r             = iv_doc.
-    ls_payment-bukrs             = gc-bukrs.
-    ls_payment-pymet             = gc_agg-wire.
+    ls_payment-bbukr             = gc-bukrs.
+    ls_payment-rzawe             = gc_agg-wire.
     ls_payment-hbkid             = gc_agg-bank.
     ls_payment-valut             = iv_valut.
     ls_payment-rwbtr             = gc_agg-amount.

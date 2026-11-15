@@ -4,7 +4,7 @@
 //          Items cleared by the payment document (DFKKOP-AUGBL = payment document, confirmed join) with the reconciliation
 //          key (FIKEY) of the CLEARING document's header (DFKKKO-OPBEL = AUGBL): the clearing posts the offset of every
 //          cleared item on the item's account under the clearing document's FIKEY, so per account and currency the payment's
-//          FI-CA amount within the FIKEY total (DFKKSUMC) is the sum of its cleared items (VERIFY V101). The bank clearing
+//          FI-CA amount within the FIKEY total (DFKKSUM) is the sum of its cleared items (VERIFY V101). The bank clearing
 //          account side of the payment is reached through the bank line (FEBEP -> BSEG-XREF2 = AUGBL) and the batch key
 //          level, not as an item. Transaction texts: text tables not confirmed (V103) - blank until SE11. Reads only by
 //          payment document (index AUGBL, V88) or by FIKEY (DFKKKO index FIKEY, V102).
@@ -14,7 +14,7 @@
 // BatchKey: V101 FIKEY of the clearing document carries the clearing's account postings (DFKKKO-FIKEY confirmed field)
 // GlAccount: V101 VERIFY-SE11 DFKKOP-HKONT (reconciliation account of the item)
 // Currency: V101 VERIFY-SE11 DFKKOP-WAERS
-// Amount: V101 VERIFY-SE11 DFKKOP-BETRW (transaction currency, signed as DFKKSUMC-BETRW?)
+// Amount: V101 VERIFY-SE11 DFKKOP-BETRW (transaction currency, signed as DFKKSUM-BETRW by SHKZG?)
 // MainTransaction: VERIFY-DDIC DFKKOP-HVORG (as the HCK seeds)
 // MainTransactionText: V103 main transaction text table (TFKHVOT candidate) not confirmed - blank
 // SubTransaction: V101 VERIFY-SE11 DFKKOP-TVORG

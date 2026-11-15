@@ -25,6 +25,8 @@
 *&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
 *& 2026-11-11 | get_metric_history: optional day list (seasonal baseline of a day series, ZCD_HCK_THRESH-SEASON).
 *& 2026-11-11 | get_jobs_monitored: jobs the SAP job monitor (area CD_JOBS) reports - E_JOBS leaves them to it.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -213,9 +215,9 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_exceptions) TYPE zif_cd_hck_types=>tt_open_exception.
 
-  "! Reconciliation key and company code with totals records (DFKKSUMC) but no
+  "! Reconciliation key and company code with totals records (DFKKSUM) but no
   "! unreversed GL document of reference type iv_awtyp for that company code
-  "! (DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY), posting date in window (A43);
+  "! (DFKKSUM-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY), posting date in window (A43);
   "! at most iv_max_rows listed
   METHODS get_fikeys_without_gl
     IMPORTING

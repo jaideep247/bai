@@ -1,10 +1,11 @@
 // Artifact: zi_cd_ledgrcpiv.ddls.asddls
 // Purpose: Ledger model (group reconciliation, build C): the stored legs of the latest measurement of a group-day of
 //          A_RECON_3WAY side by side - bank leg RC_BANK, G/L leg RC_GL (lines of the payment engine G/L transfer on the
-//          clearing account), payment engine leg RC_FICA (DFKKSUMC), differences RC_DIFF_BANK_GL / RC_DIFF_GL_FICA and the
+//          clearing account), payment engine leg RC_FICA (DFKKSUM), differences RC_DIFF_BANK_GL / RC_DIFF_GL_FICA and the
 //          tolerance used (RC_TOLERANCE_SET or _PARAM) - one row per run, check, group and day (MAX of a CASE per
 //          metric: each metric is stored once per run and group-day). Reused, never recomputed. Read-only.
 // Modification log: 2026-11-11 | Initial version (ledger drill-down and group reconciliation, build C).
+//                   2026-11-15 | Field notes from the dictionary of the reference system S/4HANA 2025 (ddic/a4h).
 // VERIFY-ADT: MAX over a CASE of DEC 31,4 values in a view entity with an inner join on a time stamp (7.58).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Ledger reconciliation - stored legs'

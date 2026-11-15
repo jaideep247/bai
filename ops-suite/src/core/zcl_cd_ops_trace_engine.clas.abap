@@ -37,6 +37,8 @@
 *&            | stage of every request seen (one rule with the payment worklist, information only).
 *& 2026-11-10 | A BP_SOURCE_FIELD the partner read refuses is a CONFIGURATION row (815), no longer cleared
 *&            | silently; the row never decides the verdict.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -1331,7 +1333,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    " G/L: DFKKKO-FIKEY of the payment document = DFKKSUMC-FIKEY = BKPF-AWKEY (AWTYP, BUKRS,
+    " G/L: DFKKKO-FIKEY of the payment document = DFKKSUM-FIKEY = BKPF-AWKEY (AWTYP, BUKRS,
     " not reversed)
     DATA(ls_gl) = VALUE ty_row( stage = zif_cd_ops_trace_types=>gc_stage-gl bukrs = is_attempt-bukrs
                                 source_table = zif_cd_ops_trace_types=>gc_table-dfkkko record_key = is_attempt-ref ).
@@ -1350,7 +1352,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     IF mo_dao->get_summary_keys( lt_fikey ) IS INITIAL.
       ls_gl-status       = zif_cd_ops_trace_types=>gc_status-missing.
       ls_gl-reason       = zif_cd_ops_trace_types=>gc_reason-not_summarised.
-      ls_gl-source_table = zif_cd_ops_trace_types=>gc_table-sumc.
+      ls_gl-source_table = zif_cd_ops_trace_types=>gc_table-dfkksum.
       ls_gl-record_key   = lv_fikey.
       ls_gl-detail       = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-not_summarised iv_v1 = lv_fikey ).
       add_row( is_attempt = is_attempt is_row = ls_gl ).

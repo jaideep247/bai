@@ -7,10 +7,13 @@
 //          same document, the order of ZI_CD_TrxItemPay and ZIF_CD_OPS_PAY_OUTCOME=>EVALUATE_DOCUMENTS: run
 //          date, then run ID). Live from the standard table: nothing is copied. Read-only.
 // Modification log: 2026-11-10 | Initial version (control center: payment lifecycle).
+//                   2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET;
+//                   reference system S/4HANA 2025).
 // Access path (Performance_Review.md section 11): a business date restricts LAUFD, the first field of the DPAYH
-// key (primary index); the newer-run probe reads DPAYH by DOC1R (index VERIFY-SE11) and only run dates from
-// the business date on (the window bounds both sides).
-// VERIFY-SE11: DPAYH-BUKRS / PYMET / HBKID / RWBTR / WAERS (as ZI_CD_PayWorkItem and the HCK runtime DAO).
+// key (primary index); the newer-run probe reads DPAYH by DOC1R (index H8H on the reference system S/4HANA 2025)
+// and only run dates from the business date on (the window bounds both sides).
+// DPAYH-BBUKR (paying company code) / RZAWE (payment method) / HBKID / RWBTR / WAERS seen on the reference system
+// S/4HANA 2025 (DPAYH has no BUKRS / PYMET; as ZI_CD_PayWorkItem and the HCK runtime DAO).
 // VERIFY-ADT: comparison operators and OR in the ON condition of a left outer join (7.58), as ZI_CD_TrxItemPay.
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -29,8 +32,8 @@ define view entity ZI_CD_PayLifeRun
   key Pay.laufd                                             as BusinessDate,
   key Pay.laufi                                             as RunId,
   key Pay.doc1r                                             as PaymentDocument,
-      Pay.bukrs                                             as CompanyCode,
-      Pay.pymet                                             as PaymentMethod,
+      Pay.bbukr                                             as CompanyCode,
+      Pay.rzawe                                             as PaymentMethod,
       Pay.hbkid                                             as HouseBank,
       Pay.zz_payment_status                                 as PaymentStatus,
       Pay.waers                                             as Currency,

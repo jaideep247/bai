@@ -24,6 +24,8 @@
 *& 2026-11-08 | Payment worklist (requests not paid on the due date): source spec keys DUE (requested payment date)
 *&            | and AMOUNT of the request log, TY_CFG_ROW-DUE / AMOUNT, keyset position TY_CFG_SEEK.
 *& 2026-11-10 | Stage CONFIGURATION (configuration row, never the verdict); message 815 (partner filter off).
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency). Constant GC_TABLE-DFKKSUM (was SUMC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -257,7 +259,7 @@ INTERFACE zif_cd_ops_trace_types
       fmon    TYPE ty_tabname VALUE 'ZCD_FMON_EVENT',
       bkpf    TYPE ty_tabname VALUE 'BKPF',
       bseg    TYPE ty_tabname VALUE 'BSEG',
-      sumc    TYPE ty_tabname VALUE 'DFKKSUMC',
+      dfkksum TYPE ty_tabname VALUE 'DFKKSUM',
       but000  TYPE ty_tabname VALUE 'BUT000',
     END OF gc_table.
   CONSTANTS gc_utc TYPE tznzone VALUE 'UTC'.

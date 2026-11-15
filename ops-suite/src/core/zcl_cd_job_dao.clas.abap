@@ -9,9 +9,11 @@
 *& rows with a finding). One grouped read each for all runs of a call.
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor adoption, area CD_JOBS).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - SAP job monitor plug-in data access</p>
-"! VERIFY-SE11 V68: an index of DPAYH starting with LAUFD / LAUFI (the run key itself is confirmed).
+"! V68: the DPAYH primary key starts with LAUFD / LAUFI (reference system S/4HANA 2025); company code = BBUKR.
 CLASS zcl_cd_job_dao DEFINITION
   PUBLIC
   FINAL
@@ -46,13 +48,13 @@ CLASS zcl_cd_job_dao IMPLEMENTATION.
             IMPORTING et_dates = DATA(lt_dates)
                       et_ids   = DATA(lt_ids) ).
     " confirmed path: payments of a run = DPAYH LAUFD + LAUFI with a payment document (DOC1R filled)
-    SELECT laufd, laufi, bukrs, COUNT(*) AS payments
+    SELECT laufd, laufi, bbukr AS bukrs, COUNT(*) AS payments
       FROM dpayh
       WHERE laufd IN @lt_dates
         AND laufi IN @lt_ids
         AND doc1r <> @space
-      GROUP BY laufd, laufi, bukrs
-      ORDER BY laufd, laufi, bukrs
+      GROUP BY laufd, laufi, bbukr
+      ORDER BY laufd, laufi, bbukr
       INTO CORRESPONDING FIELDS OF TABLE @rt_payments.
     LOOP AT rt_payments ASSIGNING FIELD-SYMBOL(<ls_row>).
       IF NOT line_exists( it_runs[ laufd = <ls_row>-laufd laufi = <ls_row>-laufi ] ).

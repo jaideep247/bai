@@ -129,7 +129,7 @@ is not known yet is a placeholder in angle quotes.
 Names treated as confirmed (evidence C) are the ones confirmed in a reference landscape or stable SAP standard:
 `FPY1`, `RFKK_MA_SCHEDULER`, `FP05`, `FPCJ`, `FP07`, `FP08`, `FP09`, `FP04`, `FPR1`, `FPVA`, `FPVB`, `FPG1`,
 `FPCOPARA`, `FF_5`, `RFEBKA00`, `FEBAN`, `SM37`; tables `DPAYH`, `DPAYP`, `DFKKOP`, `DFKKKO`, `DFKKCR`, `TFK042Z`,
-`DFKKZK`, `DFKKZP`, `DFKKRH`, `DFKKRP`, `FKKMAKO`, `FKKMAZE`, `DFKKSUMC`, `FEBKO`, `FEBEP`, `TBTCO`, `TBTCP`. Every
+`DFKKZK`, `DFKKZP`, `DFKKRK`, `DFKKRP`, `FKKMAKO`, `FKKMAZE`, `DFKKSUMC`, `DFKKSUM`, `FEBKO`, `FEBEP`, `TBTCO`, `TBTCP`. Every
 field used in a monitoring condition is a VERIFY item until checked in SE11 of the target system (S/4HANA 2023).
 
 ### Generic risk checks

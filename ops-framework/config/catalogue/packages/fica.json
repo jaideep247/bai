@@ -97,7 +97,7 @@
        "func": "COUNT",
        "date_field": "LAUFD",
        "min_age_days": 1,
-       "bukrs_field": "BUKRS",
+       "bukrs_field": "BBUKR",
        "status_field": "DOC1R",
        "status_op": "EQ",
        "status_value": "",
@@ -167,7 +167,7 @@
        "table": "DFKKZK",
        "description": "Oldest payment lot not closed",
        "func": "AGE",
-       "date_field": "‹lot creation date field›",
+       "date_field": "ERDAT",
        "min_age_days": 1,
        "status_field": "‹lot status field›",
        "status_op": "NE",
@@ -222,7 +222,7 @@
    ],
    "tables": [
     {
-     "name": "DFKKRH",
+     "name": "DFKKRK",
      "role": "H",
      "description": "Returns lot header"
     },
@@ -255,12 +255,12 @@
      "aggregates": [
       {
        "id": "R1",
-       "table": "DFKKRH",
+       "table": "DFKKRK",
        "description": "Oldest returns lot not closed",
        "func": "AGE",
-       "date_field": "‹lot creation date field›",
+       "date_field": "ERDAT",
        "min_age_days": 1,
-       "status_field": "‹lot status field›",
+       "status_field": "STARS",
        "status_op": "NE",
        "status_value": "‹closed value›",
        "amber": 1,
@@ -377,8 +377,7 @@
     {
      "name": "DFKKRAPT",
      "role": "L",
-     "description": "Clearing history (reset clearings)",
-     "verify": "V128"
+     "description": "Clearing history (reset clearings)"
     }
    ],
    "monitors": [
@@ -393,7 +392,7 @@
        "table": "DFKKRAPT",
        "description": "Clearing resets of the last day",
        "func": "COUNT",
-       "date_field": "‹reset date field›",
+       "date_field": "STDAT",
        "max_age_days": 1,
        "amber": "‹amber count›",
        "red": "‹red count›",
@@ -440,7 +439,7 @@
        "table": "DFKKKO",
        "description": "Reversed documents of the last day",
        "func": "COUNT",
-       "date_field": "‹entry date field›",
+       "date_field": "CPUDT",
        "max_age_days": 1,
        "status_field": "STBEL",
        "status_op": "NE",
@@ -552,26 +551,22 @@
     {
      "name": "DFKKINVDOC_H",
      "role": "H",
-     "description": "Invoicing documents",
-     "verify": "V128"
+     "description": "Invoicing documents"
     },
     {
      "name": "DFKKINVDOC_I",
      "role": "I",
-     "description": "Invoicing document items (INVDOCNO, INVDOCITEM)",
-     "verify": "V128"
+     "description": "Invoicing document items (INVDOCNO, INVDOCITEM)"
     },
     {
      "name": "DFKKINVBILL_H",
      "role": "H",
-     "description": "Billing documents to invoice",
-     "verify": "V128"
+     "description": "Billing documents to invoice"
     },
     {
      "name": "DFKKINVBILL_I",
      "role": "I",
-     "description": "Billing document items (tax _T, additional _A)",
-     "verify": "V128"
+     "description": "Billing document items (tax _T, additional _A)"
     }
    ],
    "monitors": [
@@ -588,7 +583,7 @@
        "func": "AGE",
        "date_field": "‹billing date field›",
        "min_age_days": 1,
-       "status_field": "‹invoicing status field›",
+       "status_field": "INVSTATUS",
        "status_op": "NE",
        "status_value": "‹invoiced value›",
        "amber": 1,
@@ -621,8 +616,7 @@
     {
      "name": "DFKKIH",
      "role": "L",
-     "description": "Interest history per item (interest document IOPBEL)",
-     "verify": "V128"
+     "description": "Interest history per item (interest document IOPBEL)"
     },
     {
      "name": "DFKKOP",
@@ -805,12 +799,12 @@
        "table": "DFKKOP",
        "description": "Overdue instalments",
        "func": "COUNT",
-       "date_field": "‹due date field›",
+       "date_field": "FAEDN",
        "min_age_days": "‹tolerance days›",
        "status_field": "‹instalment item flag›",
        "status_op": "EQ",
        "status_value": "X",
-       "cond_field": "‹clearing status field›",
+       "cond_field": "AUGST",
        "cond_op": "NE",
        "cond_value": "‹cleared value›",
        "amber": 1,
@@ -859,9 +853,9 @@
        "table": "DFKKOP",
        "description": "Open items past their deferral date",
        "func": "COUNT",
-       "date_field": "‹deferral date field›",
+       "date_field": "STUDT",
        "min_age_days": 1,
-       "status_field": "‹clearing status field›",
+       "status_field": "AUGST",
        "status_op": "NE",
        "status_value": "‹cleared value›",
        "amber": "‹amber count›",
@@ -899,14 +893,12 @@
     {
      "name": "DFKKCOH",
      "role": "H",
-     "description": "Correspondence requests and their print state",
-     "verify": "V128"
+     "description": "Correspondence requests and their print state"
     },
     {
      "name": "DFKKCOHI",
      "role": "L",
-     "description": "Correspondence history (detail in DFKKCOD by type)",
-     "verify": "V128"
+     "description": "Correspondence history (detail in DFKKCOD by type)"
     }
    ],
    "monitors": [
@@ -966,10 +958,10 @@
    ],
    "tables": [
     {
-     "name": "DFKKSUMC",
+     "name": "DFKKSUM",
      "role": "S",
-     "description": "Summary records of a reconciliation key",
-     "link_object": "FICA_SUMMARY_RECORD"
+     "description": "Key totals per company code, G/L account, currency",
+     "link_object": "FICA_SUMMARY_TOTALS"
     },
     {
      "name": "DFKKKO",
@@ -978,10 +970,10 @@
      "link_object": "FICA_DOC_HEADER"
     },
     {
-     "name": "‹reconciliation key status table›",
+     "name": "DFKKSUMC",
      "role": "S",
      "description": "Reconciliation keys: closed, transferred",
-     "verify": "V128"
+     "link_object": "FICA_SUMMARY_RECORD"
     }
    ],
    "monitors": [
@@ -993,10 +985,10 @@
      "aggregates": [
       {
        "id": "R1",
-       "table": "‹reconciliation key status table›",
+       "table": "DFKKSUMC",
        "description": "Oldest key not transferred",
        "func": "AGE",
-       "date_field": "‹key date field›",
+       "date_field": "CPUDT",
        "min_age_days": 1,
        "status_field": "‹key status field›",
        "status_op": "NE",
@@ -1029,10 +1021,10 @@
       },
       {
        "id": "OUT_GLKEY",
-       "table": "‹reconciliation key status table›",
+       "table": "DFKKSUMC",
        "description": "Keys of the downtime days not transferred",
        "func": "COUNT",
-       "date_field": "‹key date field›",
+       "date_field": "CPUDT",
        "status_field": "‹key status field›",
        "status_op": "NE",
        "status_value": "‹transferred value›",

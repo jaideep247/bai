@@ -45,9 +45,9 @@
      "description": "Electronic bank statement header",
      "fields": [
        {"name": "KUKEY", "evidence": "C", "description": "Short key of the statement"},
-       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "V", "verify": "V117", "description": "Company code"},
-       {"name": "HBKID", "evidence": "V", "verify": "V117", "description": "House bank"},
-       {"name": "HKTID", "evidence": "V", "verify": "V117", "description": "Account ID of the house bank"}
+       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "C", "description": "Company code"},
+       {"name": "HBKID", "evidence": "C", "description": "House bank"},
+       {"name": "HKTID", "evidence": "C", "description": "Account ID of the house bank"}
      ]},
     {"id": "S4_BANK_STMT_LINE", "source": "FEBEP", "kind": "T", "keys": ["KUKEY", "ESNUM"],
      "description": "Electronic bank statement line",
@@ -59,7 +59,7 @@
        {"name": "BUDAT", "evidence": "C", "description": "Posting date (always filled)"},
        {"name": "VB1OK", "evidence": "C", "description": "Posted in posting area 1"},
        {"name": "VB2OK", "evidence": "C", "description": "Posted in posting area 2"},
-       {"name": "VGEXT", "evidence": "V", "verify": "V138",
+       {"name": "VGEXT", "evidence": "C",
         "description": "External transaction code of the line (break analysis)"}
      ]}
   ],

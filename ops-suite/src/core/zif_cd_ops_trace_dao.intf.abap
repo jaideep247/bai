@@ -15,6 +15,8 @@
 *&            | ZCD_FMON_TABWL).
 *& 2026-11-08 | READ_CONFIGURED_AFTER: watermark read of a configured source (keyset date, time, key) - request log
 *&            | of the payment worklist.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository</p>
 INTERFACE zif_cd_ops_trace_dao
@@ -180,7 +182,7 @@ INTERFACE zif_cd_ops_trace_dao
     RETURNING
       VALUE(rt_events) TYPE zif_cd_ops_trace_types=>tt_fmon_event.
 
-  "! Summary records (DFKKSUMC) of the FIKEYs
+  "! Totals records (DFKKSUM) of the FIKEYs
   METHODS get_summary_keys
     IMPORTING
       it_fikey        TYPE zif_cd_ops_trace_types=>tt_fikey

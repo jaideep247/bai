@@ -461,7 +461,7 @@ Read-only; reads in `ZCL_CD_HCK_RECON_DAO` (factory `GET_RECON_DAO`), every leg 
 |---|---|---|
 | Bank | FEBEP / FEBKO through `ZI_CD_HckRcBankLine`: SUM of KWBTR per account, currency (line, else statement), booking day (FEBEP-BUDAT), BAI code (VORGC), debit / credit (EPVOZ) | The payment engine account of FEBEP-XBLNR (bank text removed, 10 characters - as EBS, `EBS_VALIDATION.md` §A0a) = `ZCD_EBS_ACCT-ACCOUNT_NO` of the set's house bank account (EBS configuration read through `ZCL_CD_EBS_FACTORY`). Signed: credit +, debit - (EBS parameters `EBS_FEB_CREDIT_IND` / `_DEBIT_IND`), inverted by `INVERT_BANK`. Each code counts by its role (`ZCD_HCK_BTCROLE` usage RECON) |
 | G/L | ACDOCA (ledger `EBS_GL_LEDGER`, transaction currency RWCUR / WSL) on the clearing account per day and reference procedure | Lines of the payment engine G/L transfer (AWTYP = `TRACE_GL_AWTYP`, FKKSU) are the G/L leg; other postings (bank statement, manual) are shown apart in the detail |
-| Payment engine | DFKKSUMC (G/L transfer totals: the confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY) per company code, account, currency, posting day; DPAYH payment documents (DOC1R filled, no proposal run) of the house bank account per run date in the detail | Matching G/L to the subledger line by line is not possible (summarised transfer): the comparison is at group level only |
+| Payment engine | DFKKSUM (G/L transfer totals: the confirmed path DFKKSUM-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY) per company code, account, currency, posting day; DPAYH payment documents (DOC1R filled, no proposal run) of the house bank account per run date in the detail | Matching G/L to the subledger line by line is not possible (summarised transfer): the comparison is at group level only |
 
 **Comparisons.** Bank <-> G/L: difference = bank - G/L transfer (`LEG_BANK`). G/L <-> payment engine: difference = G/L transfer - control total (`LEG_FICA`). Tolerance: `ZCD_HCK_RCSET-TOLERANCE`, else `HCK_RECON_TOLERANCE`; |difference| <= tolerance is balanced (the boundary is balanced).
 
@@ -699,7 +699,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 
 | Object | Reason | Covered instead by |
 |---|---|---|
-| DAO reads of TBTCO, BALHDR, SNAP_BEG, VBHDR, DFKKSUMC/DFKKKO/BKPF; `ENQUEUE_READ`; `DATE_CONVERT_TO_FACTORYDATE`; `get_table_fields` (RTTI) | Thin wrappers over SAP standard tables / FMs with unverified fields; doubling them proves only the double | QA1 cases HCK-QA-06…10; the logic consuming their output is unit-tested (cycle eval, threshold, agg query) |
+| DAO reads of TBTCO, BALHDR, SNAP_BEG, VBHDR, DFKKSUM/DFKKKO/BKPF; `ENQUEUE_READ`; `DATE_CONVERT_TO_FACTORYDATE`; `get_table_fields` (RTTI) | Thin wrappers over SAP standard tables / FMs with unverified fields; doubling them proves only the double | QA1 cases HCK-QA-06…10; the logic consuming their output is unit-tested (cycle eval, threshold, agg query) |
 | DAO `aggregate` and `compute_table_hash` (dynamic SQL on arbitrary tables) | Dynamic FROM on non-doubled tables; the SQL text is built and tested in the pure builder | `ltc_agg_query`; QA1 HCK-QA-01, HCK-QA-05 |
 | Check plug-ins `ZCL_CD_HCK_C_*` | Glue: parameter → DAO → pure helper; no own rules | Pure tests of `agg_query`, `cycle_eval`, `param`; engine tests through LTD plug-ins; QA1 cases |
 | `ZCL_CD_HCK_ENGINE=>take_baseline` | AUTHORITY-CHECK + DAO wrapper | QA1 HCK-QA-05 |
@@ -770,24 +770,24 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 10. `NRIV`-OBJECT, SUBOBJECT, NRRANGENR, TOYEAR, FROMNUMBER, TONUMBER, NRLEVEL, EXTERNIND (`get_number_ranges`; character limits CHAR 20)
 11. `TRFCQOUT`-QNAME, DEST, QSTATE, QRFCDATUM, QRFCUZEIT and `TRFCQIN`-QNAME, QSTATE, QRFCDATUM, QRFCUZEIT (constants `GC_TRFCQOUT` / `GC_TRFCQIN`, validated at run time; also whether the queue state shown in SMQ1 / SMQ2 is held in these tables or in TRFCQSTATE)
 12. bgRFC unit / error table and its fields (PARAM4 of `E_QUEUES`; SBGRFCMON tables on 7.58)
-13. `DPAYH`-XVORL, BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; `TFK042Z` key LAND1 / ZLSCH via the company code's country (`get_issued_payments`; released `I_CompanyCode`-Country through `ZI_CD_OpsCompanyCode` since 2026-11-11, was `T001`-LAND1 - V123)
+13. `DPAYH`-XVORL, BBUKR, RZAWE, HBKID, VALUT, RWBTR, WAERS (**2026-11-15:** seen on the reference system S/4HANA 2025, `ddic/a4h`; DPAYH has no BUKRS / PYMET - the paying company code is BBUKR `BUKRS_PAY`, the method RZAWE `PYMET_KK`; the DAO reads them under the old result names); `TFK042Z` key LAND1 / ZLSCH via the company code's country (`get_issued_payments`; released `I_CompanyCode`-Country through `ZI_CD_OpsCompanyCode` since 2026-11-11, was `T001`-LAND1 - V123)
 14. `BSEG`-XREF2 / ZUONR / AUGBL / HKONT read by BUKRS + XREF2 + GJAHR (FOR ALL ENTRIES, `get_gl_lines_by_xref2`): BSEG has no index on XREF2 - access path in a QA1 SQL trace (secondary index BUKRS / XREF2, or the clearing accounts in PARAM1); fiscal year = calendar year assumed
 15. `FEBEP`-VORGC / VGEXT (bank code of the line, as the EBS read) and the CHECT form of AUGBL / ZTNUM (with or without leading zeros - both are read); ZTNUM length and the 13-character suffix; `DFKKCR`-STATE is **confirmed** (B / V / blank)
-16. `DFKKRP`-BETRW (returned amount, shared EBS read `GET_RETURN_ITEMS`)
+16. `DFKKRP`-BETRW (returned amount, shared EBS read `GET_RETURN_ITEMS`) - **not a field of DFKKRP** on the reference system S/4HANA 2025, `ddic/a4h` (BETRR / BETRH / BETRU there): open, V160 (`ddic/open_fields.csv`)
 17. Stripe payout log `ZCD_STRP_POUT_LOG` field names and the DFKKOP payment intent field (parameters `HCK_STRIPE_*`, validated against the DDIC and `ZCD_OPS_TABWL` HCK / READ at run time)
-18. `DPAYH` by DOC1R (`get_issued_payments_by_doc`, canonical payment outcome): index on DOC1R; DOC1R not unique (re-runs) - the latest run (LAUFD, then LAUFI, descending) is judged
+18. `DPAYH` by DOC1R (`get_issued_payments_by_doc`, canonical payment outcome): index on DOC1R (**2026-11-15:** index H8H on DOC1R on the reference system S/4HANA 2025, `ddic/a4h`); DOC1R not unique (re-runs) - the latest run (LAUFD, then LAUFI, descending) is judged
 
 `ZCL_CD_HCK_RECON_DAO` / `ZI_CD_HckRcBankLine` (2026-11-07, `A_RECON_3WAY`):
 
 18. `ACDOCA`-RLDNR, RBUKRS, RACCT, RWCUR, WSL (signed, transaction currency), BUDAT, AWTYP, BELNR, GJAHR, DOCLN, **ZUONR** (Stripe descriptor after payout processing, ACH assignment = AUGBL), **DRCRK** (`get_gl_days`, `get_doc_assignments`, `get_assignment_sums`, `get_open_assignments`)
-19. `DFKKSUMC`-BUKRS, HKONT, WAERS, **BUDAT**, **BETRW** (signed?) (`get_fica_days`)
-20. `DPAYH`-HKTID (house bank account of the payment) (`get_payment_days`)
+19. `DFKKSUM`-BUKRS, HKONT, WAERS, BUDAT, BETRW, SHKZG (`get_fica_days`; **2026-11-15:** the totals are `DFKKSUM`, not `DFKKSUMC` - that is the reconciliation key and its status, without company code, account or currency; fields seen on the reference system S/4HANA 2025, `ddic/a4h`; BETRW `BETRW_LONG_KK` is summed signed by SHKZG, H = credit negative - whether it is stored signed stays V101)
+20. `DPAYH`-HKTID (house bank account of the payment) (`get_payment_days`; seen on the reference system S/4HANA 2025, `ddic/a4h`)
 21. `FEBEP`-VORGC length (35 characters in the ZBTR key CODE, CHAR 10 in the reconciliation types), CHECT = `DFKKRP`-SELW1 form (`get_bank_days_no_lot`); FEBEP-BELNR / GJAHR = the posted deposit document in FEBKO-BUKRS (`get_deposits`)
 
 
 `ZCL_CD_HCK_DOCCHG_DAO` (2026-11-11, `A_DOC_CHANGE`, build C):
 
-22. `DFKKKO`-STBEL / CPUDT / FIKEY of the payment document and its reversal document; index on CPUDT (as the snapshot source REVERSALS); `DPAYH`-XVORL / BUKRS / RWBTR / WAERS / ZZ_PAYMENT_STATUS by DOC1R (`get_reversed_payments`) - V108
+22. `DFKKKO`-STBEL / CPUDT / FIKEY of the payment document and its reversal document; index on CPUDT (as the snapshot source REVERSALS); `DPAYH`-XVORL / BBUKR (was BUKRS, 2026-11-15) / RWBTR / WAERS / ZZ_PAYMENT_STATUS by DOC1R (`get_reversed_payments`) - V108
 Seed-only (customizing, validated at runtime against the DDIC): DFKKOP-FAEDN/AUGST/HVORG/BUKRS/BETRH, FEBKO-AZDAT and format field, ZCD_PAYM_REQ_LOG date/source fields, /SAPPO/ORDER_HDR fields, return-debit main transactions, log objects, factory calendars, real SAP job names behind the wiki placeholders.
 
 Not verified (offline build): activation, DDIC existence, ABAP Unit execution, CDS/DCL syntax on 2023 (release-dependent annotations marked), FM interfaces (`ENQUEUE_READ`, `DATE_CONVERT_TO_FACTORYDATE`, `AUTHORITY_CHECK_DATASET`), dynamic SQL behaviour for SUM into DECFLOAT34, BKPF-AWKEY vs FIKEY length comparison, performance at 10M+ open items (the aging aggregate on DFKKOP needs an index on the date/clearing fields or a narrower condition — performance test phase). Timeouts are measured, not enforced: a synchronous check cannot be killed (parallel aRFC with a server-group time-out is the later option).

@@ -1,5 +1,5 @@
 {
-  "_comment": "Link registry, industry package FICA (SAP FI-CA / FS-CD standard layer: SAP standard tables of contract accounts receivable and payable (FI-CA) and its insurance collections / disbursements extension (FS-CD)): documents, items, reconciliation keys and their summary records, payment runs, cheques, returns, notification-of-change lots, payment methods. Standard objects and standard links only - a customer's own fields (custom fields on these tables) and tables are its overlay. The join facts are confirmed in a reference landscape (quality C) unless marked P; a field still to be confirmed in SE11 is evidence V (V117) and its link is delivered inactive. Object keys are the fields that identify a row for the walker (business identity, e.g. a document for the items of a document), not necessarily the full DDIC key. docs/LINK_REGISTRY.md.",
+  "_comment": "Link registry, industry package FICA (SAP FI-CA / FS-CD standard layer: SAP standard tables of contract accounts receivable and payable (FI-CA) and its insurance collections / disbursements extension (FS-CD)): documents, items, reconciliation keys and their summary records, payment runs, cheques, returns, notification-of-change lots, payment methods. Standard objects and standard links only - a customer's own fields (custom fields on these tables) and tables are its overlay. The join facts are confirmed in a reference landscape (quality C) unless marked P; a field still to be confirmed in SE11 is evidence V (V117) and its link is delivered inactive. Since 2026-11-15 every field is evidence C: seen in the dictionary of a reference system (S/4HANA 2025 with FI-CA; the product's target release is S/4HANA 2023) or in a consumer landscape's table definitions. DFKKSUMC is the reconciliation key (status), DFKKSUM its totals per company code, account and currency; the company code of a payment is DPAYH-BBUKR (paying company code), its method DPAYH-RZAWE. Object keys are the fields that identify a row for the walker (business identity, e.g. a document for the items of a document), not necessarily the full DDIC key. docs/LINK_REGISTRY.md.",
   "layer": {"id": "FICA", "kind": "I", "rank": 20, "prefix": "FICA_", "description": "Industry package: SAP FI-CA / FS-CD (standard)",
             "owner": "OPS FRAMEWORK", "active": true},
   "objects": [
@@ -20,12 +20,21 @@
        {"name": "GPART", "sensitivity": "M", "evidence": "C", "description": "Business partner (masked)"}
      ]},
     {"id": "FICA_SUMMARY_RECORD", "source": "DFKKSUMC", "kind": "T", "keys": ["FIKEY"],
-     "description": "Summary records of a reconciliation key (G/L transfer)",
+     "description": "Reconciliation key (status: closed, error)",
      "fields": [
        {"name": "FIKEY", "evidence": "C", "description": "Reconciliation key"},
-       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "V", "verify": "V117", "description": "Company code"},
-       {"name": "HKONT", "evidence": "V", "verify": "V117", "description": "G/L account"},
-       {"name": "WAERS", "evidence": "V", "verify": "V117", "description": "Currency"}
+       {"name": "XCLOS", "data_element": "XCLOS_KK", "evidence": "C", "description": "Key closed indicator"},
+       {"name": "CLDAT", "data_element": "CLDAT_KK", "evidence": "C", "description": "Date the key was closed"},
+       {"name": "XERRO", "data_element": "XERRO_KK", "evidence": "C", "description": "Error indicator of the key"}
+     ]},
+    {"id": "FICA_SUMMARY_TOTALS", "source": "DFKKSUM", "kind": "T", "keys": ["FIKEY"],
+     "description": "Key totals per company code, G/L account and currency",
+     "fields": [
+       {"name": "FIKEY", "evidence": "C", "description": "Reconciliation key"},
+       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "C", "description": "Company code"},
+       {"name": "HKONT", "data_element": "HKONT", "evidence": "C", "description": "G/L account"},
+       {"name": "WAERS", "data_element": "WAERS", "evidence": "C", "description": "Currency"},
+       {"name": "BUDAT", "data_element": "BUDAT_KK", "evidence": "C", "description": "Posting date"}
      ]},
     {"id": "FICA_PAYMENT_RUN", "source": "DPAYH", "kind": "T", "keys": ["LAUFD", "LAUFI", "DOC1R"],
      "description": "Payment of a payment run (payment data header)",
@@ -33,17 +42,17 @@
        {"name": "LAUFD", "evidence": "C", "description": "Run date"},
        {"name": "LAUFI", "evidence": "C", "description": "Run identification"},
        {"name": "DOC1R", "evidence": "C", "description": "Payment document (blank: no payment yet)"},
-       {"name": "PYMET", "evidence": "V", "verify": "V117", "description": "Payment method"},
-       {"name": "BUKRS", "data_element": "BUKRS", "evidence": "V", "verify": "V117", "description": "Company code"},
-       {"name": "HBKID", "evidence": "V", "verify": "V117", "description": "House bank"}
+       {"name": "RZAWE", "data_element": "PYMET_KK", "evidence": "C", "description": "Payment method"},
+       {"name": "BBUKR", "data_element": "BUKRS_PAY", "evidence": "C", "description": "Paying company code"},
+       {"name": "HBKID", "evidence": "C", "description": "House bank"}
      ]},
     {"id": "FICA_CHEQUE", "source": "DFKKCR", "kind": "T", "keys": ["DOC1R", "ZTNUM"],
      "description": "Cheque register",
      "fields": [
        {"name": "DOC1R", "evidence": "C", "description": "Payment document of the cheque"},
        {"name": "ZTNUM", "evidence": "C", "description": "Cheque number"},
-       {"name": "HBKID", "evidence": "V", "verify": "V117", "description": "House bank"},
-       {"name": "HKTID", "evidence": "V", "verify": "V117", "description": "Account ID of the house bank"}
+       {"name": "HBKID", "evidence": "C", "description": "House bank"},
+       {"name": "HKTID", "evidence": "C", "description": "Account ID of the house bank"}
      ]},
     {"id": "FICA_RETURN_ITEM", "source": "DFKKRP", "kind": "T", "keys": ["SELW1"],
      "description": "Returns lot items (walked per payment reference)",
@@ -61,8 +70,8 @@
     {"id": "FICA_PAY_METHOD_CFG", "source": "TFK042Z", "kind": "T", "keys": ["LAND1", "ZLSCH"],
      "description": "Payment method per country (collection or not)",
      "fields": [
-       {"name": "LAND1", "evidence": "V", "verify": "V117", "description": "Country"},
-       {"name": "ZLSCH", "evidence": "V", "verify": "V117", "description": "Payment method"},
+       {"name": "LAND1", "evidence": "C", "description": "Country"},
+       {"name": "ZLSCH", "evidence": "C", "description": "Payment method"},
        {"name": "XEINZ", "evidence": "C", "description": "Collection method (blank: disbursement)"}
      ]}
   ],
@@ -79,11 +88,18 @@
     {"id": "FICA_CLEARING_TO_ITEMS", "from": "FICA_DOC_HEADER", "to": "FICA_OPEN_ITEM", "cardinality": "1N", "quality": "C",
      "owner": "OPS FRAMEWORK", "description": "Clearing (payment) document -> items it cleared",
      "conditions": [{"kind": "EQ", "from": "OPBEL", "to": "AUGBL"}]},
-    {"id": "FICA_HDR_TO_SUMMARY", "from": "FICA_DOC_HEADER", "to": "FICA_SUMMARY_RECORD", "cardinality": "NM", "quality": "C",
-     "owner": "OPS FRAMEWORK", "description": "Document -> summary records of its reconciliation key",
+    {"id": "FICA_HDR_TO_SUMMARY", "from": "FICA_DOC_HEADER", "to": "FICA_SUMMARY_RECORD", "cardinality": "N1", "quality": "C",
+     "owner": "OPS FRAMEWORK", "description": "Document -> its reconciliation key",
      "conditions": [{"kind": "EQ", "from": "FIKEY", "to": "FIKEY"}]},
-    {"id": "FICA_SUMMARY_TO_HDRS", "from": "FICA_SUMMARY_RECORD", "to": "FICA_DOC_HEADER", "cardinality": "NM", "quality": "C",
+    {"id": "FICA_SUMMARY_TO_HDRS", "from": "FICA_SUMMARY_RECORD", "to": "FICA_DOC_HEADER", "cardinality": "1N", "quality": "C",
      "owner": "OPS FRAMEWORK", "description": "Reconciliation key -> its documents",
+     "conditions": [{"kind": "EQ", "from": "FIKEY", "to": "FIKEY"}]},
+    {"id": "FICA_SUMMARY_TO_TOTALS", "from": "FICA_SUMMARY_RECORD", "to": "FICA_SUMMARY_TOTALS", "cardinality": "1N",
+     "quality": "C", "owner": "OPS FRAMEWORK",
+     "description": "Reconciliation key -> its totals",
+     "conditions": [{"kind": "EQ", "from": "FIKEY", "to": "FIKEY"}]},
+    {"id": "FICA_TOTALS_TO_SUMMARY", "from": "FICA_SUMMARY_TOTALS", "to": "FICA_SUMMARY_RECORD", "cardinality": "N1",
+     "quality": "C", "owner": "OPS FRAMEWORK", "description": "Totals -> their reconciliation key (status)",
      "conditions": [{"kind": "EQ", "from": "FIKEY", "to": "FIKEY"}]},
     {"id": "FICA_SUMMARY_TO_JOURNAL", "from": "FICA_SUMMARY_RECORD", "to": "S4_JOURNAL_ENTRY", "cardinality": "NM", "quality": "C",
      "active": false, "verify": "V110 V117", "owner": "OPS FRAMEWORK",

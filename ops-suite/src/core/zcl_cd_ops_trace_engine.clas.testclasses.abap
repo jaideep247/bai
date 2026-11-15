@@ -29,6 +29,7 @@
 *& 2026-11-08 | Payment worklist: request rule double (stage REQUEST_DUE shown as information), search by payment
 *&            | reference (cheque number, payment document).
 *& 2026-11-10 | bad_source_field_is_reported: CONFIGURATION row instead of a silently lost filter.
+*& 2026-11-15 | Field notes from the dictionary of the reference system S/4HANA 2025 (ddic/a4h).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -604,7 +605,7 @@ CLASS ltc_trace IMPLEMENTATION.
       ENDIF.
     ENDIF.
 
-    " G/L transfer: DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY; clearing line XREF2 = AUGBL
+    " G/L transfer: DFKKKO-FIKEY = DFKKSUM-FIKEY = BKPF-AWKEY; clearing line XREF2 = AUGBL
     ls_fikey-fikey = gc-fikey.
     ls_fikey-bukrs = gc-bukrs.
     INSERT ls_fikey INTO TABLE mo_dao->mt_sumc.
