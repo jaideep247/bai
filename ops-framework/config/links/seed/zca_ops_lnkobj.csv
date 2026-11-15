@@ -6,7 +6,8 @@ FICA_OPEN_ITEM,FICA,DFKKOP,T,OPBEL,Subledger items (walked per document),X
 FICA_PAYMENT_RUN,FICA,DPAYH,T,"LAUFD,LAUFI,DOC1R",Payment of a payment run (payment data header),X
 FICA_PAY_METHOD_CFG,FICA,TFK042Z,T,"LAND1,ZLSCH",Payment method per country (collection or not),X
 FICA_RETURN_ITEM,FICA,DFKKRP,T,SELW1,Returns lot items (walked per payment reference),X
-FICA_SUMMARY_RECORD,FICA,DFKKSUMC,T,FIKEY,Summary records of a reconciliation key (G/L transfer),X
+FICA_SUMMARY_RECORD,FICA,DFKKSUMC,T,FIKEY,"Reconciliation key (status: closed, error)",X
+FICA_SUMMARY_TOTALS,FICA,DFKKSUM,T,FIKEY,"Key totals per company code, G/L account and currency",X
 S4_BANK_STMT_HDR,S4CORE,FEBKO,T,KUKEY,Electronic bank statement header,X
 S4_BANK_STMT_LINE,S4CORE,FEBEP,T,"KUKEY,ESNUM",Electronic bank statement line,X
 S4_BUSINESS_PARTNER,S4CORE,BUT000,T,PARTNER,Business partner (table; released view: V117),X

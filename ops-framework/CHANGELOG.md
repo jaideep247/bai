@@ -2,6 +2,50 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build I: field references checked against a reference system)
+
+Evidence: the dictionary of 46 SAP standard tables of a reference system (S/4HANA 2025 with FI-CA; the product
+targets S/4HANA 2023) exported by a consumer with `ddic_export.py export`. A field present there is used (noted as
+seen on the reference system); a field missing there is treated as wrong.
+
+### Added
+- `tools/abaptools/ddic_export.py`: a scanner of the repository's code (`code_references`): ABAP SQL (FROM / JOIN with
+  aliases, `alias~field`, the unqualified fields of a query with one data source and no join - field list, FIELDS,
+  left-hand side of WHERE / HAVING, GROUP BY, ORDER BY), `TYPE <table>-<field>`, components of variables typed with
+  a table (`TYPE <table>`, `TABLE OF <table>`, LOOP AT / READ TABLE rows, method parameters, class attributes,
+  `VALUE #( )` / `VALUE <table>( )` rows) and CDS view entities (`select from` / joins / associations with aliases,
+  `Alias.field`, unqualified fields of a branch with one source). Only tables with an export are judged; an alias or
+  a variable that may stand for more than one table is "unresolved", never MISSING; customer fields (ZZ / YY) missing
+  from an export are reported, not failed. `compare` prints a "code references" section with file:line, takes several
+  `--exports` folders and `--open` lists (fields that stay read under a VERIFY item), and exits non-zero on a MISSING
+  field of the registry, the catalogue or the code; `check_folders` / `export_folders` for a consumer's portable
+  check. Unit tests in `tools/tests/test_ddic_export.py`.
+- Link registry object `FICA_SUMMARY_TOTALS` (`DFKKSUM`: FIKEY, BUKRS, HKONT, WAERS, BUDAT) and the links
+  `FICA_SUMMARY_TO_TOTALS` (1N) / `FICA_TOTALS_TO_SUMMARY` (N1) by FIKEY.
+
+### Changed
+- Every table field of the link registry layers S4CORE and FICA is evidence C (seen on the reference system):
+  `FEBKO-BUKRS / HBKID / HKTID`, `FEBEP-VGEXT`, `DFKKCR-HBKID / HKTID`, `DPAYH-HBKID`, `TFK042Z-LAND1 / ZLSCH`
+  (V117, V138). `FICA_SUMMARY_RECORD` (`DFKKSUMC`) is the reconciliation key with its status fields `XCLOS`,
+  `CLDAT`, `XERRO`; document -> key is N1, key -> documents 1N (`DFKKSUMC` key is FIKEY).
+- Process catalogue: field names filled where the data element names the meaning - `DFKKZK-ERDAT`,
+  `DFKKRAPT-STDAT`, `DFKKKO-CPUDT`, `DFKKINVBILL_H-INVSTATUS`, `DFKKOP-FAEDN / STUDT / AUGST`, reconciliation key
+  status table `DFKKSUMC` (`CPUDT`); the table rows confirmed on the reference system lose their VERIFY marker. Values
+  stay placeholders, the rows stay pending (V128). `docs/LINK_REGISTRY.md` section 8 counts (FICA 9 objects, 35
+  fields, 22 links, 18 active), `docs/PROCESS_CATALOGUE.md` table list.
+- `docs/VERIFY.md`: V58, V59, V117, V128, V129, V135, V138, V146 record what the reference system shows, including
+  the indexes (e.g. no secondary index on `FEBEP-CHECT`, `DFKKCR-DOC1R`, `DFKKRP-SELW1`, `DFKKOP-AUGDT`; `DPAYH` H8H
+  on DOC1R; `DFKKOP` HTH on AUGBL; TBTCO without STATUS + ENDDATE).
+
+### Fixed
+- `FICA_PAYMENT_RUN` (`DPAYH`) named `BUKRS` and `PYMET`, which DPAYH does not have: now `BBUKR` (paying company
+  code, `BUKRS_PAY`) and `RZAWE` (`PYMET_KK`); catalogue `FICA_PAYRUN_NOPAY` reads the company code from `BBUKR`.
+- `FICA_SUMMARY_RECORD` (`DFKKSUMC`) named `BUKRS`, `HKONT`, `WAERS`: they are fields of the totals table `DFKKSUM`
+  (new object above); the G/L transfer process lists `DFKKSUM` (totals) and `DFKKSUMC` (key status) instead of a
+  placeholder.
+- Catalogue `FICA_RET_OPEN` read the returns lot status from `DFKKRH` (returns history per business partner); the
+  lot header is `DFKKRK` (`ERDAT`, `STARS`).
+
 ## [Unreleased] - 2026-11-15 (table definitions from the landscape)
 
 ### Added

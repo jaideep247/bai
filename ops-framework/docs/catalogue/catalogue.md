@@ -100,7 +100,7 @@ Depends on: FICA_GL_TRANSFER (soft: Payment documents reach the G/L with their k
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_PAYRUN_NOPAY | Payments of past runs without a payment document | R1: COUNT `DPAYH`, date LAUFD (>= 1 d), DOC1R EQ , per BUKRS, amber 1 / red ‹red count› | V V129 |
+| FICA_PAYRUN_NOPAY | Payments of past runs without a payment document | R1: COUNT `DPAYH`, date LAUFD (>= 1 d), DOC1R EQ , per BBUKR, amber 1 / red ‹red count› | V V129 |
 
 ### FICA_PAY_LOTS - Incoming payment lots and cash journal
 
@@ -120,7 +120,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_LOT_OPEN | Payment lots not posted and closed after n days | R1: AGE `DFKKZK`, date ‹lot creation date field› (>= 1 d), ‹lot status field› NE ‹closed value›, amber 1 / red 3 | V V128 |
+| FICA_LOT_OPEN | Payment lots not posted and closed after n days | R1: AGE `DFKKZK`, date ERDAT (>= 1 d), ‹lot status field› NE ‹closed value›, amber 1 / red 3 | V V128 |
 | FICA_LOT_CLARIF | Payment lot items waiting in clarification | R1: COUNT `DFKKZP`, date ‹lot item date field› (>= 1 d), ‹clarification flag› EQ X, amber 1 / red ‹red count› | V V128 |
 
 ### FICA_RETURNS - Returns lots (returned payments)
@@ -133,7 +133,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `DFKKRH` | header | - | Returns lot header | C  |
+| `DFKKRK` | header | - | Returns lot header | C  |
 | `DFKKRP` | item | FICA_RETURN_ITEM | Returns lot items (returned payment, reason) | C  |
 | `DFKKOP` | item | FICA_OPEN_ITEM | Items of the returned payment | C  |
 
@@ -141,7 +141,7 @@ Depends on: FICA_PAYRUN (soft: Returns of payments of the payment run)
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_RET_OPEN | Returns lots not posted and closed after n days | R1: AGE `DFKKRH`, date ‹lot creation date field› (>= 1 d), ‹lot status field› NE ‹closed value›, amber 1 / red 3 | V V128 |
+| FICA_RET_OPEN | Returns lots not posted and closed after n days | R1: AGE `DFKKRK`, date ERDAT (>= 1 d), STARS NE ‹closed value›, amber 1 / red 3 | V V128 |
 
 ### FICA_EBS_LOTS - Bank statement items to payment lots and clearing
 
@@ -176,11 +176,11 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
 | `DFKKOP` | item | FICA_OPEN_ITEM | Open and cleared items | C  |
-| `DFKKRAPT` | log / history | - | Clearing history (reset clearings) | V V128 |
+| `DFKKRAPT` | log / history | - | Clearing history (reset clearings) | C  |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_CLR_RESET | Clearings reset in the last day above a limit | R1: COUNT `DFKKRAPT`, date ‹reset date field› (<= 1 d), amber ‹amber count› / red ‹red count› | V V128 |
+| FICA_CLR_RESET | Clearings reset in the last day above a limit | R1: COUNT `DFKKRAPT`, date STDAT (<= 1 d), amber ‹amber count› / red ‹red count› | V V128 |
 
 ### FICA_REVERSAL - Document reversal
 
@@ -196,7 +196,7 @@ Package FICA · component FI-CA · dashboard card ACCOUNTING · business owner r
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_REV_DAY | Documents reversed in the last day above a limit | R1: COUNT `DFKKKO`, date ‹entry date field› (<= 1 d), STBEL NE , amber ‹amber count› / red ‹red count› | V V128 |
+| FICA_REV_DAY | Documents reversed in the last day above a limit | R1: COUNT `DFKKKO`, date CPUDT (<= 1 d), STBEL NE , amber ‹amber count› / red ‹red count› | V V128 |
 
 ### FICA_DUNNING - Dunning
 
@@ -229,14 +229,14 @@ Package FICA · component FI-CA · dashboard card INVOICING · business owner ro
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `DFKKINVDOC_H` | header | - | Invoicing documents | V V128 |
-| `DFKKINVDOC_I` | item | - | Invoicing document items (INVDOCNO, INVDOCITEM) | V V128 |
-| `DFKKINVBILL_H` | header | - | Billing documents to invoice | V V128 |
-| `DFKKINVBILL_I` | item | - | Billing document items (tax _T, additional _A) | V V128 |
+| `DFKKINVDOC_H` | header | - | Invoicing documents | C  |
+| `DFKKINVDOC_I` | item | - | Invoicing document items (INVDOCNO, INVDOCITEM) | C  |
+| `DFKKINVBILL_H` | header | - | Billing documents to invoice | C  |
+| `DFKKINVBILL_I` | item | - | Billing document items (tax _T, additional _A) | C  |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_INV_BACKLOG | Billing documents of past days not invoiced | R1: AGE `DFKKINVBILL_H`, date ‹billing date field› (>= 1 d), ‹invoicing status field› NE ‹invoiced value›, amber 1 / red 3 | V V128 |
+| FICA_INV_BACKLOG | Billing documents of past days not invoiced | R1: AGE `DFKKINVBILL_H`, date ‹billing date field› (>= 1 d), INVSTATUS NE ‹invoiced value›, amber 1 / red 3 | V V128 |
 
 ### FICA_INTEREST - Interest calculation
 
@@ -248,7 +248,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `DFKKIH` | log / history | - | Interest history per item (interest document IOPBEL) | V V128 |
+| `DFKKIH` | log / history | - | Interest history per item (interest document IOPBEL) | C  |
 | `DFKKOP` | item | FICA_OPEN_ITEM | Items interest is calculated on | C  |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
@@ -293,7 +293,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_IP_BREACH | Instalments overdue beyond the tolerance (plan in breach) | R1: COUNT `DFKKOP`, date ‹due date field› (>= ‹tolerance days› d), ‹instalment item flag› EQ X, ‹clearing status field› NE ‹cleared value›, amber 1 / red ‹red count› | V V128 |
+| FICA_IP_BREACH | Instalments overdue beyond the tolerance (plan in breach) | R1: COUNT `DFKKOP`, date FAEDN (>= ‹tolerance days› d), ‹instalment item flag› EQ X, AUGST NE ‹cleared value›, amber 1 / red ‹red count› | V V128 |
 
 ### FICA_DEFERRAL - Deferral of due dates
 
@@ -309,7 +309,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_DEF_EXPIRED | Deferrals expired and still open | R1: COUNT `DFKKOP`, date ‹deferral date field› (>= 1 d), ‹clearing status field› NE ‹cleared value›, amber ‹amber count› / red ‹red count› | V V128 |
+| FICA_DEF_EXPIRED | Deferrals expired and still open | R1: COUNT `DFKKOP`, date STUDT (>= 1 d), AUGST NE ‹cleared value›, amber ‹amber count› / red ‹red count› | V V128 |
 
 ### FICA_CORRESP - Correspondence
 
@@ -322,8 +322,8 @@ Package FICA · component FI-CA · dashboard card CUSTOMER · business owner rol
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `DFKKCOH` | header | - | Correspondence requests and their print state | V V128 |
-| `DFKKCOHI` | log / history | - | Correspondence history (detail in DFKKCOD by type) | V V128 |
+| `DFKKCOH` | header | - | Correspondence requests and their print state | C  |
+| `DFKKCOHI` | log / history | - | Correspondence history (detail in DFKKCOD by type) | C  |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
@@ -343,14 +343,14 @@ Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): d
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
-| `DFKKSUMC` | status | FICA_SUMMARY_RECORD | Summary records of a reconciliation key | C  |
+| `DFKKSUM` | status | FICA_SUMMARY_TOTALS | Key totals per company code, G/L account, currency | C  |
 | `DFKKKO` | header | FICA_DOC_HEADER | Documents of a reconciliation key | C  |
-| `‹reconciliation key status table›` | status | - | Reconciliation keys: closed, transferred | V V128 |
+| `DFKKSUMC` | status | FICA_SUMMARY_RECORD | Reconciliation keys: closed, transferred | C  |
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_GL_OPENKEY | Reconciliation keys not transferred after n days | R1: AGE `‹reconciliation key status table›`, date ‹key date field› (>= 1 d), ‹key status field› NE ‹transferred value›, amber 1 / red 2 | V V128 |
-| FICA_GL_OUTAGE | Risk: postings in a planned downtime, G/L transfer gaps around it | `ZCL_CA_OPS_CHK_OUTAGE` with OUT_POST: COUNT `DFKKKO`, date CPUDT CPUTM, amber 1 / red ‹red count›; OUT_GLKEY: COUNT `‹reconciliation key status table›`, date ‹key date field›, ‹key status field› NE ‹transferred value›, amber 1 / red 1 | V V128 V129 |
+| FICA_GL_OPENKEY | Reconciliation keys not transferred after n days | R1: AGE `DFKKSUMC`, date CPUDT (>= 1 d), ‹key status field› NE ‹transferred value›, amber 1 / red 2 | V V128 |
+| FICA_GL_OUTAGE | Risk: postings in a planned downtime, G/L transfer gaps around it | `ZCL_CA_OPS_CHK_OUTAGE` with OUT_POST: COUNT `DFKKKO`, date CPUDT CPUTM, amber 1 / red ‹red count›; OUT_GLKEY: COUNT `DFKKSUMC`, date CPUDT, ‹key status field› NE ‹transferred value›, amber 1 / red 1 | V V128 V129 |
 | FICA_GL_BREAKS | Clearing-account breaks not explained after n days | `ZCL_CA_OPS_CHK_BREAK` | C |
 
 ### FSCD_PAYPLAN - Payment plans and debit entry (insurance)
@@ -389,7 +389,7 @@ Depends on: FSCD_PAYPLAN (hard: Receivables come from the debit entry); FICA_PAY
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FSCD_PREM_OVERDUE | Premium receivables overdue beyond the tolerance | R1: COUNT `DFKKOP`, date ‹net due date field› (>= ‹tolerance days› d), ‹clearing status field› NE ‹cleared value›, per BUKRS, amber ‹amber count› / red ‹red count› | V V128 |
+| FSCD_PREM_OVERDUE | Premium receivables overdue beyond the tolerance | R1: COUNT `DFKKOP`, date FAEDN (>= ‹tolerance days› d), AUGST NE ‹cleared value›, per BUKRS, amber ‹amber count› / red ‹red count› | V V128 |
 
 ### FSCD_BROKER - Broker collections (broker reports)
 

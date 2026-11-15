@@ -159,12 +159,12 @@ association [0..*] to dfkkop as _OpenItem
 
 ## FICA_HDR_TO_SUMMARY
 
-Document -> summary records of its reconciliation key - NM, quality C, active.
+Document -> its reconciliation key - N1, quality C, active.
 
 ```
 left outer join dfkksumc as To on To.fikey = From.fikey
 
-association [0..*] to dfkksumc as _SummaryRecord
+association [0..1] to dfkksumc as _SummaryRecord
   on _SummaryRecord.fikey = $projection.fikey
 ```
 
@@ -291,7 +291,7 @@ association [0..*] to dfkkop as _OpenItem
 
 ## FICA_SUMMARY_TO_HDRS
 
-Reconciliation key -> its documents - NM, quality C, active.
+Reconciliation key -> its documents - 1N, quality C, active.
 
 ```
 left outer join dfkkko as To on To.fikey = From.fikey
@@ -311,4 +311,26 @@ left outer join I_JournalEntry as To on  To.OriginalReferenceDocument = From.fik
 association [0..*] to I_JournalEntry as _JournalEntry
   on _JournalEntry.OriginalReferenceDocument = $projection.fikey
   and _JournalEntry.ReferenceDocumentType = 'FKKSU'
+```
+
+## FICA_SUMMARY_TO_TOTALS
+
+Reconciliation key -> its totals - 1N, quality C, active.
+
+```
+left outer join dfkksum as To on To.fikey = From.fikey
+
+association [0..*] to dfkksum as _SummaryTotals
+  on _SummaryTotals.fikey = $projection.fikey
+```
+
+## FICA_TOTALS_TO_SUMMARY
+
+Totals -> their reconciliation key (status) - N1, quality C, active.
+
+```
+left outer join dfkksumc as To on To.fikey = From.fikey
+
+association [0..1] to dfkksumc as _SummaryRecord
+  on _SummaryRecord.fikey = $projection.fikey
 ```
