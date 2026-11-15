@@ -70,7 +70,7 @@ verifiable end to end; time to onboard the second configuration; collector perfo
 | ID | Decision | Why it matters |
 |---|---|---|
 | R1-D1 | **Decided 2026-11-15: stay in the Z namespace (`ZCA_` prefix) for now.** A registered vendor namespace (for example `/XYZ/`) stays an option for commercial delivery | Customer objects also use Z / Y, so the install checks the target for a same-named object outside the product packages and stops before writing; the namespace report of build M shows what a later move would change |
-| R1-D2 | Distribution route: abapGit for pilots, SAP Add-On Assembly Kit for commercial delivery | Versioned install, upgrade and uninstall; support-package handling |
+| R1-D2 | **Decided 2026-11-15: abapGit for pilots, SAP Add-On Assembly Kit (AAK) later for commercial delivery.** Before AAK: register a vendor namespace and rename (AAK does not package Z objects - see R1-D1 and the namespace report of build M), get AAK access through the SAP partner programme, set up a development and an assembly system for the target release | AAK gives installation with SAINT, updates with SPAM / SAINT, a versioned software component, upgrade safety, vendor-object protection and optional uninstall |
 | R1-D3 | Redistribution rights and a review of the distributable set for customer-specific data, artefacts and identifiers | The suite and the review documents stay out of the product delivery |
 | R1-D4 | Pilot landscape and the second-customer configuration used for the proof | The release claim covers only what the pilot shows |
 | R1-D5 | Responder acknowledgement separate from assignment, if a distinct response SLA is needed (review, daily operations) | Today escalation stops at assignment |
