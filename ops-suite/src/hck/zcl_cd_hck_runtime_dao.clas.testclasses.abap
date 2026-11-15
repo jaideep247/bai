@@ -27,6 +27,8 @@
 *&            | reference read uses ZCD_HCK_CLRRULE as stand-in table.
 *& 2026-11-11 | D-C8: the company code's country is doubled on ZI_CD_OpsCompanyCode (released
 *&            | I_CompanyCode) instead of T001; same rows and assertions.
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -188,8 +190,8 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     ls_dpayh-laufd = '20261105'.
     ls_dpayh-laufi = 'R00001'.
     ls_dpayh-doc1r = gc_test-doc1.
-    ls_dpayh-bukrs = gc_test-bukrs.
-    ls_dpayh-pymet = gc_test-wire.
+    ls_dpayh-bbukr = gc_test-bukrs.
+    ls_dpayh-rzawe = gc_test-wire.
     ls_dpayh-hbkid = 'JPMC1'.
     ls_dpayh-valut = '20261106'.
     ls_dpayh-rwbtr = '-100.00'.
@@ -198,12 +200,12 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     " Collection direct debit in the window (read, XEINZ = X)
     ls_dpayh-laufi = 'R00002'.
     ls_dpayh-doc1r = gc_test-doc2.
-    ls_dpayh-pymet = gc_test-debit.
+    ls_dpayh-rzawe = gc_test-debit.
     INSERT ls_dpayh INTO TABLE lt_dpayh.
     " Proposal run, blank DOC1R, out of window, other method: not read
     ls_dpayh-laufi = 'R00003'.
     ls_dpayh-doc1r = '000000300003'.
-    ls_dpayh-pymet = gc_test-wire.
+    ls_dpayh-rzawe = gc_test-wire.
     ls_dpayh-xvorl = abap_true.
     INSERT ls_dpayh INTO TABLE lt_dpayh.
     CLEAR ls_dpayh-xvorl.
@@ -217,7 +219,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     ls_dpayh-laufi = 'R00006'.
     ls_dpayh-doc1r = '000000300006'.
     ls_dpayh-laufd = '20261105'.
-    ls_dpayh-pymet = gc_test-other_m.
+    ls_dpayh-rzawe = gc_test-other_m.
     INSERT ls_dpayh INTO TABLE lt_dpayh.
     go_env->insert_test_data( lt_dpayh ).
 

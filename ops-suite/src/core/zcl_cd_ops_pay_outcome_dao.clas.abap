@@ -50,6 +50,8 @@
 *&            | the released I_CompanyCode through ZI_CD_OpsCompanyCode (was T001) in GET_NEW_VERSIONS,
 *&            | GET_OUTCOME_GROUPS / _EXAMPLES / _ROWS; the GL source (BKPF by entry time, BSEG by clearing
 *&            | document) stays on the tables (watermark paging and clearing search - Performance_Review.md 14).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot SQL</p>
 CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
@@ -1070,14 +1072,14 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
     " I_CompanyCode, decision D-C8 - a lookup of a few company code rows, GLV-PV6)
     SELECT o~fin_id, o~source, o~bukrs, o~augbl, o~laufd, o~laufi, o~valid_from, o~valid_to, o~outcome,
            o~evidence_kind, o~evidence_ref, o~finding, o~severity, o~evaluated_at, o~flow_class, o~due_date,
-           p~pymet, z~xeinz
+           p~rzawe AS pymet, z~xeinz
       FROM zcd_pay_outcome AS o
       INNER JOIN dpayh AS p ON  p~laufd = o~laufd
                             AND p~laufi = o~laufi
                             AND p~doc1r = o~augbl
-      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bbukr
       INNER JOIN tfk042z AS z ON  z~land1 = t~country
-                              AND z~zlsch = p~pymet
+                              AND z~zlsch = p~rzawe
       WHERE o~valid_to   = @zif_cd_ops_payout_types=>gc_valid_to_open
         AND o~valid_from = @iv_valid_from
         AND o~finding    = @iv_finding
@@ -1112,22 +1114,22 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       +due AS ( SELECT augbl, laufd, laufi, outcome, finding, severity,
                        CASE WHEN since <= @is_query-lag_limit THEN @abap_true ELSE @abap_false END AS due
                   FROM +cur )
-      SELECT z~xeinz, p~pymet, p~hbkid, c~laufd, c~laufi, p~valut, p~waers AS currency, c~outcome,
+      SELECT z~xeinz, p~rzawe AS pymet, p~hbkid, c~laufd, c~laufi, p~valut, p~waers AS currency, c~outcome,
              c~finding, c~severity, p~zz_payment_status AS pay_status, c~due,
              COUNT(*) AS payments, SUM( abs( p~rwbtr ) ) AS amount
         FROM +due AS c
         INNER JOIN dpayh AS p ON  p~laufd = c~laufd
                               AND p~laufi = c~laufi
                               AND p~doc1r = c~augbl
-        INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+        INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bbukr
         INNER JOIN tfk042z AS z ON  z~land1 = t~country
-                                AND z~zlsch = p~pymet
+                                AND z~zlsch = p~rzawe
         WHERE p~xvorl = @space
-          AND p~pymet IN @lt_methods
+          AND p~rzawe IN @lt_methods
           AND p~zz_payment_status IN @is_query-statuses
-        GROUP BY z~xeinz, p~pymet, p~hbkid, c~laufd, c~laufi, p~valut, p~waers, c~outcome, c~finding,
+        GROUP BY z~xeinz, p~rzawe, p~hbkid, c~laufd, c~laufi, p~valut, p~waers, c~outcome, c~finding,
                  c~severity, p~zz_payment_status, c~due
-        ORDER BY c~laufd, p~pymet, p~hbkid, c~laufi, p~valut
+        ORDER BY c~laufd, p~rzawe, p~hbkid, c~laufi, p~valut
         INTO CORRESPONDING FIELDS OF TABLE @rt_groups.
   ENDMETHOD.
 
@@ -1152,21 +1154,21 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       +due AS ( SELECT augbl, laufd, laufi, outcome, finding, severity, evidence_ref,
                        CASE WHEN since <= @is_query-lag_limit THEN @abap_true ELSE @abap_false END AS due
                   FROM +cur ),
-      +ranked AS ( SELECT c~augbl AS doc1r, c~laufd, c~laufi, p~bukrs, z~xeinz, p~pymet, p~hbkid, p~valut,
+      +ranked AS ( SELECT c~augbl AS doc1r, c~laufd, c~laufi, p~bbukr AS bukrs, z~xeinz, p~rzawe AS pymet, p~hbkid, p~valut,
                           p~waers AS currency, abs( p~rwbtr ) AS amount, c~outcome, c~finding, c~severity,
                           p~zz_payment_status AS pay_status, c~due, c~evidence_ref,
-                          row_number( ) OVER( PARTITION BY z~xeinz, p~pymet, p~hbkid, c~laufd, c~laufi, c~outcome,
+                          row_number( ) OVER( PARTITION BY z~xeinz, p~rzawe, p~hbkid, c~laufd, c~laufi, c~outcome,
                                                            c~finding, p~zz_payment_status, c~due
                                               ORDER BY p~valut, c~augbl ) AS rn
                      FROM +due AS c
                      INNER JOIN dpayh AS p ON  p~laufd = c~laufd
                                            AND p~laufi = c~laufi
                                            AND p~doc1r = c~augbl
-                     INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+                     INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bbukr
                      INNER JOIN tfk042z AS z ON  z~land1 = t~country
-                                             AND z~zlsch = p~pymet
+                                             AND z~zlsch = p~rzawe
                      WHERE p~xvorl = @space
-                       AND p~pymet IN @lt_methods
+                       AND p~rzawe IN @lt_methods
                        AND p~zz_payment_status IN @is_query-statuses )
       SELECT doc1r, laufd, laufi, bukrs, xeinz, pymet, hbkid, valut, currency, amount, outcome, finding,
              severity, pay_status, due, evidence_ref
@@ -1190,18 +1192,18 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
                     AND finding IN @is_query-findings
                     AND laufd IN @is_query-days
                   GROUP BY augbl, laufd, laufi, outcome, finding, severity )
-      SELECT c~augbl AS doc1r, c~laufd, c~laufi, p~bukrs, z~xeinz, p~pymet, p~hbkid, p~valut,
+      SELECT c~augbl AS doc1r, c~laufd, c~laufi, p~bbukr AS bukrs, z~xeinz, p~rzawe AS pymet, p~hbkid, p~valut,
              p~waers AS currency, abs( p~rwbtr ) AS amount, c~outcome, c~finding, c~severity,
              p~zz_payment_status AS pay_status
         FROM +cur AS c
         INNER JOIN dpayh AS p ON  p~laufd = c~laufd
                               AND p~laufi = c~laufi
                               AND p~doc1r = c~augbl
-        INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+        INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bbukr
         INNER JOIN tfk042z AS z ON  z~land1 = t~country
-                                AND z~zlsch = p~pymet
+                                AND z~zlsch = p~rzawe
         WHERE p~xvorl = @space
-          AND p~pymet IN @lt_methods
+          AND p~rzawe IN @lt_methods
           AND p~zz_payment_status IN @is_query-statuses
         ORDER BY c~laufd, c~augbl
         INTO CORRESPONDING FIELDS OF TABLE @rt_rows
@@ -1230,7 +1232,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
                          AND laufi = o~laufi
                          AND doc1r = o~augbl
                          AND xvorl = @space
-                         AND pymet IN @lt_methods )
+                         AND rzawe IN @lt_methods )
       ORDER BY o~laufd, o~augbl
       INTO TABLE @DATA(lt_docs)
       UP TO @iv_max ROWS.
@@ -1251,7 +1253,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
         WHERE p~laufd >= @iv_from
           AND p~xvorl  = @space
           AND p~doc1r <> @space
-          AND p~pymet IN @lt_methods
+          AND p~rzawe IN @lt_methods
         ORDER BY p~laufd, p~doc1r
         INTO TABLE @DATA(lt_first)
         UP TO @iv_max ROWS.
@@ -1269,7 +1271,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       INNER JOIN dfkkko AS k ON k~opbel = p~doc1r
       WHERE p~xvorl  = @space
         AND p~doc1r <> @space
-        AND p~pymet IN @lt_methods
+        AND p~rzawe IN @lt_methods
         AND ( k~cpudt > @is_after-wm_date
            OR ( k~cpudt = @is_after-wm_date AND k~cputm > @is_after-wm_time )
            OR ( k~cpudt = @is_after-wm_date AND k~cputm = @is_after-wm_time AND k~opbel > @lv_key ) )

@@ -41,6 +41,7 @@
 *&            | (TOP_N) retired - examples per finding are ZCA_PARAM PAYOUT_EXAMPLES.
 *& 2026-11-08 | Customer posting areas: method classes from ZPMC (PAY_METHODS string, built from one entry per payment
 *&            | method; GC_PAY_METHODS_SEP), lifecycle roles from ZBTR.
+*& 2026-11-15 | Field notes from the dictionary of the reference system S/4HANA 2025 (ddic/a4h).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -225,7 +226,7 @@ INTERFACE zif_cd_hck_runtime_types
   CONSTANTS gc_pay_methods_sep TYPE string VALUE `,`.
 
   "! Payment of a payment run (DPAYH, proposal runs excluded, DOC1R filled) with its flow.
-  "! VERIFY-DDIC: DPAYH-BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; TFK042Z-XEINZ via T001-LAND1
+  "! DPAYH-BBUKR, RZAWE, HBKID, VALUT, RWBTR, WAERS (reference system S/4HANA 2025); TFK042Z-XEINZ via T001-LAND1
   TYPES:
     BEGIN OF ty_issued_payment,
       doc1r    TYPE ty_docno,

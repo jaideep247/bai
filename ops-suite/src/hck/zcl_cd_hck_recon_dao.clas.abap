@@ -20,6 +20,9 @@
 *&            | I_JournalEntryItem (through ZI_CD_HckRcGlLine, no DCL in a
 *&            | control read); the document-key, assignment IN-list and HAVING /
 *&            | top-N reads stay on ACDOCA (performance, PlanViz first).
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency). Amount signed by SHKZG. DPAYH paying company code BBUKR and method RZAWE (DPAYH has no
+*&            | BUKRS / PYMET; reference system S/4HANA 2025).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation reads (HANA)</p>
 "! Access paths and the SQL-trace items: Performance_Review.md, section "Three-way
@@ -160,11 +163,16 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
     IF it_keys IS INITIAL.
       RETURN.
     ENDIF.
-    " Confirmed path: DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY (the transfer reached G/L).
-    " VERIFY-DDIC: DFKKSUMC BUKRS, HKONT, WAERS, BUDAT, BETRW signed in transaction currency
+    " Confirmed path: DFKKSUM-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY (the transfer reached G/L).
+    " DFKKSUM = totals of a reconciliation key per company code, account, currency and debit / credit
+    " indicator (key BUKRS, FIKEY, SHKZG, HKONT, GSBER, KHASH, SUMSZ; DFKKSUMC is the key's status and has
+    " no totals) - fields seen on the reference system S/4HANA 2025. BETRW (BETRW_LONG_KK) is signed here
+    " by SHKZG (H = credit, negative) whether or not it is stored signed (V101: same sign as ACDOCA-WSL)
     SELECT s~bukrs, s~hkont, s~waers AS currency, s~budat AS day,
-           SUM( s~betrw ) AS amount, COUNT(*) AS line_count
-      FROM dfkksumc AS s
+           SUM( CASE WHEN s~shkzg = @zif_cd_hck_recon_types=>gc_shkzg_credit THEN 0 - abs( s~betrw )
+                     ELSE abs( s~betrw ) END ) AS amount,
+           COUNT(*) AS line_count
+      FROM dfkksum AS s
       INNER JOIN @it_keys AS k ON  s~bukrs = k~bukrs
                                AND s~hkont = k~hkont
                                AND s~waers = k~currency
@@ -179,19 +187,20 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
     IF it_banks IS INITIAL.
       RETURN.
     ENDIF.
-    " Confirmed: DPAYH LAUFD / DOC1R. VERIFY-DDIC: DPAYH XVORL, BUKRS, HBKID, HKTID, RWBTR, WAERS
-    SELECT p~bukrs, p~hbkid, p~hktid, p~waers AS currency, p~laufd AS day,
+    " Confirmed: DPAYH LAUFD / DOC1R; XVORL, BBUKR (paying company code), HBKID, HKTID, RWBTR, WAERS seen on
+    " the reference system S/4HANA 2025
+    SELECT p~bbukr AS bukrs, p~hbkid, p~hktid, p~waers AS currency, p~laufd AS day,
            SUM( p~rwbtr ) AS amount, COUNT(*) AS line_count
       FROM dpayh AS p
-      INNER JOIN @it_banks AS b ON  p~bukrs = b~bukrs
+      INNER JOIN @it_banks AS b ON  p~bbukr = b~bukrs
                                 AND p~hbkid = b~hbkid
                                 AND p~hktid = b~hktid
                                 AND p~waers = b~currency
       WHERE p~laufd BETWEEN @iv_from AND @iv_to
         AND p~xvorl = @space
         AND p~doc1r <> @space
-      GROUP BY p~bukrs, p~hbkid, p~hktid, p~waers, p~laufd
-      ORDER BY p~bukrs, p~hbkid, p~hktid, p~waers, p~laufd
+      GROUP BY p~bbukr, p~hbkid, p~hktid, p~waers, p~laufd
+      ORDER BY p~bbukr, p~hbkid, p~hktid, p~waers, p~laufd
       INTO CORRESPONDING FIELDS OF TABLE @rt_days.
   ENDMETHOD.
 

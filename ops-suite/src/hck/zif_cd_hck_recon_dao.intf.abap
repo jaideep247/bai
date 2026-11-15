@@ -6,7 +6,7 @@
 *& aggregated on the database (GROUP BY, SUM, COUNT): bank lines of the
 *& payment engine accounts (ZI_CD_HckRcBankLine over FEBEP / FEBKO), G/L
 *& lines of the clearing accounts (ACDOCA), payment engine G/L transfer
-*& totals (DFKKSUMC), payment documents (DPAYH), Stripe deposit documents
+*& totals (DFKKSUM), payment documents (DPAYH), Stripe deposit documents
 *& and descriptor groups, unmatched ACH assignment groups. No line-level
 *& copy, no SELECT per document. Read-only: the interface has no write
 *& method.
@@ -15,6 +15,8 @@
 *& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
 *&            | ZCD_HCK_RCBTC).
 *& 2026-11-08 | Customer posting areas: get_btc_roles reads ZBTR usage RECON (was ZCD_HCK_BTCROLE).
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation reads</p>
 "! Implementation ZCL_CD_HCK_RECON_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RECON_DAO.
@@ -75,7 +77,7 @@ INTERFACE zif_cd_hck_recon_dao
     RETURNING
       VALUE(rt_days) TYPE zif_cd_hck_recon_types=>tt_gl_day.
 
-  "! Payment engine G/L transfer totals (DFKKSUMC) of the clearing accounts per posting day
+  "! Payment engine G/L transfer totals (DFKKSUM, signed by SHKZG) of the clearing accounts per posting day
   METHODS get_fica_days
     IMPORTING
       it_keys        TYPE zif_cd_hck_recon_types=>tt_gl_key

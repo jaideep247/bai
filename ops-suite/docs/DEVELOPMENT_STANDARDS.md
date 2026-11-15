@@ -22,7 +22,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 | Bank line → payment (methods E G H I J K L) | FEBEP-CHECT = BSEG-XREF2 = DFKKOP-AUGBL |
 | Bank line → payment (method C, cheque) | DFKKCR-DOC1R = DFKKOP-AUGBL; DFKKCR-ZTNUM = FEBEP-CHECT |
 | Return → payment | DFKKRP-SELW1 = DFKKOP-AUGBL |
-| payment engine postings reached GL | DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY |
+| payment engine postings reached GL | DFKKSUM-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY |
 | Cumulation group from bank | DPAYH LAUFD + LAUFI where DOC1R is not initial |
 | Collections vs disbursements | TFK042Z-XEINZ |
 

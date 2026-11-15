@@ -20,6 +20,8 @@
 *&            | lines on ZI_CD_OpsGlItem (released I_OperationalAcctgDocItem), the company code's country
 *&            | on ZI_CD_OpsCompanyCode (released I_CompanyCode) - same rows and assertions as with the
 *&            | BKPF / BSEG / T001 doubles.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -72,7 +74,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'DFKKOP' ) ( 'FEBEP' ) ( 'FEBKO' ) ( 'DFKKCR' ) ( 'ZCD_FMON_FILE' )
-                                   ( 'DFKKSUMC' ) ( 'ZI_CD_OPSJRNLENTRY' ) ( 'ZI_CD_OPSGLITEM' ) ( 'DFKKNRP' ) ) ).
+                                   ( 'DFKKSUM' ) ( 'ZI_CD_OPSJRNLENTRY' ) ( 'ZI_CD_OPSGLITEM' ) ( 'DFKKNRP' ) ) ).
   ENDMETHOD.
 
 
@@ -157,8 +159,8 @@ CLASS ltc_trace_dao IMPLEMENTATION.
   METHOD insert_files_and_gl.
     DATA lt_file TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
     DATA ls_file TYPE zcd_fmon_file.
-    DATA lt_sumc TYPE STANDARD TABLE OF dfkksumc WITH EMPTY KEY.
-    DATA ls_sumc TYPE dfkksumc.
+    DATA lt_sum TYPE STANDARD TABLE OF dfkksum WITH EMPTY KEY.
+    DATA ls_sum TYPE dfkksum.
     DATA lt_docs TYPE STANDARD TABLE OF zi_cd_opsjrnlentry WITH EMPTY KEY.
     DATA ls_doc TYPE zi_cd_opsjrnlentry.
     DATA lt_items TYPE STANDARD TABLE OF zi_cd_opsglitem WITH EMPTY KEY.
@@ -173,10 +175,10 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     ls_file-business_date = '20261002'.
     INSERT ls_file INTO TABLE lt_file.
     go_env->insert_test_data( lt_file ).
-    ls_sumc-fikey = gc_test-fikey.
-    ls_sumc-bukrs = gc_test-bukrs.
-    INSERT ls_sumc INTO TABLE lt_sumc.
-    go_env->insert_test_data( lt_sumc ).
+    ls_sum-fikey = gc_test-fikey.
+    ls_sum-bukrs = gc_test-bukrs.
+    INSERT ls_sum INTO TABLE lt_sum.
+    go_env->insert_test_data( lt_sum ).
     ls_doc-companycode               = gc_test-bukrs.
     ls_doc-accountingdocument        = gc_test-belnr.
     ls_doc-fiscalyear                = gc_test-gjahr.
@@ -284,7 +286,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     TRY.
         DATA(lt_keys) = VALUE zif_cd_ops_trace_types=>tt_fikey( ( fikey = gc_test-fikey bukrs = gc_test-bukrs ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_summary_keys( lt_keys ) ) exp = 1
-                                            msg = 'FIKEY summarised in DFKKSUMC' ).
+                                            msg = 'FIKEY summarised in DFKKSUM' ).
         DATA(lt_docs) = mo_cut->get_gl_documents( it_fikey = lt_keys iv_awtyp = gc_test-awtyp ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_docs ) exp = 1 msg = 'Other AWTYP not read' ).
         cl_abap_unit_assert=>assert_equals( act = lt_docs[ 1 ]-belnr exp = gc_test-belnr msg = 'G/L document' ).

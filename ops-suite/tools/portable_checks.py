@@ -17,6 +17,7 @@ Modification log:
 2026-11-11 | process_catalogue (customer layer of the process catalogue valid with the product packages, outputs current).
 2026-11-11 | break_rules (overlay bucket rules of the break analysis valid with the product rules).
 2026-11-15 | flow_config (overlay account flows valid with the product flows, all inactive).
+2026-11-15 | ddic_fields (link registry, catalogue and code field references exist in the table exports of ddic/).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -240,6 +241,19 @@ check('flow_config',
       'roles, line sources, tiles and sides, no reserved stage, rules of a stage of their flow with criteria of '
       'their line source, unique sequences, one account per company code and currency of an expected '
       'counter-posting role, roles held) and every row is delivered inactive - tools/abaptools/flow_config.py.')
+
+# Table definitions (2026-11-15): every field the link registry, the process catalogue and the code (ABAP SQL, CDS,
+# typed structures) read from an exported SAP table exists in the exports of ddic/ (reference system, landscape);
+# a field the exports show missing is a failure unless ddic/open_fields.csv names its VERIFY item
+from abaptools import ddic_export  # noqa: E402
+_ddic_folders = ddic_export.export_folders(os.path.join(ROOT, 'ddic'))
+_ddic_fail, _ddic_counts = ddic_export.check_folders(
+    os.path.join(ROOT, '..'), _ddic_folders, open_files=(os.path.join(ROOT, 'ddic', 'open_fields.csv'),))
+check('ddic_fields', _ddic_fail,
+      f'Field references compared with the table exports {", ".join(f"ddic/{p.name}" for p in _ddic_folders)} '
+      f'(tools/abaptools/ddic_export.py compare): '
+      + ', '.join(f'{v} {k}' for k, v in sorted(_ddic_counts.items()))
+      + '; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.')
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

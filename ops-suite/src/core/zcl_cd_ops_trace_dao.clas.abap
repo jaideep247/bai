@@ -3,7 +3,7 @@
 *& Purpose:
 *& SQL of the 360 degree payment trace. Standard tables are read only along
 *& the confirmed join paths (DFKKOP-ZZ_FIN_TRANS_NUM / AUGBL, DFKKCR-DOC1R,
-*& FEBEP-CHECT, DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY, BSEG by document
+*& FEBEP-CHECT, DFKKKO-FIKEY = DFKKSUM-FIKEY = BKPF-AWKEY, BSEG by document
 *& key); the G/L side through SAP's released views (I_JournalEntry,
 *& I_OperationalAcctgDocItem, I_CompanyCode - decision D-C8). Reads that
 *& already exist are reused, not copied: DPAYH, DFKKCR by
@@ -33,6 +33,8 @@
 *&            | released I_JournalEntry (ZI_CD_OpsJrnlEntry), clearing lines by document key from the
 *&            | released entry view I_OperationalAcctgDocItem (ZI_CD_OpsGlItem), the company code's country
 *&            | from the released I_CompanyCode (ZI_CD_OpsCompanyCode) - no DCL in a job read.
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency). CRSTATUS open (V153).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -313,8 +315,8 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
   METHOD zif_cd_ops_trace_dao~get_checks_by_doc.
     CHECK it_docno IS NOT INITIAL.
     " Confirmed: DFKKCR-DOC1R = DFKKOP-AUGBL; STATE = cheque status (B cashed, V voided, blank
-    " open; user 2026-11-07, read for the morning report check A_INFLIGHT). VERIFY-DDIC: RWBTR,
-    " CRSTATUS (as the EBS read)
+    " open; user 2026-11-07, read for the morning report check A_INFLIGHT); RWBTR seen on the reference
+    " system S/4HANA 2025. VERIFY V153: CRSTATUS is not a field of DFKKCR there (as the EBS read)
     SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus, state
       FROM dfkkcr
       FOR ALL ENTRIES IN @it_docno
@@ -390,9 +392,10 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_trace_dao~get_summary_keys.
     CHECK it_fikey IS NOT INITIAL.
-    " Confirmed: DFKKSUMC-FIKEY = DFKKKO-FIKEY. VERIFY-DDIC: DFKKSUMC-BUKRS (as ZCL_CD_HCK_DAO)
+    " Confirmed: DFKKSUM-FIKEY = DFKKKO-FIKEY; DFKKSUM = totals of the key per company code (BUKRS, FIKEY
+    " seen on the reference system S/4HANA 2025; DFKKSUMC has no company code), as ZCL_CD_HCK_DAO
     SELECT fikey, bukrs
-      FROM dfkksumc
+      FROM dfkksum
       FOR ALL ENTRIES IN @it_fikey
       WHERE fikey = @it_fikey-fikey
         AND bukrs = @it_fikey-bukrs

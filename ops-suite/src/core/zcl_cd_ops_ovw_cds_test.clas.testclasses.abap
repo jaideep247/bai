@@ -18,6 +18,8 @@
 *&            | (newest non-proposal run per payment document, stages from configuration), reconciliation
 *&            | variances (latest measurement beyond tolerance, expected / actual, disposition from the
 *&            | exception workflow); doubles of the direct dependencies of each view.
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 "! ZR_CD_OPSFRESHNESS: one row per batch monitor, area threshold, stale
 CLASS ltc_freshness DEFINITION FINAL
@@ -442,13 +444,13 @@ CLASS ltc_life_run IMPLEMENTATION.
     DATA(lv_yesterday) = CONV d( sy-datum - 1 ).
     " doc_rerun: paid yesterday (run A, ISSUED) and again today (run B, CLEARED) - counted once, today;
     " doc_once: today, ISSUED; doc_prop: only a proposal run - no payment
-    lt_runs = VALUE #( ( laufd = lv_yesterday laufi = gc-run_a doc1r = gc-doc_rerun bukrs = gc-bukrs
+    lt_runs = VALUE #( ( laufd = lv_yesterday laufi = gc-run_a doc1r = gc-doc_rerun bbukr = gc-bukrs
                          zz_payment_status = gc-issued )
-                       ( laufd = sy-datum laufi = gc-run_b doc1r = gc-doc_rerun bukrs = gc-bukrs
+                       ( laufd = sy-datum laufi = gc-run_b doc1r = gc-doc_rerun bbukr = gc-bukrs
                          zz_payment_status = gc-cleared )
-                       ( laufd = sy-datum laufi = gc-run_a doc1r = gc-doc_once bukrs = gc-bukrs
+                       ( laufd = sy-datum laufi = gc-run_a doc1r = gc-doc_once bbukr = gc-bukrs
                          zz_payment_status = gc-issued )
-                       ( laufd = sy-datum laufi = gc-run_a doc1r = gc-doc_prop bukrs = gc-bukrs xvorl = abap_true
+                       ( laufd = sy-datum laufi = gc-run_a doc1r = gc-doc_prop bbukr = gc-bukrs xvorl = abap_true
                          zz_payment_status = gc-issued ) ).
     go_env->insert_test_data( lt_runs ).
   ENDMETHOD.

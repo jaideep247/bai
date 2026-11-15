@@ -346,6 +346,13 @@ role (V150), stage rule values (V151) and stage controls (V152) of the flows `DI
 flow activated as a whole; job `ZCA_OPS_FLOW_RUN` after `ZCA_OPS_BRK_RUN` and the morning report; PlanViz
 FLOW-PV1 ... FLOW-PV5 first.
 
+## Build I (2026-11-15): field names from the reference system's dictionary
+
+No new object; corrected field names in existing DAOs, CDS and test doubles (`CHANGELOG.md`). Transport them with the
+framework's corrected FICA link registry layer and process catalogue (seed rows regenerated). Before gate 1: decide
+V153-V155 (`VERIFY_Suite.md` §4) - until then `ZCL_CD_OPS_TRACE_DAO`, `ZCL_CD_EBS_SAP_DAO` and
+`ZCL_CD_OPS_POSTAREA_DAO` read a field the reference system does not have and do not activate in a system without it.
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |

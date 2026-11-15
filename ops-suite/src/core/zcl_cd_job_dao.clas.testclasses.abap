@@ -9,6 +9,8 @@
 *& runtime behavior.
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor adoption, area CD_JOBS).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025). DPAYH rows keyed by PAYNO (PYORD / PYKEY are not DPAYH fields).
 *&---------------------------------------------------------------------*
 CLASS ltc_job_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -62,9 +64,10 @@ CLASS ltc_job_dao IMPLEMENTATION.
     DATA ls_row TYPE dpayh.
     ls_row-laufd = iv_laufd.
     ls_row-laufi = iv_laufi.
-    ls_row-pyord = |{ iv_laufi }{ iv_doc }|.
+    " DPAYH key LAUFD, LAUFI, ORIGN, XVORL, PAYNO, SUBNO: the payment number keeps the rows of a run apart
+    ls_row-payno = CONV #( iv_doc ).
     ls_row-doc1r = iv_doc.
-    ls_row-bukrs = gc_bukrs.
+    ls_row-bbukr = gc_bukrs.
     INSERT ls_row INTO TABLE lt_rows.
     go_env->insert_test_data( lt_rows ).
   ENDMETHOD.

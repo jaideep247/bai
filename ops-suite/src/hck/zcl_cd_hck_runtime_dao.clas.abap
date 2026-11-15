@@ -33,6 +33,8 @@
 *& 2026-11-11 | Decision D-C8 extended: the country of a payment's company code comes from the released
 *&            | I_CompanyCode (through ZI_CD_OpsCompanyCode) instead of T001; get_gl_lines_by_xref2 stays
 *&            | on the entry view table (XREF2 search without index - Performance_Review.md section 14).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION
@@ -199,20 +201,21 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
                                                     option = zif_ca_ops_types=>gc_range-option_equal
                                                     low    = lv_method ) ).
     " Confirmed: DPAYH LAUFD / LAUFI / DOC1R (payment document = DFKKOP-AUGBL), TFK042Z-XEINZ
-    " collections vs disbursements. VERIFY-DDIC: DPAYH-XVORL, BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS;
+    " collections vs disbursements. DPAYH-XVORL, BBUKR, RZAWE, HBKID, VALUT, RWBTR, WAERS seen on the
+    " reference system S/4HANA 2025 (no BUKRS / PYMET);
     " TFK042Z key LAND1 / ZLSCH via the company code's country (released I_CompanyCode through
     " ZI_CD_OpsCompanyCode, decision D-C8; as ZCL_CD_OPS_TRACE_DAO=>GET_METHOD_KIND).
     " Index: DPAYH by LAUFD (run date window) - performance check in QA1; GLV-PV6
-    SELECT p~doc1r, p~laufd, p~laufi, p~bukrs, p~pymet, p~hbkid, p~valut,
+    SELECT p~doc1r, p~laufd, p~laufi, p~bbukr AS bukrs, p~rzawe AS pymet, p~hbkid, p~valut,
            p~rwbtr AS amount, p~waers AS currency, z~xeinz
       FROM dpayh AS p
-      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bbukr
       INNER JOIN tfk042z AS z ON  z~land1 = t~country
-                              AND z~zlsch = p~pymet
+                              AND z~zlsch = p~rzawe
       WHERE p~laufd BETWEEN @iv_from AND @iv_to
         AND p~xvorl = @space
         AND p~doc1r <> @space
-        AND p~pymet IN @lt_methods
+        AND p~rzawe IN @lt_methods
       ORDER BY p~laufd, p~laufi, p~doc1r
       INTO CORRESPONDING FIELDS OF TABLE @rt_payments
       UP TO @iv_max_rows ROWS.
@@ -228,12 +231,12 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
     " DOC1R is not unique in DPAYH (re-runs): every run is returned, the caller picks the latest.
     " VERIFY-DDIC as GET_ISSUED_PAYMENTS; index on DPAYH-DOC1R expected (Performance_Review.md); the
     " company code's country from ZI_CD_OpsCompanyCode (released I_CompanyCode, decision D-C8)
-    SELECT p~doc1r, p~laufd, p~laufi, p~bukrs, p~pymet, p~hbkid, p~valut,
+    SELECT p~doc1r, p~laufd, p~laufi, p~bbukr AS bukrs, p~rzawe AS pymet, p~hbkid, p~valut,
            p~rwbtr AS amount, p~waers AS currency, z~xeinz
       FROM dpayh AS p
-      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bukrs
+      INNER JOIN zi_cd_opscompanycode AS t ON t~companycode = p~bbukr
       INNER JOIN tfk042z AS z ON  z~land1 = t~country
-                              AND z~zlsch = p~pymet
+                              AND z~zlsch = p~rzawe
       FOR ALL ENTRIES IN @it_docno
       WHERE p~doc1r = @it_docno-table_line
         AND p~xvorl = @space

@@ -449,7 +449,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 727 | No link key - earlier stage &1 not verified |
 | 730 | G/L line &1 / &2 account &3 XREF2 &4 |
 | 731 | Enter a FIN ID, a clearing document or a cheque number |
-| 732 | FIKEY &1 has no summary record in DFKKSUMC |
+| 732 | FIKEY &1 has no totals record in DFKKSUM |
 | 733 | No &1 evidence found for &2 |
 | 737 | Partner &1 found by external number without source (legacy) |
 | 738 | Request partner &1 owns none of the items of FIN &2 - review the link |

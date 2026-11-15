@@ -12,6 +12,8 @@
 //                   and the "outcome as of" history of the transactions dashboard).
 //                   2026-11-11 | Decision D-C8 extended: the company code's country from the released
 //                   I_CompanyCode (Country = T001-LAND1) instead of T001; element names unchanged.
+//                   2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET;
+//                   reference system S/4HANA 2025).
 // VERIFY-SE11: DPAYH key LAUFD + LAUFI + DOC1R unique without proposal runs (as ZCL_CD_OPS_PAY_OUTCOME_DAO).
 // VERIFY-ADT (VERIFY_Suite.md V123): I_CompanyCode C1 on 7.58, elements CompanyCode, Country; PlanViz GLV-PV6
 @AbapCatalog.viewEnhancementCategory: [#NONE]
@@ -28,7 +30,7 @@ define view entity ZI_CD_PayWorkItem
                                             and Pay.xvorl = ' '
     left outer join I_CompanyCode    as Cc  on  Cc.CompanyCode = Work.CompanyCode
     left outer join tfk042z          as Pm  on  Pm.land1 = Cc.Country
-                                            and Pm.zlsch = Pay.pymet
+                                            and Pm.zlsch = Pay.rzawe
 {
   key Work.FinId,
   key Work.SourceSystem,
@@ -55,9 +57,9 @@ define view entity ZI_CD_PayWorkItem
       case when Work.ClearingDoc = ' ' and Work.DueDate = $session.system_date then cast( 'X' as abap_boolean )
            when Work.ClearingDoc <> ' ' and Work.RunDate = $session.system_date then cast( 'X' as abap_boolean )
            else cast( ' ' as abap_boolean ) end             as IsToday,
-      Pay.pymet                                             as PaymentMethod,
+      Pay.rzawe                                             as PaymentMethod,
       Pay.hbkid                                             as HouseBank,
-      // VERIFY-SE11: DPAYH-VALUT (as ZCL_CD_HCK_RUNTIME_DAO)
+      // DPAYH-VALUT (seen on the reference system S/4HANA 2025, as ZCL_CD_HCK_RUNTIME_DAO)
       Pay.valut                                             as ValueDate,
       Pay.zz_payment_status                                 as PaymentStatus,
       Pay.waers                                             as Currency,

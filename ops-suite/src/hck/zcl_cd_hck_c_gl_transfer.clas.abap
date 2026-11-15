@@ -2,13 +2,15 @@
 *& Artifact: zcl_cd_hck_c_gl_transfer.clas.abap
 *& Purpose:
 *& Financial integrity: every payment engine reconciliation key with totals records
-*& must have reached the general ledger (DFKKSUMC/DFKKKO-FIKEY = AWKEY).
+*& must have reached the general ledger (DFKKSUM/DFKKKO-FIKEY = AWKEY).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Gaps per company code and AWTYP (PARAM4), unreversed GL document; metric = total gaps (audit A43).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
+*&            | currency).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payment engine to GL transfer completeness</p>
 "! PARAM1 = lag in days (keys younger than this are still open, default 1),

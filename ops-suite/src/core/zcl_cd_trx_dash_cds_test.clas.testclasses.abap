@@ -33,6 +33,8 @@
 *&            | 400-day item driver, the POSTING date kind and the "as of" history are gone.
 *& 2026-11-11 | D-C8: ZI_CD_PayWorkItem / ZI_CD_TrxItem read the released I_CompanyCode; the T001 rows
 *&            | stay as the base-table double under it (same rows and assertions).
+*& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
+*&            | 2025).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -161,7 +163,7 @@ CLASS ltd_rows IMPLEMENTATION.
     rs_run-laufd             = is_row-laufd.
     rs_run-laufi             = is_row-laufi.
     rs_run-doc1r             = is_row-augbl.
-    rs_run-pymet             = iv_method.
+    rs_run-rzawe             = iv_method.
     rs_run-valut             = is_row-laufd + 1.
     rs_run-waers             = gc_currency.
     rs_run-rwbtr             = gc_amount.

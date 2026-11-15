@@ -6,14 +6,14 @@
 //          the company code country, method class from posting area ZPMC (ZI_CD_PayMethodCls), source / outcome / finding
 //          / late from the payment worklist (ZI_CD_PayWorkState; a clean payment has none - source unknown bucket).
 // Modification log: 2026-11-11 | Generated from the mapping spec (payment model).
-// CompanyCode: VERIFY-SE11 DPAYH-BUKRS (as ZI_CD_PayLifeRun)
+// CompanyCode: DPAYH-BBUKR paying company code (as ZI_CD_PayLifeRun)
 // CompanyCurrency: Released view I_CompanyCode (C1, VERIFY.md V110) - Currency, Country (country of TFK042Z); TFK042Z stays a table read (no released view)
 // TransactionType: V83: transaction of the request (field of ZCD_PAYM_REQ_LOG confirmed by the user 2026-11-11, name VERIFY-SE11) - reached through the request (pending section); blank until then
 // RequestStatus: V84: business request lifecycle status (PENDING / SCHEDULED / SRCPOSTED / source reject) - no confirmed table / field (control_seed.md section 2a P2)
-// PaymentMethod: VERIFY-SE11 DPAYH-PYMET (as ZI_CD_PayLifeRun)
-// HouseBank: VERIFY-SE11 DPAYH-HBKID (as ZI_CD_PayLifeRun)
-// HouseBankAccount: V87: DPAYH-HKTID (account ID, never the bank account number) not yet confirmed - blank until SE11
-// Currency: VERIFY-SE11 DPAYH-WAERS (as ZI_CD_PayLifeRun)
+// PaymentMethod: DPAYH-RZAWE (as ZI_CD_PayLifeRun)
+// HouseBank: DPAYH-HBKID (as ZI_CD_PayLifeRun)
+// HouseBankAccount: V87: DPAYH-HKTID (account ID) seen on the reference system; not an element of ZI_CD_PayLifeRun yet - blank
+// Currency: DPAYH-WAERS (as ZI_CD_PayLifeRun)
 // Amount: absolute DPAYH-RWBTR (as ZI_CD_PayLifeRun); sign = flow
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Payment model - adapter payment fact'

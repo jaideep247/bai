@@ -21,6 +21,7 @@
 *&            | DEADLINE rows of ZCD_FMON_SLA in one read (ZCD_FMON_DEADL merged).
 *& 2026-11-10 | ltc_payrun_totals: DPAYH payments and amount per payment run and house bank in one grouped
 *&            | read; other runs and house banks not returned (missing bank ACK alert).
+*& 2026-11-15 | DPAYH rows keyed by PAYNO (PYORD / PYKEY are not DPAYH fields).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -983,7 +984,8 @@ CLASS ltc_payrun_totals IMPLEMENTATION.
     ls_payh-hbkid = iv_hbkid.
     ls_payh-waers = gc_test-usd.
     ls_payh-rwbtr = iv_amount.
-    ls_payh-pykey = |{ iv_keyno }|.
+    " DPAYH key LAUFD, LAUFI, ORIGN, XVORL, PAYNO, SUBNO: the payment number keeps the rows of a run apart
+    ls_payh-payno = iv_keyno.
     INSERT ls_payh INTO TABLE lt_payh.
     go_env->insert_test_data( lt_payh ).
   ENDMETHOD.
