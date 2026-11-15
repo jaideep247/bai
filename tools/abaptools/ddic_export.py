@@ -9,11 +9,14 @@ include whose fields were not exported.
 Run it on a machine that reaches the system (it uses the ABAP Development Tools HTTP interface of the system, the same
 one Eclipse ADT uses). Only dictionary metadata is read; no business table is selected.
 
-    python ddic_export.py export --url https://<host>:<port> --client 100 --user <user> \
-        --tables ops-framework/config/ddic/standard_tables.txt --out ops-suite/ddic/<label>
+    python ddic_export.py export --tables ops-framework/config/ddic/standard_tables.txt --out ops-suite/ddic/<label>
     python ddic_export.py compare --exports ops-suite/ddic/<label> --repo .
 
-The password is read from the environment variable SAP_PASSWORD or asked for. Standard library only.
+The logon comes from --url / --client / --user or from the environment, with the same names as the test tool's
+qualification harness: SAP_URL or ZCA_TT_A4H_URL, SAP_CLIENT or ZCA_TT_A4H_CLIENT, SAP_USER or ZCA_TT_A4H_USER,
+SAP_PASSWORD or ZCA_TT_A4H_PASSWORD (else asked for), and SAP_TLS_PIN or ZCA_TT_A4H_TLS_PIN (SHA-256 fingerprint of a
+self-signed test system's certificate: that certificate only is accepted). On Windows, ddic_export.ps1 reads variables
+set with setx. Standard library only.
 
 Per table the export writes <TABLE>.acds (definition, if the system offers it), <TABLE>.fields.csv (DD03L, active
 version: every field incl. includes and appends) and <TABLE>.indexes.csv (DD17S); manifest.json lists what was found.
@@ -26,6 +29,8 @@ import argparse
 import base64
 import csv
 import getpass
+import hashlib
+import http.client
 import json
 import os
 import re
@@ -63,17 +68,51 @@ def load_table_list(path: str | Path) -> list[str]:
 
 # ---------------------------------------------------------------- ADT client
 
+def env(*names: str) -> str:
+    for n in names:
+        if os.environ.get(n):
+            return os.environ[n]
+    return ""
+
+
+class PinnedHandler(urllib.request.HTTPSHandler):
+    """Accepts exactly the certificate with the pinned SHA-256 fingerprint (self-signed test systems)."""
+
+    def __init__(self, pin: str, ctx: ssl.SSLContext):
+        super().__init__(context=ctx)
+        self.pin = pin
+
+    def https_open(self, req):
+        pin = self.pin
+
+        class Conn(http.client.HTTPSConnection):
+            def connect(self):
+                super().connect()
+                seen = hashlib.sha256(self.sock.getpeercert(binary_form=True)).hexdigest()
+                if seen != pin:
+                    self.sock.close()
+                    raise ssl.SSLError(f"certificate fingerprint {seen} is not the pinned one")
+        return self.do_open(Conn, req, context=self._context)
+
+
 class AdtClient:
     def __init__(self, url: str, client: str, user: str, password: str, ca_file: str | None = None,
-                 timeout: int = 60):
+                 timeout: int = 60, pin: str = ""):
         self.base = url.rstrip("/")
         self.client = client
         self.timeout = timeout
         token = base64.b64encode(f"{user}:{password}".encode()).decode()
         self.auth = f"Basic {token}"
         ctx = ssl.create_default_context(cafile=ca_file) if ca_file else ssl.create_default_context()
+        handler: urllib.request.HTTPSHandler = urllib.request.HTTPSHandler(context=ctx)
+        pin = pin.replace(":", "").lower()
+        if pin:
+            ctx.check_hostname, ctx.verify_mode = False, ssl.CERT_NONE
+            handler = PinnedHandler(pin, ctx)
+        if url.lower().startswith("http://"):
+            print("WARNING: plain HTTP sends the logon unencrypted; use the HTTPS port", file=sys.stderr)
         cookies = urllib.request.HTTPCookieProcessor()
-        self.opener = urllib.request.build_opener(cookies, urllib.request.HTTPSHandler(context=ctx))
+        self.opener = urllib.request.build_opener(cookies, handler)
         self.csrf: str | None = None
 
     def _url(self, path: str, **params: str) -> str:
@@ -82,6 +121,7 @@ class AdtClient:
 
     def _send(self, req: urllib.request.Request) -> tuple[int, str]:
         req.add_header("Authorization", self.auth)
+        req.add_header("sap-client", self.client)
         try:
             with self.opener.open(req, timeout=self.timeout) as resp:
                 if resp.headers.get("x-csrf-token") and resp.headers.get("x-csrf-token") != "Required":
@@ -294,9 +334,9 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     ex = sub.add_parser("export", help="fetch definitions, fields and indexes from a system")
-    ex.add_argument("--url", required=True, help="https://<host>:<port> of the system")
-    ex.add_argument("--client", required=True)
-    ex.add_argument("--user", required=True)
+    ex.add_argument("--url", help="https://<host>:<port> (else SAP_URL / ZCA_TT_A4H_URL)")
+    ex.add_argument("--client", help="client (else SAP_CLIENT / ZCA_TT_A4H_CLIENT)")
+    ex.add_argument("--user", help="user (else SAP_USER / ZCA_TT_A4H_USER)")
     ex.add_argument("--tables", action="append", required=True, help="table list file (repeatable)")
     ex.add_argument("--out", required=True)
     ex.add_argument("--ca-file", help="CA bundle of the system's certificate")
@@ -310,8 +350,14 @@ def main(argv: list[str] | None = None) -> int:
         tables: list[str] = []
         for f in args.tables:
             tables += [t for t in load_table_list(f) if t not in tables]
-        password = os.environ.get("SAP_PASSWORD") or getpass.getpass(f"Password of {args.user}: ")
-        client = AdtClient(args.url, args.client, args.user, password, args.ca_file)
+        url = args.url or env("SAP_URL", "ZCA_TT_A4H_URL")
+        sap_client = args.client or env("SAP_CLIENT", "ZCA_TT_A4H_CLIENT")
+        user = args.user or env("SAP_USER", "ZCA_TT_A4H_USER")
+        if not (url and sap_client and user):
+            ap.error("logon incomplete: give --url, --client and --user or set the environment variables")
+        password = env("SAP_PASSWORD", "ZCA_TT_A4H_PASSWORD") or getpass.getpass(f"Password of {user}: ")
+        client = AdtClient(url, sap_client, user, password, args.ca_file,
+                           pin=env("SAP_TLS_PIN", "ZCA_TT_A4H_TLS_PIN"))
         manifest = export(client, tables, Path(args.out))
         missing = [t for t, e in manifest["tables"].items() if not e.get("found")]
         print(f"{len(tables) - len(missing)} of {len(tables)} tables read; not found: {', '.join(missing) or '-'}")
