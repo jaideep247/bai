@@ -1,0 +1,12 @@
+{
+  "_comment": "Request data next to the account flow (docs/Extensions_Overlay.md). The account flow has no line level: its rows are signatures aggregated by stage, account, document type, origin and transaction, so a request number or a source system per row would split the matrix (and the link item -> request log CD_ITEM_TO_REQUEST is pending V82). Declared blocked so the gap stays visible (decision D-H3); the request drill-down is the payment trace and the link walker.",
+  "extensions": [
+    {"id": "CD_FLOW_REQUEST", "point": "FLOW", "anchor": "STAGE", "status": "blocked",
+     "description": "Request number and source system of a flow row",
+     "reason": "Flow rows are aggregated - no line to join (D-H3)",
+     "link": "CD_ITEM_TO_REQUEST",
+     "fields": [
+       {"field": "‹FIN number field›", "element": "ZZCD_FlowRequestNo", "label": "Request number"},
+       {"field": "SOURCE", "element": "ZZCD_FlowSource", "label": "Source system of the request"}]}
+  ]
+}

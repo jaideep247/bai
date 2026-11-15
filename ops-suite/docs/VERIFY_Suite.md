@@ -19,6 +19,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | **V123** | **Released views for the suite's G/L / company code reads outside the ledger model (D-C8 extended 2026-11-11)** | **this document, §3** |
 | V139-V141, V144 | Build F: break analysis overlay - assignment carries the payment document (overlay links), bank transaction code lists, accounts of the reconciliation sets and PlanViz on the busiest account; pilot baselines and export path (2026-11-11) | `Break_Analysis_Overlay.md` §6 |
 | V150-V152 | Build G: account flow overlay - accounts of the flows by role, values of the stage rules, findings area of the morning report's checks and PlanViz on the busiest account (2026-11-15) | `Account_Flow_Overlay.md` §4 |
+| V158 | Build H: customer extensions - the pack's generated extensions of the framework views activate from `src/ext` (worklist state of the payment next to the break groups, query copy), PlanViz of the break list with the association (2026-11-15) | `Extensions_Overlay.md` §4 |
 | V130, V131 | Process catalogue customer layer: the customer process's table and programs, approval of the activation proposal and the order of the catalogue rows before `CAT_PROCESS` (2026-11-11) | `Process_Catalogue_Overlay.md` §4 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping

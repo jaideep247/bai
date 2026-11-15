@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests of the customer extension engine (tools/abaptools/extensions.py): the inventory of extension points matches
 the product (annotations, anchors, documents, no other extensible view, the generated matrix); the worked example of
-a fictitious second customer (XX) is valid and up to date with zero framework change; every
+a fictitious second customer (XX) and the ops suite's pack are valid and up to date with zero framework change; every
 generator rule refuses what it must (point, anchor, a "to many" link, a link from another object, a field the anchor
 does not provide, a key object of another layer or with an unmapped key, an unknown or hidden field, a masked field
 declared weaker, prefixes of IDs, elements and associations, the quota, optional views and their sources); statuses
@@ -32,6 +32,7 @@ FRAMEWORK_PROFILE = {
     'examples': [{'pack': EXAMPLE, 'doc': 'docs/extensions/example_xx.md',
                   'title': 'Worked example - extensions of the fictitious customer XX'}]}
 MOVED = re.compile(r'\| Moved from Z\w+ to the reusable framework ZCA_OPS')
+SUITE_PROFILE = {'pack': 'config/extensions', 'title': 'Extensions of the ops suite on the framework views'}
 
 
 def read(path):
@@ -362,6 +363,21 @@ class RenderTest(unittest.TestCase):
         self.assertNotIn('ZZXX_BrkFeeder', active)
         self.assertIn('ZZXX_BrkReceived', pending)
         self.assertIn('ZZXX_BrkFeeder', pending)
+
+
+class SuitePackTest(unittest.TestCase):
+
+    def test_suite_pack_valid_and_up_to_date(self):
+        self.assertEqual(ex.check(SUITE, SUITE_PROFILE), [])
+
+    def test_suite_pack_statuses(self):
+        inv = ex.load_inventory()
+        problems, results, files, _ = ex.pack_outputs(SUITE, 'config/extensions', inv)
+        self.assertEqual(problems, [])
+        self.assertEqual({r['id']: r['status'] for r in results},
+                         {'CD_BRK_WORK_STATE': 'pending', 'CD_BRK_LINE_REQUEST': 'blocked',
+                          'CD_FLOW_REQUEST': 'blocked'})
+        self.assertFalse(any(p.startswith('src') for p in files), 'nothing of the suite pack is active yet')
 
 
 class NoCustomerObjectInProductTest(unittest.TestCase):

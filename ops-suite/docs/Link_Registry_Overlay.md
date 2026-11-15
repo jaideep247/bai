@@ -92,3 +92,9 @@ stays active, the registry rows are delivered inactive (or pending) and a VERIFY
    bank statement header, V117).
 4. **Registry check in the morning run**: register `ZCL_CA_OPS_CHK_LINKS` in area `CD_OPS` (a registered process needs
    its control, alert rule and owner - process onboarding) or run it on demand only.
+
+## 7. Related: extensions of the framework views (2026-11-15)
+
+The object `CD_PAY_WORK_STATE` (`ZI_CD_PayWorkState`) declares its elements `SourceSystem`, `Outcome`, `Finding`,
+`IsLate` (evidence C, the view's source in `src/core`): the pack's extension `CD_BRK_WORK_STATE` joins it to the break
+groups by the assignment and reads only these registry fields (`Extensions_Overlay.md`).

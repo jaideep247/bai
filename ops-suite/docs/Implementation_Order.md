@@ -346,6 +346,15 @@ role (V150), stage rule values (V151) and stage controls (V152) of the flows `DI
 flow activated as a whole; job `ZCA_OPS_FLOW_RUN` after `ZCA_OPS_BRK_RUN` and the morning report; PlanViz
 FLOW-PV1 ... FLOW-PV5 first.
 
+## Build H (2026-11-15): customer extensions of the framework views
+
+Framework first (`ops-framework/docs/INSTALL.md` §6g: the extensible views, V153-V157); then the suite's pack
+(`docs/Extensions_Overlay.md`): nothing is active yet - `CD_BRK_WORK_STATE` (source system and worklist state of the
+payment next to the break groups, cube, query copy `ZC_CD_BrkQry`) waits for V139 and V158 in
+`config/extensions/pending`; once active, its package `ZCD_OPS_EXT` (`src/ext`) is pulled after the framework and
+after `ZCD_OPS_CORE` (the worklist view `ZI_CD_PayWorkState`), then the binding `ZUI_CA_OPS_BRK_O4` is republished.
+Decision D-H3 (request number next to break lines and flow rows) before any further extension.
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |
