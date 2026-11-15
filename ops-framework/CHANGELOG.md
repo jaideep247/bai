@@ -2,6 +2,41 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build H: customer extensions)
+
+Goal (user, 2026-11-15): a generic tool deployable at any customer landscape, plugged in with customer-specific data
+tables to pull and amalgamate information, so that customer-specific data sits on top of what comes from the standard
+tables (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`).
+
+### Added
+- One customer extension contract: `docs/EXTENDING_WITH_CUSTOMER_DATA.md` (first principle, matrix module x standard
+  data source x extension point x mechanism, decision tree, CDS extensions, the customer pack, steps, worked example,
+  decisions D-H1, D-H2, D-H4 ... D-H7) and the inventory `config/extension_points.json` (27 extension points: 19
+  configuration / registry / generated / plug-in points of the existing modules and 8 CDS extension points).
+- Extensible product views (SAP CDS extensibility annotations, VERIFY V153): base views `ZC_CA_OpsException`,
+  `ZR_CA_OpsBrkGroup`, `ZR_CA_OpsBrkItem`, `ZI_CA_OpsFlowCube`, `ZC_CA_OpsFlowStage`, `ZR_CA_OpsCheckStatus`,
+  `ZR_CA_OpsCatalogue`, `ZC_CA_OpsCtlReview`; the elements pass on to `ZC_CA_OpsBrkGroup`, `ZI_CA_OpsBrkCube`,
+  `ZC_CA_OpsBrkItem`, `ZC_CA_OpsCheckStatus`, `ZC_CA_OpsCatalogue`; the queries `ZC_CA_OpsBrkQry` / `ZC_CA_OpsFlowQry`
+  are copied into the customer package (fallback, V155). Anchors per point (company code, journal line, assignment,
+  object of a finding, check, stage, account, process, control). No element, join or behaviour of a view changed.
+- Shared engine `../tools/abaptools/extensions.py` with the wrapper `tools/extensions.py` (house check
+  `extensions`): the inventory against the views, documents and files; the generator of a customer pack
+  (`config/extensions/*.json`: registry link or key of the customer's own object, fields with their sensitivity;
+  only declared points and anchors, customer prefixes, "to one" links, every key mapped, registry fields only,
+  hidden never, masked rendered masked, quota; active / pending / blocked) rendering `extend view entity` sources and
+  query copies into the customer package or its pending folder, and a report; `--check`.
+- Worked example of a fictitious second customer: `config/extensions/examples/xx` (six extensions: four active,
+  one pending, one blocked), rendered into `docs/extensions/example_xx.md`; the example overlay of the link registry
+  gained the customer tables it joins (`XX_REQUEST`, `XX_CTL_REGISTER`, `XX_STAGE_SLA`) and the inactive link
+  `XX_GLITEM_TO_REQUEST`. No framework file names the example outside the example folders.
+- Serializer: DDLS of an `extend view entity` (source type `E`, VERIFY V156; description from `// Extension:`).
+- Tests: `../tools/tests/test_extensions.py` (inventory drift, every generator rule, rendering, the example and the
+  first consumer's pack, no product file references a customer object), serializer test of an extension.
+- Module documents name their extension points (break analysis, account flow, process catalogue, exceptions,
+  control review, area dashboard); INSTALL C7 and section 6g; VERIFY V153-V157.
+
+No ABAP code and no message changed (no new message number used).
+
 ## [Unreleased] - 2026-11-15 (build G: account flow reconciliation)
 
 Goal (user, 2026-11-15): a reconciliation dashboard "Account flow" - stages as rows, accounts by role as columns,

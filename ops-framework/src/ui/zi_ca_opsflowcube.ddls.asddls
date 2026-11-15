@@ -14,12 +14,22 @@
 // VERIFY-ADT (V147): @Analytics.dataCategory #CUBE over a view entity with parameters and a UNION source (7.58),
 //          #MAX aggregation of an INT4, text elements by language join, currency as a dimension of DEC measures (as
 //          ZI_CA_OpsBrkCube, V136).
+// Extension point FLOW (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          base view; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view. Anchors COMPANY, STAGE, ACCOUNT: their elements stay stable.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Account flow - cube'
 @Analytics.dataCategory: #CUBE
 @VDM.viewType: #COMPOSITE
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #L, dataClass: #TRANSACTIONAL }
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: true
+@AbapCatalog.extensibility.dataSources: [ 'Fct' ]
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define view entity ZI_CA_OpsFlowCube
   with parameters
     P_DateFrom : abap.dats,

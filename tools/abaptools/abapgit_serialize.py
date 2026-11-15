@@ -35,6 +35,8 @@ Modification log:
 2026-11-10 | Operations framework: message rows without a constant column, programs, text pools.
 2026-11-10 | One engine for every component (tools/abaptools): message columns, .abapgit.xml path and
            | IGNORE list, secondary indexes and message truncation are settings; output unchanged.
+2026-11-15 | DDLS of an 'extend view entity' (customer extensions): source type EXTEND_SOURCE_TYPE (VERIFY V156),
+           | description from the comment line '// Extension: <text>'. Output of every other source unchanged.
 """
 import json
 import os
@@ -132,6 +134,17 @@ def label_of(text, default):
     return (m.group(1) if m else default)[:60]
 
 
+# DDLS source type of an 'extend view entity' (customer extension of a view entity; tools/abaptools/extensions.py).
+# VERIFY-ADT V156: the value abapGit writes for such an object on 7.58 (create one extension in ADT, pull it with
+# abapGit and compare; change this constant if it differs).
+EXTEND_SOURCE_TYPE = 'E'
+
+
+def extension_label(text, default):
+    m = re.search(r'^//\s*Extension:\s*(.*)$', text, re.M)
+    return (m.group(1).strip() if m else default)[:60]
+
+
 def sources(stage):
     src = os.path.join(stage.root, 'src')
     for d, _, files in os.walk(src):
@@ -172,10 +185,14 @@ def sources(stage):
                 stage.write(rel.replace('.intf.abap', '.intf.xml'), wrap('LCL_OBJECT_INTF', body))
             elif f.endswith('.ddls.asddls'):
                 text = read(p)
+                extend = re.search(r'^\s*extend\s+view\s+entity\b', text, re.I | re.M)
                 kind = ('A' if re.search(r'\bdefine\s+abstract\s+entity\b', text, re.I)
+                        else EXTEND_SOURCE_TYPE if extend
                         else 'P' if re.search(r'\bas\s+projection\s+on\b', text, re.I) else 'W')
+                # an extension has no header label (its first label is an element's): '// Extension: <text>'
+                label = extension_label(text, name) if extend else label_of(text, name)
                 body = '   <DDLS>\n' + tag('DDLNAME', name) + tag('DDLANGUAGE', 'E') + \
-                       tag('DDTEXT', label_of(text, name)) + tag('SOURCE_TYPE', kind) + '   </DDLS>\n'
+                       tag('DDTEXT', label) + tag('SOURCE_TYPE', kind) + '   </DDLS>\n'
                 stage.write(rel.replace('.ddls.asddls', '.ddls.xml'), wrap('LCL_OBJECT_DDLS', body))
             elif f.endswith('.ddlx.asddlxs'):
                 text = read(p)

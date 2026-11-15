@@ -8,11 +8,20 @@
 //                   2026-11-10 | Company code of the slice (company-code isolation; DCL with BUKRS).
 //                   2026-11-11 | Planned downtime mark of the slice (operations response features).
 //                   2026-11-11 | Reopened sign-off and its reason (explainable, versioned results).
+// Extension point CTL_REVIEW (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          base view; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view. Anchors COMPANY, CONTROL: their elements stay stable.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Daily control review'
 @Metadata.allowExtensions: true
 @Search.searchable: true
 @ObjectModel.semanticKey: [ 'Area', 'ControlId', 'BusinessDate', 'CompanyCode' ]
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: true
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define root view entity ZC_CA_OpsCtlReview
   provider contract transactional_query
   as projection on ZR_CA_OpsCtlReview

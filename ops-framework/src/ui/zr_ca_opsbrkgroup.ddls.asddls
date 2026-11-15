@@ -7,10 +7,20 @@
 //          are never summed across currencies. Drill-down to the lines (_Items). Nothing computed here that the
 //          analysis did not store; read-only (no behaviour).
 // Modification log: 2026-11-11 | Initial version (build F: clearing-account break analysis).
+// Extension point BRK_GROUP (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          base view; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view. Anchors COMPANY, JOURNAL_GROUP, ASSIGNMENT: their elements stay stable.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Clearing account breaks'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #L, dataClass: #TRANSACTIONAL }
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: true
+@AbapCatalog.extensibility.dataSources: [ 'Grp' ]
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define root view entity ZR_CA_OpsBrkGroup
   as select from    zca_ops_brkgrp   as Grp
     inner join      ZI_CA_OpsBrkSnap as Snap on Snap.SnapshotId = Grp.snap_id

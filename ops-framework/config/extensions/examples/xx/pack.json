@@ -1,0 +1,11 @@
+{
+  "_comment": "Worked example of a customer pack (fictitious customer XX, docs/EXTENDING_WITH_CUSTOMER_DATA.md section 8). Validated and rendered by tools/extensions.py --check of the framework into docs/extensions/example_xx.md; never generated into a package of the framework. In a customer folder the same files sit under config/extensions and the generator writes the package folder.",
+  "prefix": "XX",
+  "layer": "XX",
+  "links": ["config/links/examples/xx_overlay.json"],
+  "since": "2026-11-15",
+  "package_folder": "src/ext",
+  "pending_folder": "config/extensions/pending",
+  "package_text": "Customer XX: extensions of the operations framework",
+  "report": "docs/extensions/extensions.md"
+}

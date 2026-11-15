@@ -63,3 +63,7 @@ observation.
 ## 7. VERIFY
 
 V26-V33 of `VERIFY.md`; company-code slices V35, V37, V38, V40, V41.
+
+## Related: customer data on top (2026-11-15)
+
+A customer adds columns from its own tables to the daily control review `ZC_CA_OpsCtlReview` (the projection: the behaviour stays untouched); anchors: company code and the control (area, control ID) - extension point `CTL_REVIEW` of `config/extension_points.json`. It declares them in its folder (`config/extensions/*.json`); `tools/extensions.py` checks them against the inventory and the link registry and generates the `extend view entity` sources into the customer package. No product object changes. `docs/EXTENDING_WITH_CUSTOMER_DATA.md`; VERIFY V153-V157.

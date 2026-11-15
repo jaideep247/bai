@@ -226,3 +226,7 @@ finding, the dashboard shows only the job and request processes.
 `docs/ADDING_A_BUSINESS_PROCESS.md` (onboarding a business process, `CAT_PROCESS`), `docs/LINK_REGISTRY.md` (business
 objects of the tables), `docs/OPERATIONS_FEATURES.md` (planned downtime), `docs/JOB_MONITORING.md` (the monitor of
 `S4_BATCH_JOBS`), `docs/catalogue/catalogue.md` (generated reference).
+
+## Related: customer data on top (2026-11-15)
+
+A customer adds columns from its own tables to the catalogue `ZR_CA_OpsCatalogue` (passed on to `ZC_CA_OpsCatalogue`); anchor: the process ID as the key of a customer object - extension point `CATALOGUE` of `config/extension_points.json`. It declares them in its folder (`config/extensions/*.json`); `tools/extensions.py` checks them against the inventory and the link registry and generates the `extend view entity` sources into the customer package. No product object changes. `docs/EXTENDING_WITH_CUSTOMER_DATA.md`; VERIFY V153-V157.

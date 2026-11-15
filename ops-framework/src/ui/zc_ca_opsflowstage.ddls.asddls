@@ -7,10 +7,20 @@
 //          (area, company code).
 // Modification log: 2026-11-15 | Initial version (build G: account flow reconciliation).
 // VERIFY-ADT (V147): language join to a domain text view.
+// Extension point FLOW_STAGE (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          base view; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view. Anchors COMPANY, STAGE: their elements stay stable.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Account flow stages and controls'
 @Metadata.allowExtensions: true
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #S, dataClass: #MIXED }
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: true
+@AbapCatalog.extensibility.dataSources: [ 'Stg' ]
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define view entity ZC_CA_OpsFlowStage
   as select from    ZI_CA_OpsFlowStgTag as Stg
     left outer join ZI_CA_OpsFlowTagT   as TagT on  TagT.ControlStatus = Stg.ControlStatus

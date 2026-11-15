@@ -6,10 +6,20 @@
 //          monitor it (ZI_CA_OpsCatMon). Steps, tables and dependencies are in the configuration app. Nothing
 //          stored, read-only (no behaviour definition).
 // Modification log: 2026-11-11 | Initial version (process catalogue with activation).
+// Extension point CATALOGUE (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          base view; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view. Anchors PROCESS: their elements stay stable.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Process catalogue with activation'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #A, sizeCategory: #S, dataClass: #CUSTOMIZING }
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: true
+@AbapCatalog.extensibility.dataSources: [ 'Prc' ]
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define root view entity ZR_CA_OpsCatalogue
   as select from    zca_ops_catprc      as Prc
     left outer join zca_ops_catpkg      as Pkg on Pkg.pkg_id = Prc.pkg_id

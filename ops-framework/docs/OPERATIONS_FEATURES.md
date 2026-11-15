@@ -250,3 +250,7 @@ other app of the framework.
 ## 8. VERIFY
 
 `docs/VERIFY.md` V70-V79 (a consumer's configuration and cards: its own items, e.g. V80 / V81 of the first consumer).
+
+## Related: customer data on top (2026-11-15)
+
+A customer adds columns from its own tables to the exceptions list and object page `ZC_CA_OpsException` (the projection: the behaviour of the exceptions stays untouched); anchors: company code, the object of the finding (object key with its object type) and the check (area, group 2) - extension point `EXC` of `config/extension_points.json`. It declares them in its folder (`config/extensions/*.json`); `tools/extensions.py` checks them against the inventory and the link registry and generates the `extend view entity` sources into the customer package. No product object changes. `docs/EXTENDING_WITH_CUSTOMER_DATA.md`; VERIFY V153-V157.

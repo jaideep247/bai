@@ -19,10 +19,20 @@
 // VERIFY-ADT: cross join with left outer joins, a literal in the ON condition of a left outer join, the
 //             TIMESTAMPL -> TIMESTAMP cast and tstmp_seconds_between (as the consumers' "as of" views), coalesce
 //             over a LEFT OUTER JOIN column (7.58).
+// Extension point CHECK_STATUS (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
+//          base view; a customer adds its own elements with extend view entity from its package,
+//          never by changing this view. Anchors COMPANY, CHECK: their elements stay stable.
+// VERIFY-ADT (V153): the extensibility annotations below on 7.58.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Area dashboard: status per check'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #B, sizeCategory: #M, dataClass: #MIXED }
+@AbapCatalog.extensibility.extensible: true
+@AbapCatalog.extensibility.elementSuffix: 'ZOP'
+@AbapCatalog.extensibility.allowNewDatasources: true
+@AbapCatalog.extensibility.dataSources: [ 'Sl' ]
+@AbapCatalog.extensibility.quota.maximumFields: 50
+@AbapCatalog.extensibility.quota.maximumBytes: 2000
 define root view entity ZR_CA_OpsCheckStatus
   as select from    ZI_CA_OpsChkSlice  as Sl
     cross join      ZI_CA_OpsChkStaleD as StD

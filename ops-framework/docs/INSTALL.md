@@ -16,6 +16,7 @@ run in an SAP system yet: the first installation is also the first activation (s
 | C4 | **abapGit** (standalone report or developer version) is available in the development system, and ADT for the service bindings. | SE38 / ADT |
 | C5 | **ZCA_PARAM release 1.1.0 or later** is installed or installed first (step 1). `start_run` refuses every run on an older release (message 044). | `ZIF_CA_PARAM_TYPES=>GC_VERSION` |
 | C6 | **Customer wording.** The framework carries no customer, bank, middleware, scheduler or system names - not in the code, the documents, the templates, the configuration or the shared tools (check `customer_terms` of `tools/checks.py`); extend `config/customer_terms.txt` with the new customer's names and object prefixes before the first change. Customer specifics (tables, fields, VERIFY items, worked examples) live in the consumer's own folder; a line that must name a term (change history) is an entry of `config/customer_terms_allowed.txt` with its reason. | `python3 tools/checks.py` |
+| C7 | **Customer data on top only through extension points.** The new customer's own tables, fields, links, rows and classes are planned against `config/extension_points.json` (`docs/EXTENDING_WITH_CUSTOMER_DATA.md` sections 2-3); a wish no point covers is a product change request, never a change of a product object at the customer. | Workshop list of wishes per extension point |
 
 Names to look up in `TADIR` before the first pull (C3) - patterns, `*` = any characters:
 
@@ -135,6 +136,9 @@ it lists RUN, ALERT_LOG and every active purge target of `ZCA_OPS_PURGE` with th
 3. Enter the consumer's alert rules for the area in the configuration app `ZUI_CA_OPS_CFG` (or rely on
    rules with area `*`), and its SLA parameters `SLA_DAYS_<area>_<B|E|W>` if the default of 1 day does not fit.
 4. Register its purge targets in `ZCA_OPS_PURGE` (configuration app) when it has own tables to purge.
+5. Its own data on top of the standard data: only through the extension points of `config/extension_points.json`
+   (configuration rows, its registry layer, its plug-in classes, its generated CDS extensions in its own package) -
+   `docs/EXTENDING_WITH_CUSTOMER_DATA.md`, section 6 lists the steps; installation of the extensions: section 6g.
 
 How a consumer writes findings, raises alerts and plugs in: `README.md` (section *How a consumer uses it*).
 
@@ -243,6 +247,19 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
 3. Job `ZCA_OPS_FLOW_RUN` per area after the break analysis and the checks of the day (key date = today); the
    query `ZC_CA_OpsFlowQry` in the *Multidimensional Reports* app, the cards of `ZUI_CA_OPS_FLOW` on the consumer's
    overview page; PlanViz FLOW-PV1 ... FLOW-PV5 first (V145-V149).
+
+## 6g. Build H (2026-11-15): customer extensions (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`)
+
+1. After the pull: the thirteen views of the CDS extension points carry the extensibility annotations
+   (`config/extension_points.json`); activate the framework as before and confirm V153 on one of them first.
+2. A consumer's extensions come with the consumer: its package of generated `extend view entity` sources and query
+   copies (`src/ext` of its folder) is pulled **after** the framework; then republish the bindings whose views it
+   extends (`ZUI_CA_OPS_EXC_O4`, `_BRK_O4`, `_FLOW_O4`, `_DASH_O4`, `_REV_O4`) so the metadata carries the new
+   elements, and open the copied queries in *Multidimensional Reports* (V154-V156).
+3. Security sign-off per extension: the columns are visible to every user of the product row (the product view's
+   DCL governs, V157); check the masked fields in the list, the object page, the export and the query.
+4. Before every transport of a consumer's extensions: `python3 tools/extensions.py --check` in the framework and in
+   the consumer's folder; nothing of the pending folder is ever transported.
 
 ## 7. Verify the installation (demo report)
 

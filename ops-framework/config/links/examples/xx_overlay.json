@@ -1,5 +1,5 @@
 {
-  "_comment": "Worked example of a customer overlay (fictitious customer, prefix XX; docs/LINK_REGISTRY.md section 7). Validated with the product layers by tools/link_registry.py --check, never seeded. A custom table ZXX_PAY_REQ (payment requests of the customer's feeder), a custom field ZZXX_REQ_ID appended to the standard items table, the flow request -> items -> payment -> bank line, a fallback chain (partner by external number with the feeder, then without), a standard link switched off (no notification-of-change lots) and one replaced (the customer's bank returns the payment reference without leading zeros).",
+  "_comment": "Worked example of a customer overlay (fictitious customer, prefix XX; docs/LINK_REGISTRY.md section 7). Validated with the product layers by tools/link_registry.py --check, never seeded. A custom table ZXX_PAY_REQ (payment requests of the customer's feeder), a custom field ZZXX_REQ_ID appended to the standard items table, the flow request -> items -> payment -> bank line, a fallback chain (partner by external number with the feeder, then without), a standard link switched off (no notification-of-change lots) and one replaced (the customer's bank returns the payment reference without leading zeros). Since 2026-11-15 also the customer tables its extensions of the product views join (config/extensions/examples/xx, docs/EXTENDING_WITH_CUSTOMER_DATA.md): requests by number, the audit register of the controls, the service levels of the flow stages, and the link clearing line -> request (inactive until V110).",
   "layer": {"id": "XX", "kind": "C", "rank": 30, "prefix": "XX_", "description": "Customer overlay of the example customer XX",
             "owner": "XX PAYMENT TEAM", "active": true},
   "objects": [
@@ -11,6 +11,30 @@
        {"name": "FEEDER", "evidence": "C", "description": "Feeder system"},
        {"name": "STATUS", "evidence": "C", "description": "Processing status (OK = accepted attempt)"},
        {"name": "MEMBER_ID", "sensitivity": "M", "evidence": "C", "description": "Member number (masked)"}
+     ]},
+    {"id": "XX_REQUEST", "source": "ZXX_REQUEST", "kind": "T", "keys": ["REQ_ID"],
+     "description": "Payment requests of the feeder (accepted attempt)",
+     "fields": [
+       {"name": "REQ_ID", "evidence": "C", "description": "Request number of the feeder"},
+       {"name": "FEEDER", "evidence": "C", "description": "Feeder system"},
+       {"name": "RECEIVED_ON", "evidence": "C", "description": "Date the request was received"},
+       {"name": "MEMBER_ID", "sensitivity": "M", "evidence": "C", "description": "Member number (masked)"}
+     ]},
+    {"id": "XX_CTL_REGISTER", "source": "ZXX_CTL_REG", "kind": "T", "keys": ["AREA", "CONTROL_ID"],
+     "description": "Audit register of the customer's controls",
+     "fields": [
+       {"name": "AREA", "evidence": "C", "description": "Area of the control"},
+       {"name": "CONTROL_ID", "evidence": "C", "description": "Control of the operations framework"},
+       {"name": "AUDIT_REF", "evidence": "C", "description": "Reference of the control in the audit register"},
+       {"name": "TESTER", "sensitivity": "M", "evidence": "C", "description": "User who tests the control (masked)"}
+     ]},
+    {"id": "XX_STAGE_SLA", "source": "ZXX_STAGE_SLA", "kind": "T", "keys": ["FLOW_ID", "STAGE_ID"],
+     "description": "Service levels of the stages of the account flows",
+     "fields": [
+       {"name": "FLOW_ID", "evidence": "C", "description": "Account flow"},
+       {"name": "STAGE_ID", "evidence": "C", "description": "Stage of the flow"},
+       {"name": "SLA_HOURS", "evidence": "C", "description": "Hours a posting may stay in the stage"},
+       {"name": "TEAM", "evidence": "C", "description": "Owner team of the stage"}
      ]}
   ],
   "fields": [
@@ -36,7 +60,11 @@
     {"id": "XX_PAYMENT_TO_STMT_LINE", "from": "FICA_OPEN_ITEM", "to": "S4_BANK_STMT_LINE", "cardinality": "NM", "quality": "C",
      "replaces": "FICA_PAYMENT_TO_STMT_LINE", "owner": "XX PAYMENT TEAM",
      "description": "Payment -> bank lines (bank drops leading zeros)",
-     "conditions": [{"kind": "EQ", "from": "AUGBL", "to": "CHECT", "transform": "NOZERO"}]}
+     "conditions": [{"kind": "EQ", "from": "AUGBL", "to": "CHECT", "transform": "NOZERO"}]},
+    {"id": "XX_GLITEM_TO_REQUEST", "from": "S4_JOURNAL_ITEM", "to": "XX_REQUEST", "cardinality": "N1", "quality": "P",
+     "active": false, "verify": "V110", "owner": "XX PAYMENT TEAM",
+     "description": "Clearing line -> request in its assignment",
+     "conditions": [{"kind": "EQ", "from": "AssignmentReference", "to": "REQ_ID"}]}
   ],
   "activation": [
     {"kind": "K", "id": "FICA_PAYMENT_TO_NOC", "active": false, "reason": "No notification-of-change lots at XX", "owner": "XX PAYMENT TEAM"}

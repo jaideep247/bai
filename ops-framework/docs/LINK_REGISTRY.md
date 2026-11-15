@@ -24,6 +24,7 @@ framework (a drill-down, a generated CDS view, an impact report) uses the same d
 |---|---|
 | Operations (drill-down) | `ZIF_CA_OPS_LINK_WALKER`: from one object and key, every linked object with its key, the path and the evidence quality (§5) |
 | Developers (generated CDS) | the payment model generator renders a join from a registry link instead of a hand-written join text (§6.2) |
+| Customers (extensions) | the extension generator joins a customer's table to a product view through a "to one" registry link and reads only registry fields, with their sensitivity (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`) |
 | Change management (impact) | `docs/links/impact.md` of a component: if a field changes, which links, object keys, payment model sections and aggregate checks depend on it (§6.1) |
 | Auditors (lineage) | `docs/links/lineage.md`: the layers, objects and links as a diagram, with the custom field flows (§6.1) |
 
@@ -199,6 +200,11 @@ country of one object and the method of another) stays CDS text.
 7. `python3 tools/link_registry.py --check` in the customer's folder; load its seed rows in DV1 (`ZUI_CA_OPS_CFG`,
    customizing request); approve the sources the walker reads for its area in `ZCA_OPS_TABWL`; register
    `ZCL_CA_OPS_CHK_LINKS` in its area; walk from `XX_PAY_REQUEST` with the request number.
+8. **Columns on the product views** (2026-11-15): the customer tables its extensions join - `XX_REQUEST` (one row
+   per request), `XX_CTL_REGISTER` (audit register by area and control), `XX_STAGE_SLA` (service level by flow and
+   stage) - and the link `XX_GLITEM_TO_REQUEST` (clearing line -> request in its assignment, N1, inactive until
+   V110). The extension generator follows only "to one" links and renders their ON condition on the anchor elements
+   of the product view (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`).
 
 ## 8. What the product layers hold (2026-11-11)
 
