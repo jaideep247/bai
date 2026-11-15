@@ -9,7 +9,8 @@
   "description": "Industry package: SAP FI-CA standard processes",
   "owner": "OPS FRAMEWORK",
   "active": true,
-  "auth_role": "‹PFCG role of the area›"
+  "auth_role": "‹PFCG role of the area›",
+  "license_module": "CATALOGUE_FICA"
  },
  "processes": [
   {

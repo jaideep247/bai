@@ -1145,6 +1145,108 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>350</MSGNR>
+     <TEXT>&amp;1 is not covered by the licence: save the row inactive (LIC_ENFORCE X)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>351</MSGNR>
+     <TEXT>Check &amp;1 not run: module &amp;2 not licensed (state &amp;3, LIC_ENFORCE X)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>352</MSGNR>
+     <TEXT>&amp;1 refused: module &amp;2 not licensed (state &amp;3, LIC_ENFORCE X)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>353</MSGNR>
+     <TEXT>Module(s) &amp;1 used but not covered by licence &amp;2 (LIC_ENFORCE W: runs)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>354</MSGNR>
+     <TEXT>No licence installed: install the vendor's file (ZCA_OPS_LICENSE_INSTALL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>355</MSGNR>
+     <TEXT>Module &amp;1 of licence &amp;2 ends on &amp;3 (&amp;4 days left)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>356</MSGNR>
+     <TEXT>Module &amp;1 of licence &amp;2 ended on &amp;3: grace period until &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>357</MSGNR>
+     <TEXT>Module &amp;1 of licence &amp;2 ended on &amp;3, grace period ended on &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>358</MSGNR>
+     <TEXT>Licence &amp;1: signature invalid or not by the vendor (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>359</MSGNR>
+     <TEXT>Licence &amp;1 is bound to other systems (this system: &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>360</MSGNR>
+     <TEXT>Licence &amp;1 is not for the installed product version &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>361</MSGNR>
+     <TEXT>Licence file not readable (&amp;1): not the vendor's signed licence</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>362</MSGNR>
+     <TEXT>Licence &amp;1 installed: &amp;2 module(s), state &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>363</MSGNR>
+     <TEXT>Licence &amp;1 checked in test mode (nothing stored): state &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>364</MSGNR>
+     <TEXT>Licence &amp;1 not installed: state &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>365</MSGNR>
+     <TEXT>Signature check could not run (SSF return &amp;1, PSE &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>366</MSGNR>
+     <TEXT>Licence file on the server: maintain the parameters &amp;1 and &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

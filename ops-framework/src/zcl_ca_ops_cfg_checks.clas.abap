@@ -23,6 +23,8 @@
 *& 2026-11-11 | FIELD_REF_VALID: TABLE-FIELD reference of a link condition of the link registry (message 225).
 *& 2026-11-11 | APPROVER_VALID: approver of a process catalogue activation - a user of the client other than
 *&            | the user saving the row (four-eyes, message 240).
+*& 2026-11-15 | MODULE_LICENSED, CAT_PROCESS_LICENSED, CLASS_LICENSED, PACKAGE_LICENSED: the licence of the
+*&            | module of an active row (ZIF_CA_OPS_LICENSE; refused only under LIC_ENFORCE = X, message 350).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - config apps: field checks</p>
 CLASS zcl_ca_ops_cfg_checks DEFINITION
@@ -182,6 +184,36 @@ CLASS zcl_ca_ops_cfg_checks DEFINITION
     CLASS-METHODS approver_valid
       IMPORTING
         iv_user         TYPE syuname
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Licence (2026-11-15): an active row of the module may be saved - abap_false only under LIC_ENFORCE = X when
+    "! the licence does not cover the module (CORE never refused). The callers check active rows only, so a
+    "! deactivation is always allowed
+    CLASS-METHODS module_licensed
+      IMPORTING
+        iv_value        TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Licence: the module of a catalogue process (its own or its package's); blank / no module = allowed
+    CLASS-METHODS cat_process_licensed
+      IMPORTING
+        iv_value        TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Licence: the module of a registered check class; a class of no module = allowed
+    CLASS-METHODS class_licensed
+      IMPORTING
+        iv_value        TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! Licence: the module of a catalogue package; a customer layer (no module) = allowed
+    CLASS-METHODS package_licensed
+      IMPORTING
+        iv_value        TYPE clike
       RETURNING
         VALUE(rv_valid) TYPE abap_bool.
 
@@ -422,6 +454,30 @@ CLASS zcl_ca_ops_cfg_checks IMPLEMENTATION.
 
   METHOD window_min_valid.
     rv_valid = xsdbool( iv_minutes >= 1 ).
+  ENDMETHOD.
+
+
+  METHOD module_licensed.
+    rv_valid = abap_true.
+    IF iv_value IS INITIAL.
+      RETURN.
+    ENDIF.
+    rv_valid = zcl_ca_ops_factory=>get_license( )->decide( CONV #( iv_value ) )-allowed.
+  ENDMETHOD.
+
+
+  METHOD cat_process_licensed.
+    rv_valid = module_licensed( zcl_ca_ops_factory=>get_license( )->module_of_cat_process( iv_value ) ).
+  ENDMETHOD.
+
+
+  METHOD class_licensed.
+    rv_valid = module_licensed( zcl_ca_ops_factory=>get_license( )->module_of_class( iv_value ) ).
+  ENDMETHOD.
+
+
+  METHOD package_licensed.
+    rv_valid = module_licensed( zcl_ca_ops_factory=>get_license( )->module_of_package( iv_value ) ).
   ENDMETHOD.
 
 

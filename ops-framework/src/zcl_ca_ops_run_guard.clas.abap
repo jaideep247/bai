@@ -11,6 +11,11 @@
 *&    back, the run is closed as aborted (red) with one RUN_ABORTED finding that
 *&    carries the exception trace and error class, committed, then dispatched
 *&    (ON_ABORT rules). The caller re-raises, so the batch job ends cancelled.
+*&  - refuse_license: the licence refuses a module (LIC_ENFORCE = X) - the
+*&    refusal is a persisted, aborted, red run of the area (variant = the
+*&    module) with one LICENSE_REFUSED finding (message 352), committed and
+*&    dispatched (CORE: never refused itself), so the refusal is visible in
+*&    the runs and alerts, not only in a job log.
 *& An alert dispatch that fails adds an ALERT_FAILED finding (never swallowed).
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
@@ -18,6 +23,7 @@
 *& 2026-11-10 | abort( ) for the run boundary of the engines; refuse commits after its dispatch;
 *&            | ALERT_FAILED finding when the dispatch fails (was swallowed).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_RUN_GUARD to the reusable framework ZCA_OPS.
+*& 2026-11-15 | refuse_license: a module refused by the licence is a persisted, alerted run (licensing).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - refused run (run lock held)</p>
 CLASS zcl_ca_ops_run_guard DEFINITION
@@ -70,6 +76,17 @@ CLASS zcl_ca_ops_run_guard DEFINITION
         ix_error          TYPE REF TO cx_root
       RETURNING
         VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
+
+    "! Record a module's run refused by the licence: start_run of the area (variant = module), one finding
+    "! LICENSE_REFUSED (352, severity E), run aborted / red, finish_run, commit, alert router. A store that fails
+    "! (unknown area, database) leaves the refusal unpersisted but still returned and dispatched.
+    CLASS-METHODS refuse_license
+      IMPORTING
+        iv_area           TYPE zif_ca_ops_types=>ty_area
+        is_decision       TYPE zif_ca_ops_lic_types=>ty_decision
+        iv_entry          TYPE clike
+      RETURNING
+        VALUE(rs_refusal) TYPE ty_refusal.
 
     CLASS-METHODS was_refused
       IMPORTING
@@ -203,6 +220,54 @@ CLASS zcl_ca_ops_run_guard IMPLEMENTATION.
                                                                iv_tail  = ix_error->get_text( ) )
                           details     = zcl_ca_ops_util=>exception_trace( ix_error )
                           error_class = zcl_ca_ops_util=>error_class( ix_error ) ).
+  ENDMETHOD.
+
+
+  METHOD refuse_license.
+    DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
+    DATA(lv_variant) = CONV zif_ca_ops_types=>ty_variant( is_decision-module ).
+    DATA(ls_finding) = VALUE zif_ca_ops_types=>ty_finding(
+      object_type = zif_ca_ops_lic_types=>gc_object_type-module
+      object_key  = |{ iv_area }/{ is_decision-module }|
+      group1      = iv_area
+      rule_id     = zif_ca_ops_lic_types=>gc_rule_id
+      check_code  = zif_ca_ops_lic_types=>gc_code-refused
+      severity    = zif_ca_ops_types=>gc_severity-error
+      action      = zif_ca_ops_types=>gc_action-notify
+      reference   = iv_entry
+      message     = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_lic_types=>gc_msg-gate_refused
+                                           iv_v1    = iv_entry
+                                           iv_v2    = is_decision-module
+                                           iv_v3    = is_decision-state ) ).
+    INSERT ls_finding INTO TABLE rs_refusal-findings.
+    TRY.
+        rs_refusal-run = lo_store->start_run( iv_area    = iv_area
+                                              iv_variant = lv_variant ).
+        lo_store->save_findings( EXPORTING it_findings = rs_refusal-findings
+                                 CHANGING  cs_run      = rs_refusal-run ).
+        rs_refusal-run-status   = zif_ca_ops_types=>gc_run_status-aborted.
+        rs_refusal-run-rag      = zif_ca_ops_types=>gc_rag-red.
+        rs_refusal-run-message  = ls_finding-message.
+        rs_refusal-run-ended_at = zcl_ca_ops_factory=>get_clock( )->now( ).
+        lo_store->finish_run( rs_refusal-run ).
+        lo_store->commit( ).
+      CATCH zcx_ca_ops_error cx_sy_open_sql_db.
+        " not persisted (unknown area, database): the caller still raises 352 and the alert router hears of it
+        lo_store->rollback( ).
+        rs_refusal-run = VALUE #( area     = iv_area
+                                  variant  = lv_variant
+                                  status   = zif_ca_ops_types=>gc_run_status-aborted
+                                  rag      = zif_ca_ops_types=>gc_rag-red
+                                  message  = ls_finding-message
+                                  ended_at = zcl_ca_ops_factory=>get_clock( )->now( ) ).
+    ENDTRY.
+    TRY.
+        zcl_ca_ops_factory=>get_alert( )->dispatch( is_run      = rs_refusal-run
+                                                    it_findings = rs_refusal-findings ).
+      CATCH zcx_ca_ops_error INTO DATA(lx_alert).
+        INSERT alert_failed( is_run = rs_refusal-run ix_error = lx_alert ) INTO TABLE rs_refusal-findings.
+    ENDTRY.
+    lo_store->commit( ).
   ENDMETHOD.
 
 

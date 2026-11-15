@@ -21,6 +21,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | V150-V152 | Build G: account flow overlay - accounts of the flows by role, values of the stage rules, findings area of the morning report's checks and PlanViz on the busiest account (2026-11-15) | `Account_Flow_Overlay.md` §4 |
 | V158 | Build H: customer extensions - the pack's generated extensions of the framework views activate from `src/ext` (worklist state of the payment next to the break groups, query copy), PlanViz of the break list with the association (2026-11-15) | `Extensions_Overlay.md` §4 |
 | **V159-V161** (V159, V160 closed) | **Fields the suite's code reads that the reference system does not have (2026-11-15, build I)** | **this document, §4; `ddic/open_fields.csv`** |
+| V169 | Build J: licensing - the installation numbers and SIDs of DV1 / QA1 / PS4 sent to the vendor, the vendor's licence installed per system, the modules the suite uses licensed, a module outside the licence refused in QA1 under `X` while the suite's own engines run (2026-11-15) | `Licensing_Overlay.md` §4 |
 | V130, V131 | Process catalogue customer layer: the customer process's table and programs, approval of the activation proposal and the order of the catalogue rows before `CAT_PROCESS` (2026-11-11) | `Process_Catalogue_Overlay.md` §4 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping

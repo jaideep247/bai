@@ -36,6 +36,11 @@ Modification log:
 2026-11-15 | Account flow reconciliation: flows, accounts by role (role, line source, plug-in class of what checks
            | account for), stages (expected roles, reserved rows 340), tiles fed by stage rows, stage controls and
            | ordered stage rules (criteria of the rule's line source only).
+2026-11-15 | Licensing (docs/LICENSING.md): activation (ACTIVE = X) of a row of an unlicensed module refused on save
+           | (message 350, only under LIC_ENFORCE = X): controls, aggregate rows, approved tables, scheduler jobs,
+           | runbook links, correlation rules, customer link layers, break accounts, flows (check kind 'module'); a
+           | business process / catalogue activation by its catalogue process, a registered check by its class, a
+           | catalogue package by its module ('valid' with the *_LICENSED checks). Deactivation is always allowed.
 """
 import os
 import sys
@@ -81,7 +86,8 @@ SPEC = {
              [('area', 'area', False), ('valid', 'owner', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid'),
               ('valid', 'backup', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid'),
               ('valid', 'team', 'zcl_ca_ops_cfg_checks=>team_valid', 'team_invalid'),
-              ('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid')]),
+              ('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid'),
+              ('when', 'active', 'X', [('module', 'CONTROL')])]),
             ('zca_ops_ctlt', 'ControlText', 'zca_d_ctlt', 'Guidance', 'Control guidance per language', [],
              [('area', 'area', False)]),
             ('zca_ops_ctlchk', 'ControlCheck', 'zca_d_ctlchk', 'Covered check', 'Checks covered by a control', [],
@@ -92,17 +98,23 @@ SPEC = {
             ('zca_ops_proc', 'Process', 'zca_d_proc', 'Process', 'Business processes', [],
              [('area', 'area', False), ('valid', 'owner', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid'),
               ('valid', 'backup', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid'),
-              ('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid')]),
+              ('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid'),
+              ('when', 'active', 'X', [('valid', 'cat_process', 'zcl_ca_ops_cfg_checks=>cat_process_licensed',
+                                        'license_refused')])]),
             ('zca_ops_check', 'RegisteredCheck', 'zca_d_check', 'Check', 'Registered checks', [],
-             [('area', 'area', False), ('class', 'class_name', 'ZIF_CA_OPS_CHECK')]),
+             [('area', 'area', False), ('class', 'class_name', 'ZIF_CA_OPS_CHECK'),
+              ('when', 'active', 'X', [('valid', 'class_name', 'zcl_ca_ops_cfg_checks=>class_licensed',
+                                        'license_refused')])]),
             ('zca_ops_agg', 'AggregateCheck', 'zca_d_agg', 'Aggregate', 'Aggregate checks (no code)', [],
              [('area', 'area', False), ('enum', 'agg_func', 'COUNT,AGE'), ('enum', 'status_op', ',EQ,NE,IN,NI'),
               ('enum', 'cond_op', ',EQ,NE,GT,LT,GE,LE,IN,NI'), ('table', 'tabname'),
               ('field', 'date_field', 'tabname'), ('field', 'time_field', 'tabname'), ('field', 'bukrs_field', 'tabname'),
-              ('field', 'status_field', 'tabname'), ('field', 'cond_field', 'tabname')]),
+              ('field', 'status_field', 'tabname'), ('field', 'cond_field', 'tabname'),
+              ('when', 'active', 'X', [('module', 'ONBOARD')])]),
             ('zca_ops_tabwl', 'ApprovedTable', 'zca_d_tabwl', 'Approved table', 'Tables approved for aggregate checks', [],
              [('area', 'area', False), ('table', 'table_name'),
-              ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid')]),
+              ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid'),
+              ('when', 'active', 'X', [('module', 'ONBOARD')])]),
             # Payment model (2026-11-11): texts / order of the dimension values and the feeder systems with their
             # deep-link URL template (read by the consumers' generated payment model CDS)
             ('zca_ops_pmdim', 'PaymDimText', 'zca_d_pmdim', 'Dimension text', 'Payment model dimension texts', [],
@@ -112,22 +124,26 @@ SPEC = {
             # SAP job monitor (2026-11-11): jobs of the external workload scheduler and the SAP job names they
             # start (PCRE, complete name) - the board shows scheduler job -> SAP parent job -> failed child
             ('zca_ops_jobsch', 'SchedulerJob', 'zca_d_jobsch', 'Scheduler job', 'Scheduler jobs and SAP job names', [],
-             [('pcre', 'sap_pattern'), ('enum', 'criticality', 'H,M,L')]),
+             [('pcre', 'sap_pattern'), ('enum', 'criticality', 'H,M,L'),
+              ('when', 'active', 'X', [('module', 'JOBS')])]),
             # Operations response features (2026-11-11): runbook link per check (exact values, as covered checks;
             # an active row needs its link) and alert correlation rules (key fields, PCRE, window)
             ('zca_ops_runbook', 'RunbookLink', 'zca_d_runbook', 'Runbook link', 'Runbook links per check', [],
              [('area', 'area', False), ('enum', 'match_field', 'RULE_ID,CHECK_CODE,GROUP2'),
-              ('when', 'active', 'X', [('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>link_valid', 'url_invalid')])]),
+              ('when', 'active', 'X', [('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>link_valid', 'url_invalid')]),
+              ('when', 'active', 'X', [('module', 'RESPONSE')])]),
             ('zca_ops_corr', 'CorrelationRule', 'zca_d_corr', 'Correlation rule', 'Alert correlation rules', [],
              [('area', 'area', False), ('pcre', 'check_pattern'), ('pcre', 'key_pattern'),
               ('valid', 'key_fields', 'zcl_ca_ops_cfg_checks=>key_fields_valid', 'corr_fields_invalid'),
-              ('valid', 'window_min', 'zcl_ca_ops_cfg_checks=>window_min_valid', 'corr_window_invalid')]),
+              ('valid', 'window_min', 'zcl_ca_ops_cfg_checks=>window_min_valid', 'corr_window_invalid'),
+              ('when', 'active', 'X', [('module', 'RESPONSE')])]),
             # Link registry (2026-11-11): layers, business objects and their fields (checked against the runtime
             # DDIC), links with their conditions (TABLE-FIELD references) and activation overrides of a customer
             # layer; cross-row rules (prefixes, cycles, cardinality, evidence) are the registry check's
             # (ZCL_CA_OPS_CHK_LINKS) and the offline validator's (tools/link_registry.py)
             ('zca_ops_lnklyr', 'LinkLayer', 'zca_d_lnklyr', 'Link layer', 'Link registry layers', [],
-             [('enum', 'layer_kind', 'S,I,C')]),
+             [('enum', 'layer_kind', 'S,I,C'),
+              ('when', 'layer_kind', 'C', [('when', 'active', 'X', [('module', 'LINKS')])])]),
             ('zca_ops_lnkobj', 'LinkObject', 'zca_d_lnkobj', 'Object', 'Link registry business objects', [],
              [('table', 'source_name'), ('enum', 'source_kind', 'T,V')]),
             ('zca_ops_lnkfld', 'LinkField', 'zca_d_lnkfld', 'Field', 'Link registry object fields', [],
@@ -152,7 +168,9 @@ SPEC = {
             # cross-row rules (prefixes, ranks, dependency cycles, links of the registry) are the catalogue check's
             # (ZCL_CA_OPS_CHK_ONBOARD) and the offline validator's (tools/process_catalogue.py)
             ('zca_ops_catpkg', 'CatalogPackage', 'zca_d_catpkg', 'Package', 'Process catalogue packages', [],
-             [('enum', 'pkg_kind', 'S,I,C'), ('area', 'mon_area', False)]),
+             [('enum', 'pkg_kind', 'S,I,C'), ('area', 'mon_area', False),
+              ('when', 'active', 'X', [('valid', 'pkg_id', 'zcl_ca_ops_cfg_checks=>package_licensed',
+                                        'license_refused')])]),
             ('zca_ops_catprc', 'CatalogProcess', 'zca_d_catprc', 'Process', 'Process catalogue processes', [],
              [('enum', 'evidence', 'C,V'), ('when', 'evidence', 'V', [('required', 'verify_ref')])]),
             ('zca_ops_catstp', 'CatalogStep', 'zca_d_catstp', 'Step', 'Process catalogue steps', [],
@@ -166,13 +184,15 @@ SPEC = {
             ('zca_ops_catact', 'CatalogActivation', 'zca_d_catact', 'Activation', 'Process catalogue activation', [],
              [('when', 'valid_from', FILLED, [('required', 'reason'), ('required', 'pkg_id'),
                                                 ('required', 'approved_by')]),
-              ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>approver_valid', 'approver_invalid')]),
+              ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>approver_valid', 'approver_invalid'),
+              ('when', 'active', 'X', [('valid', 'process_id', 'zcl_ca_ops_cfg_checks=>cat_process_licensed',
+                                        'license_refused')])]),
             # Clearing-account break analysis (2026-11-11): accounts, buckets, bucket rules (ordered, first match
             # wins) and their conditions; cross-row rules (bucket of a rule, link of a LINK condition, parameter of
             # an @ value) are the analysis's (ZCL_CA_OPS_BRK_RULES=>VALIDATE, configuration findings) and the offline
             # validator's (tools/checks.py break_rules)
             ('zca_ops_brkacc', 'BreakAccount', 'zca_d_brkacc', 'Account', 'Break analysis clearing accounts', [],
-             [('area', 'area', False)]),
+             [('area', 'area', False), ('when', 'active', 'X', [('module', 'BREAKS')])]),
             ('zca_ops_brkbkt', 'BreakBucket', 'zca_d_brkbkt', 'Bucket', 'Break analysis buckets', [], []),
             ('zca_ops_brkrul', 'BreakRule', 'zca_d_brkrul', 'Bucket rule', 'Break analysis bucket rules', [],
              [('area', 'area', True), ('pcre', 'acct_pattern'),
@@ -190,7 +210,8 @@ SPEC = {
             # account per role, criteria of the rule's source) are the evaluation's (ZCL_CA_OPS_FLOW_CONFIG=>VALIDATE)
             # and the offline validator's (tools/checks.py flow_config)
             ('zca_ops_flow', 'AccountFlow', 'zca_d_flow', 'Flow', 'Account flows', [],
-             [('area', 'area', False), ('enum', 'direction', ',D,C')]),
+             [('area', 'area', False), ('enum', 'direction', ',D,C'),
+              ('when', 'active', 'X', [('module', 'FLOW')])]),
             ('zca_ops_flwacc', 'FlowAccount', 'zca_d_flwacc', 'Flow account', 'Account flow accounts by role', [],
              [('area', 'area', False), ('enum', 'role', FLOW_ROLES), ('enum', 'line_source', 'G,F'),
               ('enum', 'eval_category', ',TRANSIT,CLARIFY,OPEN,BANK'),

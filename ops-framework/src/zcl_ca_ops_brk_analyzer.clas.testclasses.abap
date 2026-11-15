@@ -13,7 +13,26 @@
 *& writes the database. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-11 | Initial version (build F: clearing-account break analysis).
+*& 2026-11-15 | Licensing: the module is gated first (licence double; refused = 352, nothing read).
 *&---------------------------------------------------------------------*
+CLASS ltd_brk_license DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_license PARTIALLY IMPLEMENTED.
+    DATA mv_refuse TYPE abap_bool.
+    DATA mv_module TYPE zif_ca_ops_lic_types=>ty_module.
+ENDCLASS.
+
+CLASS ltd_brk_license IMPLEMENTATION.
+  METHOD zif_ca_ops_license~gate.
+    mv_module = iv_module.
+    rs_decision = VALUE #( module = iv_module allowed = xsdbool( mv_refuse = abap_false ) ).
+    IF mv_refuse = abap_true.
+      RAISE EXCEPTION TYPE zcx_ca_ops_error MESSAGE e352(zca_ops) WITH iv_entry iv_module 'EXPIRED'.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltd_brk_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_brk_dao.
@@ -157,6 +176,7 @@ CLASS ltc_brk_analyzer DEFINITION FINAL FOR TESTING
     DATA mo_catalog TYPE REF TO ltd_brk_catalog.
     DATA mo_auth TYPE REF TO ltd_brk_auth.
     DATA mo_seed TYPE REF TO zcl_ca_ops_param_seed.
+    DATA mo_license TYPE REF TO ltd_brk_license.
 
     METHODS setup.
     METHODS teardown.
@@ -177,6 +197,7 @@ CLASS ltc_brk_analyzer DEFINITION FINAL FOR TESTING
     METHODS changed_rule_new_version    FOR TESTING.
     METHODS links_only_for_link_rules   FOR TESTING.
     METHODS not_authorised_raises       FOR TESTING.
+    METHODS unlicensed_module_refused   FOR TESTING.
 ENDCLASS.
 
 
@@ -188,6 +209,8 @@ CLASS ltc_brk_analyzer IMPLEMENTATION.
     mo_catalog = NEW #( ).
     mo_auth    = NEW #( ).
     mo_seed    = NEW #( ).
+    mo_license = NEW #( ).
+    zcl_ca_ops_injector=>inject_license( mo_license ).
     zcl_ca_ops_injector=>inject_brk_dao( mo_dao ).
     zcl_ca_ops_injector=>inject_catalog( mo_catalog ).
     zcl_ca_ops_injector=>inject_auth( mo_auth ).
@@ -373,6 +396,22 @@ CLASS ltc_brk_analyzer IMPLEMENTATION.
         analyze( ).
         cl_abap_unit_assert=>fail( msg = 'Not authorised: must raise' ).
       CATCH zcx_ca_ops_error.
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_group_reads exp = 0 msg = 'Nothing read' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the module BREAKS is gated first - refused (LIC_ENFORCE = X) nothing is read or written
+  METHOD unlicensed_module_refused.
+    given_account_with_breaks( ).
+    mo_license->mv_refuse = abap_true.
+    TRY.
+        analyze( ).
+        cl_abap_unit_assert=>fail( msg = 'Unlicensed module: must raise' ).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '352' msg = 'Refused' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_license->mv_module exp = zif_ca_ops_lic_types=>gc_module-breaks
+                                            msg = 'Module BREAKS' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_group_reads exp = 0 msg = 'Nothing read' ).
     ENDTRY.
   ENDMETHOD.

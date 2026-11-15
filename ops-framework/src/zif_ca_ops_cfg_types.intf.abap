@@ -22,6 +22,7 @@
 *& 2026-11-11 | LINK_REF_INVALID (225), REQUIRED / MUST_BE_BLANK (235 / 236): link registry rows.
 *& 2026-11-11 | Message 240 approver_invalid (process catalogue activation, four-eyes).
 *& 2026-11-15 | Message 340 value_reserved (account flow stages: reserved rows of the dashboard).
+*& 2026-11-15 | Message 350 license_refused (licensing: activation of a row of an unlicensed module).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configuration apps: types</p>
 INTERFACE zif_ca_ops_cfg_types
@@ -171,6 +172,8 @@ INTERFACE zif_ca_ops_cfg_types
       approver_invalid    TYPE ty_msg_number VALUE '240',
       "! A value reserved by the framework (account flow stages: the dashboard's own rows; 2026-11-15)
       value_reserved      TYPE ty_msg_number VALUE '340',
+      "! Licence: the row is active but its module is not licensed (refused under LIC_ENFORCE = X; 2026-11-15)
+      license_refused     TYPE ty_msg_number VALUE '350',
     END OF gc_msg.
 
 ENDINTERFACE.

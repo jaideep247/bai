@@ -1,0 +1,52 @@
+// UI annotations: licence modules (service ZUI_CA_OPS_LIC, 2026-11-15)
+// List report and overview list card "Licence": module, valid to, days left and the state with its criticality
+// (green licensed / included, amber ending soon or in grace, red expired, neutral never bought). Display only - read
+// apps are never blocked by the licence (docs/LICENSING.md).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Licence module', typeNamePlural: 'Licence modules',
+                  title: { type: #STANDARD, value: 'Module' }, description: { value: 'ModuleName' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'Sequence', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsLicModule with
+{
+  @EndUserText.label: 'Module'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Module;
+  @UI.hidden: true
+  Area;
+  @EndUserText.label: 'Name'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 20 } ]
+  ModuleName;
+  @EndUserText.label: 'Always included'
+  @UI.lineItem: [ { position: 30, importance: #LOW } ]
+  IsAlwaysIncluded;
+  @UI.hidden: true
+  Sequence;
+  @EndUserText.label: 'Licence'
+  @UI.identification: [ { position: 30 } ]
+  LicenseId;
+  @EndUserText.label: 'Valid from'
+  @UI.lineItem: [ { position: 40, importance: #LOW } ]
+  ValidFrom;
+  @EndUserText.label: 'Valid to'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  ValidTo;
+  @EndUserText.label: 'Grace until'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  GraceUntil;
+  @EndUserText.label: 'Days left'
+  @UI.lineItem: [ { position: 70, importance: #HIGH, criticality: 'StateCriticality' } ]
+  @UI.dataPoint: { title: 'Days left', criticality: 'StateCriticality' }
+  DaysLeft;
+  @EndUserText.label: 'State'
+  @UI.lineItem: [ { position: 80, importance: #HIGH, criticality: 'StateCriticality' } ]
+  @UI.identification: [ { position: 50, criticality: 'StateCriticality' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  LicenseState;
+  @UI.hidden: true
+  StateCriticality;
+}

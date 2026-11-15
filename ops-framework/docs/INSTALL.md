@@ -261,6 +261,24 @@ How a consumer writes findings, raises alerts and plugs in: `README.md` (section
 4. Before every transport of a consumer's extensions: `python3 tools/extensions.py --check` in the framework and in
    the consumer's folder; nothing of the pending folder is ever transported.
 
+## 6h. Licensing (2026-11-15, `docs/LICENSING.md`)
+
+Nothing stops working with this release: `LIC_ENFORCE` is delivered `W` (warn only) and the licence check reports a
+missing licence as an exception of `CA_OPS`.
+
+1. Binding `ZUI_CA_OPS_LIC_O4` (OData V4 - UI); republish `ZUI_CA_OPS_CFG_O4` (activation now checks the licence,
+   message 350, refused only under `X`).
+2. Basis, per system (DV1, QA1, PS4): SSF application and PSE for the licence, the vendor's certificate in its
+   certificate list (STRUST); parameter `LIC_SSF_PROFILE` = the PSE (V166). Role `Z_CA_OPS_LICENSE` (`ZCA_OPS` 01 / 03
+   for `CA_OPS`) for the licence administrator (`docs/auth_zca_ops.md`).
+3. Per system: `ZCA_OPS_LICENSE_INSTALL` in test mode, then without - the licence file the vendor issued for that
+   system's installation number and SID; check the dashboard and the next run of the `LICENSE` check (registry row
+   `CA_OPS / LICENSE`, group `MORNING`, delivered active). The licence is per system - never transported.
+4. Optional alert rule for the licence findings: `config/licensing/alert_rules_license.csv` (area `*`, inactive, enter the
+   distribution list).
+5. `LIC_ENFORCE` = `X` only when the contract says so and V162 / V163 / V166 / V167 are closed; switch back to `W` at
+   once if a module is refused by mistake (CORE never is; stored data stays readable either way).
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

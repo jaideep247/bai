@@ -13,6 +13,7 @@
 *& the area. Read only towards every table.
 *& Modification log:
 *& 2026-11-11 | Initial version (build F: pilot pack).
+*& 2026-11-15 | Licensing: module BREAKS gated first (refused only under LIC_ENFORCE = X, message 352).
 *&---------------------------------------------------------------------*
 REPORT zca_ops_pilot_export.
 
@@ -76,6 +77,9 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD export.
     zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-display
                                             iv_area     = p_area ).
+    zcl_ca_ops_factory=>get_license( )->gate( iv_module = zif_ca_ops_lic_types=>gc_module-breaks
+                                              iv_area   = p_area
+                                              iv_entry  = sy-repid ).
     DATA(lv_to) = COND d( WHEN p_to IS INITIAL THEN zcl_ca_ops_factory=>get_clock( )->today( ) ELSE p_to ).
     DATA(lv_from) = p_from.
     IF lv_from IS INITIAL.

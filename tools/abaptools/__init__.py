@@ -35,6 +35,10 @@ works unchanged.
   extensions          the inventory of the framework's extension points (checked against its views and documents)
                       and a customer's CDS extensions of the product views from its declarations: validation against
                       the inventory and the link registry, extend view entity sources, query copies, report (--check)
+  licensing           the licensable modules of the operations framework (validated against the product: entry points,
+                      gates, check classes, configuration validations, catalogue packages), the generated module map of
+                      the runtime and its document (--check); the licence payload rules and the decision twin used by the
+                      vendor's tools in tools/licensing (issue_license.py, verify_license.py)
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).
@@ -48,6 +52,7 @@ Modification log:
 2026-11-11 | break_rules (clearing-account break analysis of the operations framework).
 2026-11-15 | flow_config (account flow reconciliation of the operations framework).
 2026-11-15 | extensions (customer extensions of the operations framework).
+2026-11-15 | licensing (vendor licence of the operations framework: modules, module map, payload, decision twin).
 """
 import importlib.util
 import os

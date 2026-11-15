@@ -1,0 +1,150 @@
+{
+ "_comment": "Licensable modules of the operations framework ZCA_OPS (docs/LICENSING.md). Product content: the vendor decides the modules, a customer's licence file names which of them it may run. CORE is always included and never refused. Each module lists its entry points (documentation of what it is), the registered check classes that need it, the configuration entities whose activation needs it (alias of ZUI_CA_OPS_CFG) and the gates that refuse a run of it (source files that name its constant gc_module-<code>). Catalogue packages and processes name their module in their own spec (license_module of config/catalogue). tools/licensing.py validates this file against the product and generates ZCL_CA_OPS_LIC_MAP (the module map of the runtime) and docs/licensing/modules.md - never edit those, regenerate.",
+ "product": "ZCA_OPS",
+ "version": "1.0.0",
+ "derived_config": [
+  {"entity": "Process", "field": "cat_process", "rule": "a business process monitors a catalogue process: the module of that process's package (or of the process itself)"},
+  {"entity": "RegisteredCheck", "field": "class_name", "rule": "a registered check runs a class of a module (check_classes below)"},
+  {"entity": "CatalogActivation", "field": "process_id", "rule": "a customer activates a catalogue process: the module of its package"},
+  {"entity": "CatalogPackage", "field": "pkg_id", "rule": "a catalogue package switched on: its module"}
+ ],
+ "modules": [
+  {
+   "code": "CORE",
+   "name": "Runs, findings, exceptions, alerts, check runner, extensions",
+   "always": true,
+   "seq": 10,
+   "description": "The store of runs and findings, the exceptions app, the alert router and its channels, run lock and abort, the configuration apps and their gate, the generic check runner with the check registry and the business process register, parameters, retention purge, the process catalogue model with its product baseline S4CORE, explainable results, the customer extension contract and the licence itself. Always included - never refused, so a customer whose licence lapsed still sees and works its existing exceptions.",
+   "entry_points": ["src/zcl_ca_ops_store.clas.abap", "src/zcl_ca_ops_alert_router.clas.abap", "src/zcl_ca_ops_check_runner.clas.abap", "src/zca_ops_check_run.prog.abap", "src/zca_ops_retention.prog.abap", "src/zcl_ca_ops_catalog.clas.abap", "src/ui/zui_ca_ops_exc.srvd.srvdsrv", "src/ui/zui_ca_ops_cfg.srvd.srvdsrv", "src/ui/zui_ca_ops_dash.srvd.srvdsrv", "src/zca_ops_license_install.prog.abap", "src/ui/zui_ca_ops_lic.srvd.srvdsrv", "config/extension_points.json", "tools/extensions.py"],
+   "check_classes": ["ZCL_CA_OPS_CHK_LICENSE"],
+   "config": [],
+   "gates": [],
+   "docs": ["README.md", "docs/EXPLAINABLE_RESULTS.md", "docs/EXTENDING_WITH_CUSTOMER_DATA.md", "docs/LICENSING.md"]
+  },
+  {
+   "code": "CONTROL",
+   "name": "Control register and daily control review",
+   "seq": 20,
+   "description": "Controls with their guidance and covered checks, the daily review with status per business date and company code, sign-off and reopen reasons.",
+   "entry_points": ["src/ui/zui_ca_ops_rev.srvd.srvdsrv", "src/zcl_ca_ops_review_policy.clas.abap"],
+   "check_classes": [],
+   "config": ["Control"],
+   "gates": ["src/ui/zbp_r_ca_opsctlreview.clas.locals_imp.abap"],
+   "docs": ["docs/CONTROL_REVIEW.md"]
+  },
+  {
+   "code": "ONBOARD",
+   "name": "Process onboarding: no-code aggregate checks",
+   "seq": 30,
+   "description": "No-code aggregate checks over approved tables (COUNT / AGE per company code, windows), the onboarding completeness check, the outage risk check over aggregate rows and the scaffold of a new business process.",
+   "entry_points": ["src/zcl_ca_ops_agg_query.clas.abap", "../tools/abaptools/new_process.py"],
+   "check_classes": ["ZCL_CA_OPS_CHK_AGG", "ZCL_CA_OPS_CHK_ONBOARD", "ZCL_CA_OPS_CHK_OUTAGE"],
+   "config": ["AggregateCheck", "ApprovedTable"],
+   "gates": [],
+   "docs": ["docs/ADDING_A_BUSINESS_PROCESS.md"]
+  },
+  {
+   "code": "JOBS",
+   "name": "SAP job monitor",
+   "seq": 40,
+   "description": "Failed and late SAP jobs with their steps, job log, application log and business objects; scheduler jobs; the job failures board.",
+   "entry_points": ["src/zcl_ca_ops_job_monitor.clas.abap", "src/ui/zui_ca_ops_jobs.srvd.srvdsrv"],
+   "check_classes": ["ZCL_CA_OPS_CHK_JOB_FAIL", "ZCL_CA_OPS_CHK_JOB_STATE"],
+   "config": ["SchedulerJob"],
+   "gates": [],
+   "docs": ["docs/JOB_MONITORING.md"]
+  },
+  {
+   "code": "RESPONSE",
+   "name": "Operations response features",
+   "seq": 50,
+   "description": "Runbook links, alert correlation, escalation until acknowledged, planned downtime windows, response-time metrics and the shift handover.",
+   "entry_points": ["src/zcl_ca_ops_correlator.clas.abap", "src/zcl_ca_ops_downtime.clas.abap", "src/ui/zui_ca_ops_dtw.srvd.srvdsrv", "src/ui/zui_ca_ops_met.srvd.srvdsrv", "src/ui/zui_ca_ops_hovr.srvd.srvdsrv"],
+   "check_classes": [],
+   "config": ["RunbookLink", "CorrelationRule"],
+   "gates": ["src/zca_ops_escalate.prog.abap"],
+   "docs": ["docs/OPERATIONS_FEATURES.md"]
+  },
+  {
+   "code": "LINKS",
+   "name": "Link registry: customer layers, walker, registry check",
+   "seq": 60,
+   "description": "A customer's own layer of the link registry (custom tables, custom fields, own links, switch-off of standard links), the registry check and the generator outputs. The product layers S4CORE / FICA are content the other modules read and stay part of them.",
+   "entry_points": ["src/zcl_ca_ops_link_walker.clas.abap", "src/zcl_ca_ops_link_registry.clas.abap", "tools/link_registry.py"],
+   "check_classes": ["ZCL_CA_OPS_CHK_LINKS"],
+   "config": ["LinkLayer"],
+   "gates": [],
+   "docs": ["docs/LINK_REGISTRY.md"]
+  },
+  {
+   "code": "CATALOGUE_FICA",
+   "name": "Process catalogue package FICA (SAP FI-CA)",
+   "seq": 70,
+   "requires": ["ONBOARD"],
+   "description": "The SAP FI-CA standard processes of the catalogue with their steps, tables, dependencies and monitoring templates.",
+   "entry_points": ["config/catalogue/packages/fica.json"],
+   "check_classes": [],
+   "config": [],
+   "gates": [],
+   "docs": ["docs/PROCESS_CATALOGUE.md"]
+  },
+  {
+   "code": "CATALOGUE_FSCD",
+   "name": "Process catalogue package FSCD (SAP FS-CD)",
+   "seq": 80,
+   "requires": ["ONBOARD", "CATALOGUE_FICA"],
+   "description": "The SAP FS-CD standard processes of the catalogue (payment plans, premium, broker, coinsurance, commission, claims) with their monitoring templates.",
+   "entry_points": ["config/catalogue/packages/fscd.json"],
+   "check_classes": [],
+   "config": [],
+   "gates": [],
+   "docs": ["docs/PROCESS_CATALOGUE.md"]
+  },
+  {
+   "code": "CATALOGUE_FSRI",
+   "name": "Process catalogue: FS-RI integration",
+   "seq": 90,
+   "requires": ["ONBOARD", "CATALOGUE_FSCD"],
+   "description": "The reinsurance (FS-RI) process of the FS-CD package, licensed on its own.",
+   "entry_points": ["config/catalogue/packages/fscd.json"],
+   "check_classes": [],
+   "config": [],
+   "gates": [],
+   "docs": ["docs/PROCESS_CATALOGUE.md"]
+  },
+  {
+   "code": "PAYMODEL",
+   "name": "Payment model generator",
+   "seq": 100,
+   "enforcement": "contract",
+   "description": "The generator of a customer's payment model (adapter views, cube, trend, object pages, DCL, service) from the product templates. Its output is generated into the customer's own package, so the licence is enforced by contract and the version history of the generated objects, not by a runtime gate (docs/LICENSING.md).",
+   "entry_points": ["templates/payment_model", "../tools/abaptools/payment_model.py"],
+   "check_classes": [],
+   "config": [],
+   "gates": [],
+   "docs": ["docs/ADDING_A_CUSTOMER_PAYMENT_MODEL.md"]
+  },
+  {
+   "code": "BREAKS",
+   "name": "Clearing-account break analysis and pilot pack",
+   "seq": 110,
+   "description": "Break analysis of clearing accounts (buckets, rules, snapshots, list, cube, query), the unexplained-break check and the pilot pack (metrics, baselines, export).",
+   "entry_points": ["src/zca_ops_brk_run.prog.abap", "src/ui/zui_ca_ops_brk.srvd.srvdsrv", "src/ui/zui_ca_ops_pilot.srvd.srvdsrv"],
+   "check_classes": ["ZCL_CA_OPS_CHK_BREAK"],
+   "config": ["BreakAccount"],
+   "gates": ["src/zcl_ca_ops_brk_analyzer.clas.abap", "src/zca_ops_pilot_export.prog.abap"],
+   "docs": ["docs/BREAK_ANALYSIS.md", "docs/PILOT_PACK.md"]
+  },
+  {
+   "code": "FLOW",
+   "name": "Account flow reconciliation",
+   "seq": 120,
+   "description": "Account flows by stage and role with movement, opening, closing and unexplained, the evaluation of what checks account for, tiles and the multidimensional query.",
+   "entry_points": ["src/zca_ops_flow_run.prog.abap", "src/ui/zui_ca_ops_flow.srvd.srvdsrv"],
+   "check_classes": [],
+   "config": ["AccountFlow"],
+   "gates": ["src/zcl_ca_ops_flow_eval.clas.abap"],
+   "docs": ["docs/ACCOUNT_FLOW.md"]
+  }
+ ]
+}

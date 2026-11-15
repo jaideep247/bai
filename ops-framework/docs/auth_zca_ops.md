@@ -59,6 +59,17 @@ activation is configuration that travels by transport through the change process
 production (waivers, downtime approval). Reading the catalogue list (`ZC_CA_OpsCatalogue`) needs 03 of `CA_OPS`; the
 active-process rows of the dashboard (`ZC_CA_OpsProcStatus`) follow the area dashboard rule (§3c).
 
+**Licensing - installation of the vendor's licence (decision D-L5, 2026-11-15, `docs/LICENSING.md`).** No new
+activity and no new field: checking a licence file with `ZCA_OPS_LICENSE_INSTALL` in test mode needs **03**, installing
+it **01** (create), both for the framework's own area `CA_OPS`. The licence is installed per system (DV1, QA1, PS4 -
+never transported), so the role `Z_CA_OPS_LICENSE` exists in production too; 01 for `CA_OPS` there creates no
+configuration row (the configuration apps refuse new rows outside DV1, D-3) and plans at most a downtime window of
+`CA_OPS`. A file read from the application server needs `S_DATASET` READ on the logical path `LIC_FILE_PATH`. The
+dashboard `ZUI_CA_OPS_LIC` needs 03 for `CA_OPS` (DCLs `ZC_CA_OPSLICMODULE`, `ZC_CA_OPSLICENSE`). Under
+`LIC_ENFORCE = X` the licence refuses a module whatever the user's roles: no authorisation grants an unlicensed
+module. A landscape that wants the licence administrator separate from the configuration owner keeps the two roles
+apart (as proposed in §3); a separate activity is the documented alternative, not built.
+
 **Daily control review - activity of the sign-off (decision 2026-11-10).** The sign-off uses the existing change
 activity **02** of the control's area, not a new activity: the reviewer is the operator who already works the
 area's exceptions with 02, so no SU21 change and no new role field are needed; a display role (03) sees the
@@ -76,6 +87,7 @@ no separate sign-off activity.
 | `Z_CA_OPS_CONFIG` (configuration owner of the framework; also the link registry and the process catalogue with its activation rows, 2026-11-11 - DV1 only) | `CA_OPS` | 01, 02, 03, 06 | * |
 | `Z_CA_OPS_DOWNTIME_PLANNER` (2026-11-11: plans downtime windows of an area) | the area | 01, 02, 03, 06 | * |
 | `Z_CA_OPS_DOWNTIME_APPROVER` (2026-11-11: approves them - never the planner) | the area | 03, 85 | * |
+| `Z_CA_OPS_LICENSE` (2026-11-15: licence administrator - installs the vendor's licence in each system) | `CA_OPS` | 01, 03 | * |
 
 **SAP job monitor (2026-11-11).** The job user of `ZCA_OPS_CHECK_RUN` for the monitor's area also needs `S_BTCH_JOB`
 JOBACTION `PROT` (display job log), JOBGROUP `*` - read only; the monitor never releases, cancels, changes or restarts
@@ -97,6 +109,7 @@ A consumer adds its own roles with its areas (in its own authorisation sheet; th
 | `ZC_CA_OpsHandover` (`ZUI_CA_OPS_HOVR`, shift handover, 2026-11-11) | `ZC_CA_OPSHANDOVER` | the rule of §3c on `Area` and `CompanyCode` of the row (exceptions, escalations, control slices per company code; downtime area-level) |
 | `ZC_CA_OpsBrkGroup`, `ZC_CA_OpsBrkItem`, `ZC_CA_OpsBrkBucket` (`ZUI_CA_OPS_BRK`, clearing-account breaks, build F 2026-11-11) and the cube `ZI_CA_OpsBrkCube` | `ZC_CA_OPSBRKGROUP`, `_OPSBRKITEM`, `_OPSBRKBUCKET`, `ZI_CA_OPSBRKCUBE` | the rule of §3c on `Area` and `CompanyCode` of the clearing account; report `ZCA_OPS_BRK_RUN` needs `ZCA_OPS` 16 for the area (`docs/BREAK_ANALYSIS.md`) |
 | `ZC_CA_OpsFlowTile`, `ZC_CA_OpsFlowStage` (`ZUI_CA_OPS_FLOW`, account flow, build G 2026-11-15) and the cube `ZI_CA_OpsFlowCube` (query `ZC_CA_OpsFlowQry`) | `ZC_CA_OPSFLOWTILE`, `_OPSFLOWSTAGE`, `ZI_CA_OPSFLOWCUBE` | the rule of §3c on `Area` and `CompanyCode` of the account / stage row; report `ZCA_OPS_FLOW_RUN` needs `ZCA_OPS` 16 for the area (`docs/ACCOUNT_FLOW.md`) |
+| `ZC_CA_OpsLicModule`, `ZC_CA_OpsLicense` (`ZUI_CA_OPS_LIC`, licensing, 2026-11-15) | `ZC_CA_OPSLICMODULE`, `ZC_CA_OPSLICENSE` | `Area` (constant `CA_OPS`) authorised (03) - the licence has no company code; `ZCA_OPS_LICENSE_INSTALL` needs 03 (test) / 01 (install) for `CA_OPS` |
 | `ZC_CA_OpsPilot`, `ZC_CA_OpsPilotBrk` (`ZUI_CA_OPS_PILOT`, pilot pack, build F 2026-11-11) and the cube `ZI_CA_OpsPilotCube` | `ZC_CA_OPSPILOT`, `_OPSPILOTBRK`, `ZI_CA_OPSPILOTCUBE` | the rule of §3c on `Area` and `CompanyCode`; the export `ZCA_OPS_PILOT_EXPORT` writes area-level figures and needs `ZCA_OPS` 03 for the area and `S_DATASET` 34 on the logical path (`docs/PILOT_PACK.md`) |
 
 VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36, V51, V76, V78.

@@ -25,6 +25,7 @@
 *& 2026-11-11 | GET_CATALOG, GET_CAT_DAO: process catalogue API and its data access (injectable).
 *& 2026-11-11 | GET_BRK_DAO: data access of the clearing-account break analysis (injectable).
 *& 2026-11-15 | GET_FLOW_DAO: data access of the account flow reconciliation (injectable).
+*& 2026-11-15 | GET_LICENSE: the licence API (licensing; injectable, a new instance per call = per run).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven
@@ -110,6 +111,12 @@ CLASS zcl_ca_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_ca_ops_flow_dao.
 
+    "! Licence API (2026-11-15): state of the vendor-signed licence and its modules, the gate of a module's
+    "! entry point. A new instance per call - the licence is verified once per instance (per run)
+    CLASS-METHODS get_license
+      RETURNING
+        VALUE(ro_license) TYPE REF TO zif_ca_ops_license.
+
     "! Planned downtime API: the windows of an area and "is this planned?" (2026-11-11)
     CLASS-METHODS get_downtime
       RETURNING
@@ -168,6 +175,7 @@ CLASS zcl_ca_ops_factory DEFINITION
     CLASS-DATA go_cat_dao_double TYPE REF TO zif_ca_ops_cat_dao.
     CLASS-DATA go_brk_dao_double TYPE REF TO zif_ca_ops_brk_dao.
     CLASS-DATA go_flow_dao_double TYPE REF TO zif_ca_ops_flow_dao.
+    CLASS-DATA go_license_double TYPE REF TO zif_ca_ops_license.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
     "! Installed ZCA_PARAM release as seen by CHECK_VERSION (test seam: a double release)
     CLASS-DATA gv_param_version_double TYPE string.
@@ -292,6 +300,12 @@ CLASS zcl_ca_ops_factory IMPLEMENTATION.
   METHOD get_flow_dao.
     ro_dao = COND #( WHEN go_flow_dao_double IS BOUND THEN go_flow_dao_double
                      ELSE NEW zcl_ca_ops_flow_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_license.
+    ro_license = COND #( WHEN go_license_double IS BOUND THEN go_license_double
+                         ELSE NEW zcl_ca_ops_license( ) ).
   ENDMETHOD.
 
 

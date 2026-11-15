@@ -8,7 +8,8 @@ check their SAP job name pattern and criticality on save; the operations respons
 the runbook link of an active runbook row, the patterns, key fields and window of a correlation rule and the
 escalation severity of an alert rule on save; the link registry (2026-11-11) checks sources and fields against the
 runtime DDIC, the TABLE-FIELD references and the kind-dependent fields of a condition on save; the account flows
-(2026-11-15) check roles, line sources, the source plug-in, reserved stage IDs and the criteria of a rule's source.
+(2026-11-15) check roles, line sources, the source plug-in, reserved stage IDs and the criteria of a rule's source;
+the licence (2026-11-15) refuses the activation of a row of an unlicensed module (module or derived from the row).
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-framework/)
 """
@@ -112,6 +113,25 @@ class FrameworkAppTest(unittest.TestCase):
         valid = {(c[1], c[3]) for c in checks['zca_ops_corr'] if c[0] == 'valid'}
         self.assertEqual(valid, {('key_fields', 'corr_fields_invalid'), ('window_min', 'corr_window_invalid')})
         self.assertIn(('enum', 'esc_severity', ',B,E,W,I'), checks['zca_ops_alrule'])
+
+    def test_licence_checked_on_save(self):
+        # licensing (2026-11-15): an active row of a module needs the module licensed (refused only under X)
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        for table, module in (('zca_ops_control', 'CONTROL'), ('zca_ops_agg', 'ONBOARD'), ('zca_ops_tabwl', 'ONBOARD'),
+                              ('zca_ops_jobsch', 'JOBS'), ('zca_ops_runbook', 'RESPONSE'), ('zca_ops_corr', 'RESPONSE'),
+                              ('zca_ops_brkacc', 'BREAKS'), ('zca_ops_flow', 'FLOW')):
+            self.assertIn(('when', 'active', 'X', [('module', module)]), checks[table], table)
+        self.assertIn(('when', 'layer_kind', 'C', [('when', 'active', 'X', [('module', 'LINKS')])]),
+                      checks['zca_ops_lnklyr'])
+        derived = {t: [c for c in checks[t] if c[0] == 'when' and c[3][0][0] == 'valid'
+                       and c[3][0][3] == 'license_refused'] for t in ('zca_ops_proc', 'zca_ops_check',
+                                                                       'zca_ops_catact', 'zca_ops_catpkg')}
+        self.assertTrue(all(derived.values()), derived)
+        with open(os.path.join(rap_generate.ROOT, 'src', 'ui', 'zbp_r_ca_opscfgall.clas.locals_imp.abap'),
+                  encoding='utf-8') as handle:
+            bp = handle.read()
+        self.assertIn('zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-flow )', bp)
+        self.assertIn('zcl_ca_ops_cfg_checks=>cat_process_licensed( ls_row-CatProcess )', bp)
 
     def test_link_registry_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

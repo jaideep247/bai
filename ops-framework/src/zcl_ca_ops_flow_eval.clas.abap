@@ -16,6 +16,8 @@
 *& mode writes nothing. Read-only towards business data.
 *& Modification log:
 *& 2026-11-15 | Initial version (build G: account flow reconciliation).
+*& 2026-11-15 | Licensing: module FLOW gated at the start (ZIF_CA_OPS_LICENSE=>GATE; refused under LIC_ENFORCE =
+*&            | X with message 352 and a recorded refused run, nothing read or written).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - account flow evaluation</p>
 "! The movement, the opening and closing positions and the stage rows are not computed here: they are CDS over the
@@ -86,6 +88,10 @@ CLASS zcl_ca_ops_flow_eval IMPLEMENTATION.
   METHOD evaluate.
     zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
                                             iv_area     = iv_area ).
+    " licence of the module (refused only under LIC_ENFORCE = X: 352, recorded as a refused run)
+    zcl_ca_ops_factory=>get_license( )->gate( iv_module = zif_ca_ops_lic_types=>gc_module-flow
+                                              iv_area   = iv_area
+                                              iv_entry  = 'ZCA_OPS_FLOW_RUN' ).
     DATA(lo_dao) = zcl_ca_ops_factory=>get_flow_dao( ).
     DATA(lt_off) = zcl_ca_ops_factory=>get_catalog( )->inactive_onboarded(
                      iv_area = iv_area

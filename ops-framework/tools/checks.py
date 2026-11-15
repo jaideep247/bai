@@ -61,6 +61,12 @@ Checks
                       annotations and its anchor elements, no other view is extensible; the matrix of
                       docs/EXTENDING_WITH_CUSTOMER_DATA.md and the worked example of a customer pack are up to date
                       (tools/extensions.py, shared engine tools/abaptools/extensions.py)
+  licensing           the licensable modules (config/licensing/modules.json) against the product: codes, CORE always
+                      included, entry points / gates / documents exist, every check class of the product in one module,
+                      every gate names its module constant, every configuration entity of a module (and every derived
+                      one) has the licence validation in the generated behaviour pool, every catalogue package names a
+                      known module; the generated module map ZCL_CA_OPS_LIC_MAP and docs/licensing/modules.md are up
+                      to date (tools/licensing.py, shared engine tools/abaptools/licensing.py)
 
 Modification log:
 2026-11-10 | Copied from the parameter framework's checks and extended for the framework.
@@ -72,6 +78,7 @@ Modification log:
 2026-11-11 | break_rules (clearing-account break analysis: product buckets and bucket rules valid).
 2026-11-15 | flow_config (account flow reconciliation: product flows valid and inactive).
 2026-11-15 | extensions (build H: inventory of extension points, extensible views, worked example of a pack).
+2026-11-15 | licensing (vendor licence: module catalogue valid, module map and document up to date).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -237,6 +244,12 @@ def check_extensions(root):
     return extensions._engine.check(root, extensions.PROFILE)
 
 
+def check_licensing(root):
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import licensing  # noqa: E402
+    return licensing._engine.check(root, licensing.PROFILE)
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -260,6 +273,7 @@ CHECKS = [
     ('break_rules', check_break_rules),
     ('flow_config', check_flow_config),
     ('extensions', check_extensions),
+    ('licensing', check_licensing),
 ]
 
 

@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-379 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -206,6 +206,23 @@ texts <= 73 characters).
 | 336 | Area &1: no active account flow &2 |
 | 338 | Source &1 answered nothing for account &2 - not evaluated |
 | 340 | Value &1 of &2 is reserved (reserved: &3) |
+| 350 | &1 is not covered by the licence: save the row inactive (LIC_ENFORCE X) |
+| 351 | Check &1 not run: module &2 not licensed (state &3, LIC_ENFORCE X) |
+| 352 | &1 refused: module &2 not licensed (state &3, LIC_ENFORCE X) |
+| 353 | Module(s) &1 used but not covered by licence &2 (LIC_ENFORCE W: runs) |
+| 354 | No licence installed: install the vendor's file (ZCA_OPS_LICENSE_INSTALL) |
+| 355 | Module &1 of licence &2 ends on &3 (&4 days left) |
+| 356 | Module &1 of licence &2 ended on &3: grace period until &4 |
+| 357 | Module &1 of licence &2 ended on &3, grace period ended on &4 |
+| 358 | Licence &1: signature invalid or not by the vendor (&2) |
+| 359 | Licence &1 is bound to other systems (this system: &2) |
+| 360 | Licence &1 is not for the installed product version &2 |
+| 361 | Licence file not readable (&1): not the vendor's signed licence |
+| 362 | Licence &1 installed: &2 module(s), state &3 |
+| 363 | Licence &1 checked in test mode (nothing stored): state &2 |
+| 364 | Licence &1 not installed: state &2 |
+| 365 | Signature check could not run (SSF return &1, PSE &2) |
+| 366 | Licence file on the server: maintain the parameters &1 and &2 |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |
