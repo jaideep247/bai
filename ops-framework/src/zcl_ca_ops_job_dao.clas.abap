@@ -12,6 +12,7 @@
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor). Dynamic field names: PCRE and
 *&            | CL_ABAP_DYN_PRG=>CHECK_COLUMN_NAME before any dynamic SQL.
+*& 2026-11-16 | SCHEDULER_JOBS: the plan columns of a scheduler row (expected runs, build P).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - SAP job monitor data access</p>
 "! VERIFY-SE11 V58 / V59: fields of TBTCO, TBTCP, BALHDR on 7.58 and the indexes the windows use
@@ -353,7 +354,8 @@ CLASS zcl_ca_ops_job_dao IMPLEMENTATION.
 
 
   METHOD zif_ca_ops_job_dao~scheduler_jobs.
-    SELECT sched_folder, sched_job, sap_pattern, criticality, seq
+    SELECT sched_folder, sched_job, sap_pattern, criticality, seq, plan_days, plan_time, late_min, calendar_id,
+           pred_folder, pred_job
       FROM zca_ops_jobsch
       WHERE active = @abap_true
       ORDER BY seq, sched_folder, sched_job

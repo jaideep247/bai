@@ -345,6 +345,31 @@ per registered check and run as soon as the objects are active.
    or the install harness (source H, V283); `ZCA_OPS` 02 for `CA_OPS`. Never transported as seed.
 6. Roles: the new lists read with `ZCA_OPS` 03 for the area (DCLs `ZC_CA_OPSCOVERAGE`, `ZC_CA_OPSALERTRECON`).
 
+## 6l. Expected runs and FI-CA mass activities (2026-11-16, build P, `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`)
+
+Expected runs: core, licence module `JOBS`. Mass activities: pack FI-CA Cash Operations, module `CASH_OPS`. Every
+delivered row is inactive.
+
+1. Pull: the new columns of `ZCA_OPS_JOBSCH` (`PLAN_DAYS`, `PLAN_TIME`, `LATE_MIN`, `CALENDAR_ID`, `PRED_FOLDER`,
+   `PRED_JOB`), table `ZCA_OPS_MAACT`; republish `ZUI_CA_OPS_CFG_O4` (plan columns of *Scheduler jobs*, entity
+   *Mass activities*).
+2. Expected runs: fill the plan columns of the scheduler rows of the jobs that must run (run days, planned start in
+   the SAP server's system time, late minutes, calendar, predecessor - V295); a site with the FI-CA Cash Operations
+   pack sets `XRUN_CALENDAR_CLASS` = `ZCL_CA_OPS_MA_CALENDAR` for holidays (core alone: weekdays only, D-P3). A site
+   that receives its scheduler's plan export writes a source class (`ZIF_CA_OPS_EXPECTED_RUN_SRC`, worked example
+   `examples/expected_runs`) and names it first in `XRUN_SOURCES`.
+3. Registry row `CA_OPS / EXPECTED_RUNS` (`config/check_registry.csv`, group `FAST`, inactive): the consumer's area
+   and fast group (e.g. every 15 minutes, after the job monitor's group); a control covering `EXPECTED_RUNS` gives the
+   findings their owner.
+4. Mass activities: rows of `ZCA_OPS_MAACT` per activity of the area (activity type, parent program, parent job names,
+   output rule, minimum, run limit - V298-V303); the monitoring row `FICA_MA_INTERVALS` of the catalogue process
+   `FICA_PAYRUN` (area `CA_FICA`, group `INTRADAY`, inactive); decide D-P2 (this check or the payment run check reports a
+   payment without document) before both are active.
+5. Parameters (`docs/PARAMETERS.md`, prefixes `XRUN_`, `MA_`): defaults are safe; `MA_RESOLVERS` only when the
+   parallel jobs of a mass activity are linked by another resolver than the job monitor's (V301).
+6. Roles: nothing new - the check user of the area reads TBTCO / TBTCP through the job monitor (no `S_BTCH_JOB` beyond
+   `PROT`), `DPAYH` and `FKKMAKO` through the cash checks' data access.
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

@@ -27,7 +27,7 @@ The **modules** and their entry points are listed in `docs/licensing/modules.md`
 | `CORE` (always, never refused) | runs, findings, exceptions app, alert router and channels, run lock / abort, configuration apps, check runner and registry, business process register, parameters, purge, process catalogue model with the baseline `S4CORE`, explainable results, the **customer extension contract** (decision D-L2), the licence itself |
 | `CONTROL` | control register and the daily control review (sign-off) |
 | `ONBOARD` | no-code aggregate checks, approved tables, onboarding check, outage risk check, process scaffold |
-| `JOBS` | SAP job monitor (job checks, scheduler jobs, failures board) |
+| `JOBS` | SAP job monitor (job checks, scheduler jobs, failures board) and the expected runs of the scheduler (`ZCL_CA_OPS_CHK_XRUN`, build P) |
 | `RESPONSE` | runbook links, alert correlation, escalation until acknowledged, downtime windows, metrics, shift handover |
 | `LINKS` | a customer's own layer of the link registry, the registry check (the product layers stay content of the other modules) |
 | `CATALOGUE_FICA` / `CATALOGUE_FSCD` / `CATALOGUE_FSRI` | the catalogue packages FICA and FSCD and the FS-RI process of FSCD (`license_module` in `config/catalogue`) |
@@ -43,6 +43,10 @@ customer's own business process without catalogue process and its own check clas
 vendor's tool refuses a licence that misses a requirement unless forced. Areas are not licensed (D-L3): an area is the
 customer's grouping, the modules are what runs in it.
 
+
+**Module CASH_OPS - mass activities (2026-11-16, build P).** The same licence covers the mass activity check
+`ZCL_CA_OPS_CHK_MA_INTERVAL` and the configuration entity `MassActivity` (activation refused under `LIC_ENFORCE = X`
+without the module, message 350) - `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`.
 
 **Module CASH_OPS - payment file lifecycle (2026-11-15, build K).** One FI-CA Cash Operations licence covers the cash checks of build N and the payment file lifecycle
 (`docs/PAYMENT_FILE_LIFECYCLE.md`): entry points `ZCA_OPS_PF_RUN` and `ZUI_CA_OPS_PAYFILE`, check class

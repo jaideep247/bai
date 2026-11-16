@@ -91,7 +91,9 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'PayFileStatusMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Payment file status mapping', position: 420, targetElement: '_PayFileStatusMap' },
     { id: 'PayFileAdapter', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Payment file adapters', position: 430, targetElement: '_PayFileAdapter' }
+      label: 'Payment file adapters', position: 430, targetElement: '_PayFileAdapter' },
+    { id: 'MassActivity', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Mass activities and their output', position: 440, targetElement: '_MassActivity' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

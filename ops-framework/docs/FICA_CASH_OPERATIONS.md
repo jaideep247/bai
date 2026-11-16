@@ -30,6 +30,7 @@ Delivered **inactive** (catalogue monitoring rows); the status values of SAP tab
 | `ZCL_CA_OPS_CASH_FACTORY` / `_INJECTOR` | Data access resolution and its test double slot |
 | `ZIF_CA_OPS_CASH_TYPES` | Stages, evaluation states, check codes, parameters `CASH_*`, messages 500-539, row types |
 | `config/cash/fixtures.json` | Offline fixture spec: 30 scenarios, the same as the ABAP Unit tests (section 7) |
+| `ZCL_CA_OPS_CHK_MA_INTERVAL` (build P) | Mass activity runs: intervals failed / not finished / overrun, document output short (section 7b) |
 
 Licensing: module **`CASH_OPS`** (requires `CATALOGUE_FICA`; `config/licensing/modules.json`, module map regenerated).
 The runner's licence gate covers the six check classes through the module map.
@@ -205,6 +206,22 @@ process owner `P`, none `N`); `FINDING` sets `EVID_KEY` and collects one typed e
 `ZERO_VOLUME` = `ZERO_OK`, `NOT_EXPECTED` = `HOLIDAY`, `STALE`, `NOT_EVALUATED` = not evaluated) into the check's
 `TY_RESULT-EVAL` (`EVAL( )`, returned by each of the six checks); the runner stores the framework's evaluation record
 (`docs/EVALUATION_AND_COVERAGE.md` section 1.1). The detail line 530 stays.
+
+## 7b. Mass activity intervals and their output (2026-11-16, build P)
+
+The seventh check of the package, `ZCL_CA_OPS_CHK_MA_INTERVAL` (catalogue process `FICA_PAYRUN`, check
+`FICA_MA_INTERVALS`, group `INTRADAY`, inactive; module `CASH_OPS`), watches the mass activities of the area
+(`ZCA_OPS_MAACT`): a parent job that ended while intervals failed or did not finish, an interval past its run limit, a
+run whose document output is short - payment documents of the payment run or dunning notices (`FKKMAKO`). It reuses
+this package and does not copy it: the run context `ZCL_CA_OPS_CASH_CTX` (owner, cutoff, contract, evaluation), the
+data access `ZIF_CA_OPS_CASH_DAO=>PAYMENT_RUNS` and `WORKING_DAY`, the stage `JOB_OK`, and the payment run check's own
+sum per run, now the public `ZCL_CA_OPS_CHK_CASH_PAYRUN=>SUM_BY_RUN` (the check calls it unchanged through `BY_RUN`).
+The calendar handling serves the expected runs of the core too (`ZCL_CA_OPS_MA_CALENDAR`, parameter
+`XRUN_CALENDAR_CLASS`). Scorecard scenario 1 (job finished, a child interval failed, 2 of 3 payment documents) is
+fixture `MA-01`. `FKKMAKO` / `FKKMAZE` are the dunning history on the reference system, not the interval records of
+the mass activity framework (V298, V300). A payment without document after a successful job is reported by this
+check (`MA_OUTPUT_SHORT`, with the failed interval) and by `PAYRUN_NO_DOCUMENT`: activate one rule per area (D-P2).
+Details: `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md` section 3.
 
 ## 8. Configuration (parameters, area CA_OPS)
 

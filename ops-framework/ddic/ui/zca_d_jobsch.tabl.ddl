@@ -13,6 +13,12 @@ define table zca_d_jobsch {
   description : abap.char(60);
   active : abap_boolean;
   seq : abap.int4;
+  plandays : abap.char(7);
+  plantime : abap.tims;
+  latemin : abap.int4;
+  calendarid : abap.char(2);
+  predfolder : abap.char(40);
+  predjob : abap.char(64);
   lastchangedby : abp_lastchange_user;
   lastchangedat : abp_lastchange_tstmpl;
   locallastchangedat : abp_locinst_lastchange_tstmpl;

@@ -1,0 +1,3 @@
+AREA,ACT_ID,DESCRIPTION,AKTYP,PARENT_PROGRAM,JOB_PATTERN,OUTPUT_KIND,MIN_OUTPUT,RUN_LIMIT_MIN,ACTIVE
+CA_FICA,PAYRUN,Payment run: intervals and payment documents,‹AKTYP›,RFKK_MA_SCHEDULER,‹parent job name PCRE›,PAYDOC,0,120,
+CA_FICA,DUNNING,Dunning: intervals and dunning notices,‹AKTYP›,‹program›,‹parent job name PCRE›,DUNNING,0,120,

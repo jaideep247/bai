@@ -13,6 +13,7 @@
 *& and messages 110-139 of ZCA_OPS. No logic.
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor: failures, parent / child links, evidence chain).
+*& 2026-11-16 | TY_SCHED: plan columns of a scheduler row (expected runs by configuration, build P).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - SAP job monitor types</p>
 "! TBTCO is cross-client: every read filters AUTHCKMAN = the logon client. Times of TBTCO are
@@ -363,6 +364,15 @@ INTERFACE zif_ca_ops_job_types
       sap_pattern TYPE zif_ca_ops_types=>ty_object_key,
       criticality TYPE ty_criticality,
       seq         TYPE i,
+      "! Expected runs by configuration (2026-11-16, build P): run days Monday ... Sunday (X = runs; blank = no
+      "! expected run), planned start (system time), late minutes (0 = XRUN_LATE_MIN), factory calendar and the
+      "! predecessor scheduler job (ZCL_CA_OPS_XRUN_SRC_JOBSCH)
+      plan_days   TYPE c LENGTH 7,
+      plan_time   TYPE t,
+      late_min    TYPE i,
+      calendar_id TYPE c LENGTH 2,
+      pred_folder TYPE ty_sched_folder,
+      pred_job    TYPE ty_sched_job,
     END OF ty_sched.
   TYPES tt_sched TYPE STANDARD TABLE OF ty_sched WITH EMPTY KEY.
 

@@ -21,6 +21,8 @@
 *& 2026-11-15 | Initial version (build N: FI-CA cash coverage).
 *& 2026-11-16 | Exception contract (build K merge): returns the evidence rows of its findings.
 *& 2026-11-16 | Evaluation state (build O): the run's evaluation (ZCL_CA_OPS_CASH_CTX=>EVAL) in TY_RESULT-EVAL.
+*& 2026-11-16 | Build P: the sum per run is the public SUM_BY_RUN (pure), called by the mass activity check
+*&            | ZCL_CA_OPS_CHK_MA_INTERVAL for the document output of a payment run (one rule, not a copy).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FI-CA cash check - payment run expected / completed</p>
 "! VERIFY V221: DPAYH-XVORL set = proposal row; a payment run that follows a proposal carries the proposal's run date
@@ -34,6 +36,18 @@ CLASS zcl_ca_ops_chk_cash_payrun DEFINITION
 
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_check.
+
+    "! The run rows per run, proposal flag, company code and currency (payment methods summed); with
+    "! iv_skip_orders the payments without document of a payment-order method (it_order_methods) are left out -
+    "! such a method posts its document only after the bank confirmed the order. Pure; also called by the mass
+    "! activity check for the document output of a payment run (one rule, not a copy)
+    CLASS-METHODS sum_by_run
+      IMPORTING
+        it_rows          TYPE zif_ca_ops_cash_types=>tt_run_sum
+        it_order_methods TYPE zif_ca_ops_types=>tt_param_range
+        iv_skip_orders   TYPE abap_bool
+      RETURNING
+        VALUE(rt_runs)   TYPE zif_ca_ops_cash_types=>tt_run_sum.
 
   PRIVATE SECTION.
     DATA mo_ctx TYPE REF TO zcl_ca_ops_cash_ctx.
@@ -357,14 +371,20 @@ CLASS zcl_ca_ops_chk_cash_payrun IMPLEMENTATION.
 
 
   METHOD by_run.
+    rt_runs = sum_by_run( it_rows          = mt_runs
+                          it_order_methods = mo_ctx->param_range( zif_ca_ops_cash_types=>gc_param-payrun_order_meth )
+                          iv_skip_orders   = iv_skip_orders ).
+  ENDMETHOD.
+
+
+  METHOD sum_by_run.
     DATA lt_sum TYPE SORTED TABLE OF zif_ca_ops_cash_types=>ty_run_sum
                 WITH UNIQUE KEY run_date run_id proposal company_code currency.
 
-    DATA(lt_orders) = mo_ctx->param_range( zif_ca_ops_cash_types=>gc_param-payrun_order_meth ).
-    LOOP AT mt_runs ASSIGNING FIELD-SYMBOL(<ls_row>).
+    LOOP AT it_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       DATA(ls_row) = <ls_row>.
       CLEAR ls_row-pay_method.
-      IF iv_skip_orders = abap_true AND lt_orders IS NOT INITIAL AND <ls_row>-pay_method IN lt_orders.
+      IF iv_skip_orders = abap_true AND it_order_methods IS NOT INITIAL AND <ls_row>-pay_method IN it_order_methods.
         CLEAR: ls_row-nodoc_count, ls_row-nodoc_amount.
       ENDIF.
       READ TABLE lt_sum ASSIGNING FIELD-SYMBOL(<ls_sum>) WITH TABLE KEY run_date     = ls_row-run_date

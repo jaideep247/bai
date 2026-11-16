@@ -51,5 +51,6 @@ define root view entity ZC_CA_OpsCfgAll
       _PayFileType : redirected to composition child ZC_CA_PayFileType,
       _PayFileMilestone : redirected to composition child ZC_CA_PayFileMilestone,
       _PayFileStatusMap : redirected to composition child ZC_CA_PayFileStatusMap,
-      _PayFileAdapter : redirected to composition child ZC_CA_PayFileAdapter
+      _PayFileAdapter : redirected to composition child ZC_CA_PayFileAdapter,
+      _MassActivity : redirected to composition child ZC_CA_MassActivity
 }

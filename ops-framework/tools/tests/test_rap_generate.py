@@ -9,7 +9,8 @@ the runbook link of an active runbook row, the patterns, key fields and window o
 escalation severity of an alert rule on save; the link registry (2026-11-11) checks sources and fields against the
 runtime DDIC, the TABLE-FIELD references and the kind-dependent fields of a condition on save; the account flows
 (2026-11-15) check roles, line sources, the source plug-in, reserved stage IDs and the criteria of a rule's source;
-the licence (2026-11-15) refuses the activation of a row of an unlicensed module (module or derived from the row).
+the licence (2026-11-15) refuses the activation of a row of an unlicensed module (module or derived from the row);
+the mass activities (2026-11-16, build P) check their parent job names as PCRE and their output rule on save.
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-framework/)
 """
@@ -34,7 +35,9 @@ class FrameworkAppTest(unittest.TestCase):
                     # correlation rules (operations response features, 2026-11-11)
                     ('framework', 'zca_ops_corr', 'check_pattern'), ('framework', 'zca_ops_corr', 'key_pattern'),
                     # accounts of a bucket rule (clearing-account break analysis, 2026-11-11)
-                    ('framework', 'zca_ops_brkrul', 'acct_pattern')}
+                    ('framework', 'zca_ops_brkrul', 'acct_pattern'),
+                    # parent job names of a mass activity (build P, 2026-11-16)
+                    ('framework', 'zca_ops_maact', 'job_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
                  for c in t[6] if c[0] == 'pcre'}
         self.assertEqual(found, expected)
@@ -58,7 +61,8 @@ class FrameworkAppTest(unittest.TestCase):
                               'zca_ops_catdep', 'zca_ops_catact', 'zca_ops_brkacc', 'zca_ops_brkbkt',
                               'zca_ops_brkrul', 'zca_ops_brkcnd', 'zca_ops_pilotbl', 'zca_ops_flow',
                               'zca_ops_flwacc', 'zca_ops_flwstg', 'zca_ops_flwtil', 'zca_ops_flwctl',
-                              'zca_ops_flwrul', 'zca_ops_pftyp', 'zca_ops_pfstg', 'zca_ops_pfmap', 'zca_ops_pfadp'])
+                              'zca_ops_flwrul', 'zca_ops_pftyp', 'zca_ops_pfstg', 'zca_ops_pfmap', 'zca_ops_pfadp',
+                              'zca_ops_maact'])
 
     def test_payment_model_tables_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

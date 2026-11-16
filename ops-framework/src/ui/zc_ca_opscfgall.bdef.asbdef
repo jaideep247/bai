@@ -54,6 +54,7 @@ define behavior for ZC_CA_OpsCfgAll alias OpsCfgAll
   use association _PayFileMilestone { create; with draft; }
   use association _PayFileStatusMap { create; with draft; }
   use association _PayFileAdapter { create; with draft; }
+  use association _MassActivity { create; with draft; }
 }
 
 define behavior for ZC_CA_AlertRule alias AlertRule
@@ -426,6 +427,15 @@ use etag
 }
 
 define behavior for ZC_CA_PayFileAdapter alias PayFileAdapter
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_MassActivity alias MassActivity
 use etag
 {
   use update;

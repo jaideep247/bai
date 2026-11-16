@@ -16,6 +16,7 @@ CA_FICA,FICA_INV_BACKLOG,FICA_INVOICING,Billing documents of past days not invoi
 CA_FICA,FICA_PAYFILE_ACK,FICA_PAYFILE_ACK,Payment files stopped before the bank accepted them,ZCL_CA_OPS_CHK_PAYFILE,INTRADAY,X,,10
 CA_FICA,FICA_PAYRUN_NOPAY,FICA_PAYRUN,Payments of past runs without a payment document,ZCL_CA_OPS_CHK_AGG,DAILY,X,,10
 CA_FICA,FICA_CASH_PAYRUN,FICA_PAYRUN,"Cash: payment run expected / completed, documents, gap",ZCL_CA_OPS_CHK_CASH_PAYRUN,DAILY,X,,20
+CA_FICA,FICA_MA_INTERVALS,FICA_PAYRUN,"Mass activity runs: intervals failed, overrun, output short",ZCL_CA_OPS_CHK_MA_INTERVAL,INTRADAY,X,,30
 CA_FICA,FICA_LOT_OPEN,FICA_PAY_LOTS,Payment lots not posted and closed after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_LOT_CLARIF,FICA_PAY_LOTS,Payment lot items waiting in clarification,ZCL_CA_OPS_CHK_AGG,DAILY,,,20
 CA_FICA,FICA_CASH_PAYLOT,FICA_PAY_LOTS,"Cash: payment lots not posted, clarification ageing",ZCL_CA_OPS_CHK_CASH_PAYLOT,DAILY,X,,30

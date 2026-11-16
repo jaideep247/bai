@@ -44,4 +44,5 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_PayFileMilestone as PayFileMilestone;
   expose ZC_CA_PayFileStatusMap as PayFileStatusMap;
   expose ZC_CA_PayFileAdapter as PayFileAdapter;
+  expose ZC_CA_MassActivity as MassActivity;
 }

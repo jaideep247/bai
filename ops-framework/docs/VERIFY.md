@@ -12,7 +12,7 @@ reference system does not have) and V260 (2026-11-16, reversal pointer direction
 first consumer's.
 
 **Customer items are not kept here (2026-11-11).** This list names only the product's objects and SAP standard
-objects. V44 / V45, V55 / V56, V67-V69, V80 / V81, V82-V93, V100-V109, V115, V121 / V122, V123, V130 / V131, V139-V141, V144, V150-V152, V158, V169 and V260 are the first consumer's items,
+objects. V44 / V45, V55 / V56, V67-V69, V80 / V81, V82-V93, V100-V109, V115, V121 / V122, V123, V130 / V131, V139-V141, V144, V150-V152, V158, V169, V260 and V307 are the first consumer's items,
 indexed in its own list `docs/VERIFY_Suite.md` of the consumer (V82-V93 moved there from this file on
 2026-11-11, IDs unchanged); a new consumer keeps its items in its own list the same way.
 
@@ -304,3 +304,27 @@ Build O. V270-V289 are reserved for it; V286-V289 are free.
 | V284 | Translation | Texts of the domains `ZCA_OPS_EVAL_STATE`, `ZCA_OPS_EVAL_CMPL`, `ZCA_OPS_COV_STATE`, `ZCA_OPS_DLV_STATE` (DD07T) and messages 560-584 in the customer's languages (SE63). |
 | V285 | Runtime (fixture replay) | `config/evaluation/fixtures.json` on a system: the payment file check (day results), a cash check (zero volume, not expected, not evaluated) and a legacy check give the expected evaluation records; the retention purge deletes the records with their run. |
 
+### 2026-11-16 - expected runs and FI-CA mass activities (`docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`)
+
+Build P. V290-V309 are reserved for it; V307 is the first consumer's item (the plan of its scheduler rows, in its
+own list); V308-V309 are free.
+
+| ID | Kind | Item |
+|---|---|---|
+| V290 | Activation / ABAP Unit | Activation of the build P objects (new columns of `ZCA_OPS_JOBSCH`, table `ZCA_OPS_MAACT`, the regenerated configuration app `ZUI_CA_OPS_CFG` with the entity *Mass activities*, interfaces and classes of the expected runs and of the mass activity check, `ZCL_CA_OPS_CHK_CASH_PAYRUN=>SUM_BY_RUN`) and their ABAP Unit tests (`ZCL_CA_OPS_XRUN_SRC_JOBSCH`, `ZCL_CA_OPS_XRUN_MONITOR`, `ZCL_CA_OPS_CHK_XRUN`, `ZCL_CA_OPS_MA_SRC_JOBS`, `ZCL_CA_OPS_MA_DAO`, `ZCL_CA_OPS_MA_CALENDAR`, `ZCL_CA_OPS_CHK_MA_INTERVAL`; the payment run check's own tests unchanged). |
+| V291 | VERIFY-SE11 (V58) | The TBTCO statuses the expected runs read as waiting (`XRUN_WAITING_STATUSES` P, S, Y) and as active (R, Z) on the target release; whether a job in status P (scheduled, not released) carries a planned start. |
+| V292 | Runtime (QA1) | Matching an expected run to its SAP job by name (the scheduler row's PCRE) and time window (`XRUN_EARLY_MIN` / `XRUN_MATCH_MIN`): no false "never started" for a job the scheduler starts early or late; two runs of one job a day get one job each. The link is probable (P); a key of the scheduler's run written into the SAP job, if the scheduler writes one, would make it confirmed. |
+| V293 | Runtime (QA1) | Times: the planned start of the configured rows and of a scheduler export is system time of the SAP server (as TBTCO); a scheduler that exports another time zone is converted by its source class. The deadline of a finding (UTC) is derived from its distance to the server clock. |
+| V294 | Business | Which states of the site's scheduler map to planned, started, ended OK, ended not OK, held, not started (the example maps WAITING, RUNNING, OK, NOTOK, HOLD - test words, not a scheduler's vocabulary) and how fresh its export must be (`XRUN_SOURCE_STALE_MIN`, 60). |
+| V295 | Business | The plan of the configured rows: run days, planned start, late minutes, calendar and predecessor per scheduler job, from the scheduler's own definitions (rows without plan columns give no expected run). |
+| V296 | VERIFY-SE37 (V230) | The business calendar of the configured plan for a site with the FI-CA Cash Operations pack: `ZCL_CA_OPS_MA_CALENDAR` answers through the cash checks' factory calendar (`DATE_CONVERT_TO_FACTORYDATE`, V230); the core alone has no calendar (weekdays only, decision D-P3). |
+| V297 | PlanViz / volume | `XRUN_MAX_JOBS` (5 000): the reads of the jobs that ran since the earliest planned start and of the waiting jobs at peak; a cap reached is reported (`XRUN_READ_CAPPED`) and the check partial. |
+| V298 | VERIFY-SE11 | `FKKMAKO` / `FKKMAZE` are the dunning history (header per business partner and contract account, and its items) on the reference system - not the run and interval records of the mass activity framework. Their key `LAUFD` / `LAUFI` (`MLFID_KK`) is read as the dunning run; `FKKMAZE` is not read. |
+| V299 | VERIFY-SE11 / business | `FKKMAKO-MSALM` (`MSALM_KK`) with `WAERS` as the amount of a dunning notice; whether one row stands for one dunning notice (the count of the output). |
+| V300 | VERIFY-SE11 / SE80 | The run and interval records of the mass activity framework (function group `FKKAKTIV2`, FPY1 / `RFKK_MA_SCHEDULER`): the tables of run header, interval and job with their status fields and values on the target release - not in the reference system's export, so not read. Until confirmed, the delivered run source `ZCL_CA_OPS_MA_SRC_JOBS` sees a run's parallel jobs, not its intervals; a source on those tables replaces it through `MA_SOURCE`. |
+| V301 | Runtime (QA1) | Which jobs a mass activity run starts: the parent job (program `RFKK_MA_SCHEDULER` of the payment run variants, seen on A4H) and how its parallel jobs are linked to it (event, job log message or the heuristic of the job monitor, `MA_RESOLVERS` / `JOB_RESOLVERS`); whether the scheduler's own job is the parent or releases one. |
+| V302 | VERIFY-SE11 | Mass activity types of the site (`TFK090A-AKTYP`): the delivered rows of `ZCA_OPS_MAACT` keep the activity type, the dunning program and the parent job names as placeholders (rows inactive); the payment run type `PAYP` is a test value of the test tool, not a value recorded from `TFK090A` (fact F25). |
+| V303 | Business | The expectation of a payment run's output: its payments (default) or the proposal (only with `CASH_PAYRUN_GAP_ACTIVE` = X after V221); payments of a payment-order method (`CASH_PAYRUN_ORDER_METHODS`) count as documented; the minimum output of a dunning run. |
+| V304 | Runtime (QA1) | Several parent jobs of one activity on one run date without a run ID: the output of the date is judged once (with the first parent that ended); the activity's job names must tell the runs of a day apart where their output differs. |
+| V305 | Fiori / RAP | Configuration app: the plan columns of *Scheduler jobs* and the entity *Mass activities* (licence check of module `CASH_OPS` on activation, PCRE check of the parent job names). |
+| V306 | Runtime (fixture replay) | `config/expected_runs/fixtures.json` on a system: XRUN-01 ... XRUN-06 with scheduler rows and a scheduler export table, MA-01 ... MA-05 with a payment run of three payments and a cancelled parallel job; findings, evaluation records and evidence rows agree with the spec. |

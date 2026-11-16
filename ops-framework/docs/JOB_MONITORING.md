@@ -26,8 +26,11 @@ consumer's area (e.g. `FAST` every 5 minutes). Every job **of the client** is wa
 | | `JOB_LOG_UNREADABLE` | W | A job log could not be read (message 123 of the reader, trace and error class in the finding): that job is not judged on its log, its other evidence is kept |
 
 **What is not detected here.** A job that was never scheduled at all is an *absence*, not a failure of a job: the
-expected-events calendar (job X by time T, after job Z) stays with the consumer (e.g. its job cycle checks); the monitor
-reports released jobs that did not start and its own staleness (`CHECK_STALE_MIN_<area>`, runner `CHECK_FAILED`). A job
+monitor reports released jobs that did not start and its own staleness (`CHECK_STALE_MIN_<area>`, runner
+`CHECK_FAILED`). Since 2026-11-16 (build P) the absence has a check of its own: the **expected runs**
+(`ZCL_CA_OPS_CHK_XRUN`, section 13, `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`) compare the external scheduler's plan
+(job X by time T, after job Z) with the jobs of this monitor's tables - never started, failed before SAP, waiting for a
+predecessor, held, late. A job
 without a linked parent is not proven independent - the board says *no link found*, never *no parent*.
 
 Object type `JOB`, object key `<job name>/<job count>`, rule ID `JOBMON`; the runner stamps GROUP1 = process and
@@ -127,7 +130,7 @@ that stays readable (program texts, variant contents, the spool itself, applicat
 | `ZCA_OPS_JOBALOG` | + log number | BALHDR header of an application log linked to the job: object / subobject, external number, date / time, user, program, error and abort counters, quality - **P**: no BALHDR field names the job, the link is step user + step program + run time (at most `JOB_MAX_APPLOGS` = 20 per job; the messages stay in SLG1 until expiry) |
 | `ZCA_OPS_JOBBO` | + object number | business objects of the consumer's enrichers: type, key, label, company code, count, quality |
 | `ZCA_OPS_JOBWM` | area, check ID | the watermark (end of the last window read completely, run ID) - never purged |
-| `ZCA_OPS_JOBSCH` (C) | scheduler folder, job | the external scheduler's jobs and the SAP job names (PCRE, complete name) each starts, criticality H / M / L, active, sequence (first match wins) - configuration app `ZUI_CA_OPS_CFG`, entity *Scheduler jobs*; the board shows *scheduler job → SAP root job → failed child* |
+| `ZCA_OPS_JOBSCH` (C) | scheduler folder, job | the external scheduler's jobs and the SAP job names (PCRE, complete name) each starts, criticality H / M / L, active, sequence (first match wins) - configuration app `ZUI_CA_OPS_CFG`, entity *Scheduler jobs*; the board shows *scheduler job → SAP root job → failed child*. Plan columns (2026-11-16, build P): run days `PLAN_DAYS`, planned start `PLAN_TIME`, `LATE_MIN`, `CALENDAR_ID`, predecessor `PRED_FOLDER` / `PRED_JOB` - the plan "expected by configuration" (section 13) |
 
 Indexes (DDL comments, VERIFY V65): `ZCA_OPS_JOB` DET (`DETECTED_AT`, purge), PAR (parent: children facet), ROL
 (area, role, date: list report). Purge target **`JOB_EVIDENCE`** (`ZCL_CA_OPS_JOB_PURGE`, registry row of
@@ -214,7 +217,7 @@ watermark and would report the same jobs again.
 
 ## 11. Parameters
 
-`docs/PARAMETERS.md` (prefix `JOB_`, area `CA_OPS`).
+`docs/PARAMETERS.md` (prefix `JOB_`, area `CA_OPS`; the expected runs `XRUN_`).
 
 ## 12. VERIFY
 
@@ -224,3 +227,21 @@ until V58-V60 are closed in DV1.
 
 `docs/VERIFY.md` V58-V66 (framework); a consumer keeps the VERIFY items of its own plug-ins, job naming and scheduler
 export in its own release documentation.
+
+## 13. Expected runs (2026-11-16, build P)
+
+The scheduler's plan against SAP's jobs, through this monitor's data access (`ZIF_CA_OPS_JOB_DAO`: `JOBS_RUNNING`,
+`WAITING_JOBS`, `SCHEDULER_JOBS`) - `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md` section 2:
+
+- plug-in `ZIF_CA_OPS_EXPECTED_RUN_SRC` (`XRUN_SOURCES`): delivered `ZCL_CA_OPS_XRUN_SRC_JOBSCH` reads the plan
+  columns of `ZCA_OPS_JOBSCH` plus a business calendar (`XRUN_CALENDAR_CLASS`); a site adds a reader of its
+  scheduler's export (worked example `examples/expected_runs`, never seeded);
+- engine `ZCL_CA_OPS_XRUN_MONITOR` (the run's job by name and time window, quality P), check `ZCL_CA_OPS_CHK_XRUN`
+  (registry row `CA_OPS / EXPECTED_RUNS`, inactive): `XRUN_NEVER_STARTED` (stage `SCHEDULER`, `HANDOVER` - failed before
+  SAP, `SAP_QUEUE`), `XRUN_PRED_NOT_FINISHED`, `XRUN_HELD`, `XRUN_STARTED_LATE`, source notices; findings with the
+  exception contract and evidence rows of the scheduler record (kind `SCHD`) and the SAP job (`S4_BACKGROUND_JOB`);
+  a stale scheduler source makes the evaluation `STALE`, an unreadable one `NOT_EVAL`.
+
+Parent / child links of this monitor serve the FI-CA mass activity check too: its delivered run source links a run's
+parallel jobs to the parent job through `JOB_RESOLVERS` (or `MA_RESOLVERS`), section 3 of that document.
+

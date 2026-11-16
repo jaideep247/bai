@@ -101,6 +101,12 @@ CA_OPS,LINK_MAX_DEPTH,P,INT,1,10,4,,,,,Levels a link registry walk follows from 
 CA_OPS,LINK_MAX_NODES,P,INT,1,5000,500,,,,,Objects one link registry walk returns at most,OPS FRAMEWORK
 CA_OPS,LINK_MAX_ROWS,P,INT,1,10000,100,,,,,Rows one read of a link returns at most (per level),OPS FRAMEWORK
 CA_OPS,LINK_READ_CHUNK,P,INT,1,1000,100,,,,,Source rows per database read of a link (IN list or OR),OPS FRAMEWORK
+CA_OPS,MA_LOOKBACK_DAYS,P,INT,0,31,2,,,,,Days of mass activity runs read back,OPS FRAMEWORK
+CA_OPS,MA_MAX_INTERVALS,P,INT,1,10000,500,,,,,Intervals kept per mass activity run,OPS FRAMEWORK
+CA_OPS,MA_MAX_RUNS,P,INT,1,10000,200,,,,,Parent jobs read per mass activity,OPS FRAMEWORK
+CA_OPS,MA_RESOLVERS,P,LIST,,,,,,X,,Interval resolvers (ZIF_CA_OPS_JOB_RESOLVER; blank = JOB_),OPS FRAMEWORK
+CA_OPS,MA_RUN_LIMIT_MIN,P,INT,1,10080,120,,,,,Minutes a mass activity interval may run,OPS FRAMEWORK
+CA_OPS,MA_SOURCE,P,CLASS,,,ZCL_CA_OPS_MA_SRC_JOBS,,ZIF_CA_OPS_MA_SRC,,X,Run source of the mass activity check,OPS FRAMEWORK
 CA_OPS,METRIC_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of month / week of the response-time metrics,OPS FRAMEWORK
 CA_OPS,PF_AMOUNT_RED,P,CHAR,,,,,,,,Amounts that block a payment file finding ([CoCd:]CUR amt),OPS FRAMEWORK
 CA_OPS,PF_BREACH_RED_MIN,P,INT,0,10080,240,,,,,Minutes overdue from which a payment file finding blocks,OPS FRAMEWORK
@@ -126,3 +132,12 @@ CA_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; 
 CA_OPS,SHIFT_TIMES_DEFAULT,S,TIME,,,000000,,,X,,Shift start times (HHMMSS rows) of teams without own times,OPS FRAMEWORK
 CA_OPS,SHIFT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of the shift start times (TTZZ),OPS FRAMEWORK
 CA_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,OPS FRAMEWORK
+CA_OPS,XRUN_CALENDAR_CLASS,P,CLASS,,,,,ZIF_CA_OPS_XRUN_CALENDAR,,X,Business calendar of planned runs (blank = weekdays only),OPS FRAMEWORK
+CA_OPS,XRUN_EARLY_MIN,P,INT,0,10080,60,,,,,Minutes before the planned start a job counts as the run,OPS FRAMEWORK
+CA_OPS,XRUN_LATE_MIN,P,INT,0,10080,30,,,,,Minutes after the planned start until a run is late,OPS FRAMEWORK
+CA_OPS,XRUN_LOOKBACK_DAYS,P,INT,0,31,1,,,,,Days of the scheduler plan read back (0 = today),OPS FRAMEWORK
+CA_OPS,XRUN_MATCH_MIN,P,INT,0,10080,720,,,,,Minutes after the planned start a job counts as the run,OPS FRAMEWORK
+CA_OPS,XRUN_MAX_JOBS,P,INT,1,50000,5000,,,,,SAP jobs read per run of the expected-run check,OPS FRAMEWORK
+CA_OPS,XRUN_SOURCES,P,LIST,,,ZCL_CA_OPS_XRUN_SRC_JOBSCH,,,X,,Expected-run sources in order (ZIF_CA_OPS_EXPECTED_RUN_SRC),OPS FRAMEWORK
+CA_OPS,XRUN_SOURCE_STALE_MIN,P,INT,1,44640,60,,,,,Minutes after which a scheduler source is stale,OPS FRAMEWORK
+CA_OPS,XRUN_WAITING_STATUSES,P,LIST,,,"P,S,Y",,,,,SAP job statuses of a run waiting to start,OPS FRAMEWORK

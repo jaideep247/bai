@@ -20,6 +20,18 @@ define view entity ZR_CA_SchedulerJob
       active as Active,
       @EndUserText.label: 'Display order'
       seq as Seq,
+      @EndUserText.label: 'Run days (Mon-Sun, X = runs; blank = none)'
+      plan_days as PlanDays,
+      @EndUserText.label: 'Planned start (system time)'
+      plan_time as PlanTime,
+      @EndUserText.label: 'Late after (minutes, 0 = XRUN_LATE_MIN)'
+      late_min as LateMin,
+      @EndUserText.label: 'Factory calendar (SCAL)'
+      calendar_id as CalendarId,
+      @EndUserText.label: 'Predecessor folder'
+      pred_folder as PredFolder,
+      @EndUserText.label: 'Predecessor job'
+      pred_job as PredJob,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,

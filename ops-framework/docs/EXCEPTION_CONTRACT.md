@@ -25,7 +25,8 @@ adopt it (a module of FI-CA cash checks will). Status: not activated (`docs/VERI
 | Owner | `RESP_USER`, `RESP_TEAM`, `RESP_SOURCE` | from the existing configuration (`ZIF_CA_OPS_OWNER`): **C** the active control that covers the check code, else the check ID, else the rule (`ZCA_OPS_CTLCHK` -> `ZCA_OPS_CONTROL` owner and team); **P** the owner of the check's business process (`ZCA_OPS_PROC`); **N** none configured (said, never guessed). The assigned owner of the exceptions app (`OWNER`) stays separate |
 | Evidence | `EVID_KEY` + rows of `ZCA_OPS_FNDEVI` | `ZCL_CA_OPS_EXC_CONTRACT=>EVIDENCE_KEY` (SHA-1 of area, check, object key, company code - stable over the carry-forward); rows replaced at every run that raises the finding |
 
-Evidence row: kind (`SAP`, `MW` middleware / transfer, `BANK`, `OPS` the product's own record), type (`RUN`, `JOB`,
+Evidence row: kind (`SAP`, `MW` middleware / transfer, `BANK`, `OPS` the product's own record, `SCHD` the external
+scheduler - build P), type (`RUN`, `JOB`,
 `PAYDOC`, `FILE`, `MSG`, `ACK`, `STMT`, `EVENT`), label, the record's own key, the **link registry object and key
 values** ("FIELD=value;...") - `ZIF_CA_OPS_EVIDENCE=>WALKER_REQUEST` turns a row into the start of the link walker
 (`docs/LINK_REGISTRY.md`) - occurrence and observation time, quality (`C` confirmed, `P` probable, `U` unmatched),
@@ -80,6 +81,16 @@ The contract says what a finding is about; the **evaluation record** of the chec
 all of it - expected scope, source freshness, watermark, completeness, result class, reason and last valid result -
 for every check, also one that raised nothing (`docs/EVALUATION_AND_COVERAGE.md`). A module that adopts the contract
 folds its own vocabulary into the optional `TY_RESULT-EVAL` (the payment file days, the cash evaluations).
+
+## 3b. Expected runs and mass activities (2026-11-16, build P)
+
+`ZCL_CA_OPS_CHK_XRUN` fills the contract itself: one run per finding (`ITEM_COUNT` 1, `UNKNOWN_COUNT` 1 - a run has no
+amount), the deadline that passed (planned start + late minutes), the stage (`SCHEDULER`, `HANDOVER`, `SAP_QUEUE`,
+`WAIT_PRED`, `LATE_START`), the owner through `ZIF_CA_OPS_OWNER`, and evidence rows of the new kind `SCHD` (the
+external scheduler's record) next to the SAP job (`S4_BACKGROUND_JOB`, quality P - matched by name and time window)
+or its absence (quality U). `ZCL_CA_OPS_CHK_MA_INTERVAL` adopts it through the cash checks' context (section 3):
+count and amount per company code and currency of the missing documents, and evidence of the run, the parent job, the
+payment run and each failed interval with its job (`docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md` section 2.5, 3.3).
 
 ## 4. Limits
 
