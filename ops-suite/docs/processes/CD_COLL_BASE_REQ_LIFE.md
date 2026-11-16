@@ -22,6 +22,17 @@ Role (PFCG, ZCA_OPS for the area): `Z_CD_OPS_COLL`
 | `COLL_R1_PENDING` / `R1` | ‹status table› | AGE | ‹status field› EQ PENDING | ‹amber days› / ‹red days› |
 | `COLL_R4_SRCPOSTED` / `R4` | ‹status table› | COUNT | ‹status field› EQ SRCPOSTED | ‹amber count› / ‹red count› |
 
+## Build R (2026-11-16): R2 and R3 complete
+
+`ZCL_CD_COLL_C_NO_ANSWER` (R2) and `ZCL_CD_COLL_C_REFUND` (R3) are complete in `src/core` with the shared rules
+`ZCL_CD_COLL_RULES` and ABAP Unit tests on doubles; the skeleton folder of the scaffold was removed. The data source
+stays a placeholder - parameters of area CD_OPS, delivered blank (a blank or placeholder value raises: `CHECK_FAILED`,
+no verdict): `COLL_SRC_REQUEST` (`TABLE=..;KEY=<request key>;KEY2=<company code field>;STATUS=..;DATE=..;TIME=..;AMOUNT=..`),
+`COLL_SRC_REFUND` (`TABLE=..;KEY=<request key>;STATUS=..;DATE=..;TIME=..`), `COLL_REJECT_VALUE`, `COLL_REFUND_OK`,
+`COLL_REFUND_FAILED`, `COLL_R2_AMBER_H` / `_RED_H`, `COLL_R3_AMBER_H` / `_RED_H`, `COLL_CURRENCY`, `COLL_LOOKBACK_DAYS` (7),
+`COLL_MAX_ROWS` (50 000). Both tables are read through the configured-source reader of the payment trace: they need
+`ZCD_OPS_TABWL` rows FMON / SOURCE. Activation and QA1 test: `docs/Pilot_Acceptance.md` §4; VERIFY V250-V253.
+
 ## End to end
 
 | Piece | Where |

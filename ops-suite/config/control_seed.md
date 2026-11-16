@@ -3,14 +3,14 @@
 > **First principle:** a control is a name, an owner and a list of the checks that already run — its status is read from their findings, never typed.
 > **Analogy:** a pilot's checklist page: each line names an instrument already on the panel; a line without an instrument is a request to the avionics shop, not a tick box.
 
-Status 2026-11-10: proposal for the control register of the operations framework (`ZCA_OPS_CONTROL`, `ZCA_OPS_CTLT`, `ZCA_OPS_CTLCHK`, app `ZUI_CA_OPS_CFG` → *Settings & ownership*) and the payment lifecycle stages of the suite (`ZCD_OPS_PAYSTAGE`, app `ZUI_CD_OPS_CFG`). Rows travel by transport from DV1 (`ops-framework/docs/CONTROL_REVIEW.md`). **Owners, backups and teams are left blank** — the support lead fills them in DV1 (no personal names in the repository). Nothing has run in SAP.
+Status 2026-11-16 (build R: the five open controls built, inactive - §2c; was 2026-11-10): proposal for the control register of the operations framework (`ZCA_OPS_CONTROL`, `ZCA_OPS_CTLT`, `ZCA_OPS_CTLCHK`, app `ZUI_CA_OPS_CFG` → *Settings & ownership*) and the payment lifecycle stages of the suite (`ZCD_OPS_PAYSTAGE`, app `ZUI_CD_OPS_CFG`). Rows travel by transport from DV1 (`ops-framework/docs/CONTROL_REVIEW.md`). **Owners, backups and teams are left blank** — the support lead fills them in DV1 (no personal names in the repository). Nothing has run in SAP.
 
 Seed files (one row per table row, header = field names):
 
 | File | Table | Rows |
 |---|---|---|
 | `config/control_register.csv` | `ZCA_OPS_CONTROL` (area, control, name, category, owner, backup, team, cut-off, runbook link, active, sequence) | 12 controls (the mockup's 13 without *IDoc / interface checks*, user decision 2026-11-10: no IDocs in use) |
-| `config/control_checks.csv` | `ZCA_OPS_CTLCHK` (control → area of the findings, finding field, exact value) | 55 covered checks (2026-11-10: *Clearing job* covered by its own two checks instead of the three general job checks; 2026-11-11: the missing-volume checks `B_VOL_PAYRUN`, `B_VOL_FILES` under *Payment files* and `B_VOL_STMT` under *BAI exceptions*, `config/hck_seed.md` §4b) |
+| `config/control_checks.csv` | `ZCA_OPS_CTLCHK` (control → area of the findings, finding field, exact value) | 59 covered checks (2026-11-16, build R: `C_ECT_PENDING`, `C_CHQ_NO_ID`, `F_BLKLINE`, `F_RETNOTIF` - §2c; 2026-11-10: *Clearing job* covered by its own two checks instead of the three general job checks; 2026-11-11: the missing-volume checks `B_VOL_PAYRUN`, `B_VOL_FILES` under *Payment files* and `B_VOL_STMT` under *BAI exceptions*, `config/hck_seed.md` §4b) |
 | `config/control_guidance.csv` | `ZCA_OPS_CTLT` (language E: what the reviewer checks) | 12 |
 | `config/pay_stages.csv` | `ZCD_OPS_PAYSTAGE` (payment lifecycle card) | 10 stages |
 
@@ -22,36 +22,38 @@ Seed files (one row per table row, header = field names):
 |---|---|---|---|---|---|---|
 | 1 | Payment files (`PAYMENT_FILES`) | Payments | CD_FMON | FMON checks by check ID (`RULE_ID`): `F_MISSING`, `F_LATE`, `F_REJECT`, `F_DUP`, `F_SIZE`, `F_REGEN`, `F_SLA`, `F_DEADLINE` (`config/fmon_seed.md`) | full | X |
 | 2 | Clearing job (`CLEARING_JOB`) | Batch processing | CD_HCK | Health checks (`GROUP2` = check ID): `B_CLEAR_TODAY`, `B_CLEAR_PRIOR` - job cycle `CLEARING` with the clearing job as its critical step (`config/hck_seed.md` §2, §3, §7; proposal P1 **built as configuration 2026-11-10**) | full once the step's job name and window are filled in DV1 (Control-M schedule; QA1 pilot field `<clearing job>`) | X |
-| 3 | Base-rejected items (`BASE_REJECTS`) | Exceptions | CD_COLL (moved from CD_HCK 2026-11-10, user decision: signed off by the collections operations team) | Process `CD_COLL` / `BASE_REQ_LIFE`, checks R1-R4 (`GROUP2` = `COLL_R1_PENDING` ... `COLL_R4_SRCPOSTED`), delivered inactive | **gap until P2 is answered** — proposal P2 | blank |
-| 4 | ECT pending items (`ECT_PENDING`) | Disbursements | CD_HCK | — (`C_CHQ_STATUS` covers a cheque status that went backwards, not pending items) | **gap** (reviewer) — proposal P3 | blank |
+| 3 | Base-rejected items (`BASE_REJECTS`) | Exceptions | CD_COLL (moved from CD_HCK 2026-11-10, user decision: signed off by the collections operations team) | Process `CD_COLL` / `BASE_REQ_LIFE`, checks R1-R4 (`GROUP2` = `COLL_R1_PENDING` ... `COLL_R4_SRCPOSTED`); R2 / R3 classes **complete** (build R, 2026-11-16), data source = parameters with placeholders | **built, inactive** until the P2 facts are answered (§2c) | blank |
+| 4 | ECT pending items (`ECT_PENDING`) | Disbursements | CD_HCK | `C_ECT_PENDING` (build R, 2026-11-16: count and age of pending cheques, inactive; `C_CHQ_STATUS` covers a status that went backwards) | **built, inactive** until the pending values are confirmed (§2c) | blank |
 | 5 | Outbound ZICD / ZCD (`OUTBOUND_IFACE`) | Interfaces | CD_FMON | FMON gateway stages: `F_PRISM`, `F_PRISMRCV`, `F_PRISMDLV`, `F_PRFAIL`, `F_PRFILE` | full for the interfaces configured in `ZCD_FMON_IFACE`; VERIFY that every ZICD / ZCD outbound interface has a row | X |
-| 6 | BlackLine (`BLACKLINE`) | Reconciliation | CD_HCK | `A_GL_TRANSFER` (payment engine reconciliation keys reached the G/L) | **partial** — the extract file to BlackLine is not monitored: proposal P4 | X |
+| 6 | BlackLine (`BLACKLINE`) | Reconciliation | CD_HCK | `A_GL_TRANSFER` (payment engine reconciliation keys reached the G/L); `F_BLKLINE` (build R: the two extracts due on the 2nd business day - missing, late, empty; inactive) | **partial** until `F_BLKLINE` and its interfaces are active, then full (§2c) | X |
 | 7 | BAI exceptions (`BAI_EXCEPTIONS`) | Banking | CD_EBS | Every EBS rule (`RULE_ID`): statement rules `S01`–`S13`, `R18`; line rules `R01`–`R22`; circuit breaker `CB`; engine `ENG` | full | X |
 | 8 | Manual retrievals (`MANUAL_RETRIEVALS`) | Disbursements | CD_EBS | `R07L` (ACH retrieval: bank statement against the retrieval status) | **partial** — retrievals requested but not yet on a statement: proposal P5 | X |
-| 9 | Missing check IDs (`MISSING_CHECK_IDS`) | Disbursements | CD_HCK | — | **gap** (reviewer) — proposal P6 | blank |
+| 9 | Missing check IDs (`MISSING_CHECK_IDS`) | Disbursements | CD_HCK | `C_CHQ_NO_ID` (build R, 2026-11-16: cheque payments of the day without cheque number, inactive) | **built, inactive** until the condition and the cheque methods are confirmed (§2c) | blank |
 | 10 | Pending acknowledgements (`PENDING_ACKS`) | Interfaces | CD_FMON | `F_BANKACK` (ACK stage SLA, files acknowledged per file), `F_ACKMATCH` (ACK totals) | full for per-file ACKs; per-payment ACKs are judged by `A_INFLIGHT` (`PAY_STATUS_LAG`, area CD_HCK) — add a `CD_HCK` / `CHECK_CODE` row once the code is confirmed | X |
-| 11 | Returns notifications (`RETURNS_NOTIF`) | Payments | CD_FMON | `F_LOT` (returns / NOC lots not processed), `F_NOCAGE` (NOC ageing) | **partial** (reviewer) — the notification back to the source is not checked: proposal P7 | X |
+| 11 | Returns notifications (`RETURNS_NOTIF`) | Payments | CD_FMON | `F_LOT` (returns / NOC lots not processed), `F_NOCAGE` (NOC ageing); `F_RETNOTIF` (build R: notification file due on a returns day, inactive) | **partial** until the notification route is confirmed and `F_RETNOTIF` (or the PSU job step) is active (§2c) | X |
 | 12 | Daily reconciliation (`DAILY_RECON`) | Reconciliation | CD_HCK | `A_RECON_3WAY` (three-way reconciliation; its variances are the *Open variances* card) | full | X |
 
 **Build C (2026-11-11).** Control 12 `DAILY_RECON` also covers `A_DOC_CHANGE` (reversed payments that had left SAP, reversal keys without G/L transfer, bank lines of reversed payments - `config/hck_seed.md` §2): covered-check row `CD_HCK` / `GROUP2` = `A_DOC_CHANGE`, transported together with the activation of the check (V108). The ledger drill-down (payment ledger, batch key level, group reconciliation - `Dashboard_Production_Support.md` §9) is the evidence a reviewer opens from the control; it adds no check.
 
-A control with no covered check would always show *Healthy* — so the three gap controls are delivered **inactive**; activate each with its check row (or, by decision, as a manual-only control: then the reviewer's result and observation are the only evidence and the derived status stays *Healthy* — say so in its guidance).
+A control with no covered check would always show *Healthy* — so the three gap controls are delivered **inactive** (since build R each has a built check; it stays inactive until its open fact is answered, §2c); activate each with its check row (or, by decision, as a manual-only control: then the reviewer's result and observation are the only evidence and the derived status stays *Healthy* — say so in its guidance).
 
 **Mockup example → existing check (summary).** Payment files → FMON file checks; Clearing job → job cycle checks (configure the cycle); Base-rejected items → none (P2); ECT pending items → none (P3); Outbound interfaces → FMON gateway / interface stages; BlackLine → `A_GL_TRANSFER` (partial, P4); IDoc / interface checks → **dropped** (no IDocs in use; no proposal).
 
-## 2. Proposals (not built in this change — configuration rows or new code, each needs a decision)
+## 2. Proposals (P2-P4, P6, P7 built by build R 2026-11-16, inactive - §2c; P5 open)
 
 | ID | For | Proposal | Kind | Needs |
 |---|---|---|---|---|
 | P1 | Clearing job | **Built as configuration (2026-11-10):** job cycle `CLEARING` with the clearing job as critical step in `ZCD_JOB_CYCLE` / `ZCD_JOB_STEP`, checks `B_CLEAR_TODAY` / `B_CLEAR_PRIOR` (class of `B_CYCLE_*`, PARAM2 = `CLEARING`, red at one step not OK); the general cycle checks leave the cycle out; covered-check rows replaced | configuration | job name, window and calendar of the step (Control-M schedule) - filled in DV1 |
-| P2 | Base-rejected items | **Meaning confirmed 2026-11-10:** a collections payment request the source (BASE) rejected after SAP sent `SCHEDULED`; for a Stripe card premium the money is already collected, so every reject must end in a Stripe premium refund called by SAP. Checks R1-R4 of §2a (no-code aggregates for R1, R4; R2 and R3 are check classes because their limits are in hours - D-PO3 approved 2026-11-10; R3 is an anti-join reject → refund) | configuration + one check class | request status table / field / values, Stripe refund log and its success value (VERIFY-SE11, §2a) |
-| P3 | ECT pending items | Generic aggregate check row: COUNT and AGE of pending items in the ECT table (`ZECT_STATUS` pending values) | configuration | table / status values (VERIFY-SE11) |
-| P4 | BlackLine | FMON outbound interface for the BlackLine extract file (`ZCD_FMON_IFACE` + `ZCD_FMON_SLA` deadline row); covered-check rows `CD_FMON` / `GROUP2` = interface | configuration | file name pattern, delivery deadline |
+| P2 | Base-rejected items | **Built (build R, 2026-11-16): R2 / R3 classes complete, data source = COLL_ parameters (placeholders), §2c.** **Meaning confirmed 2026-11-10:** a collections payment request the source (BASE) rejected after SAP sent `SCHEDULED`; for a Stripe card premium the money is already collected, so every reject must end in a Stripe premium refund called by SAP. Checks R1-R4 of §2a (no-code aggregates for R1, R4; R2 and R3 are check classes because their limits are in hours - D-PO3 approved 2026-11-10; R3 is an anti-join reject → refund) | configuration + one check class | request status table / field / values, Stripe refund log and its success value (VERIFY-SE11, §2a) |
+| P3 | ECT pending items | **Built (build R):** check class `C_ECT_PENDING` (the latest-row condition and the register's encashment cannot be a single-table aggregate): COUNT and AGE of pending cheques | configuration (values) | pending `ZECT_STATUS` values, `ZCD_CHECK_HIST` field names (V240-V242) |
+| P4 | BlackLine | **Built (build R):** FMON outbound interfaces `BLACKLINE_COLL_OUT` / `BLACKLINE_DISB_OUT` with DEADLINE rows, check `F_BLKLINE` (`ZCL_CD_FMON_CHK_DUE_FILE`, 2nd business day); covered-check row `CD_FMON` / `RULE_ID` = `F_BLKLINE` (FMON findings carry the interface in GROUP1, which a covered-check row cannot match) | configuration | file name patterns, evidence source, due time, calendar (V247-V249) |
 | P5 | Manual retrievals | Generic aggregate on the retrieval log (`ZCD_ACH_RTRV_LOG`): retrievals requested and not confirmed after n days | configuration | status field and values (VERIFY-SE11, as part B of the transactions dashboard) |
-| P6 | Missing check IDs | Generic aggregate: cheque payments of the day without cheque number (DFKKCR / cheque history) — or a small check class if the condition needs a join | configuration or new code | the table and condition that mean "no check ID" |
-| P7 | Returns notifications | FMON outbound interface of the returns notification to the source (PCLM) with its SLA, or a check on the request log status after a return | configuration (FMON) or new code | how the source is notified |
+| P6 | Missing check IDs | **Built (build R):** check class `C_CHQ_NO_ID` - one anti-join DPAYH / DFKKCR (fields of the reference system) | configuration (methods) | the meaning, the cheque methods, the timing (V243-V246) |
+| P7 | Returns notifications | **Built (build R), FMON route** (two open names instead of four for the request-log route): interface `RETURNS_NOTIF_OUT` with DEADLINE row, check `F_RETNOTIF` (`WHEN=RETURNS`); alternative if the payment status update runs (`PSU_PCLM`, `PSU_DIS`) report returns: a job-cycle step | configuration | how the source is notified, do the PSU runs report returns (V254, V255) |
 
 ## 2a. Gap controls - status after the pre-pilot hardening (2026-11-10)
+
+Since build R (2026-11-16) every control below has a built, inactive check - the questions stay open; current state and activation in §2c and `docs/Pilot_Acceptance.md`.
 
 Rule applied: a gap is closed only where the data source is already read by the suite **and** its meaning is confirmed in
 the repository (`docs/USAA_Known_Tables.md`, `DEVELOPMENT_STANDARDS.md` §1); otherwise the control stays **inactive** and
@@ -80,11 +82,26 @@ The collections request lifecycle is the worked example of the framework's proce
 | `config/approved_tables.csv` | ‹status table› for `CD_COLL` |
 | `config/control_checks.csv` | `BASE_REJECTS` (area `CD_COLL` since 2026-11-10) covers the four checks (`CHECK_AREA` `CD_COLL`, `GROUP2`) - the control stays inactive (§1); its register, guidance and covered-check rows are entered after area `CD_COLL` exists in ZCA_PARAM (the configuration app validates the area) |
 | `config/alert_rules.csv` | `COLL_LIFE`: area `CD_COLL`, GROUP1 `BASE_REQ_LIFE`, severity E, ‹SO23 list› |
-| `docs/processes/CD_COLL_BASE_REQ_LIFE.md` | owner team, checks, Fiori apps, job, parameters, VERIFY list; R3 skeleton in `docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/` (not imported: no confirmed table to read) |
+| `docs/processes/CD_COLL_BASE_REQ_LIFE.md` | owner team, checks, Fiori apps, job, parameters, VERIFY list; the R2 / R3 classes are complete in `src/core` since build R (2026-11-16, §2c: sources and limits are the COLL_ parameters, delivered blank) - the scaffold's skeleton folder was removed |
 
 Not delivered until activation: the area `CD_COLL` (an inactive delivered area would be reported every morning by
 `D_PARAM_INVALID`), the role, the SLA / freshness parameters of the area. The portable check `process_onboarding`
 keeps the rows consistent; `D_PROC_ONBOARD` reports the process every morning once it is active and incomplete.
+
+## 2c. Build R (2026-11-16) - pilot acceptance items (review finding 5)
+
+Each gap control has a built check, delivered **inactive**; the open fact, who answers it, the single activation step
+and the QA1 test are in `docs/Pilot_Acceptance.md`. Every new finding carries count, amount and currency (one
+`EXPOSURE_PER_CURRENCY` finding per currency), oldest age, deadline, the control (owner = its register row) and the
+evidence keys; a source or value still a placeholder raises - *not evaluated*, never green.
+
+| Control | Built | Rows (all inactive) | Open (VERIFY) | Activation |
+|---|---|---|---|---|
+| `ECT_PENDING` (P3) | `ZCL_CD_HCK_C_ECT_PENDING`, `ZCL_CD_HCK_CHEQUE_DAO` (register by cheque number), `ZCL_CD_HCK_EXPOSURE` | `ZCD_HCK_DEF` `C_ECT_PENDING`, thresholds `ECT_PENDING` / `ECT_PENDING_AGE` (`config/hck_seed.md`); covered `CD_HCK` / `GROUP2` = `C_ECT_PENDING` | pending `ZECT_STATUS` values, history field names, limits (V240-V242) | PARAM1 / PARAM2 / thresholds filled, check and control ACTIVE = X |
+| `BLACKLINE` (P4) | `ZCL_CD_FMON_CHK_DUE_FILE` (`WHEN=BUSDAY`) | `ZCD_FMON_IFACE` `BLACKLINE_COLL_OUT` (`ZCD_FI_BLACKLINE_EXTRACT_COLL`), `BLACKLINE_DISB_OUT` (`ZCD_BLACKLINE_RECON`), their DEADLINE rows, `ZCD_FMON_CHK` `F_BLKLINE` (`config/fmon_seed.md`); covered `CD_FMON` / `RULE_ID` = `F_BLKLINE` | file evidence and patterns, due time and calendar, empty extract allowed (V247-V249) | interface, DEADLINE and check rows filled and active; `A_GL_TRANSFER` stays; then coverage full |
+| `BASE_REJECTS` (P2) | `ZCL_CD_COLL_C_NO_ANSWER` (R2), `ZCL_CD_COLL_C_REFUND` (R3), `ZCL_CD_COLL_RULES` (in `src/core`; the scaffold skeleton folder removed) | parameters `COLL_*` (area CD_OPS, `config/param_definitions.csv`, blank); R1 / R4 aggregate rows unchanged | status table / fields / reject value, refund log, hours, currency, area and role (V250-V253) | one customizing request: parameter values, aggregate placeholders, approvals, rows, process, area, control active |
+| `MISSING_CHECK_IDS` (P6) | `ZCL_CD_HCK_C_CHQ_NO_ID`, `ZCL_CD_HCK_CHEQUE_DAO` (anti-join DPAYH / DFKKCR) | `ZCD_HCK_DEF` `C_CHQ_NO_ID`, threshold `CHEQUE_NO_ID` 1 / 1; covered `CD_HCK` / `GROUP2` = `C_CHQ_NO_ID` | meaning, cheque methods, timing, PlanViz (V243-V246) | PARAM1 `METHODS=` filled, check and control ACTIVE = X |
+| `RETURNS_NOTIF` (P7) | `ZCL_CD_FMON_CHK_DUE_FILE` (`WHEN=RETURNS`); `F_LOT` / `F_NOCAGE` kept | `ZCD_FMON_IFACE` `RETURNS_NOTIF_OUT`, DEADLINE row, `ZCD_FMON_CHK` `F_RETNOTIF`; covered `CD_FMON` / `RULE_ID` = `F_RETNOTIF` | how the source is told; do the PSU runs report returns; file pattern / due time (V254, V255) | file: rows active; PSU runs: job-cycle step instead |
 
 ## 3. Payment lifecycle stages (`ZCD_OPS_PAYSTAGE`, `config/pay_stages.csv`)
 

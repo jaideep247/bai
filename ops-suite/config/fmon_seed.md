@@ -20,7 +20,9 @@ pattern captures and the ones no pattern captures.
 | PAYREQ_PRISM_IN | I | API | PRISM | SAP | * | * | * | (blank: API calls, no file name) | 0 | 0 | | | ‹payment engine RTB› | X |
 | CHECK_POSPAY_OUT | O | POSPAY | * | PRISM | CHECK | * | ‹bank› | `‹confirm PCRE›` | 1 | 0 | ‹confirm› | FILE | ‹team› | X |
 | ACH_COLL_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | X | FILE | ‹team› | X |
-| BLACKLINE_OUT | O | OTHER | * | BLACKLINE | | * | | `‹confirm PCRE›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
+| BLACKLINE_COLL_OUT | O | OTHER | * | BLACKLINE | | * | | `‹confirm PCRE›` | 0 | 0 | (blank — no ACK) | | ‹team› | (blank - build R, P4) |
+| BLACKLINE_DISB_OUT | O | OTHER | * | BLACKLINE | | * | | `‹confirm PCRE›` | 0 | 0 | (blank — no ACK) | | ‹team› | (blank - build R, P4) |
+| RETURNS_NOTIF_OUT | O | OTHER | * | ‹PCLM - confirm› | ACH | * | | `‹confirm PCRE›` | 0 | 0 | (blank — no ACK) | | ‹team› | (blank - build R, P7) |
 | STRIPE_PAYOUT_IN | I | OTHER | * | SAP | CARD | * | | `‹confirm PCRE›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
 | BAI_JPMC_IN | I | STATEMENT | * | SAP | | * | ‹bank identifier as in the statement› (JPMC) | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
 | BAI_BOA_IN | I | STATEMENT | * | SAP | | * | ‹bank identifier as in the statement› (BOA) | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
@@ -29,6 +31,8 @@ pattern captures and the ones no pattern captures.
 | CHECK_PRINT_IRIS_OUT | O | OTHER | * | IRIS | CHECK | * | ‹bank› | `‹confirm PCRE›` | 1 | 0 | (blank — no bank ACK) | | ‹team› | X |
 
 **BANK_KEY (user decision 2026-11-07).** `BANK_KEY` is filled exactly as the bank identifies itself in its bank statement (the sender / bank identifier the statement carries — e.g. the BAI2 group-header originator identification, usually the ABA routing number, 9 characters; a BIC, 8 or 11 characters, for a CAMT statement — take it from an imported statement of that bank), **not** a short name such as JPMC / BOA (these stay only as a readable comment in brackets). The same value goes into `ZCD_EBS_ACCT-BANK_KEY` of every payment engine account of that bank, into the statement interface row (`BAI_JPMC_IN`, `BAI_BOA_IN`), into every other interface row of that bank (`WIRE_JPMC_OUT`: the PRISM queue per bank, `FMON_PRISM_THROTTLE_SCOPE` C, groups by it) and into bank-specific entries of the posting area `ZBTM` (key BANK_KEY, was ZCD_BTC_MAP; `*` = every bank). The field is CHAR 15 on both tables (`ZCD_EBS_ACCT`, `ZCD_FMON_IFACE`) and 15 characters in ZBTM (VERIFY-SE11 that the TFK033D key holds it, `docs/FICA_Posting_Areas.md` §4): a routing number (9) or BIC (11) fits; a longer identifier would need a DDIC change. The FEB adapter finds the accounts of an interface by this value (condensed, upper case) — a different spelling in one table makes every account of the bank "not imported". PNC rows: same rule once PNC statements are monitored.
+
+**Due outbound files (build R, 2026-11-16; `docs/Pilot_Acceptance.md` §3, §5).** `BLACKLINE_COLL_OUT` = the collections extract of program `ZCD_FI_BLACKLINE_EXTRACT_COLL`, `BLACKLINE_DISB_OUT` = the disbursements extract of program `ZCD_BLACKLINE_RECON` (replace the example row `BLACKLINE_OUT`); both run on the 2nd business day of the next month. `RETURNS_NOTIF_OUT` = the notification of returns / NOC back to the source (PCLM) - **only if** the answer to the pilot question is "a file" (the other answers are in `docs/Pilot_Acceptance.md` §5). `MIN_BYTES` 0: an empty file is the due-file check's finding `DUE_FILE_EMPTY` (not `F_SIZE`). They have **no `ZCD_FMON_CAL` row**: the daily checks `F_MISSING` / `F_LATE` / `F_DEADLINE` never expect them; the check rows `F_BLKLINE` / `F_RETNOTIF` (class `ZCL_CD_FMON_CHK_DUE_FILE`, section ZCD_FMON_CHK) do, with the DEADLINE row of the interface below. All rows inactive until the file name pattern, the evidence source (PRISM status event or a source row of `ZCD_FMON_SRC`) and the due time are confirmed. `FMON_LOOKBACK_DAYS` must cover the days from the 1st of the month to the 2nd business day (e.g. 5) for an extract generated before its due day to count.
 
 Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL = PAYMENT`), collections per file (`FILE`); Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK (`ACK_EXPECTED` blank). A source-specific row (e.g. `SOURCE_SYS = PCLM`) is only needed when that source differs (other SLA, pattern or owner); otherwise the `*` row serves every source and LOB.
 
@@ -61,6 +65,9 @@ Every SLA row is delivered with `ACTIVE = X`. New rows only by customizing trans
 |---|---|---|---|---|---|---|---|---|---|
 | BAI_JPMC_IN | FULLY_PROCESSED | DEADLINE | * | | | 10:00 | E | X | JPMC BAI received, imported and posted by 10:00 |
 | BAI_BOA_IN | FULLY_PROCESSED | DEADLINE | * | | | 10:00 | E | X | BOA BAI received, imported and posted by 10:00 |
+| BLACKLINE_COLL_OUT | GENERATED_IN_SAP | DEADLINE | * | | | ‹due time› | E | (blank) | Collections BlackLine extract on the 2nd business day (build R) |
+| BLACKLINE_DISB_OUT | GENERATED_IN_SAP | DEADLINE | * | | | ‹due time› | E | (blank) | Disbursements BlackLine extract on the 2nd business day (build R) |
+| RETURNS_NOTIF_OUT | GENERATED_IN_SAP | DEADLINE | * | | | ‹due time› | E | (blank) | Returns notification to the source on a returns day (build R) |
 
 At 10:00 the finding `STAGE_DEADLINE_MISSED` names the earliest missing step (GROUP2): `NOT_RECEIVED` (no file, no statement), `NOT_IMPORTED` (received, statements of x of y payment engine accounts in FEBKO), `NOT_POSTED` (every account imported, n of m in-scope FEBEP lines not posted), with bank and statement date. Stages a deadline may name (configuration app): FILE_RECEIVED, FILE_LOADED, FULLY_PROCESSED, GENERATED_IN_SAP, ACK_RECEIVED.
 
@@ -192,8 +199,12 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | F_PRFILE | ZCL_CD_FMON_CHK_PRISM_FILE | W | GRACE_MIN=60 |
 | F_DEADLINE | ZCL_CD_FMON_CHK_DEADLINE | E | (none - DEADLINE rows of ZCD_FMON_SLA; row SEVERITY wins) |
 | F_REGEN | ZCL_CD_FMON_CHK_REGEN | B | (none) - FILE_REGENERATED_NOT_FAILED: regenerated file while the earlier generation did not fail (possible duplicate payment file) |
+| F_BLKLINE | ZCL_CD_FMON_CHK_DUE_FILE | E | `IFACES=BLACKLINE_COLL_OUT,BLACKLINE_DISB_OUT;WHEN=BUSDAY;BUSDAY=2;CAL=‹factory calendar›;GRACE_MIN=60;CONTROL=BLACKLINE` - **inactive** (build R, P4) |
+| F_RETNOTIF | ZCL_CD_FMON_CHK_DUE_FILE | E | `IFACES=RETURNS_NOTIF_OUT;WHEN=RETURNS;GRACE_MIN=60;CONTROL=RETURNS_NOTIF` - **inactive** (build R, P7; only with the file answer) |
 
 `F_PRFAIL` reuses the reject check: with `OUTCOME=PRISM_FAILED` it reports only `PRISM_FAILED` (the existing `F_REJECT` row is unchanged and does not report it, so nothing is doubled); for a file with a generation group it reports `FILE_REPLACED` (information) once a regenerated file exists, `REGENERATION_MISSING` (E) next to `PRISM_FAILED` after `FMON_REGEN_WAIT_MIN`, and `PRISM_DUPLICATE_NAME` (E) instead of `PRISM_FAILED` for an error code of `FMON_PRISM_DUP_NAME_CODES`. `F_REGEN` and `F_PRFAIL` also run in the instant PRISM unit. `F_PRFILE` reports `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported) and `PRISM_NOT_LOADED` (inbound file PRISM delivered, not received in SAP) after `GRACE_MIN` — longer than the 5-minute cycle, so PRISM being faster than SAP's next read is no finding. The instant PRISM unit runs only the SLA, reject and PRISM-file checks.
+
+`F_BLKLINE` / `F_RETNOTIF` (build R, 2026-11-16): the interfaces of `IFACES` are due on the `BUSDAY`-th working day of the month (factory calendar `CAL`) or on a business day with a returns file of the day (`WHEN=RETURNS`), by the `DUE_TIME` of their DEADLINE row (day type `*`, local time `FMON_TIME_ZONE`). On that day: no file of the period after due time + `GRACE_MIN` = `DUE_FILE_MISSING` (row severity), a file first seen after the due time = `DUE_FILE_LATE` (W), only empty files (0 bytes; with `COUNT=X` also 0 records) = `DUE_FILE_EMPTY` (E); an inactive interface, no DEADLINE row or a calendar that cannot be read = `DUE_FILE_NOT_EVALUATED` (E) - never green. Object key `<interface>/<due date>`; the exception is closed by the operator once the file is in (outside the reconciliation scope of the 5-minute run - QA1 test in `docs/Pilot_Acceptance.md`). Covered-check rows: `BLACKLINE` / `RETURNS_NOTIF` → `CD_FMON` / `RULE_ID` = `F_BLKLINE` / `F_RETNOTIF`.
 
 ## FMON parameters — framework `ZCA_PARAM`, area `CD_FMON`
 

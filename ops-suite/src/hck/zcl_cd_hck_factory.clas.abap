@@ -9,6 +9,7 @@
 *& 2026-11-07 | get_runtime_dao: reads of the checks E_NUMRANGE, E_QUEUES, A_INFLIGHT.
 *& 2026-11-07 | get_recon_dao: reads of the three-way reconciliation check A_RECON_3WAY.
 *& 2026-11-11 | get_docchg_dao: reads of the document-change risk check A_DOC_CHANGE (build C).
+*& 2026-11-16 | get_cheque_dao: reads of the cheque pilot checks C_ECT_PENDING, C_CHQ_NO_ID (build R).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - factory (DAO, engine)</p>
 "! Getters never read the database.
@@ -48,6 +49,11 @@ CLASS zcl_cd_hck_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_hck_docchg_dao.
 
+    "! Reads of the cheque pilot checks (cheque register, cheque payments without cheque number)
+    CLASS-METHODS get_cheque_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_cd_hck_cheque_dao.
+
   PRIVATE SECTION.
 
     CLASS-DATA go_dao_double TYPE REF TO zif_cd_hck_dao.
@@ -55,6 +61,7 @@ CLASS zcl_cd_hck_factory DEFINITION
     CLASS-DATA go_runtime_dao_double TYPE REF TO zif_cd_hck_runtime_dao.
     CLASS-DATA go_recon_dao_double TYPE REF TO zif_cd_hck_recon_dao.
     CLASS-DATA go_docchg_dao_double TYPE REF TO zif_cd_hck_docchg_dao.
+    CLASS-DATA go_cheque_dao_double TYPE REF TO zif_cd_hck_cheque_dao.
 
 ENDCLASS.
 
@@ -94,6 +101,12 @@ CLASS zcl_cd_hck_factory IMPLEMENTATION.
   METHOD get_docchg_dao.
     ro_dao = COND #( WHEN go_docchg_dao_double IS BOUND THEN go_docchg_dao_double
                      ELSE NEW zcl_cd_hck_docchg_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_cheque_dao.
+    ro_dao = COND #( WHEN go_cheque_dao_double IS BOUND THEN go_cheque_dao_double
+                     ELSE NEW zcl_cd_hck_cheque_dao( ) ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -22,6 +22,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | V158 | Build H: customer extensions - the pack's generated extensions of the framework views activate from `src/ext` (worklist state of the payment next to the break groups, query copy), PlanViz of the break list with the association (2026-11-15) | `Extensions_Overlay.md` §4 |
 | **V159-V161** (V159, V160 closed) | **Fields the suite's code reads that the reference system does not have (2026-11-15, build I)** | **this document, §4; `ddic/open_fields.csv`** |
 | V169 | Build J: licensing - the installation numbers and SIDs of DV1 / QA1 / PS4 sent to the vendor, the vendor's licence installed per system, the modules the suite uses licensed, a module outside the licence refused in QA1 under `X` while the suite's own engines run (2026-11-15) | `Licensing_Overlay.md` §4 |
+| **V240-V258** | **Build R: pilot acceptance items of the first customer's five open daily controls - ECT pending, BlackLine extracts, base-rejected items, missing check IDs, returns notification (2026-11-16)** | **this document, §5; `Pilot_Acceptance.md`** |
 | V130, V131 | Process catalogue customer layer: the customer process's table and programs, approval of the activation proposal and the order of the catalogue rows before `CAT_PROCESS` (2026-11-11) | `Process_Catalogue_Overlay.md` §4 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping
@@ -82,3 +83,30 @@ failing; they block the activation of the reading class in a system without the 
 system (index lists, the sign of `DFKKSUM-BETRW`, field lengths) are recorded where the items live:
 `Performance_Review.md` §17, `USAA_Known_Tables.md` V101 / V102 / V107 / V108, `Release_Readiness.md`,
 `HCK_MORNING_REPORT.md` §15, `Payment_Trace.md` §9, `FICA_Posting_Areas.md`.
+
+## 5. Build R (2026-11-16) - pilot acceptance items of the first customer's daily controls
+
+Answer to finding 5 of the product review (`docs/Pilot_Acceptance.md`). Every check is built and delivered inactive;
+each row is the fact still open and who answers it. A row is closed only with the answer recorded in the release pack.
+
+| ID | Kind | Item |
+|---|---|---|
+| V240 | Business | `ECT_PENDING`: the `ZECT_STATUS` values that mean *pending* (sent to IRIS, not yet mailed; status 1?), written exactly as stored (leading zeros) - PARAM2 `PENDING=` of `C_ECT_PENDING`. Payment operations (disbursements) with the IRIS / PRISM owner |
+| V241 | VERIFY-SE11 | `ZCD_CHECK_HIST`: the cheque number field (= `DFKKCR-ZTNUM`, padding as on the register), the status field, the date and time of the status change; one row per cheque or per change (both are read correctly: latest by date / time) - PARAM1 of `C_ECT_PENDING` |
+| V242 | Business | `ECT_PENDING`: amber / red limits of `ECT_PENDING` (count) and `ECT_PENDING_AGE` (days; red = the deadline of a pending cheque); `DAYS` (180) covers the oldest pending cheque that matters - an older one is not seen |
+| V243 | Business | `MISSING_CHECK_IDS`: a *missing check ID* is a cheque payment of a run without a cheque number on the register (not a health check that did not run). The reference system's test tool treats a run payment without `DFKKCR` row as an error; the business meaning stays the user's answer |
+| V244 | VERIFY / configuration | `MISSING_CHECK_IDS`: the cheque payment methods (`DPAYH-RZAWE`; the CHQ class of posting area ZPMC is the likely list) - PARAM1 `METHODS=` of `C_CHQ_NO_ID` |
+| V245 | Business | `MISSING_CHECK_IDS`: when a cheque number is due - the print run of the run day, so the runs of the day before the review (`OFFSET=1`, `DAYS=1`) |
+| V246 | PlanViz / ST05 | `DFKKCR` has no index on `ZTNUM` alone, `DOC1R` or `LAUFD` on the reference system: the register read of `C_ECT_PENDING` (by cheque number) and the anti-join of `C_CHQ_NO_ID` (DPAYH run-date window, `ZCL_CD_HCK_CHEQUE_DAO`) on the busiest run day in QA1 |
+| V247 | VERIFY / interface | BlackLine: how the extracts of `ZCD_FI_BLACKLINE_EXTRACT_COLL` and `ZCD_BLACKLINE_RECON` are evidenced (PRISM status event with interface ID / file name, or a log table as an FMON source) and their file name patterns - rows `BLACKLINE_COLL_OUT`, `BLACKLINE_DISB_OUT` |
+| V248 | Business | BlackLine: the due time on the 2nd business day and the factory calendar (`CAL=` of `F_BLKLINE`); whether an extract may legitimately be empty (no postings in the month) |
+| V249 | QA1 | BlackLine: `FMON_LOOKBACK_DAYS` covers the days from the 1st of the month to the 2nd business day (an extract generated early counts); the operator closes a due-file exception once the file is in (outside the reconciliation scope of the 5-minute run) |
+| V250 | VERIFY-SE11 | `BASE_REJECTS`: the request status table and its fields - request key, company code, status, date and time of the change, amount - and the value of a source reject; one row per request or per change (`COLL_SRC_REQUEST`, `COLL_REJECT_VALUE`; aggregate rows R1 / R4) |
+| V251 | VERIFY-SE11 | `BASE_REJECTS`: SAP's Stripe refund log - key back to the request, status field, success and failure values, time stamp (`COLL_SRC_REFUND`, `COLL_REFUND_OK`, `COLL_REFUND_FAILED`) |
+| V252 | Business | `BASE_REJECTS`: hours for R2 and R3 (`COLL_R2_*_H`, `COLL_R3_*_H`), the currency of the request amounts (`COLL_CURRENCY`), and that the change date / time are local time (`FMON_TIME_ZONE`) |
+| V253 | Configuration | `BASE_REJECTS`: area `CD_COLL`, role `Z_CD_OPS_COLL`, SO23 list of rule `COLL_LIFE`, `ZCD_OPS_TABWL` rows FMON / SOURCE for the status table and the refund log (read through the configured-source reader), `S_TABU_NAM` of the job user |
+| V254 | Business | `RETURNS_NOTIF`: how the source (PCLM, DIS) is told about a return / NOC - an outbound file, the payment status update runs to the source (`PSU_PCLM`, `PSU_DIS`; **do these runs report returns?**), or a status row of the request log |
+| V255 | VERIFY / interface | `RETURNS_NOTIF`: for a file - name pattern, evidence source, due time (`RETURNS_NOTIF_OUT`, `F_RETNOTIF`); for the PSU runs - job names and window of the job-cycle step |
+| V256 | ABAP Unit (DV1) | `ltc_ect_pending`, `ltc_chq_no_id`, `ltc_cheque_dao` (OSQL), `ltc_exposure`, `ltc_due_file`, `ltc_check` of `ZCL_CD_COLL_C_NO_ANSWER` / `_C_REFUND` - doubles only, offline |
+| V257 | QA1 | The tests ECT-1/2, BL-1/2/3, BR-1/2, MC-1, RN-1/2/3 of `Pilot_Acceptance.md` with their expected results |
+| V258 | QA1 | *Not evaluated* is never green: a check with a placeholder left (HCK `PLUGIN_ERROR`, runner `CHECK_FAILED`, FMON `DUE_FILE_NOT_EVALUATED`) leaves a finding under the control's check, so the daily review never shows the control *Healthy* (the framework-wide evaluation state of build O shows it as *not evaluated* once merged) |

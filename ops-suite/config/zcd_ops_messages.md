@@ -1,6 +1,6 @@
 # Message class ZCD_OPS
 
-Number ranges: 001–099, 700–799 and 800–849 core (841–859: SAP job monitor plug-ins of area CD_JOBS, 2026-11-11) · 860–889 ledger and document changes (build C, HCK check A_DOC_CHANGE) · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
+Number ranges: 001–099, 700–799 and 800–849 core (841–859: SAP job monitor plug-ins of area CD_JOBS, 2026-11-11) · 860–889 ledger and document changes (build C, HCK check A_DOC_CHANGE) · 900–929 pilot acceptance checks of the first customer's daily controls (build R: ECT pending, missing cheque numbers, due outbound files, collections requests) · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
 Every user-facing text of the suite is one of these messages (built with `ZCL_CD_OPS_UTIL=>TEXT( )`) or a text symbol (`docs/text_elements/`); numbers are referenced through the `gc_msg-*` constants of each area's types interface.
 Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the operations framework raises moved to its class ZCA_OPS with their numbers (2026-11-10, `ops-framework/config/zca_ops_messages.md`); a number listed there is not reused here.
 
@@ -537,3 +537,25 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 861 | Reversal &1 of payment &2: reconciliation key &3 has no G/L transfer |
 | 862 | Bank line &1 references payment &2, reversed by &3 |
 | 863 | Document changes: read capped at &1 rows (window &2 to &3) |
+| 900 | Cheque &1 pending (status &2) for &3 days, payment &4 |
+| 901 | Cheque &1 pending (status &2) for &3 days: no cheque register row |
+| 902 | &1: &2 open item(s) in currency &3, oldest &4 |
+| 903 | Cheque payment &1 of run &2 (method &3, bank &4) has no cheque number |
+| 904 | Check &1 not evaluated: &2 is blank or a placeholder |
+| 905 | Check &1: read capped at &2 rows (window &3 to &4) |
+| 906 | &1: file due &2 by &3 not generated |
+| 907 | &1: file due &2 by &3 first seen at &4 (late) |
+| 908 | &1: file due &2 is empty (&3) |
+| 909 | &1: due file not evaluated - |
+| 910 | Request &1 SCHEDULED &2 h ago: no answer of the source |
+| 911 | Request &1 rejected by the source &2 h ago: no successful refund |
+| 912 | Request &1 rejected by the source: premium refund failed (&2) |
+| 913 | Deadline: &1 |
+| 914 | Age (days): &1 |
+| 915 | Control: &1 |
+| 916 | Age (hours): &1 |
+| 917 | Evidence: &1 |
+| 918 | no DEADLINE row of day type * in ZCD_FMON_SLA |
+| 919 | Factory calendar '&1' cannot be read (CAL of the check row) |
+| 920 | interface not active in ZCD_FMON_IFACE |
+| 921 | Due rule &1 unknown (WHEN=BUSDAY or WHEN=RETURNS) |

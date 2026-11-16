@@ -3,6 +3,35 @@
 Changes of the ops suite (`ops-suite/`) from 2026-11-15 on; earlier changes are in the modification logs of the
 objects, `docs/Class_Purpose_and_Modification_Log.md`, `docs/Implementation_Order.md` and `docs/history/`.
 
+## 2026-11-16 - build R: pilot acceptance items of the five open daily controls (review finding 5)
+
+Every check is built and delivered **inactive**; the open facts, activation steps and QA1 tests are in
+`docs/Pilot_Acceptance.md`, the VERIFY items V240-V258 in `docs/VERIFY_Suite.md` §5, the control state in
+`config/control_seed.md` §2c.
+
+- **ECT pending (P3):** morning report check `C_ECT_PENDING` (`ZCL_CD_HCK_C_ECT_PENDING`) - count and age of the
+  cheques whose latest valid status in `ZCD_CHECK_HIST` (`STATE` = space) is a pending `ZECT_STATUS` value (parameter,
+  placeholder) and that are still open on `DFKKCR` (`BNKDT` initial, `STATE` blank); evidence cheque number, payment
+  document, company code, amount, currency, age, deadline.
+- **Missing check IDs (P6):** check `C_CHQ_NO_ID` (`ZCL_CD_HCK_C_CHQ_NO_ID`) - cheque payments of yesterday's runs
+  without a cheque register row with a cheque number; one anti-join DPAYH / DFKKCR in the new data access
+  `ZIF_CD_HCK_CHEQUE_DAO` / `ZCL_CD_HCK_CHEQUE_DAO` (fields of the reference system; factory getter
+  `GET_CHEQUE_DAO`, injector `INJECT_CHEQUE_DAO`); cheque methods a parameter (placeholder).
+- **Exposure:** `ZIF_CD_HCK_CHEQUE_TYPES`, `ZCL_CD_HCK_EXPOSURE` - count, amount, oldest age and deadline per currency
+  (`EXPOSURE_PER_CURRENCY`, information), labelled context (deadline, age, control, evidence) on every item finding.
+- **BlackLine (P4) and returns notification (P7):** FMON check `ZCL_CD_FMON_CHK_DUE_FILE` - an outbound file due on the
+  n-th business day of the month (factory calendar) or on a returns day, by the due time of its DEADLINE row: missing,
+  late, empty, or not evaluated (never green). Rows (`config/fmon_seed.md`, inactive): interfaces
+  `BLACKLINE_COLL_OUT`, `BLACKLINE_DISB_OUT` (replace the example `BLACKLINE_OUT`), `RETURNS_NOTIF_OUT`, their DEADLINE
+  rows, checks `F_BLKLINE`, `F_RETNOTIF`. No existing FMON class changed.
+- **Base-rejected items (P2):** `ZCL_CD_COLL_C_NO_ANSWER` (R2) and `ZCL_CD_COLL_C_REFUND` (R3) complete in `src/core`
+  with `ZCL_CD_COLL_RULES` and `ZIF_CD_COLL_TYPES`; sources and limits are the new parameters `COLL_*` (area CD_OPS,
+  name prefix `COLL_` in `ZCL_CD_OPS_FACTORY=>PARAM_PREFIXES`, delivered blank); the skeleton folder of the scaffold
+  removed, `config/processes/CD_COLL_BASE_REQ_LIFE.json` names the classes without skeleton.
+- Covered-check rows (`config/control_checks.csv`): `ECT_PENDING` → `C_ECT_PENDING`, `MISSING_CHECK_IDS` →
+  `C_CHQ_NO_ID`, `BLACKLINE` → `F_BLKLINE`, `RETURNS_NOTIF` → `F_RETNOTIF`; guidance texts of the four controls.
+- Messages ZCD_OPS 900-921; parameter seed class regenerated; `config/hck_seed.md` rows and thresholds.
+
 ## 2026-11-15 - returned amount from DFKKRP-BETRR
 
 - `DFKKRP` has no `BETRW` (user); the returned amount of a returns lot item is `BETRR`. `ZCL_CD_EBS_SAP_DAO=>GET_RETURN_ITEMS`

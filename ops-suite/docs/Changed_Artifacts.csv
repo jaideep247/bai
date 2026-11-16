@@ -352,6 +352,7 @@ docs/Operations_Runbook.md,Doc,
 docs/PRISM_Status_API.md,Doc,
 docs/Payment_Trace.md,Doc,
 docs/Performance_Review.md,Doc,
+docs/Pilot_Acceptance.md,Doc,
 docs/Process_Catalogue_Overlay.md,Doc,
 docs/Process_Flow_Card.md,Doc,
 docs/QA1_Pilot.md,Doc,
@@ -375,10 +376,6 @@ docs/links/lineage.md,Doc,
 docs/processes/CD_COLL_BASE_REQ_LIFE.md,Doc,
 docs/processes/CD_HCK_GL_CLEAR_BRK.md,Doc,
 docs/processes/CD_JOBS_SAP_JOBS.md,Doc,
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.abap,ABAP,Check COLL_R2_SCHEDULED of process BASE_REQ_LIFE (area CD_COLL):
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.testclasses.abap,ABAP,Tests of check COLL_R2_SCHEDULED through ZIF_CA_OPS_CHECK~RUN with a data access
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_refund.clas.abap,ABAP,Check COLL_R3_REFUND of process BASE_REQ_LIFE (area CD_COLL):
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_refund.clas.testclasses.abap,ABAP,Tests of check COLL_R3_REFUND through ZIF_CA_OPS_CHECK~RUN with a data access
 docs/text_elements/zcd_ebs_validate.prog.texts.md,Doc,
 docs/text_elements/zcd_fmon_monitor.prog.texts.md,Doc,
 docs/text_elements/zcd_morning_report.prog.texts.md,Doc,
@@ -495,6 +492,15 @@ src/core/zcd_pay_outcome.tabl.xml,abapGit,
 src/core/zcd_pay_outpkg.tabl.xml,abapGit,
 src/core/zcd_pay_outpkgm.tabl.xml,abapGit,
 src/core/zcd_pay_outwm.tabl.xml,abapGit,
+src/core/zcl_cd_coll_c_no_answer.clas.abap,ABAP,"Check COLL_R2_SCHEDULED of process BASE_REQ_LIFE (area CD_COLL, control"
+src/core/zcl_cd_coll_c_no_answer.clas.testclasses.abap,ABAP,Tests of check COLL_R2_SCHEDULED through ZIF_CA_OPS_CHECK~RUN with doubles
+src/core/zcl_cd_coll_c_no_answer.clas.xml,abapGit,
+src/core/zcl_cd_coll_c_refund.clas.abap,ABAP,"Check COLL_R3_REFUND of process BASE_REQ_LIFE (area CD_COLL, control"
+src/core/zcl_cd_coll_c_refund.clas.testclasses.abap,ABAP,Tests of check COLL_R3_REFUND through ZIF_CA_OPS_CHECK~RUN with doubles of
+src/core/zcl_cd_coll_c_refund.clas.xml,abapGit,
+src/core/zcl_cd_coll_rules.clas.abap,ABAP,Shared rules of the collections request checks (process CD_COLL /
+src/core/zcl_cd_coll_rules.clas.testclasses.abap,ABAP,Unit tests of the shared rules of the collections request checks: the
+src/core/zcl_cd_coll_rules.clas.xml,abapGit,
 src/core/zcl_cd_job_dao.clas.abap,ABAP,SQL of the suite's SAP job monitor plug-ins (read only): payments of
 src/core/zcl_cd_job_dao.clas.testclasses.abap,ABAP,SQL tests of the suite's SAP job monitor plug-in data access on
 src/core/zcl_cd_job_dao.clas.xml,abapGit,
@@ -653,6 +659,8 @@ src/core/zi_cd_trxitempay.ddls.asddls,CDS,
 src/core/zi_cd_trxitempay.ddls.xml,abapGit,
 src/core/zi_cd_trxretnocu.ddls.asddls,CDS,
 src/core/zi_cd_trxretnocu.ddls.xml,abapGit,
+src/core/zif_cd_coll_types.intf.abap,ABAP,Types and constants of the collections request checks of process
+src/core/zif_cd_coll_types.intf.xml,abapGit,
 src/core/zif_cd_job_dao.intf.abap,ABAP,Data access of the suite's SAP job monitor plug-ins: payments of payment
 src/core/zif_cd_job_dao.intf.xml,abapGit,
 src/core/zif_cd_job_types.intf.abap,ABAP,Types and constants of the suite's adoption of the framework's SAP job
@@ -1128,6 +1136,9 @@ src/fmon/zcl_cd_fmon_chk_ack_match.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_deadline.clas.abap,ABAP,Plug-in check STAGE_DEADLINE_MISSED: the stage of a DEADLINE row of ZCD_FMON_SLA must be
 src/fmon/zcl_cd_fmon_chk_deadline.clas.testclasses.abap,ABAP,"Domain tests of the stage deadline check (pure, context built field by"
 src/fmon/zcl_cd_fmon_chk_deadline.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_chk_due_file.clas.abap,ABAP,Plug-in check of an outbound file due on a business day by a clock time
+src/fmon/zcl_cd_fmon_chk_due_file.clas.testclasses.abap,ABAP,Unit tests of the due-file check: the 2nd working day of the month skips
+src/fmon/zcl_cd_fmon_chk_due_file.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_duplicate.clas.abap,ABAP,Plug-in check DUPLICATE_FILE: the same file generated/received twice
 src/fmon/zcl_cd_fmon_chk_duplicate.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_late.clas.abap,ABAP,"Plug-in check FILE_LATE: a file arrived after its calendar window, or"
@@ -1408,6 +1419,9 @@ src/hck/zcl_cd_hck_c_alert_health.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_applog.clas.abap,ABAP,Mass-run health: application-log (SLG1) error rate per object/subobject
 src/hck/zcl_cd_hck_c_applog.clas.testclasses.abap,ABAP,Unit tests of the application log error-rate check: rate and error count
 src/hck/zcl_cd_hck_c_applog.clas.xml,abapGit,
+src/hck/zcl_cd_hck_c_chq_no_id.clas.abap,ABAP,"Check C_CHQ_NO_ID (control MISSING_CHECK_IDS, proposal P6, build R): the"
+src/hck/zcl_cd_hck_c_chq_no_id.clas.testclasses.abap,ABAP,Unit tests of the check for cheque payments without a cheque number: every
+src/hck/zcl_cd_hck_c_chq_no_id.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_chq_status.clas.abap,ABAP,Check: cheque status went backwards in ZCD_CHECK_HIST (IRIS status via
 src/hck/zcl_cd_hck_c_chq_status.clas.testclasses.abap,ABAP,Unit tests of the cheque status regression check: a terminal status that
 src/hck/zcl_cd_hck_c_chq_status.clas.xml,abapGit,
@@ -1417,6 +1431,9 @@ src/hck/zcl_cd_hck_c_config_drift.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_docchg.clas.abap,ABAP,"Document-change risk check A_DOC_CHANGE (build C, severity E, through the"
 src/hck/zcl_cd_hck_c_docchg.clas.testclasses.abap,ABAP,Unit tests of the document-change risk check A_DOC_CHANGE: a payment
 src/hck/zcl_cd_hck_c_docchg.clas.xml,abapGit,
+src/hck/zcl_cd_hck_c_ect_pending.clas.abap,ABAP,"Check C_ECT_PENDING (control ECT_PENDING, proposal P3, build R): COUNT and"
+src/hck/zcl_cd_hck_c_ect_pending.clas.testclasses.abap,ABAP,Unit tests of the ECT pending check: a cheque whose latest valid status is
+src/hck/zcl_cd_hck_c_ect_pending.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_framework.clas.abap,ABAP,Adapter of the framework's check contract to the health check (process
 src/hck/zcl_cd_hck_c_framework.clas.testclasses.abap,ABAP,Unit tests of the framework check adapter: the framework check named in
 src/hck/zcl_cd_hck_c_framework.clas.xml,abapGit,
@@ -1474,6 +1491,9 @@ src/hck/zcl_cd_hck_c_volume.clas.xml,abapGit,
 src/hck/zcl_cd_hck_canonical.clas.abap,ABAP,Pure canonical serialization of a table row for the configuration-drift
 src/hck/zcl_cd_hck_canonical.clas.testclasses.abap,ABAP,Unit tests of the canonical row serialization used by the drift hash;
 src/hck/zcl_cd_hck_canonical.clas.xml,abapGit,
+src/hck/zcl_cd_hck_cheque_dao.clas.abap,ABAP,SQL of the cheque pilot checks (build R). Cheque register rows of a set of
+src/hck/zcl_cd_hck_cheque_dao.clas.testclasses.abap,ABAP,OSQL tests of the cheque pilot reads: register rows by cheque number
+src/hck/zcl_cd_hck_cheque_dao.clas.xml,abapGit,
 src/hck/zcl_cd_hck_cycle_eval.clas.abap,ABAP,Pure job-cycle rules: derive the state of a cycle step from TBTCO job
 src/hck/zcl_cd_hck_cycle_eval.clas.testclasses.abap,ABAP,"Unit tests of job-cycle step state derivation (NOT_STARTED, RUNNING,"
 src/hck/zcl_cd_hck_cycle_eval.clas.xml,abapGit,
@@ -1525,6 +1545,9 @@ src/hck/zcl_cd_hck_ev_support.clas.xml,abapGit,
 src/hck/zcl_cd_hck_export.clas.abap,ABAP,Writes a complete report file or none (audit A61): the content goes to a
 src/hck/zcl_cd_hck_export.clas.testclasses.abap,ABAP,Unit tests of the complete-or-nothing export with an LTD file double;
 src/hck/zcl_cd_hck_export.clas.xml,abapGit,
+src/hck/zcl_cd_hck_exposure.clas.abap,ABAP,"Exposure of a finding set of the pilot acceptance checks (build R),"
+src/hck/zcl_cd_hck_exposure.clas.testclasses.abap,ABAP,Unit tests of the exposure per currency: items of two currencies give two
+src/hck/zcl_cd_hck_exposure.clas.xml,abapGit,
 src/hck/zcl_cd_hck_factory.clas.abap,ABAP,Single resolution point of the HCK data access object and engine;
 src/hck/zcl_cd_hck_factory.clas.xml,abapGit,
 src/hck/zcl_cd_hck_injector.clas.abap,ABAP,Test seam of the HCK factory: injects a DAO double; reset( ) clears it.
@@ -1613,6 +1636,10 @@ src/hck/zi_cd_opsvaru.ddls.asddls,CDS,
 src/hck/zi_cd_opsvaru.ddls.xml,abapGit,
 src/hck/zif_cd_hck_check.intf.abap,ABAP,Contract of a health check plug-in. One class per check type; the
 src/hck/zif_cd_hck_check.intf.xml,abapGit,
+src/hck/zif_cd_hck_cheque_dao.intf.abap,ABAP,Reads of the cheque pilot checks (build R): cheque register rows (DFKKCR)
+src/hck/zif_cd_hck_cheque_dao.intf.xml,abapGit,
+src/hck/zif_cd_hck_cheque_types.intf.abap,ABAP,Types and constants of the pilot acceptance checks of the first
+src/hck/zif_cd_hck_cheque_types.intf.xml,abapGit,
 src/hck/zif_cd_hck_dao.intf.abap,ABAP,"Data access of the health check payment engine area: customizing, metric history,"
 src/hck/zif_cd_hck_dao.intf.xml,abapGit,
 src/hck/zif_cd_hck_docchg_dao.intf.abap,ABAP,Reads of the document-change risk check A_DOC_CHANGE (build C): the
