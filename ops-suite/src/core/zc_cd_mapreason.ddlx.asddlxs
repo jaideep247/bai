@@ -1,0 +1,35 @@
+// UI annotations: Approved tables and payment stages - Return / NOC reasons (typed ZRSN)
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Return reason',
+                     typeNamePlural: 'Return / NOC reasons (typed ZRSN)',
+                     title: { type: #STANDARD, value: 'Version' } } }
+annotate entity ZC_CD_MapReason with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Version;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Reason;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  FicaReason;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  IsNoc;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

@@ -16,6 +16,9 @@ Modification log:
            | framework's app moved to the framework's own wrapper.
 2026-11-10 | Payment lifecycle stages (ZCD_OPS_PAYSTAGE) in the core app (overview page, control center).
 2026-11-11 | The suite's prefix CD is set here (PREFIX): the shared engine has no consumer prefix as default.
+2026-11-15 | Typed product mapping tables ZCD_OPS_MAPRSN / _MAPPMC / _MAPBTM / _MAPBTR in the core app (source T
+           | per purpose, versions; ZBTM by user decision 2026-11-15): '*' only where the reader applies it
+           | (check kind 'generic', message 427), allowed values, the ZBTM disposition required.
 """
 import os
 import sys
@@ -36,6 +39,11 @@ ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
 # ZCD_HCK_BTCROLE are FI-CA customer posting areas ZBTM, ZRSN, ZPMC, ZBTR maintained in FQC0 - no app
 # entity; their checks are the configuration check ZCL_CD_OPS_CFG_CHECKS=>CHECK_POSTING_AREAS
 # (morning report D_POSTAREA_INVALID). Rule groups of ZBTM are checked there against ZCD_BTC_RULE.
+# Product review 2026-11-15: the source is a setting per purpose (POSTAREA_SOURCE_*): P posting area where the
+# layout fits TFK033D (8 keys, 6 results, CHAR 12), T typed table ZCD_OPS_MAP* of the core app below (rows of a
+# mapping version, the active one is POSTAREA_VERSION_*). ZBTM including its disposition is typed (user decision
+# 2026-11-15). A duplicate key set is refused by the table key; the morning check applies the same rules to both.
+SCHEMES = 'BAI2,ISO,PRTRY'
 SPEC = {
     'ebs': dict(
         folder='ebs', area='CD_EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
@@ -156,6 +164,24 @@ SPEC = {
              [('when', 'active', 'X', [('required', 'label')])]),
             ('zcd_ops_svcmap', 'ServiceMap', 'zcd_d_svcmap', 'Covered by', 'What a business service covers', [],
              [('enum', 'match_field', 'AREA,CONTROL,RULE_ID,CHECK_CODE,GROUP2')]),
+            # Typed product mapping tables (2026-11-15): one per purpose, layout of FICA_Posting_Areas.md section 2;
+            # '*' only in the keys whose reader applies it (as message 427 of the morning check)
+            ('zcd_ops_maprsn', 'MapReason', 'zcd_d_maprsn', 'Return reason', 'Return / NOC reasons (typed ZRSN)', [],
+             [('positive', 'version'), ('enum', 'is_noc', ',X')]),
+            ('zcd_ops_mappmc', 'MapMethodClass', 'zcd_d_mappmc', 'Method class', 'Payment method classes (typed ZPMC)',
+             [], [('positive', 'version'), ('generic', 'flow'), ('generic', 'pay_method'), ('enum', 'flow', 'D,C'),
+                  ('enum', 'age_basis', ',VALUE_DATE,ISSUE_DATE')]),
+            ('zcd_ops_mapbtm', 'MapBtcCode', 'zcd_d_mapbtm', 'Bank transaction code',
+             'Bank transaction codes (typed ZBTM)', ['family', 'sub_family'],
+             [('positive', 'version'), ('generic', 'scheme'), ('generic', 'code'), ('generic', 'family'),
+              ('enum', 'scheme', SCHEMES), ('enum', 'flow', 'D,C,*'), ('enum', 'exp_cdi', ',C,D,*'),
+              ('enum', 'action', ',' + ACTIONS), ('enum', 'disposition', 'POSTED,NOT_POSTED')]),
+            ('zcd_ops_mapbtr', 'MapBtcRole', 'zcd_d_mapbtr', 'Bank code role', 'Bank code roles (typed ZBTR)',
+             ['family', 'sub_family'],
+             [('positive', 'version'), ('generic', 'usage'), ('generic', 'scope'), ('generic', 'scheme'),
+              ('generic', 'code'), ('generic', 'family'), ('generic', 'sub_family'),
+              ('enum', 'usage', 'LIFECYCLE,RECON'), ('enum', 'scheme', SCHEMES),
+              ('enum', 'compare_amount', ',X,R,C')]),
         ]),
 }
 
@@ -212,7 +238,11 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'green_min': 'Good from score', 'amber_min': 'Watch from score',
           'match_field': 'Covers (AREA / CONTROL / RULE_ID / CHECK_CODE / GROUP2)',
           'match_value': 'Value (exact; blank for AREA)', 'weight': 'Weight (multiplier)',
-          'match_value': 'Payment status (PAYRUN) / worklist outcome or stage (REQUEST)'}
+          'match_value': 'Payment status (PAYRUN) / worklist outcome or stage (REQUEST)',
+          # Typed product mapping tables (2026-11-15)
+          'version': 'Mapping version (active: POSTAREA_VERSION_*)', 'bank': 'Bank key of the statement (* = every bank)',
+          'house_bank': 'House bank (* = every house bank)', 'sub_family': 'ISO sub-family (* = family row)',
+          'family': 'ISO family', 'disposition': 'Disposition (POSTED / NOT_POSTED)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME=RENAME, TOKENS=TOKENS, LABELS=LABELS, PREFIX='cd')
 

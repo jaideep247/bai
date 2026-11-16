@@ -19,6 +19,10 @@ authorization master ( global )
   association _PayStage { create ( features : global ); with draft; }
   association _Service { create ( features : global ); with draft; }
   association _ServiceMap { create ( features : global ); with draft; }
+  association _MapReason { create ( features : global ); with draft; }
+  association _MapMethodClass { create ( features : global ); with draft; }
+  association _MapBtcCode { create ( features : global ); with draft; }
+  association _MapBtcRole { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -34,6 +38,14 @@ authorization master ( global )
     validation Service ~ validateTransport;
     validation ServiceMap ~ validateFields;
     validation ServiceMap ~ validateTransport;
+    validation MapReason ~ validateFields;
+    validation MapReason ~ validateTransport;
+    validation MapMethodClass ~ validateFields;
+    validation MapMethodClass ~ validateTransport;
+    validation MapBtcCode ~ validateFields;
+    validation MapBtcCode ~ validateTransport;
+    validation MapBtcRole ~ validateFields;
+    validation MapBtcRole ~ validateTransport;
   }
 }
 
@@ -169,6 +181,148 @@ etag master LocalLastChangedAt
     MatchValue = match_value;
     Weight = weight;
     Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_MapReason alias MapReason
+persistent table zcd_ops_maprsn
+with additional save
+draft table zcd_d_maprsn
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Version, Reason;
+  field ( mandatory : create ) Version, Reason;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_maprsn
+  {
+    Version = version;
+    Reason = reason;
+    FicaReason = fica_reason;
+    IsNoc = is_noc;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_MapMethodClass alias MapMethodClass
+persistent table zcd_ops_mappmc
+with additional save
+draft table zcd_d_mappmc
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Version, Flow, PayMethod, HouseBank;
+  field ( mandatory : create ) Version, Flow, PayMethod, HouseBank;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_mappmc
+  {
+    Version = version;
+    Flow = flow;
+    PayMethod = pay_method;
+    HouseBank = house_bank;
+    MethodClass = method_class;
+    AgeBasis = age_basis;
+    Calendar = calendar;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_MapBtcCode alias MapBtcCode
+persistent table zcd_ops_mapbtm
+with additional save
+draft table zcd_d_mapbtm
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Version, Scheme, Code, Family, SubFamily, Bank, Flow;
+  field ( mandatory : create ) Version, Scheme, Code, Bank, Flow;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_mapbtm
+  {
+    Version = version;
+    Scheme = scheme;
+    Code = code;
+    Family = family;
+    SubFamily = sub_family;
+    Bank = bank;
+    Flow = flow;
+    Category = category;
+    RuleGroup = rule_group;
+    ExpCdi = exp_cdi;
+    PayMethod = pay_method;
+    PostingRule = posting_rule;
+    ActionCode = action;
+    Disposition = disposition;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_MapBtcRole alias MapBtcRole
+persistent table zcd_ops_mapbtr
+with additional save
+draft table zcd_d_mapbtr
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Version, Usage, Scope, Scheme, Code, Family, SubFamily;
+  field ( mandatory : create ) Version, Usage, Scope, Scheme, Code;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_mapbtr
+  {
+    Version = version;
+    Usage = usage;
+    Scope = scope;
+    Scheme = scheme;
+    Code = code;
+    Family = family;
+    SubFamily = sub_family;
+    Role = role;
+    CompareAmount = compare_amount;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

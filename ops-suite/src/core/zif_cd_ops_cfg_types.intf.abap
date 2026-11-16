@@ -14,6 +14,8 @@
 *& 2026-11-08 | Message 426: expected group list of ZCD_HCK_AGG (ZCD_HCK_AGGGRP merged).
 *& 2026-11-08 | Messages 427-433 (and 385 shared): configuration check of the customer posting areas.
 *& 2026-11-10 | Message 812 (shared with R21): lookup key / status field not approved in ZCD_OPS_TABWL.
+*& 2026-11-15 | Messages 440-444: source per purpose and typed product mapping tables (layout does not fit
+*&            | a posting area, duplicate key sets, missing ZBTM disposition, empty mapping version).
 *& 2026-11-10 | Types, constants and the gate's messages moved to the reusable framework ZCA_OPS
 *&            | (ZIF_CA_OPS_CFG_TYPES); this interface keeps the suite's field check messages.
 *&---------------------------------------------------------------------*
@@ -54,6 +56,16 @@ INTERFACE zif_cd_ops_cfg_types
       class_entry_none    TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '431',
       area_empty          TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '432',
       entries_differ      TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '433',
+      "! Source per purpose (2026-11-15): a field of the layout is longer than TFK033D holds (CHAR 12)
+      postarea_too_short  TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '440',
+      "! Source per purpose: the layout has more keys / results than TFK033D (8 / 6)
+      postarea_too_few    TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '441',
+      "! Two entries with the same key set (case ignored): only the first one applies
+      duplicate_keys      TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '442',
+      "! ZBTM disposition blank (typed table: POSTED or NOT_POSTED, user decision 2026-11-15)
+      disposition_missing TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '443',
+      "! The active version of a typed table has no rows
+      version_empty       TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '444',
       "! Shared with the in-flight check (HCK): one payment method in two method classes
       method_two_classes  TYPE zif_ca_ops_cfg_types=>ty_msg_number VALUE '385',
       "! Shared with the EBS lookup rule R21 at runtime: field not approved in ZCD_OPS_TABWL (EBS / LOOKUP)

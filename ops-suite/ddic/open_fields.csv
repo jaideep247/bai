@@ -1,2 +1,1 @@
 TABLE,FIELD,VERIFY,NOTE
-TFK033D,FUN07,V161,"TFK033D has the results FUN01 to FUN06 only (FUNNN_KK, CHAR 12; keys KEY01 to KEY08, CHAR 12) on the reference system S/4HANA 2025: the 7th result of posting area ZBTM (disposition NOT_POSTED, audit A26) has no field - the ZBTM layout needs a decision (FICA_Posting_Areas.md); read by ZCL_CD_OPS_POSTAREA_DAO until then"

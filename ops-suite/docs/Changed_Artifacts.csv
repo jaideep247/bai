@@ -255,11 +255,19 @@ ddic/a4h/VBHDR.acds,Other,
 ddic/a4h/VBHDR.fields.csv,Doc,
 ddic/a4h/VBHDR.indexes.csv,Doc,
 ddic/a4h/manifest.json,Doc,
+ddic/core/zcd_d_mapbtm.tabl.ddl,DDIC,
+ddic/core/zcd_d_mapbtr.tabl.ddl,DDIC,
+ddic/core/zcd_d_mappmc.tabl.ddl,DDIC,
+ddic/core/zcd_d_maprsn.tabl.ddl,DDIC,
 ddic/core/zcd_d_opscfg.tabl.ddl,DDIC,
 ddic/core/zcd_d_opstabwl.tabl.ddl,DDIC,
 ddic/core/zcd_d_paystage.tabl.ddl,DDIC,
 ddic/core/zcd_d_svc.tabl.ddl,DDIC,
 ddic/core/zcd_d_svcmap.tabl.ddl,DDIC,
+ddic/core/zcd_ops_mapbtm.tabl.ddl,DDIC,
+ddic/core/zcd_ops_mapbtr.tabl.ddl,DDIC,
+ddic/core/zcd_ops_mappmc.tabl.ddl,DDIC,
+ddic/core/zcd_ops_maprsn.tabl.ddl,DDIC,
 ddic/core/zcd_ops_paystage.tabl.ddl,DDIC,
 ddic/core/zcd_ops_svc.tabl.ddl,DDIC,
 ddic/core/zcd_ops_svcmap.tabl.ddl,DDIC,
@@ -386,6 +394,7 @@ docs/text_elements/zcd_ops_pattern_check.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_pattern_migrate.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_pay_snapshot.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_payment_trace.prog.texts.md,Doc,
+docs/text_elements/zcd_ops_postarea_copy.prog.texts.md,Doc,
 docs/text_elements/zcl_cd_hck_report_html.clas.texts.md,Doc,
 lint_stubs/if_bgmc_op_single_tx_uncontr.intf.abap,ABAP,
 lint_stubs/if_bgmc_op_single_tx_uncontr.intf.xml,abapGit,
@@ -399,6 +408,22 @@ src/core/zc_cd_approvedtable.ddls.asddls,CDS,
 src/core/zc_cd_approvedtable.ddls.xml,abapGit,
 src/core/zc_cd_approvedtable.ddlx.asddlxs,CDS,
 src/core/zc_cd_approvedtable.ddlx.xml,abapGit,
+src/core/zc_cd_mapbtccode.ddls.asddls,CDS,
+src/core/zc_cd_mapbtccode.ddls.xml,abapGit,
+src/core/zc_cd_mapbtccode.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapbtccode.ddlx.xml,abapGit,
+src/core/zc_cd_mapbtcrole.ddls.asddls,CDS,
+src/core/zc_cd_mapbtcrole.ddls.xml,abapGit,
+src/core/zc_cd_mapbtcrole.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapbtcrole.ddlx.xml,abapGit,
+src/core/zc_cd_mapmethodclass.ddls.asddls,CDS,
+src/core/zc_cd_mapmethodclass.ddls.xml,abapGit,
+src/core/zc_cd_mapmethodclass.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapmethodclass.ddlx.xml,abapGit,
+src/core/zc_cd_mapreason.ddls.asddls,CDS,
+src/core/zc_cd_mapreason.ddls.xml,abapGit,
+src/core/zc_cd_mapreason.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapreason.ddlx.xml,abapGit,
 src/core/zc_cd_opscfgall.bdef.asbdef,RAP,
 src/core/zc_cd_opscfgall.bdef.xml,abapGit,
 src/core/zc_cd_opscfgall.ddls.asddls,CDS,
@@ -473,12 +498,20 @@ src/core/zc_cd_trxretnoc.ddls.asddls,CDS,
 src/core/zc_cd_trxretnoc.ddls.xml,abapGit,
 src/core/zc_cd_trxretnoc.ddlx.asddlxs,CDS,
 src/core/zc_cd_trxretnoc.ddlx.xml,abapGit,
+src/core/zcd_d_mapbtm.tabl.xml,abapGit,
+src/core/zcd_d_mapbtr.tabl.xml,abapGit,
+src/core/zcd_d_mappmc.tabl.xml,abapGit,
+src/core/zcd_d_maprsn.tabl.xml,abapGit,
 src/core/zcd_d_opscfg.tabl.xml,abapGit,
 src/core/zcd_d_opstabwl.tabl.xml,abapGit,
 src/core/zcd_d_paystage.tabl.xml,abapGit,
 src/core/zcd_d_svc.tabl.xml,abapGit,
 src/core/zcd_d_svcmap.tabl.xml,abapGit,
 src/core/zcd_ops.msag.xml,abapGit,
+src/core/zcd_ops_mapbtm.tabl.xml,abapGit,
+src/core/zcd_ops_mapbtr.tabl.xml,abapGit,
+src/core/zcd_ops_mappmc.tabl.xml,abapGit,
+src/core/zcd_ops_maprsn.tabl.xml,abapGit,
 src/core/zcd_ops_pattern_check.prog.abap,ABAP,"Pattern check (read-only, user decision 2026-11-06): for one pattern area"
 src/core/zcd_ops_pattern_check.prog.xml,abapGit,
 src/core/zcd_ops_pattern_migrate.prog.abap,ABAP,One-off migration of the configured CP wildcard patterns to PCRE (user
@@ -488,6 +521,8 @@ src/core/zcd_ops_pay_snapshot.prog.xml,abapGit,
 src/core/zcd_ops_payment_trace.prog.abap,ABAP,360 degree payment trace for L1 / L2 support (read-only): enter a FIN
 src/core/zcd_ops_payment_trace.prog.xml,abapGit,
 src/core/zcd_ops_paystage.tabl.xml,abapGit,
+src/core/zcd_ops_postarea_copy.prog.abap,ABAP,Migration step of the typed product mapping tables (product review
+src/core/zcd_ops_postarea_copy.prog.xml,abapGit,
 src/core/zcd_ops_svc.tabl.xml,abapGit,
 src/core/zcd_ops_svcmap.tabl.xml,abapGit,
 src/core/zcd_ops_tabwl.tabl.xml,abapGit,
@@ -527,6 +562,9 @@ src/core/zcl_cd_ops_injector.clas.xml,abapGit,
 src/core/zcl_cd_ops_ovw_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of the production-support overview page
 src/core/zcl_cd_ops_ovw_cds_test.clas.testclasses.abap,ABAP,CDS tests of the production-support overview page on
 src/core/zcl_cd_ops_ovw_cds_test.clas.xml,abapGit,
+src/core/zcl_cd_ops_pamap_dao.clas.abap,ABAP,SQL of the typed product mapping tables (product review 2026-11-15): one
+src/core/zcl_cd_ops_pamap_dao.clas.testclasses.abap,ABAP,"OSQL tests of the typed mapping table repository (ZCD_OPS_MAPRSN,"
+src/core/zcl_cd_ops_pamap_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_param_seed.clas.abap,ABAP,Delivered parameter areas and definitions of the suite in the framework
 src/core/zcl_cd_ops_param_seed.clas.testclasses.abap,ABAP,Unit tests of the delivered parameter definitions with the REAL framework
 src/core/zcl_cd_ops_param_seed.clas.xml,abapGit,
@@ -555,17 +593,23 @@ src/core/zcl_cd_ops_pay_snap_queue.clas.xml,abapGit,
 src/core/zcl_cd_ops_pay_snapshot.clas.abap,ABAP,"The payment worklist ZCD_PAY_OUTCOME: open payments, open payment"
 src/core/zcl_cd_ops_pay_snapshot.clas.testclasses.abap,ABAP,Unit tests of the payment worklist snapshot (FAST / NIGHTLY / SWEEP) with
 src/core/zcl_cd_ops_pay_snapshot.clas.xml,abapGit,
-src/core/zcl_cd_ops_postarea.clas.abap,ABAP,Reader of the FI-CA customer posting areas (ZIF_CD_OPS_POSTAREA): the
+src/core/zcl_cd_ops_postarea.clas.abap,ABAP,Reader of the mapping tables (ZIF_CD_OPS_POSTAREA): the posting area of
 src/core/zcl_cd_ops_postarea.clas.testclasses.abap,ABAP,Application tests of the posting area reader with the in-memory posting
 src/core/zcl_cd_ops_postarea.clas.xml,abapGit,
+src/core/zcl_cd_ops_postarea_copy.clas.abap,ABAP,Migration of the entries of a purpose from its FI-CA customer posting
+src/core/zcl_cd_ops_postarea_copy.clas.testclasses.abap,ABAP,Application tests of the copy from a posting area into a typed mapping
+src/core/zcl_cd_ops_postarea_copy.clas.xml,abapGit,
 src/core/zcl_cd_ops_postarea_dao.clas.abap,ABAP,SQL of the posting area reader: one set-based read of the stored FQC0
 src/core/zcl_cd_ops_postarea_dao.clas.testclasses.abap,ABAP,OSQL tests of the posting area repository (TFK033D doubled): only the
 src/core/zcl_cd_ops_postarea_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_postarea_factory.clas.abap,ABAP,Factory of the customer posting area reader: one reader per internal
 src/core/zcl_cd_ops_postarea_factory.clas.xml,abapGit,
-src/core/zcl_cd_ops_postarea_injector.clas.abap,ABAP,Test injector of ZCL_CD_OPS_POSTAREA_FACTORY: a repository double (the
+src/core/zcl_cd_ops_postarea_injector.clas.abap,ABAP,Test injector of ZCL_CD_OPS_POSTAREA_FACTORY: repository doubles (the
 src/core/zcl_cd_ops_postarea_injector.clas.xml,abapGit,
-src/core/zcl_cd_ops_postarea_mem.clas.abap,ABAP,In-memory posting areas (test double of ZIF_CD_OPS_POSTAREA_DAO): the
+src/core/zcl_cd_ops_postarea_layout.clas.abap,ABAP,"Layouts of the four mapping purposes (ZRSN, ZPMC, ZBTM, ZBTR): key and"
+src/core/zcl_cd_ops_postarea_layout.clas.testclasses.abap,ABAP,Domain tests of the mapping layouts: the fit of each purpose to TFK033D
+src/core/zcl_cd_ops_postarea_layout.clas.xml,abapGit,
+src/core/zcl_cd_ops_postarea_mem.clas.abap,ABAP,In-memory mappings (test double of ZIF_CD_OPS_POSTAREA_DAO and of
 src/core/zcl_cd_ops_postarea_mem.clas.xml,abapGit,
 src/core/zcl_cd_ops_purge_target.clas.abap,ABAP,Purge targets of the payment engine suite for the framework's retention
 src/core/zcl_cd_ops_purge_target.clas.testclasses.abap,ABAP,"OSQL tests of the suite's purge targets: FMON events, PRISM events and HCK"
@@ -659,6 +703,8 @@ src/core/zif_cd_job_types.intf.abap,ABAP,Types and constants of the suite's adop
 src/core/zif_cd_job_types.intf.xml,abapGit,
 src/core/zif_cd_ops_cfg_types.intf.abap,ABAP,Field check messages (class ZCD_OPS) of the suite's configuration apps
 src/core/zif_cd_ops_cfg_types.intf.xml,abapGit,
+src/core/zif_cd_ops_pamap_dao.intf.abap,ABAP,"SQL seam of the typed product mapping tables (ZCD_OPS_MAPRSN, _MAPPMC,"
+src/core/zif_cd_ops_pamap_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_pattern_dao.intf.abap,ABAP,Repository of the pattern check and the pattern migration: configured
 src/core/zif_cd_ops_pattern_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_pattern_types.intf.abap,ABAP,Types and constants of the pattern check and the pattern migration
@@ -673,7 +719,7 @@ src/core/zif_cd_ops_pay_snap_queue.intf.abap,ABAP,Seam for the parallel packages
 src/core/zif_cd_ops_pay_snap_queue.intf.xml,abapGit,
 src/core/zif_cd_ops_payout_types.intf.abap,ABAP,Types and constants of the canonical payment outcome: the outcome
 src/core/zif_cd_ops_payout_types.intf.xml,abapGit,
-src/core/zif_cd_ops_postarea.intf.abap,ABAP,Reader of the FI-CA customer posting areas of the suite (FQC0 entries):
+src/core/zif_cd_ops_postarea.intf.abap,ABAP,Reader of the mapping tables of the suite: per purpose the FI-CA customer
 src/core/zif_cd_ops_postarea.intf.xml,abapGit,
 src/core/zif_cd_ops_postarea_dao.intf.abap,ABAP,SQL seam of the posting area reader: the stored FQC0 entries of one
 src/core/zif_cd_ops_postarea_dao.intf.xml,abapGit,
@@ -687,6 +733,14 @@ src/core/zif_cd_ops_types.intf.abap,ABAP,"Shared by Health Check (HCK), File Mon
 src/core/zif_cd_ops_types.intf.xml,abapGit,
 src/core/zr_cd_approvedtable.ddls.asddls,CDS,
 src/core/zr_cd_approvedtable.ddls.xml,abapGit,
+src/core/zr_cd_mapbtccode.ddls.asddls,CDS,
+src/core/zr_cd_mapbtccode.ddls.xml,abapGit,
+src/core/zr_cd_mapbtcrole.ddls.asddls,CDS,
+src/core/zr_cd_mapbtcrole.ddls.xml,abapGit,
+src/core/zr_cd_mapmethodclass.ddls.asddls,CDS,
+src/core/zr_cd_mapmethodclass.ddls.xml,abapGit,
+src/core/zr_cd_mapreason.ddls.asddls,CDS,
+src/core/zr_cd_mapreason.ddls.xml,abapGit,
 src/core/zr_cd_opscfgall.bdef.asbdef,RAP,
 src/core/zr_cd_opscfgall.bdef.xml,abapGit,
 src/core/zr_cd_opscfgall.ddls.asddls,CDS,
