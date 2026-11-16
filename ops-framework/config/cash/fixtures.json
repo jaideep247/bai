@@ -1,0 +1,695 @@
+{
+ "_comment": "Offline fixture spec of the FI-CA cash operations checks (docs/FICA_CASH_OPERATIONS.md section 7). Each scenario names the check, its ABAP Unit test (the same scenario on test doubles), the source records at SAP table grain that produce it on a real system, the parameters, and the expected findings: check code, severity, stage, evaluation, object key, company code, currency, amount, count, oldest item, age and owner. Status values in 'given' are test values (V222 / V224 pending), never SAP facts. Validated by tools/tests/test_cash_fixtures.py; replay on a system is VERIFY V235.",
+ "spec_version": 1,
+ "today": "2026-11-16",
+ "now_utc": "2026-11-16T08:00:00Z",
+ "defaults": {
+  "area": "ZT_OPS_A",
+  "company_code": "ZT01",
+  "calendar": {
+   "id": "ZT",
+   "non_working": ["2026-11-14", "2026-11-15"]
+  },
+  "owner": {
+   "control": "process control of the catalogue process",
+   "owner": "ZT_OWNER",
+   "team": "ZT_TEAM",
+   "cutoff_time": "10:00:00"
+  }
+ },
+ "fixtures": [
+  {
+   "id": "PAYRUN-01",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "missing_run_on_business_day",
+   "scorecard": [4],
+   "title": "A business day is silent: no payment and no job of the payment run",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4", "CASH_PAYRUN_JOBNAME": "ZT_PAYRUN*"},
+   "given": {"DPAYH": [{"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "900.00", "DOC1R": "000000000001"}], "TBTCO": []},
+   "expect": [
+    {
+     "check_code": "PAYRUN_MISSING",
+     "severity": "E",
+     "stage": "SCHEDULE",
+     "evaluation": "STALE",
+     "object_key": "20261113",
+     "company_code": "",
+     "currency": "",
+     "amount": "0.00",
+     "item_count": 0,
+     "oldest": "2026-11-13",
+     "age_days": 3,
+     "owner": "ZT_OWNER"
+    },
+    {"check_code": "CASH_NOT_EXPECTED", "severity": "I", "stage": "SCHEDULE", "evaluation": "NOT_EXPECTED", "object_key": "20261114"},
+    {"check_code": "CASH_NOT_EXPECTED", "severity": "I", "stage": "SCHEDULE", "evaluation": "NOT_EXPECTED", "object_key": "20261115"}
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYRUN-02",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "zero_volume_is_information",
+   "scorecard": [4],
+   "title": "The job ran and finished, nothing was due: a valid zero-volume day",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4", "CASH_PAYRUN_JOBNAME": "ZT_PAYRUN*"},
+   "given": {
+    "DPAYH": [
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "900.00", "DOC1R": "000000000001"}
+    ],
+    "TBTCO": [{"JOBNAME": "ZT_PAYRUN_DAILY", "JOBCOUNT": "13000001", "STATUS": "F", "STRTDATE": "2026-11-13"}]
+   },
+   "expect": [
+    {"check_code": "CASH_ZERO_VOLUME", "severity": "I", "stage": "PAYMENT", "evaluation": "ZERO_VOLUME", "object_key": "20261113"}
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYRUN-03",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "cancelled_job_is_job_failed",
+   "scorecard": [1],
+   "title": "The job of the payment run was cancelled",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4", "CASH_PAYRUN_JOBNAME": "ZT_PAYRUN*"},
+   "given": {"TBTCO": [{"JOBNAME": "ZT_PAYRUN_DAILY", "JOBCOUNT": "13000001", "STATUS": "A", "STRTDATE": "2026-11-13"}]},
+   "expect": [
+    {"check_code": "PAYRUN_JOB_FAILED", "severity": "E", "stage": "JOB", "evaluation": "OBSERVED", "object_key": "20261113", "oldest": "2026-11-13", "age_days": 3, "owner": "ZT_OWNER"}
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYRUN-04",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "job_ok_output_incomplete",
+   "scorecard": [1],
+   "injection": "job_ok_output_incomplete",
+   "title": "Failure injection: the job finished successfully, one of three payments has no payment document",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4", "CASH_PAYRUN_JOBNAME": "ZT_PAYRUN*"},
+   "given": {
+    "DPAYH": [
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "400.00", "DOC1R": "000000000001"},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "250.00", "DOC1R": ""},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "250.00", "DOC1R": "000000000003"}
+    ],
+    "TBTCO": [{"JOBNAME": "ZT_PAYRUN_DAILY", "JOBCOUNT": "12000001", "STATUS": "F", "STRTDATE": "2026-11-12"}]
+   },
+   "expect": [
+    {
+     "check_code": "PAYRUN_NO_DOCUMENT",
+     "severity": "E",
+     "stage": "JOB_OK",
+     "evaluation": "OBSERVED",
+     "object_key": "20261112/PAY01/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "250.00",
+     "item_count": 1,
+     "oldest": "2026-11-12",
+     "age_days": 4,
+     "owner": "ZT_OWNER",
+     "evidence": {"LAUFD/LAUFI": "20261112/PAY01", "JOBNAME/JOBCOUNT": "ZT_PAYRUN_DAILY/12000001"}
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYRUN-05",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "currencies_never_summed",
+   "scorecard": [],
+   "title": "Payments without document in two currencies: one finding per currency",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4"},
+   "given": {
+    "DPAYH": [
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "100.00", "DOC1R": ""},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "100.00", "DOC1R": "000000000002"},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "USD", "RWBTR": "120.00", "DOC1R": ""},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "USD", "RWBTR": "180.00", "DOC1R": ""}
+    ]
+   },
+   "expect": [
+    {"check_code": "PAYRUN_NO_DOCUMENT", "severity": "E", "stage": "PAYMENT", "object_key": "20261112/PAY01/ZT01/EUR", "company_code": "ZT01", "currency": "EUR", "amount": "100.00", "item_count": 1},
+    {"check_code": "PAYRUN_NO_DOCUMENT", "severity": "E", "stage": "PAYMENT", "object_key": "20261112/PAY01/ZT01/USD", "company_code": "ZT01", "currency": "USD", "amount": "300.00", "item_count": 2}
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYRUN-06",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "proposal_gap_when_active",
+   "scorecard": [1],
+   "title": "Proposal of 5 items, payment run paid 3: gap of 2 items",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4", "CASH_PAYRUN_GAP_ACTIVE": "X"},
+   "given": {
+    "DPAYH": [
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "X", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "500.00", "rows": 5},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "300.00", "DOC1R": "000000000001", "rows": 3}
+    ]
+   },
+   "expect": [
+    {
+     "check_code": "PAYRUN_PROPOSAL_GAP",
+     "severity": "E",
+     "stage": "PROPOSAL",
+     "object_key": "20261112/PAY01/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "200.00",
+     "item_count": 2,
+     "oldest": "2026-11-12",
+     "age_days": 4
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYRUN-07",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "unreadable_not_evaluated",
+   "scorecard": [4],
+   "injection": "source_read_fails",
+   "title": "The payments cannot be read: not evaluated, never green",
+   "parameters": {"CASH_CALENDAR": "ZT"},
+   "given": {"DPAYH": "read fails"},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "PAYMENT", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_PAYRUN/PAYMENT"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "PAYRUN-08",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "no_calendar_not_evaluated",
+   "scorecard": [4],
+   "title": "No business calendar: expected runs not evaluated",
+   "parameters": {"CASH_CALENDAR": ""},
+   "given": {},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "SCHEDULE", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_PAYRUN/SCHEDULE"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "PAYRUN-09",
+   "check": "FICA_CASH_PAYRUN",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN",
+   "abap_unit": "order_method_excluded",
+   "scorecard": [],
+   "title": "A payment-order method posts no payment document by design: left out",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_PAYRUN_ORDER_METHODS": "O"},
+   "given": {
+    "DPAYH": [
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RZAWE": "O", "RWBTR": "100.00", "DOC1R": "", "rows": 2},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RZAWE": "C", "RWBTR": "50.00", "DOC1R": ""},
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "BBUKR": "ZT01", "WAERS": "EUR", "RZAWE": "C", "RWBTR": "50.00", "DOC1R": "000000000005", "rows": 2}
+    ]
+   },
+   "expect": [
+    {
+     "check_code": "PAYRUN_NO_DOCUMENT",
+     "severity": "E",
+     "stage": "PAYMENT",
+     "object_key": "20261112/PAY01/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "50.00",
+     "item_count": 1,
+     "oldest": "2026-11-12",
+     "age_days": 4
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYLOT-01",
+   "check": "FICA_CASH_PAYLOT",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYLOT",
+   "abap_unit": "lot_not_posted_exception",
+   "scorecard": [],
+   "title": "Incoming payment lot of 10 November not posted",
+   "parameters": {"CASH_LOT_DONE_STATUS": "9"},
+   "given": {
+    "DFKKZK": [{"KEYZ1": "LOT1", "STAZS": "1", "ERDAT": "2026-11-10"}],
+    "DFKKZP": [
+     {"KEYZ1": "LOT1", "POSZA": 1, "BUKRS": "ZT01", "WAERS": "EUR", "BETRZ": "10.00"},
+     {"KEYZ1": "LOT1", "POSZA": 2, "BUKRS": "ZT01", "WAERS": "EUR", "BETRZ": "15.00"}
+    ]
+   },
+   "expect": [
+    {
+     "check_code": "LOT_NOT_POSTED",
+     "severity": "E",
+     "stage": "POSTING",
+     "evaluation": "OBSERVED",
+     "object_key": "LOT1/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "25.00",
+     "item_count": 2,
+     "oldest": "2026-11-10",
+     "age_days": 6,
+     "owner": "ZT_OWNER",
+     "evidence": {"KEYZ1": "LOT1"}
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYLOT-02",
+   "check": "FICA_CASH_PAYLOT",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYLOT",
+   "abap_unit": "clarification_aged",
+   "scorecard": [],
+   "title": "Lot items in clarification since 11 November",
+   "parameters": {"CASH_LOT_DONE_STATUS": "9", "CASH_LOT_CLARIF_DAYS": "3"},
+   "given": {"DFKKZP": [{"KEYZ1": "LOT2", "POSZA": 1, "BUKRS": "ZT01", "WAERS": "EUR", "BETRZ": "75.00", "XKLAE": "X", "BUDAT": "2026-11-11", "rows": 3}]},
+   "expect": [
+    {
+     "check_code": "LOT_CLARIFICATION_AGED",
+     "severity": "E",
+     "stage": "CLARIFY",
+     "object_key": "LOT2/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "75.00",
+     "item_count": 3,
+     "oldest": "2026-11-11",
+     "age_days": 5
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "PAYLOT-03",
+   "check": "FICA_CASH_PAYLOT",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYLOT",
+   "abap_unit": "done_status_pending",
+   "scorecard": [4],
+   "title": "Done status of a lot not maintained: posting rule not evaluated",
+   "parameters": {"CASH_LOT_DONE_STATUS": ""},
+   "given": {},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "POSTING", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_PAYLOT/POSTING", "rule_param": "CASH_LOT_DONE_STATUS"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "PAYLOT-04",
+   "check": "FICA_CASH_PAYLOT",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYLOT",
+   "abap_unit": "nothing_open_is_observed",
+   "scorecard": [4],
+   "title": "Nothing open: no finding, the check complete",
+   "parameters": {"CASH_LOT_DONE_STATUS": "9"},
+   "given": {"DFKKZK": [], "DFKKZP": []},
+   "expect": [],
+   "partial": false
+  },
+  {
+   "id": "PAYLOT-05",
+   "check": "FICA_CASH_PAYLOT",
+   "class": "ZCL_CA_OPS_CHK_CASH_PAYLOT",
+   "abap_unit": "unreadable_not_evaluated",
+   "scorecard": [4],
+   "injection": "source_read_fails",
+   "title": "The lot table cannot be read: not evaluated, never green",
+   "parameters": {"CASH_LOT_DONE_STATUS": "9"},
+   "given": {"DFKKZK": "read fails"},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "POSTING", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_PAYLOT/POSTING"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "RETURN-01",
+   "check": "FICA_CASH_RETURNS",
+   "class": "ZCL_CA_OPS_CHK_CASH_RETURN",
+   "abap_unit": "lot_not_closed_exception",
+   "scorecard": [3],
+   "title": "Returns lot of 11 November not closed",
+   "parameters": {"CASH_RET_DONE_STATUS": "9"},
+   "given": {"DFKKRK": [{"KEYR1": "RET1", "STARS": "1", "ERDAT": "2026-11-11"}], "DFKKRP": [{"KEYR1": "RET1", "POSRA": 1, "BUKRS": "ZT01", "WAERS": "EUR", "BETRR": "40.00", "RLBEL": "000000000077"}]},
+   "expect": [
+    {
+     "check_code": "RETURNS_LOT_NOT_CLOSED",
+     "severity": "E",
+     "stage": "POSTING",
+     "object_key": "RET1/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "40.00",
+     "item_count": 1,
+     "oldest": "2026-11-11",
+     "age_days": 5,
+     "owner": "ZT_OWNER",
+     "evidence": {"KEYR1": "RET1"}
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "RETURN-02",
+   "check": "FICA_CASH_RETURNS",
+   "class": "ZCL_CA_OPS_CHK_CASH_RETURN",
+   "abap_unit": "clarification_and_reversal",
+   "scorecard": [3],
+   "title": "A return in clarification and a return whose reversal is pending",
+   "parameters": {"CASH_RET_DONE_STATUS": "9"},
+   "given": {
+    "DFKKRP": [
+     {"KEYR1": "RET2", "POSRA": 1, "BUKRS": "ZT01", "WAERS": "EUR", "BETRR": "60.00", "XKLAE": "X", "RLBEL": "000000000078", "BUDAT": "2026-11-11"},
+     {"KEYR1": "RET3", "POSRA": 1, "BUKRS": "ZT01", "WAERS": "EUR", "BETRR": "15.00", "RLBEL": "", "BUDAT": "2026-11-11"}
+    ]
+   },
+   "expect": [
+    {"check_code": "RETURNS_CLARIFICATION_AGED", "severity": "E", "stage": "CLARIFY", "object_key": "RET2/ZT01/EUR", "currency": "EUR", "amount": "60.00", "item_count": 1},
+    {"check_code": "RETURNS_REVERSAL_PENDING", "severity": "E", "stage": "REVERSAL", "object_key": "RET3/ZT01/EUR", "currency": "EUR", "amount": "15.00", "item_count": 1}
+   ],
+   "partial": false
+  },
+  {
+   "id": "RETURN-03",
+   "check": "FICA_CASH_RETURNS",
+   "class": "ZCL_CA_OPS_CHK_CASH_RETURN",
+   "abap_unit": "done_status_pending",
+   "scorecard": [4],
+   "title": "Done status of a returns lot not maintained: that rule not evaluated, the others run",
+   "parameters": {"CASH_RET_DONE_STATUS": ""},
+   "given": {},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "POSTING", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_RETURNS/POSTING", "rule_param": "CASH_RET_DONE_STATUS"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "RETURN-04",
+   "check": "FICA_CASH_RETURNS",
+   "class": "ZCL_CA_OPS_CHK_CASH_RETURN",
+   "abap_unit": "one_rule_unreadable",
+   "scorecard": [4],
+   "injection": "source_read_fails",
+   "title": "The clarification read fails: that stage not evaluated, the others evaluated",
+   "parameters": {"CASH_RET_DONE_STATUS": "9"},
+   "given": {"DFKKRP (clarification)": "read fails"},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "CLARIFY", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_RETURNS/CLARIFY"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "EBS-01",
+   "check": "FICA_CASH_EBS",
+   "class": "ZCL_CA_OPS_CHK_CASH_EBS",
+   "abap_unit": "account_missing_one_day",
+   "scorecard": [],
+   "title": "One of two accounts has no statement for Friday 13th",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4", "CASH_EBS_FICA_BANKS": "HB1"},
+   "given": {
+    "FEBKO": [
+     {"KUKEY": "00000001", "BUKRS": "ZT01", "HBKID": "HB1", "HKTID": "AC1", "AZDAT": "2026-11-12"},
+     {"KUKEY": "00000002", "BUKRS": "ZT01", "HBKID": "HB2", "HKTID": "AC2", "AZDAT": "2026-11-12"},
+     {"KUKEY": "00000003", "BUKRS": "ZT01", "HBKID": "HB1", "HKTID": "AC1", "AZDAT": "2026-11-13"}
+    ]
+   },
+   "expect": [
+    {
+     "check_code": "EBS_STATEMENT_MISSING",
+     "severity": "E",
+     "stage": "ARRIVAL",
+     "evaluation": "OBSERVED",
+     "object_key": "20261113/HB2/AC2/ZT01/",
+     "company_code": "ZT01",
+     "oldest": "2026-11-13",
+     "age_days": 3,
+     "owner": "ZT_OWNER",
+     "evidence": {"HBKID/HKTID": "HB2/AC2"}
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "EBS-02",
+   "check": "FICA_CASH_EBS",
+   "class": "ZCL_CA_OPS_CHK_CASH_EBS",
+   "abap_unit": "no_account_delivered_stale",
+   "scorecard": [4],
+   "title": "No statement of any known account for Friday 13th: the source is stale",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4"},
+   "given": {"FEBKO": [{"KUKEY": "00000001", "BUKRS": "ZT01", "HBKID": "HB1", "HKTID": "AC1", "AZDAT": "2026-11-12"}, {"KUKEY": "00000002", "BUKRS": "ZT01", "HBKID": "HB2", "HKTID": "AC2", "AZDAT": "2026-11-12"}]},
+   "expect": [
+    {"check_code": "EBS_SOURCE_STALE", "severity": "E", "stage": "ARRIVAL", "evaluation": "STALE", "object_key": "20261113", "item_count": 2, "oldest": "2026-11-13", "age_days": 3}
+   ],
+   "partial": false
+  },
+  {
+   "id": "EBS-03",
+   "check": "FICA_CASH_EBS",
+   "class": "ZCL_CA_OPS_CHK_CASH_EBS",
+   "abap_unit": "lines_unposted_and_no_lot",
+   "scorecard": [3],
+   "title": "Statement lines not posted; a statement of a FI-CA house bank without payment lot",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_LOOKBACK_DAYS": "4", "CASH_EBS_FICA_BANKS": "HB1"},
+   "given": {
+    "FEBKO": [
+     {"KUKEY": "00000001", "BUKRS": "ZT01", "HBKID": "HB1", "HKTID": "AC1", "AZDAT": "2026-11-12", "EDATE": "2026-11-12"},
+     {"KUKEY": "00000003", "BUKRS": "ZT01", "HBKID": "HB1", "HKTID": "AC1", "AZDAT": "2026-11-13", "EDATE": "2026-11-13"}
+    ],
+    "FEBEP": [
+     {"KUKEY": "00000001", "ESNUM": 1, "KWAER": "EUR", "KWBTR": "60.00", "VB1OK": ""},
+     {"KUKEY": "00000001", "ESNUM": 2, "KWAER": "EUR", "KWBTR": "40.00", "VB1OK": ""},
+     {"KUKEY": "00000003", "ESNUM": 1, "KWAER": "EUR", "KWBTR": "45.00", "VB1OK": "X", "rows": 3}
+    ],
+    "DFKKZK": [{"KEYZ1": "LOT8", "KUKEY": "00000001"}]
+   },
+   "expect": [
+    {
+     "check_code": "EBS_LINES_NOT_POSTED",
+     "severity": "E",
+     "stage": "POSTING",
+     "object_key": "00000001/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "100.00",
+     "item_count": 2,
+     "oldest": "2026-11-12",
+     "age_days": 4,
+     "evidence": {"KUKEY": "00000001"}
+    },
+    {
+     "check_code": "EBS_NOT_TRANSFERRED_FICA",
+     "severity": "E",
+     "stage": "TRANSFER",
+     "object_key": "00000003/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "45.00",
+     "item_count": 3,
+     "oldest": "2026-11-13",
+     "age_days": 3,
+     "evidence": {"KUKEY": "00000003"}
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "EBS-04",
+   "check": "FICA_CASH_EBS",
+   "class": "ZCL_CA_OPS_CHK_CASH_EBS",
+   "abap_unit": "fica_banks_pending",
+   "scorecard": [4],
+   "title": "House banks transferred to FI-CA not maintained: transfer rule not evaluated",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_EBS_FICA_BANKS": ""},
+   "given": {},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "TRANSFER", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_EBS/TRANSFER", "rule_param": "CASH_EBS_FICA_BANKS"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "EBS-05",
+   "check": "FICA_CASH_EBS",
+   "class": "ZCL_CA_OPS_CHK_CASH_EBS",
+   "abap_unit": "no_statement_unknown",
+   "scorecard": [4],
+   "title": "No statement at all in the account window: expected accounts unknown",
+   "parameters": {"CASH_CALENDAR": "ZT", "CASH_EBS_ACCOUNT_DAYS": "30"},
+   "given": {"FEBKO": []},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "ARRIVAL", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_EBS/ARRIVAL"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "CLEAR-01",
+   "check": "FICA_CASH_CLEARING",
+   "class": "ZCL_CA_OPS_CHK_CASH_CLEAR",
+   "abap_unit": "reset_after_payout",
+   "scorecard": [3],
+   "title": "Clearing by a paid payment reset on 15 November",
+   "parameters": {"CASH_CLR_DAYS": "1", "CASH_CLR_AUGRD": "Z1,Z2"},
+   "given": {
+    "DFKKRAPT": [
+     {"OPBEL": "ITEM1", "AUGBL": "PAYDOC1", "STBLG": "RESET1", "STDAT": "2026-11-15", "AUGRD": "Z1", "BUKRS": "ZT01", "WAERS": "EUR", "BETRW": "50.00"},
+     {"OPBEL": "ITEM2", "AUGBL": "PAYDOC1", "STBLG": "RESET1", "STDAT": "2026-11-15", "AUGRD": "Z1", "BUKRS": "ZT01", "WAERS": "EUR", "BETRW": "30.00"}
+    ],
+    "DPAYH": [{"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "DOC1R": "PAYDOC1", "BBUKR": "ZT01"}]
+   },
+   "expect": [
+    {
+     "check_code": "CLEARING_RESET_AFTER_PAYOUT",
+     "severity": "E",
+     "stage": "RESET",
+     "object_key": "PAYDOC1/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "80.00",
+     "item_count": 2,
+     "oldest": "2026-11-15",
+     "age_days": 1,
+     "owner": "ZT_OWNER",
+     "evidence": {"AUGBL": "PAYDOC1"}
+    }
+   ],
+   "partial": true
+  },
+  {
+   "id": "CLEAR-02",
+   "check": "FICA_CASH_CLEARING",
+   "class": "ZCL_CA_OPS_CHK_CASH_CLEAR",
+   "abap_unit": "reversal_names_run",
+   "scorecard": [3],
+   "title": "Payment document of run 20261112/PAY01 reversed after payout (STORB of the original)",
+   "parameters": {"CASH_CLR_DAYS": "1"},
+   "given": {
+    "DPAYH": [
+     {"LAUFD": "2026-11-12", "LAUFI": "PAY01", "XVORL": "", "DOC1R": "PAYDOC2", "BBUKR": "ZT01", "WAERS": "EUR", "RWBTR": "500.00"}
+    ],
+    "DFKKKO": [
+     {"OPBEL": "PAYDOC2", "STORB": "REVDOC2"},
+     {"OPBEL": "REVDOC2", "STBEL": "PAYDOC2", "CPUDT": "2026-11-15"}
+    ]
+   },
+   "expect": [
+    {
+     "check_code": "PAYMENT_REVERSED_AFTER_PAYOUT",
+     "severity": "E",
+     "stage": "REVERSAL",
+     "object_key": "PAYDOC2/20261112/PAY01/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "500.00",
+     "item_count": 1,
+     "oldest": "2026-11-15",
+     "age_days": 1,
+     "evidence": {"OPBEL": "PAYDOC2", "LAUFD/LAUFI": "20261112/PAY01"}
+    }
+   ],
+   "partial": true
+  },
+  {
+   "id": "CLEAR-03",
+   "check": "FICA_CASH_CLEARING",
+   "class": "ZCL_CA_OPS_CHK_CASH_CLEAR",
+   "abap_unit": "unreadable_not_evaluated",
+   "scorecard": [4],
+   "injection": "source_read_fails",
+   "title": "The reversal source cannot be read: the reversal stage not evaluated",
+   "parameters": {"CASH_CLR_DAYS": "1"},
+   "given": {"DFKKKO": "read fails"},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "REVERSAL", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_CLEARING/REVERSAL"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "GLKEY-01",
+   "check": "FICA_CASH_GLKEY",
+   "class": "ZCL_CA_OPS_CHK_CASH_GLKEY",
+   "abap_unit": "open_past_cutoff",
+   "scorecard": [3],
+   "title": "Reconciliation key created 12 November still open",
+   "parameters": {"CASH_GLKEY_OPEN_DAYS": "1", "CASH_GL_AWTYP": "ZTREF"},
+   "given": {"DFKKSUMC": [{"FIKEY": "KEY_OPEN", "XCLOS": "", "CPUDT": "2026-11-12"}], "DFKKSUM": [{"BUKRS": "ZT01", "FIKEY": "KEY_OPEN", "SHKZG": "S", "WAERS": "EUR", "BETRW": "250.00", "rows": 4}]},
+   "expect": [
+    {
+     "check_code": "GLKEY_OPEN_PAST_CUTOFF",
+     "severity": "E",
+     "stage": "CLOSE",
+     "object_key": "KEY_OPEN/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "1000.00",
+     "item_count": 4,
+     "oldest": "2026-11-12",
+     "age_days": 4,
+     "owner": "ZT_OWNER",
+     "evidence": {"FIKEY": "KEY_OPEN"}
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "GLKEY-02",
+   "check": "FICA_CASH_GLKEY",
+   "class": "ZCL_CA_OPS_CHK_CASH_GLKEY",
+   "abap_unit": "closed_not_in_gl",
+   "scorecard": [3],
+   "title": "Key closed 12 November, no unreversed G/L document of reference type ZTREF",
+   "parameters": {"CASH_GLKEY_GL_DAYS": "1", "CASH_GL_AWTYP": "ZTREF"},
+   "given": {"DFKKSUMC": [{"FIKEY": "KEY_GAP", "XCLOS": "X", "CLDAT": "2026-11-12"}], "DFKKSUM": [{"BUKRS": "ZT01", "FIKEY": "KEY_GAP", "SHKZG": "S", "WAERS": "EUR", "BETRW": "75.00", "rows": 4}], "I_JOURNALENTRY": []},
+   "expect": [
+    {
+     "check_code": "GLKEY_NOT_IN_GL",
+     "severity": "E",
+     "stage": "GL",
+     "object_key": "KEY_GAP/ZT01/EUR",
+     "company_code": "ZT01",
+     "currency": "EUR",
+     "amount": "300.00",
+     "item_count": 4,
+     "oldest": "2026-11-12",
+     "age_days": 4,
+     "evidence": {"FIKEY": "KEY_GAP", "AWTYP/AWKEY": "ZTREF/KEY_GAP"}
+    }
+   ],
+   "partial": false
+  },
+  {
+   "id": "GLKEY-03",
+   "check": "FICA_CASH_GLKEY",
+   "class": "ZCL_CA_OPS_CHK_CASH_GLKEY",
+   "abap_unit": "reference_type_pending",
+   "scorecard": [4],
+   "title": "Reference type of the G/L transfer not maintained: G/L rule not evaluated",
+   "parameters": {"CASH_GL_AWTYP": ""},
+   "given": {},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "GL", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_GLKEY/GL", "rule_param": "CASH_GL_AWTYP"}
+   ],
+   "partial": true
+  },
+  {
+   "id": "GLKEY-04",
+   "check": "FICA_CASH_GLKEY",
+   "class": "ZCL_CA_OPS_CHK_CASH_GLKEY",
+   "abap_unit": "one_rule_unreadable",
+   "scorecard": [4],
+   "injection": "source_read_fails",
+   "title": "The error read fails: transfer stage not evaluated, the open keys still reported",
+   "parameters": {"CASH_GL_AWTYP": "ZTREF"},
+   "given": {"DFKKSUMC (error)": "read fails"},
+   "expect": [
+    {"check_code": "CASH_NOT_EVALUATED", "severity": "W", "stage": "TRANSFER", "evaluation": "NOT_EVALUATED", "object_key": "FICA_CASH_GLKEY/TRANSFER"}
+   ],
+   "partial": true
+  }
+ ]
+}

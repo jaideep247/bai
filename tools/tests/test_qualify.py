@@ -150,7 +150,7 @@ def reset(**changes):
     Fake.state = {'calls': [], 'inactive': {},
                   'objects': {'/acm/dcl/sources/zc_ca_opsexception': {}, '/bo/behaviordefinitions/zc_ca_opsexception': {},
                               '/ddic/srvd/sources/zui_ca_ops_exc': {}}, 'tadir': [], 'licences': [], 'enforce': [],
-                  'published': {'ZUI_CA_OPS_EXC_O4'}, 'present': {'ZR1_PARAM', 'ZR1_PARAM_UI', 'ZR1_OPS', 'ZR1_OPS_UI'}}
+                  'published': {'ZUI_CA_OPS_EXC_O4'}, 'present': {'ZR1_PARAM', 'ZR1_PARAM_UI', 'ZR1_OPS', 'ZR1_OPS_UI', 'ZR1_OPS_CASH'}}
     Fake.state.update(changes)
 
 

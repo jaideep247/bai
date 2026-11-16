@@ -10,7 +10,7 @@ CA_FICA,FICA_GL_OUTAGE,OUT_GLKEY,Keys of the downtime days not transferred,DFKKS
 CA_FICA,FICA_IP_BREACH,R1,Overdue instalments,DFKKOP,COUNT,FAEDN,‹tolerance days›,0,,,‹instalment item flag›,EQ,X,AUGST,NE,‹cleared value›,1,‹red count›,INSTALMENT_BREACH,
 CA_FICA,FICA_INT_MISSED,R1,Interest lines in error,DFKKIH,COUNT,‹run date field›,0,1,,,‹error flag›,EQ,X,,,,1,‹red count›,INTEREST_ERROR,
 CA_FICA,FICA_INV_BACKLOG,R1,Billing documents not invoiced,DFKKINVBILL_H,AGE,‹billing date field›,1,0,,,INVSTATUS,NE,‹invoiced value›,,,,1,3,INVOICING_BACKLOG,
-CA_FICA,FICA_PAYRUN_NOPAY,R1,Payments of past runs without a payment document,DPAYH,COUNT,LAUFD,1,0,,BBUKR,DOC1R,EQ,,,,,1,‹red count›,PAYRUN_NO_DOCUMENT,
+CA_FICA,FICA_PAYRUN_NOPAY,R1,Payments of past runs without a payment document,DPAYH,COUNT,LAUFD,1,0,,BBUKR,DOC1R,EQ,,XVORL,EQ,,1,‹red count›,PAYRUN_NO_DOCUMENT,
 CA_FICA,FICA_LOT_OPEN,R1,Oldest payment lot not closed,DFKKZK,AGE,ERDAT,1,0,,,‹lot status field›,NE,‹closed value›,,,,1,3,LOT_NOT_CLOSED,
 CA_FICA,FICA_LOT_CLARIF,R1,Lot items in clarification,DFKKZP,COUNT,‹lot item date field›,1,0,,,‹clarification flag›,EQ,X,,,,1,‹red count›,LOT_ITEM_CLARIFICATION,
 CA_FICA,FICA_RET_OPEN,R1,Oldest returns lot not closed,DFKKRK,AGE,ERDAT,1,0,,,STARS,NE,‹closed value›,,,,1,3,RETURNS_LOT_NOT_CLOSED,

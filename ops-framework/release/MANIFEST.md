@@ -37,7 +37,7 @@
 |---|---|---|---|---|---|---|
 | PARAM | Parameter framework | release, required | - | ZCA_PARAM: src, src/ui | - | - |
 | CORE | Operations framework core | release, required | PARAM | ZCA_OPS: src, src/ui | CORE, CONTROL, ONBOARD, JOBS, RESPONSE, LINKS, PAYMODEL | CHECK_CLASS, JOB_RESOLVER, JOB_ENRICHER, ALERT_SECTION, ALERT_CHANNEL, PURGE_TARGET |
-| FICA_CASH | FI-CA Cash Operations | release | CORE | ZCA_OPS: none (content pack) | CATALOGUE_FICA, BREAKS, FLOW | FLOW_SOURCE |
+| FICA_CASH | FI-CA Cash Operations | release | CORE | ZCA_OPS: src/cash | CATALOGUE_FICA, CASH_OPS, BREAKS, FLOW | FLOW_SOURCE |
 | FSCD_STANDARD | Standard FS-CD (catalogue content) | later | FICA_CASH | ZCA_OPS: none (content pack) | CATALOGUE_FSCD, CATALOGUE_FSRI | - |
 | DEMO | Demo consumer (sandbox only) | release, never in production | CORE | ZCA_OPS: src/demo | - | - |
 
@@ -77,7 +77,6 @@ Licence modules and plug-in contracts that no pack names belong to `CORE`.
 
 - Catalogue package `FICA` (`ops-framework/config/catalogue/packages/fica.json`); processes qualified in this release: FICA_PAYRUN, FICA_PAY_LOTS, FICA_RETURNS, FICA_EBS_LOTS, FICA_CLEARING, FICA_REVERSAL, FICA_GL_TRANSFER
 - Seed rows by key: area CA_FICA, layer FICA, package FICA, prefix FICA_
-- Open item V161: Posting-area mapping (TFK033D) is not a portable default until V161 is closed: no product object reads it (blocked: TFK033D)
 - Fixture (offline): `ops-framework/config/flows` - Account flow templates DISB / COLL (inactive) checked by tools/checks.py flow_config
 - Fixture (offline): `ops-framework/config/breaks` - Break buckets and product rules checked by tools/checks.py break_rules
 
@@ -86,7 +85,7 @@ Licence modules and plug-in contracts that no pack names belong to `CORE`.
 | 1 | configuration | Customizing request: product rows of the seed files of this pack (catalogue package FICA, link layer FICA, break rules, account flow templates) - every monitoring row and flow template delivered inactive |
 | 2 | configuration | Catalogue activation of the qualified processes of this pack from a date, with reason and approver (four-eyes) - effective-dated, reversible |
 | 3 | configuration | Per process: area, owner, approved tables (security sign-off), checks, control, alert rule (docs/ADDING_A_BUSINESS_PROCESS.md) |
-| 4 | verify | VERIFY items of the pack (catalogue V124-V129, links V116-V120, breaks V135-V138, flows V145-V149) and the demo scorecard fixtures (build N) |
+| 4 | verify | VERIFY items of the pack (catalogue V124-V129, links V116-V120, breaks V135-V138, flows V145-V149, cash checks V220-V237) and the cash fixtures config/cash/fixtures.json |
 
 ### FSCD_STANDARD - Standard FS-CD (catalogue content)
 

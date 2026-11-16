@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-379 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-379 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 400-449 configuration apps (RAP) · 500-549 FI-CA cash operations checks (2026-11-15, build N; `docs/FICA_CASH_OPERATIONS.md`) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -239,6 +239,44 @@ texts <= 73 characters).
 | 437 | &1 is not a user of this client |
 | 438 | Team &1 is not a value of parameter CONTROL_TEAMS |
 | 439 | &1 is not an http:// or https:// link (no blanks) |
+| 500 | Payment run expected on &1 not found (company code &2) |
+| 501 | Payment run job &1 of &2 ended with status &3 (count &4) |
+| 502 | Run &1: &2 proposed item(s) not paid, gap &3 |
+| 503 | Run &1: &2 payment(s) without payment document, &3 |
+| 504 | Job &1 finished, run &2 incomplete: &3 payment(s) without document, &4 |
+| 505 | Payment lot &1 not posted after &2 day(s): &3 item(s), &4 |
+| 506 | Payment lot &1: &2 item(s) in clarification, &3, oldest &4 |
+| 507 | Returns lot &1 not closed after &2 day(s): &3 item(s), &4 |
+| 508 | Returns lot &1: &2 return(s) in clarification, &3, oldest &4 |
+| 509 | Returns lot &1: &2 return(s) without returns document, &3 |
+| 510 | No bank statement of &1 for house bank &2 account &3 (&4) |
+| 511 | No bank statement of &1 for any of &2 known account(s) |
+| 512 | Statement &1 (&2): &3 line(s) not posted, &4 |
+| 513 | Statement &1 (&2): &3 line(s) not transferred to FI-CA, &4 |
+| 514 | Clearing by payment &1 reset after payout: &2 item(s), &3 |
+| 515 | Payment document &1 of run &2 reversed after payout: &3 |
+| 516 | Reconciliation key &1 open since &2: &3 total line(s), &4 |
+| 517 | Reconciliation key &1: G/L transfer error, &2 total line(s), &3 |
+| 518 | Reconciliation key &1 closed &2, no G/L document (&3): &4 |
+| 519 | &1 not evaluated: &2 |
+| 520 | Parameter &1 not maintained (value pending) |
+| 521 | Source &1 could not be read |
+| 522 | Business calendar &1 could not be read for &2 |
+| 523 | No business calendar in parameter &1 |
+| 524 | &1: &2 object(s) read, the limit - further objects not reported |
+| 525 | &1 on &2: job &3 finished without output (valid zero volume) |
+| 526 | &1: &2 is not a working day of calendar &3 (not expected) |
+| 527 | No bank statement in the last &1 day(s): expected accounts unknown |
+| 530 | Stage: &1 / evaluation: &2 |
+| 531 | Count: &1 / amount: &2 &3 |
+| 532 | Oldest item: &1 / age: &2 day(s) |
+| 533 | Next cutoff: &1 &2 &3 |
+| 534 | Owner: &1 / backup: &2 / team: &3 / control: &4 |
+| 535 | Evidence &1: &2 |
+| 536 | Source: &1 / rule parameter: &2 |
+| 537 | Job &1 (&2): status &3, ended &4 |
+| 538 | Owner: not assigned (no active control or process owner for &1) |
+| 539 | Next cutoff: unknown (&1 / &2 cutoff time not maintained) |
 | 742 | Alert rule &1: pattern &2 is not valid PCRE - rule not applied |
 | 786 | Exception &1 (&2) changed by a user during the run - left for next run |
 | 787 | Exception &1 / &2 changed meanwhile - not resolved, nothing saved |

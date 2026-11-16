@@ -145,6 +145,18 @@
    "config": ["AccountFlow"],
    "gates": ["src/zcl_ca_ops_flow_eval.clas.abap"],
    "docs": ["docs/ACCOUNT_FLOW.md"]
+  },
+  {
+   "code": "CASH_OPS",
+   "name": "FI-CA Cash Operations: payment run to G/L checks",
+   "seq": 130,
+   "requires": ["CATALOGUE_FICA"],
+   "description": "Runnable checks on SAP standard FI-CA tables for the cash cycle: payment run expected / completed and proposal-to-payment gaps, payment lot posting and clarification ageing, returns lots and reversal pending, bank statement arrival and posting, clearing reset and payment reversal after payout, reconciliation key to the G/L. Every exception carries count and amount per currency, oldest item and age, next cutoff, owner, stage and evidence keys at source grain; a rule that cannot be evaluated is reported, never green.",
+   "entry_points": ["src/cash/zcl_ca_ops_cash_ctx.clas.abap", "src/cash/zcl_ca_ops_cash_dao.clas.abap"],
+   "check_classes": ["ZCL_CA_OPS_CHK_CASH_PAYRUN", "ZCL_CA_OPS_CHK_CASH_PAYLOT", "ZCL_CA_OPS_CHK_CASH_RETURN", "ZCL_CA_OPS_CHK_CASH_EBS", "ZCL_CA_OPS_CHK_CASH_CLEAR", "ZCL_CA_OPS_CHK_CASH_GLKEY"],
+   "config": [],
+   "gates": [],
+   "docs": ["docs/FICA_CASH_OPERATIONS.md"]
   }
  ]
 }

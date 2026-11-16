@@ -35,8 +35,8 @@
     },
     {
      "kind": "M",
-     "name": "‹payment run mass activity type›",
-     "description": "Mass activity type of the payment run",
+     "name": "PAYP",
+     "description": "Mass activity type of the payment run (test value)",
      "verify": "V127"
     }
    ],
@@ -102,12 +102,22 @@
        "status_field": "DOC1R",
        "status_op": "EQ",
        "status_value": "",
+       "cond_field": "XVORL",
+       "cond_op": "EQ",
+       "cond_value": "",
        "amber": 1,
        "red": "‹red count›",
        "check_code": "PAYRUN_NO_DOCUMENT",
        "verify": "V129"
       }
      ]
+    },
+    {
+     "check": "FICA_CASH_PAYRUN",
+     "description": "Cash: payment run expected / completed, documents, gap",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN"
     }
    ]
   },
@@ -202,6 +212,13 @@
        "verify": "V128"
       }
      ]
+    },
+    {
+     "check": "FICA_CASH_PAYLOT",
+     "description": "Cash: payment lots not posted, clarification ageing",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_CASH_PAYLOT"
     }
    ]
   },
@@ -270,6 +287,13 @@
        "verify": "V128"
       }
      ]
+    },
+    {
+     "check": "FICA_CASH_RETURNS",
+     "description": "Cash: returns lots open, clarification, reversal pending",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_CASH_RETURN"
     }
    ]
   },
@@ -285,8 +309,8 @@
    "steps": [
     {
      "kind": "P",
-     "name": "‹transfer of bank statement items to FI-CA›",
-     "description": "Bank statement items into payment lots",
+     "name": "RFKKKA00",
+     "description": "Bank statement items into payment lots (documented)",
      "verify": "V127"
     },
     {
@@ -343,6 +367,13 @@
        "verify": "V128"
       }
      ]
+    },
+    {
+     "check": "FICA_CASH_EBS",
+     "description": "Cash: statement missing / stale, lines not posted / in FI-CA",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_CASH_EBS"
     }
    ]
   },
@@ -401,6 +432,13 @@
        "verify": "V128"
       }
      ]
+    },
+    {
+     "check": "FICA_CASH_CLEARING",
+     "description": "Cash: clearing reset / payment reversed after payout",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_CASH_CLEAR"
     }
    ]
   },
@@ -475,10 +513,9 @@
      "description": "Dunning activity run (mass activity)"
     },
     {
-     "kind": "M",
-     "name": "‹dunning mass activity types›",
-     "description": "Mass activity types of proposal and activity run",
-     "verify": "V127"
+     "kind": "T",
+     "name": "FPVA",
+     "description": "Dunning proposal run (activity run FPVB)"
     }
    ],
    "tables": [
@@ -608,7 +645,7 @@
    "steps": [
     {
      "kind": "T",
-     "name": "‹interest calculation mass run›",
+     "name": "FPINTM1",
      "description": "Interest calculation run (mass activity)",
      "verify": "V127"
     }
@@ -670,9 +707,8 @@
     },
     {
      "kind": "T",
-     "name": "‹mass write-off transaction›",
-     "description": "Mass write-off (mass activity)",
-     "verify": "V127"
+     "name": "FP04M",
+     "description": "Mass write-off (mass activity)"
     }
    ],
    "tables": [
@@ -940,10 +976,9 @@
    "description": "Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): documents entered inside an approved planned downtime window and reconciliation keys of the downtime days not transferred to the G/L; and the clearing-account break analysis (ZCA_OPS_BRK_RUN, check ZCL_CA_OPS_CHK_BREAK): groups of open clearing-account lines by assignment that do not net to zero, each in a variance bucket.",
    "steps": [
     {
-     "kind": "T",
-     "name": "‹close reconciliation keys›",
-     "description": "Close the reconciliation keys of the day",
-     "verify": "V127"
+     "kind": "P",
+     "name": "RFKKFIKEYCLOSE",
+     "description": "Close the reconciliation keys of the day"
     },
     {
      "kind": "T",
@@ -952,8 +987,8 @@
     },
     {
      "kind": "P",
-     "name": "‹G/L transfer program›",
-     "description": "G/L transfer program (job)",
+     "name": "RFKKGL00",
+     "description": "G/L transfer program of FPG1 (job, documented)",
      "verify": "V127"
     }
    ],
@@ -1042,6 +1077,13 @@
      "bukrs_aware": true,
      "schedule_group": "DAILY",
      "class": "ZCL_CA_OPS_CHK_BREAK"
+    },
+    {
+     "check": "FICA_CASH_GLKEY",
+     "description": "Cash: reconciliation key open, in error, not in the G/L",
+     "bukrs_aware": true,
+     "schedule_group": "DAILY",
+     "class": "ZCL_CA_OPS_CHK_CASH_GLKEY"
     }
    ]
   }

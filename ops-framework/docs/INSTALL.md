@@ -286,6 +286,25 @@ missing licence as an exception of `CA_OPS`.
 5. `LIC_ENFORCE` = `X` only when the contract says so and V162 / V163 / V166 / V167 are closed; switch back to `W` at
    once if a module is refused by mistake (CORE never is; stored data stays readable either way).
 
+## 6i. FI-CA Cash Operations checks (2026-11-15, build N, `docs/FICA_CASH_OPERATIONS.md`)
+
+Sub-package `ZCA_OPS_CASH` (folder `src/cash`): pulled with the framework, after the parameter framework and the
+root package (it uses the framework's types, store, runner, parameters and control register). Nothing runs until the
+registry rows are switched on.
+
+1. Licence module `CASH_OPS` (requires `CATALOGUE_FICA`); under `LIC_ENFORCE` = `W` nothing is refused.
+2. Seed the catalogue monitoring rows of area `CA_FICA` (`config/catalogue/monitoring`): the six registry rows
+   `FICA_CASH_*` and their control coverage are delivered **inactive**.
+3. Per process control (`FICA_PAYRUN`, `FICA_PAY_LOTS`, `FICA_RETURNS`, `FICA_EBS_LOTS`, `FICA_CLEARING`,
+   `FICA_GL_TRANSFER`): owner, backup, team and `CUTOFF_TIME` (the owner and the next cutoff of every exception, V234).
+4. Parameters (`docs/PARAMETERS.md`, prefix `CASH_`): `CASH_CALENDAR` (factory calendar), `CASH_PAYRUN_JOBNAME`,
+   `CASH_PAYRUN_BUKRS`; the pending values `CASH_LOT_DONE_STATUS`, `CASH_RET_DONE_STATUS`, `CASH_EBS_FICA_BANKS`,
+   `CASH_GL_AWTYP` only after their VERIFY items (V222, V224, V227, V229) - until then those rules report "not
+   evaluated", which is intended.
+5. Activate one registry row at a time (test mode run first: `ZCA_OPS_CHECK_RUN` for `CA_FICA`, group `DAILY`); never
+   together with the aggregate template of the same rule (D-N1).
+6. ABAP Unit of the package `ZCA_OPS_CASH` (V233) and the fixture replay (V235) before the pilot.
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

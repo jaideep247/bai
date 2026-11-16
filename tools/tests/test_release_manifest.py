@@ -47,7 +47,8 @@ class ProductManifestTest(unittest.TestCase):
         self.assertEqual(self.problems, [])
         self.assertEqual(rm.assign(objects, m), [])
         packs = {o['pack'] for o in objects}
-        self.assertEqual(packs, {'PARAM', 'CORE', 'DEMO'})
+        self.assertEqual(packs, {'PARAM', 'CORE', 'FICA_CASH', 'DEMO'})
+        self.assertEqual({o['package'] for o in objects if o['pack'] == 'FICA_CASH'}, {'ZCA_OPS_CASH'})
         self.assertTrue(all(o['component'] == 'ZCA_PARAM' for o in objects if o['pack'] == 'PARAM'))
         self.assertEqual({o['package'] for o in objects if o['pack'] == 'DEMO'}, {'ZCA_OPS_DEMO'})
 
@@ -136,7 +137,7 @@ class ProductManifestTest(unittest.TestCase):
         m, objects = self.fresh()
         rm.assign(objects, m)
         self.assertEqual(rm.check_open_items(m, objects), [])
-        pack(m, 'FICA_CASH')['open_items'][0]['tokens'] = ['DFKKOP']
+        pack(m, 'FICA_CASH')['open_items'] = [{'id': 'VTEST', 'tokens': ['DFKKOP'], 'text': 'test item'}]
         failures = rm.check_open_items(m, objects)
         self.assertTrue(any('ZCL_CA_OPS_FLOW_DAO uses DFKKOP' in f for f in failures))
 

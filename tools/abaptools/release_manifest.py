@@ -435,7 +435,9 @@ def check_order(manifest, objects):
         if not obj['pack']:
             continue
         allowed = closure(manifest, obj['pack'])
-        for token in sorted(tokens_of(obj['files']) - {obj['name']}):
+        # string literals are runtime names (e.g. the generated licence map lists check class names), not an
+        # activation dependency - only code references decide the import order
+        for token in sorted(tokens_of(obj['files'], literals=False) - {obj['name']}):
             packs = owner.get(token)
             if packs and not packs & allowed:
                 failures.append(f'{obj["type"]} {obj["name"]} ({obj["pack"]}) refers to {token} of pack '
