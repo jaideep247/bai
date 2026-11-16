@@ -544,6 +544,23 @@ baselines - the framework's no-code aggregate `ZCL_CA_OPS_CHK_AGG` is the findin
 
 Effective cap = parameter (default when not maintained, blank, not a number or not positive), cut to the ceiling (`ZCL_CD_HCK_PARAM=>ROW_CAP`). Raise a cap only after checking the runtime of the read in QA1; the ceilings bound memory and runtime of one check.
 
+## 7f. Pilot acceptance checks of the daily controls (build R, 2026-11-16)
+
+Two checks of category C, delivered **inactive** (`config/hck_seed.md` §2, §3; `docs/Pilot_Acceptance.md` §2, §5):
+
+- `C_ECT_PENDING` (`ZCL_CD_HCK_C_ECT_PENDING`, control `ECT_PENDING`): COUNT (`ECT_PENDING`) and AGE (`ECT_PENDING_AGE`)
+  of the cheques whose latest valid `ZCD_CHECK_HIST` status (`STATE` = space) is a pending `ZECT_STATUS` value of PARAM2
+  and that are still open on `DFKKCR` (`BNKDT` initial, `STATE` blank). The history is read through the configured-source
+  reader of the payment trace (PARAM1 = source specification, DDIC-validated, approved FMON / SOURCE); the register by
+  cheque number through `ZCL_CD_HCK_CHEQUE_DAO`.
+- `C_CHQ_NO_ID` (`ZCL_CD_HCK_C_CHQ_NO_ID`, control `MISSING_CHECK_IDS`): the cheque payments of yesterday's runs without a
+  cheque register row with a cheque number - one anti-join DPAYH / DFKKCR (`ZCL_CD_HCK_CHEQUE_DAO`).
+
+Both report one finding per item (cheque / payment document, company code, amount, currency, age, deadline, control,
+evidence keys) and one `EXPOSURE_PER_CURRENCY` information finding per currency (`ZCL_CD_HCK_EXPOSURE`); a value still a
+placeholder raises - `PLUGIN_ERROR`, status FAILED, never green; a capped read is partial (`READ_CAPPED`). Messages
+900-905, 913-917.
+
 ## 9. Job cycle monitor (Control-M fallback, monitoring only)
 
 > **First principle:** a chain is healthy only when every link ran, in order, inside its window.

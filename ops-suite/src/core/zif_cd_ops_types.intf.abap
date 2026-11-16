@@ -46,6 +46,7 @@
 *&            | keeps the payment engine constants. Areas are parameter areas of ZCA_PARAM (CD_EBS, CD_FMON,
 *&            | CD_HCK, CD_OPS; was EBS / FMON / HCK / CORE), typed ZIF_CA_OPS_TYPES=>TY_AREA.
 *& 2026-11-10 | GC_ACK_TEMPLATE: e-mail template of the missing bank ACK alert (alert e-mail templates).
+*& 2026-11-16 | Prefix COLL_ -> CD_OPS: sources and limits of the collections request checks (build R, P2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Payment engine constants; the generic types are in ZIF_CA_OPS_TYPES (framework ZCA_OPS).
@@ -112,6 +113,8 @@ INTERFACE zif_cd_ops_types
       ebs       TYPE zif_ca_ops_types=>ty_param_name VALUE 'EBS_',
       fmon      TYPE zif_ca_ops_types=>ty_param_name VALUE 'FMON_',
       hck       TYPE zif_ca_ops_types=>ty_param_name VALUE 'HCK_',
+      "! Collections request lifecycle checks of process CD_COLL / BASE_REQ_LIFE (build R, 2026-11-16)
+      coll      TYPE zif_ca_ops_types=>ty_param_name VALUE 'COLL_',
     END OF gc_param_area_prefix.
 
   "! Payment engine areas: parameter areas of ZCA_PARAM (config/param_areas.csv), the area of every

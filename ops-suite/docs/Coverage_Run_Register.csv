@@ -6,6 +6,9 @@ ZBP_R_CD_FMONPRQWA,own test include,,2,90,,"Not run in target SAP; partial exemp
 ZBP_R_CD_HCKCFGALL,own test include,,4,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZBP_R_CD_HCKSUPPRESS,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
 ZBP_R_CD_OPSCFGALL,own test include,,4,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZCL_CD_COLL_C_NO_ANSWER,own test include,,2,90,,Not run in target SAP
+ZCL_CD_COLL_C_REFUND,own test include,,2,90,,Not run in target SAP
+ZCL_CD_COLL_RULES,own test include,,3,90,,Not run in target SAP
 ZCL_CD_EBS_BTC_RESOLVER,own test include,,23,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,own test include,,15,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,own test include,,23,90,,Not run in target SAP
@@ -57,6 +60,7 @@ ZCL_CD_FMON_ADAPTER_PRISM,own test include,,5,90,,Not run in target SAP
 ZCL_CD_FMON_CALENDAR,own test include,,9,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_ACK_MATCH,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_CHK_DEADLINE,own test include,,13,90,,Not run in target SAP
+ZCL_CD_FMON_CHK_DUE_FILE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_DUPLICATE,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_CHK_LATE,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_CHK_LOT,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
@@ -89,12 +93,15 @@ ZCL_CD_FMON_UTIL,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,own test include,,20,90,,Not run in target SAP
 ZCL_CD_HCK_BUDGET,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_CANONICAL,own test include,,3,90,,Not run in target SAP
+ZCL_CD_HCK_CHEQUE_DAO,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_CYCLE_EVAL,own test include,,14,90,,Not run in target SAP
 ZCL_CD_HCK_C_ALERT_HEALTH,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_APPLOG,own test include,,4,90,,Not run in target SAP
+ZCL_CD_HCK_C_CHQ_NO_ID,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_CHQ_STATUS,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_CONFIG_DRIFT,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_C_DOCCHG,own test include,,8,90,,Not run in target SAP
+ZCL_CD_HCK_C_ECT_PENDING,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_FRAMEWORK,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_GENERIC_AGG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_GL_TRANSFER,own test include,,5,90,,Not run in target SAP
@@ -129,6 +136,7 @@ ZCL_CD_HCK_EV_STMT_DOC,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_EV_STRIPE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_EV_SUPPORT,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_EXPORT,own test include,,3,90,,Not run in target SAP
+ZCL_CD_HCK_EXPOSURE,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (construction only: every engine test resolves through it)
 ZCL_CD_HCK_INJECTOR,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (test seam: injected and reset by every engine test)
 ZCL_CD_HCK_JOB_CLAIM,own test include,,3,90,,Not run in target SAP

@@ -1,4 +1,16 @@
 AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DEVELOPER_OWNED,DESCRIPTION,OWNER
+CD_OPS,COLL_CURRENCY,P,CHAR,,,,,,,,Currency of collections request amounts (blank = not known),PE RTB
+CD_OPS,COLL_LOOKBACK_DAYS,P,INT,1,90,7,,,,,Days of collections request status read back (R2 / R3),PE RTB
+CD_OPS,COLL_MAX_ROWS,P,INT,1,,50000,,,,,Rows of the request status source per read (R2 / R3),PE RTB
+CD_OPS,COLL_R2_AMBER_H,P,INT,0,,,,,,,Hours SCHEDULED without source answer: warning,PE RTB
+CD_OPS,COLL_R2_RED_H,P,INT,0,,,,,,,Hours SCHEDULED without source answer: error,PE RTB
+CD_OPS,COLL_R3_AMBER_H,P,INT,0,,,,,,,Hours a rejected request may wait for its refund: warning,PE RTB
+CD_OPS,COLL_R3_RED_H,P,INT,0,,,,,,,Hours a rejected request may wait for its refund: error,PE RTB
+CD_OPS,COLL_REFUND_FAILED,P,LIST,,,,,,,,Refund log statuses that mean the refund call failed,PE RTB
+CD_OPS,COLL_REFUND_OK,P,LIST,,,,,,,,Refund log statuses that mean the refund succeeded,PE RTB
+CD_OPS,COLL_REJECT_VALUE,P,CHAR,,,,,,,,Request status value of a source (BASE) reject,PE RTB
+CD_OPS,COLL_SRC_REFUND,P,CHAR,,,,,,,X,Source spec TABLE=..;KEY=.. of the Stripe refund log,PE RTB
+CD_OPS,COLL_SRC_REQUEST,P,CHAR,,,,,,,X,Source spec TABLE=..;KEY=.. of collections request status,PE RTB
 CD_OPS,MON_STALE_AFTER_MIN_CD_EBS,P,INT,1,,1560,,,,,Minutes after the last EBS run before its monitor is stale,PE RTB
 CD_OPS,MON_STALE_AFTER_MIN_CD_FMON,P,INT,1,,15,,,,,Minutes after the last FMON run before its monitor is stale,PE RTB
 CD_OPS,MON_STALE_AFTER_MIN_CD_HCK,P,INT,1,,1560,,,,,Minutes after the last HCK run before its monitor is stale,PE RTB

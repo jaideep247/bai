@@ -374,6 +374,17 @@ No new object; corrected field names in existing DAOs, CDS and test doubles (`CH
 framework's corrected FICA link registry layer and process catalogue (seed rows regenerated). V159-V161
 (`VERIFY_Suite.md` §4) are closed: V159 / V160 by the corrected fields, V161 by build L (typed ZBTM table, no `FUN07`).
 
+## Build R (2026-11-16): pilot acceptance items of the first customer's daily controls
+
+| Step | Objects | Notes |
+|---|---|---|
+| 1. Messages | ZCD_OPS 900-921 (`config/zcd_ops_messages.md`) | With the message class |
+| 2. HCK classes | `ZIF_CD_HCK_CHEQUE_TYPES`, `ZIF_CD_HCK_CHEQUE_DAO`, `ZCL_CD_HCK_CHEQUE_DAO`, `ZCL_CD_HCK_EXPOSURE`, `ZCL_CD_HCK_FACTORY` / `_INJECTOR` (getter `GET_CHEQUE_DAO`), `ZCL_CD_HCK_C_ECT_PENDING`, `ZCL_CD_HCK_C_CHQ_NO_ID` | With the HCK group of Step 2; reads the core trace repository (configured sources) |
+| 3. FMON class | `ZCL_CD_FMON_CHK_DUE_FILE` | With the FMON group; no existing FMON class changed |
+| 4. Core classes | `ZIF_CD_OPS_TYPES` (prefix `COLL_`), `ZCL_CD_OPS_FACTORY`, `ZCL_CD_OPS_PARAM_SEED` (generated), `ZIF_CD_COLL_TYPES`, `ZCL_CD_COLL_RULES`, `ZCL_CD_COLL_C_NO_ANSWER`, `ZCL_CD_COLL_C_REFUND` | After the HCK group (`ZCL_CD_HCK_EXPOSURE`, `ZIF_CD_HCK_CHEQUE_TYPES`) |
+| 5. Customizing (transport, all inactive) | `config/hck_seed.md` `C_ECT_PENDING`, `C_CHQ_NO_ID` and thresholds; `config/fmon_seed.md` interfaces, DEADLINE rows, `F_BLKLINE`, `F_RETNOTIF`; parameter definitions `COLL_*`; `config/control_checks.csv` four covered-check rows, `config/control_guidance.csv` | Each control is activated by its own customizing request once its open fact is answered (`Pilot_Acceptance.md`) |
+| 6. ABAP Unit / QA1 | V256 (ABAP Unit), V257 (QA1 tests), V246 (PlanViz of the DFKKCR reads) | Before activating a control |
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |

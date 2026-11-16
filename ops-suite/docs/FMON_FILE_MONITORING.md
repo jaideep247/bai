@@ -200,12 +200,29 @@ The finding's AMOUNT / CURRENCY are the file amount; REFERENCE stays the file ID
 
 ## A4a. Cheque status from IRIS (ECT) — proposed, not built (2026-11-07)
 
+**2026-11-16 (build R):** the pending-cheque part is built as the morning report check `C_ECT_PENDING` (inactive; `HCK_MORNING_REPORT.md` §7f, `docs/Pilot_Acceptance.md` §2); the inbound IRIS status interface below stays a proposal.
+
 **Proposed, not built — awaiting the user's confirmation of which pay groups and sources have this behaviour** (process: the payment run clears and generates the positive pay / cheque print files). Rule confirmed by the user 2026-11-07, recorded for the later build:
 - the ECT status (IRIS → PRISM → SAP) is validated on `ZCD_CHECK_HIST` records with **`ZCD_CHECK_HIST-STATE` = space** (field name STATE confirmed; the state filter is part of the read of `ZCD_CHECK_HIST`);
 - link to the cheque: **`ZCD_CHECK_HIST-ZTNUM = DFKKCR-ZTNUM`** (scoped to house bank / account where both tables carry them; leading zeros normalised as the existing cheque-number code does) — DFKKCR ties the cheque to its payment and print file; **`DFKKCR-STATE` is not checked**;
 - statuses **1, 3, 4 and 9** are reported (a configurable list; 3 failed, 4 rejected, 9 returned; mailed 10 may still become 9);
 - **open:** which pay groups and sources have this behaviour (the user is confirming), and the meaning of status 1 (to be reported under its own code / detail, never as "failed").
 Design direction once confirmed: an inbound interface for the IRIS status flow, a grouped, incremental read of `ZCD_CHECK_HIST` joined to `DFKKCR` by key (no row-by-row loops), findings per print file (cheques without status within an SLA) and per cheque (reported status, status of a replaced print file generation — §A2 rule 9). Field names other than STATE and the status domain stay VERIFY-SE11 (`USAA_Known_Tables.md`). Nothing of it is in the code, configuration, seeds or tests.
+
+## A4b. Outbound files due on a business day - BlackLine extracts and the returns notification (build R, 2026-11-16)
+
+Plug-in check `ZCL_CD_FMON_CHK_DUE_FILE` (rows `F_BLKLINE`, `F_RETNOTIF` of `ZCD_FMON_CHK`, **inactive**;
+`config/fmon_seed.md`, `docs/Pilot_Acceptance.md` §3, §6). The interfaces of `IFACES` have no `ZCD_FMON_CAL` row (the daily
+expected-file checks never see them); they are due on the `BUSDAY`-th working day of the month (`WHEN=BUSDAY`, factory
+calendar `CAL`: the BlackLine extracts of `ZCD_FI_BLACKLINE_EXTRACT_COLL` and `ZCD_BLACKLINE_RECON` on the 2nd business
+day) or on a business day with a returns file of the day (`WHEN=RETURNS`: the notification to the source), by the
+`DUE_TIME` of the interface's DEADLINE row (day type `*`). On the due day: `DUE_FILE_MISSING` after due time +
+`GRACE_MIN`, `DUE_FILE_LATE` (W) for a file first seen after the due time, `DUE_FILE_EMPTY` (E) when every file of the
+period is empty, `DUE_FILE_NOT_EVALUATED` (E) for an inactive interface, a missing DEADLINE row or an unreadable
+calendar - never green. Object key `<interface>/<due date>`; the 5-minute run does not reconcile it (no expectation of
+the day), so the operator closes the exception once the file is in. The only FMON check that reads the factory
+calendar (`ZCL_CD_FMON_FACTORY=>GET_CALENDAR`, injectable); the existing FMON classes are unchanged. Messages 906-909,
+913, 915, 917-921.
 
 ## A5. RAG triage playbook
 
