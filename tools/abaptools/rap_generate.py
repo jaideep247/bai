@@ -42,6 +42,8 @@ Modification log:
            | consumer-specific abbreviation). Output unchanged.
 2026-11-15 | Check kind 'module' (licence of the operations framework: activation of a row of an unlicensed
            | module refused on save, message license_refused). Output unchanged for apps without it.
+2026-11-15 | An app with more than 37 entities answers the global authorisations / features of each association in one
+           | statement (method length). Output unchanged for smaller apps.
 """
 import os, re
 
@@ -683,9 +685,17 @@ def bp_locals(app, tables):
          '    IF requested_authorizations-%action-Edit = if_abap_behv=>mk-on.',
          '      result-%action-Edit = lcl_auth=>edit( ).',
          '    ENDIF.']
+    # an app with many entities answers each association in one statement (method length; output of smaller
+    # apps unchanged)
+    compact = 3 * len(tables) + 8 > 120
     for t in tables:
-        o.append(f"    IF requested_authorizations-%assoc-_{t['alias']} = if_abap_behv=>mk-on.")
-        o.append(f"      result-%assoc-_{t['alias']} = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).")
+        a = t['alias']
+        if compact:
+            o.append(f"    result-%assoc-_{a} = COND #( WHEN requested_authorizations-%assoc-_{a} = if_abap_behv=>mk-on")
+            o.append("                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).")
+            continue
+        o.append(f"    IF requested_authorizations-%assoc-_{a} = if_abap_behv=>mk-on.")
+        o.append(f"      result-%assoc-_{a} = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).")
         o.append('    ENDIF.')
     o += ['  ENDMETHOD.', '', '',
          '  METHOD get_global_features.',
@@ -694,8 +704,13 @@ def bp_locals(app, tables):
          '                              THEN if_abap_behv=>fc-o-enabled',
          '                              ELSE if_abap_behv=>fc-o-disabled ).']
     for t in tables:
-        o.append(f"    IF requested_features-%assoc-_{t['alias']} = if_abap_behv=>mk-on.")
-        o.append(f"      result-%assoc-_{t['alias']} = lv_create.")
+        a = t['alias']
+        if compact:
+            o.append(f"    result-%assoc-_{a} = COND #( WHEN requested_features-%assoc-_{a} = if_abap_behv=>mk-on")
+            o.append("                                 THEN lv_create ).")
+            continue
+        o.append(f"    IF requested_features-%assoc-_{a} = if_abap_behv=>mk-on.")
+        o.append(f"      result-%assoc-_{a} = lv_create.")
         o.append('    ENDIF.')
     o += ['  ENDMETHOD.', '', 'ENDCLASS.']
 

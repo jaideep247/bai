@@ -3,4 +3,6 @@
 define service ZUI_CA_OPS_EXC {
   expose ZC_CA_OpsException as Exception;
   expose ZC_CA_OpsExcHist as History;
+  // Exception contract (2026-11-15): the typed evidence rows of an exception
+  expose ZC_CA_OpsFindEvidence as Evidence;
 }

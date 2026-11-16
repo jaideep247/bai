@@ -36,7 +36,7 @@ house check `extensions` fails when the inventory, the views and this document d
 
 <!-- generated: extension points (tools/extensions.py; never edit this block) -->
 
-Inventory `config/extension_points.json` (release 2026-11-15): 27 extension points, 8 of them CDS extension points.
+Inventory `config/extension_points.json` (release 2026-11-15): 30 extension points, 9 of them CDS extension points.
 
 | Module | Standard data source | Extension point | Mechanism | Product object | Example |
 |---|---|---|---|---|---|
@@ -63,6 +63,9 @@ Inventory `config/extension_points.json` (release 2026-11-15): 27 extension poin
 | Job monitoring | SAP background jobs and their logs | `JOB_RESOLVER` - Which jobs belong to one run of an application | plug-in class | `ZIF_CA_OPS_JOB_RESOLVER` | The worker jobs of a parallel processing run |
 | Link registry (every module) | SAP standard objects of the layers S4CORE (released views, bank statement, partner) and FICA (FI-CA tables) | `LINK_OVERLAY` - Customer layer: its tables and views, custom fields on standard tables, its links, switch-off and replacement of a standard link | link registry (customer layer) | `ZCA_OPS_LNKLYR` | Custom field ZZXX_REQ_ID on DFKKOP and the link item -> request (config/links/examples/xx_overlay.json) |
 | Operations response | Findings of every check | `RESPONSE` - Runbook links and correlation rules of the customer's checks | configuration row | `ZCA_OPS_RUNBOOK` | The customer's runbook page of a check |
+| Payment file lifecycle | Payment file register of the product (ZCA_OPS_PFFILE), fed from FI-CA payment runs and the adapters | `PAYFILE` - Payment file worklist (list report and object page) | CDS extension (generated) | `ZC_CA_OpsPayFile` | The customer's own file name or business line of a file |
+| Payment file lifecycle | Middleware, bank acknowledgements, schedulers and ticketing the product cannot see | `PAYFILE_ADAPTER` - A customer source of files, transfers, bank answers, jobs or statements, a ticket sink, a calendar | plug-in class | `ZIF_CA_OPS_PF_ADAPTER` | The bank acknowledgement table of the customer |
+| Payment file lifecycle | FI-CA payment runs (DPAYH), SAP background jobs (TBTCO) | `PAYFILE_CONFIG` - File types, milestones and deadlines, status mappings and adapters of the customer | configuration row | `ZCA_OPS_PFTYP` | The customer's acceptance deadline of 10:00 on the next business day |
 | Payment model | The product contract; the G/L side on released journal views | `PAYMENT_MODEL` - Mapping spec: which customer table holds a payment, a request, an attempt; adapter views generated into the customer package; feeder systems and texts as rows of ZCA_OPS_FEEDER / ZCA_OPS_PMDIM | generated from a customer spec | `mapping.json` | Customer XX with requests from a claims and a billing system (section 3 of the document) |
 | Process catalogue | SAP standard processes of the catalogue packages with their activation | `CATALOGUE` - Process catalogue (list and object page) | CDS extension (generated) | `ZR_CA_OpsCatalogue` | The customer's process owner and its own process reference |
 | Process catalogue | SAP standard processes of the packages S4CORE and FI-CA | `CATALOGUE_LAYER` - Customer layer of the catalogue: activation of standard processes, its own processes | configuration row | `ZCA_OPS_CATACT` | config/catalogue/examples of the framework |
@@ -80,6 +83,7 @@ Inventory `config/extension_points.json` (release 2026-11-15): 27 extension poin
 | `CHECK_STATUS` | `ZR_CA_OpsCheckStatus` (select); `ZC_CA_OpsCheckStatus` (projection, reads `ZR_CA_OpsCheckStatus`) | `COMPANY` link from `S4_COMPANY_CODE` (CompanyCode = CompanyCode); `CHECK` key (Area, CheckId) | V153, V154, V157 |
 | `CATALOGUE` | `ZR_CA_OpsCatalogue` (select); `ZC_CA_OpsCatalogue` (projection, reads `ZR_CA_OpsCatalogue`) | `PROCESS` key (ProcessId) | V153, V154, V157 |
 | `CTL_REVIEW` | `ZC_CA_OpsCtlReview` (projection) | `COMPANY` link from `S4_COMPANY_CODE` (CompanyCode = CompanyCode); `CONTROL` key (Area, ControlId) | V153, V154, V157 |
+| `PAYFILE` | `ZR_CA_OpsPayFile` (select); `ZC_CA_OpsPayFile` (projection, reads `ZR_CA_OpsPayFile`) | `COMPANY` link from `S4_COMPANY_CODE` (CompanyCode = CompanyCode); `FILE` key (Area, FileId, Currency) | V153, V154, V157 |
 
 Annotations of every extensible view: `extensible: true`, `elementSuffix: 'ZOP'`, `allowNewDatasources` true on the base view (false on a view the elements are passed on to), `dataSources` the alias of a select view's main source, `quota.maximumFields: 50`, `quota.maximumBytes: 2000` (V153).
 

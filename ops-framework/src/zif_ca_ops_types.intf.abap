@@ -50,6 +50,8 @@
 *&            | (pilot pack) read in area CA_OPS.
 *& 2026-11-15 | Name prefix FLOW_ read in area CA_OPS (account flow reconciliation).
 *& 2026-11-15 | Name prefix LIC_ read in area CA_OPS (licensing).
+*& 2026-11-15 | Exception contract (ZIF_CA_OPS_EXC_CONTRACT=>TY_CONTRACT included in TY_FINDING); name prefix PF_
+*&            | read in area CA_OPS (payment file lifecycle).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -172,6 +174,8 @@ INTERFACE zif_ca_ops_types
       flow        TYPE ty_param_name VALUE 'FLOW_',
       "! Licence of the vendor (ZIF_CA_OPS_LIC_TYPES=>GC_PARAM, 2026-11-15)
       license     TYPE ty_param_name VALUE 'LIC_',
+      "! Payment file lifecycle (ZIF_CA_OPS_PF_TYPES=>GC_PARAM, 2026-11-15)
+      payfile     TYPE ty_param_name VALUE 'PF_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters
@@ -369,8 +373,12 @@ INTERFACE zif_ca_ops_types
       cfg_rule      TYPE ty_cfg_rule,
       "! Time of the business event the finding is about (UTC; blank = not known): time to detect of the pilot
       "! metrics = first seen - event time (else the business date)
-      event_at      TYPE timestampl,
-    END OF ty_finding.
+      event_at      TYPE timestampl.
+      "! Exception contract (2026-11-15, docs/EXCEPTION_CONTRACT.md): unknown count, duplicate exposure, deadline
+      "! and calendar, stage, responsible user / team and their source, evidence key - stored as ZCA_OPS_FINDING
+      "! UNKNOWN_COUNT ... EVID_KEY; ITEM_COUNT above is stored too (the count of the contract)
+      INCLUDE TYPE zif_ca_ops_exc_contract=>ty_contract.
+  TYPES END OF ty_finding.
   TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
   "! Scope of a run for exception reconciliation: object keys or groups (GROUP2) evaluated

@@ -10,6 +10,7 @@ CA_FICA,FICA_GL_BREAKS,FICA_GL_TRANSFER,Clearing-account breaks not explained af
 CA_FICA,FICA_IP_BREACH,FICA_INSTALMENT,Instalments overdue beyond the tolerance (plan in breach),ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_INT_MISSED,FICA_INTEREST,Interest runs that did not post (error lines),ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_INV_BACKLOG,FICA_INVOICING,Billing documents of past days not invoiced,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
+CA_FICA,FICA_PAYFILE_ACK,FICA_PAYFILE_ACK,Payment files stopped before the bank accepted them,ZCL_CA_OPS_CHK_PAYFILE,INTRADAY,X,,10
 CA_FICA,FICA_PAYRUN_NOPAY,FICA_PAYRUN,Payments of past runs without a payment document,ZCL_CA_OPS_CHK_AGG,DAILY,X,,10
 CA_FICA,FICA_LOT_OPEN,FICA_PAY_LOTS,Payment lots not posted and closed after n days,ZCL_CA_OPS_CHK_AGG,DAILY,,,10
 CA_FICA,FICA_LOT_CLARIF,FICA_PAY_LOTS,Payment lot items waiting in clarification,ZCL_CA_OPS_CHK_AGG,DAILY,,,20

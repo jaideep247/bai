@@ -1,0 +1,8 @@
+AREA,SOURCE_ID,STATUS,MILESTONE,OUTCOME,DESCRIPTION,ACTIVE
+<area>,SAPJOB,F,GENERATED,OK,SAP job finished: the file is generated (ZCL_CA_OPS_PF_SRC_TBTCO),
+<area>,SAPJOB,A,GENERATED,FAILED,SAP job cancelled: the file is not generated,
+<area>,SAPJOB,R,,INFO,SAP job running,
+<area>,SAPJOB,Z,,INFO,SAP job put active,
+<area>,SAPJOB,S,,INFO,SAP job released,
+<area>,SAPJOB,Y,,INFO,SAP job ready,
+<area>,SAPJOB,P,,INFO,SAP job scheduled,

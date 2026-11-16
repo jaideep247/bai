@@ -71,6 +71,17 @@ CA_OPS,LINK_MAX_NODES,P,INT,1,5000,500,,,,,Objects one link registry walk return
 CA_OPS,LINK_MAX_ROWS,P,INT,1,10000,100,,,,,Rows one read of a link returns at most (per level),OPS FRAMEWORK
 CA_OPS,LINK_READ_CHUNK,P,INT,1,1000,100,,,,,Source rows per database read of a link (IN list or OR),OPS FRAMEWORK
 CA_OPS,METRIC_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of month / week of the response-time metrics,OPS FRAMEWORK
+CA_OPS,PF_AMOUNT_RED,P,CHAR,,,,,,,,Amounts that block a payment file finding ([CoCd:]CUR amt),OPS FRAMEWORK
+CA_OPS,PF_BREACH_RED_MIN,P,INT,0,10080,240,,,,,Minutes overdue from which a payment file finding blocks,OPS FRAMEWORK
+CA_OPS,PF_EVIDENCE_MAX,P,INT,1,200,20,,,,,Evidence rows per payment file finding,OPS FRAMEWORK
+CA_OPS,PF_GRACE_MIN,P,INT,0,1440,30,,,,,Minutes overdue a payment file finding stays a warning,OPS FRAMEWORK
+CA_OPS,PF_LOOKBACK_DAYS,P,INT,1,31,3,,,,,Days a first read of a payment file source looks back,OPS FRAMEWORK
+CA_OPS,PF_MAX_FINDINGS,P,INT,1,10000,200,,,,,Payment file findings per file type and run,OPS FRAMEWORK
+CA_OPS,PF_MAX_PAYMENTS,P,INT,1,100000,5000,,,,,Payments kept per payment file (more are counted only),OPS FRAMEWORK
+CA_OPS,PF_OPEN_DAYS,P,INT,1,93,10,,,,,Days a payment file stays under watch after business date,OPS FRAMEWORK
+CA_OPS,PF_OVERLAP_MIN,P,INT,0,1440,60,,,,,Minutes a payment file source rereads before its watermark,OPS FRAMEWORK
+CA_OPS,PF_RETENTION_DAYS,P,INT,0,3660,400,,,,,Days the payment file register is kept (0 = never removed),OPS FRAMEWORK
+CA_OPS,PF_STALE_MIN,P,INT,1,10080,120,,,,,Minutes after which a payment file source is stale,OPS FRAMEWORK
 CA_OPS,PILOT_EXPORT_FILE,P,CHAR,,,,"[A-Z0-9_/]{0,60}",,,,Logical file name of the pilot export (transaction FILE),OPS FRAMEWORK
 CA_OPS,PILOT_EXPORT_PATH,P,CHAR,,,,"[A-Z0-9_/]{0,60}",,,,Logical path of the pilot export (transaction FILE),OPS FRAMEWORK
 CA_OPS,PILOT_FP_REASON,P,CHAR,,,NOT_AN_ISSUE,"[A-Z0-9_]{1,12}",,,,Reason code that marks a resolved exception a false positive,OPS FRAMEWORK

@@ -83,7 +83,15 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'FlowStageControl', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Account flow stage controls', position: 380, targetElement: '_FlowStageControl' },
     { id: 'FlowStageRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Account flow stage rules', position: 390, targetElement: '_FlowStageRule' }
+      label: 'Account flow stage rules', position: 390, targetElement: '_FlowStageRule' },
+    { id: 'PayFileType', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Payment file types', position: 400, targetElement: '_PayFileType' },
+    { id: 'PayFileMilestone', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Payment file milestones', position: 410, targetElement: '_PayFileMilestone' },
+    { id: 'PayFileStatusMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Payment file status mapping', position: 420, targetElement: '_PayFileStatusMap' },
+    { id: 'PayFileAdapter', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Payment file adapters', position: 430, targetElement: '_PayFileAdapter' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

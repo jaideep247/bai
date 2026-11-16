@@ -40,4 +40,8 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_FlowTileStage as FlowTileStage;
   expose ZC_CA_FlowStageControl as FlowStageControl;
   expose ZC_CA_FlowStageRule as FlowStageRule;
+  expose ZC_CA_PayFileType as PayFileType;
+  expose ZC_CA_PayFileMilestone as PayFileMilestone;
+  expose ZC_CA_PayFileStatusMap as PayFileStatusMap;
+  expose ZC_CA_PayFileAdapter as PayFileAdapter;
 }

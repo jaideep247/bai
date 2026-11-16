@@ -1,5 +1,6 @@
 PROCESS_ID,PRED_ID,DEP_KIND,DESCRIPTION
 FICA_EBS_LOTS,S4_BANK_STMT,H,Needs the imported bank statement
+FICA_PAYFILE_ACK,FICA_PAYRUN,H,The payment run produces the payments of a file
 FICA_PAYRUN,FICA_GL_TRANSFER,S,Payment documents reach the G/L with their keys
 FICA_RETURNS,FICA_PAYRUN,S,Returns of payments of the payment run
 FSCD_BROKER,FSCD_PAYPLAN,S,Broker items reference the receivables

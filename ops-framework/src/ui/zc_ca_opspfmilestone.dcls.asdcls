@@ -1,0 +1,12 @@
+// Artifact: zc_ca_opspfmilestone.dcls.asdcls
+// Purpose: Read access to the payment file stage timeline (service ZUI_CA_OPS_PAYFILE): authorization object ZCA_OPS with ZCA_PARAR = the area and ACTVT 03, and for a row with a company code the same object with BUKRS = its company code (company-code isolation, docs/auth_zca_ops.md section 3c).
+// Modification log: 2026-11-15 | Initial version (build K: payment file lifecycle).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); IS INITIAL in an access condition.
+@EndUserText.label: 'Payment file stage timeline - read access'
+@MappingRole: true
+define role ZC_CA_OpsPfMilestone {
+  grant select on ZC_CA_OpsPfMilestone
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

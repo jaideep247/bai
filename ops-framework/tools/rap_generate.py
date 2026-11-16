@@ -41,6 +41,9 @@ Modification log:
            | runbook links, correlation rules, customer link layers, break accounts, flows (check kind 'module'); a
            | business process / catalogue activation by its catalogue process, a registered check by its class, a
            | catalogue package by its module ('valid' with the *_LICENSED checks). Deactivation is always allowed.
+2026-11-15 | Payment file lifecycle (docs/PAYMENT_FILE_LIFECYCLE.md): file types (ACK level, calendar, time zone,
+           | cut-off, expectation; module CASHOPS), milestones (product vocabulary, clock / offset deadlines), status
+           | mappings (an outcome needs a milestone) and adapters (class of ZIF_CA_OPS_PF_ADAPTER, role, source).
 """
 import os
 import sys
@@ -58,6 +61,7 @@ SEV = 'B,E,W,I'
 FLOW_ROLES = 'RECEIVABLE,PAYABLE,OUTSIDE,SETTLEMENT,CLEARING,CASH,CLARIFICATION'
 FLOW_RESERVED = 'OTHER,MOVEMENT,OPENING,CLOSING,UNEXPLAINED'
 FLOW_RESERVED_RULE = 'MOVEMENT,OPENING,CLOSING,UNEXPLAINED'
+PF_MILESTONES = 'PAYRUN,GENERATED,PICKUP,DELIVERED,RECEIPT,ACCEPTED,SETTLED'
 
 SPEC = {
     # The framework's own app (2026-11-10): sub-package ZCA_OPS_UI (folder ui), prefix CA, messages of
@@ -232,6 +236,22 @@ SPEC = {
               ('when', 'active', 'X', [('required', 'stage_id'), ('reserved', 'stage_id', FLOW_RESERVED_RULE)]),
               ('when', 'line_source', 'G', [('blank', 'origin'), ('blank', 'main_trans'), ('blank', 'sub_trans')]),
               ('when', 'line_source', 'F', [('blank', 'ref_type')])]),
+            ('zca_ops_pftyp', 'PayFileType', 'zca_d_pftyp', 'File type', 'Payment file types', [],
+             [('area', 'area', False), ('enum', 'direction', ',D,C'), ('enum', 'ack_level', 'F,B,P,N'),
+              ('when', 'active', 'X', [('module', 'CASHOPS')])]),
+            ('zca_ops_pfstg', 'PayFileMilestone', 'zca_d_pfstg', 'Milestone', 'Payment file milestones', [],
+             [('area', 'area', False), ('enum', 'milestone', PF_MILESTONES), ('enum', 'due_kind', ',T,O'),
+              ('enum', 'basis', ',' + PF_MILESTONES),
+              ('when', 'due_kind', 'O', [('required', 'basis')]),
+              ('when', 'due_kind', 'T', [('blank', 'basis')])]),
+            ('zca_ops_pfmap', 'PayFileStatusMap', 'zca_d_pfmap', 'Status mapping', 'Payment file status mapping', [],
+             [('area', 'area', False), ('enum', 'milestone', ',' + PF_MILESTONES),
+              ('enum', 'outcome', 'OK,REJECTED,PARTIAL,FAILED,INFO'),
+              ('when', 'outcome', 'OK,REJECTED,PARTIAL,FAILED', [('required', 'milestone')])]),
+            ('zca_ops_pfadp', 'PayFileAdapter', 'zca_d_pfadp', 'Adapter', 'Payment file adapters', [],
+             [('area', 'area', False), ('enum', 'role', 'FILE,TRANSFER,ACK,SCHED,STMT,TICKET,CALENDAR'),
+              ('class', 'class_name', 'ZIF_CA_OPS_PF_ADAPTER'), ('enum', 'source_type', ',SAP,MW,BANK'),
+              ('when', 'active', 'X', [('required', 'class_name'), ('required', 'source_id')])]),
         ]),
 }
 
@@ -325,7 +345,19 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'rule_seq': 'Sequence (first match wins)', 'ref_type': 'Reference transaction (AWTYP)',
           'doc_type': 'Document type (journal or FI-CA)', 'origin': 'FI-CA origin key',
           'main_trans': 'FI-CA main transaction', 'sub_trans': 'FI-CA sub-transaction',
-          'debit_credit': 'Debit / credit (S, H, blank = both)'}
+          'debit_credit': 'Debit / credit (S, H, blank = both)',
+          'file_type': 'Payment file type', 'ack_level': 'Bank ACK level (F file, B batch, P payment, N none)',
+          'ack_multi': 'One ACK may cover several files', 'calendar_id': 'Factory calendar (SCAL)',
+          'time_zone': 'Time zone of the clock times', 'day_cutoff': 'Overnight cut-off (local time)',
+          'expected_files': 'Files expected per business day', 'zero_ok': 'A business day without files is valid',
+          'stale_min': 'Source stale after (minutes, 0 = PF_STALE_MIN)',
+          'open_days': 'Watched for (days, 0 = PF_OPEN_DAYS)',
+          'milestone': 'Milestone', 'required': 'Required',
+          'due_kind': 'Deadline (T clock time, O offset)', 'due_time': 'Due at (local time)',
+          'day_offset': 'Business days after the business date', 'basis': 'Offset from milestone',
+          'offset_min': 'Offset (minutes)', 'grace_min': 'Warning for (minutes, 0 = PF_GRACE_MIN)',
+          'source_id': 'Source', 'status': 'Native status (exact)', 'outcome': 'Outcome',
+          'setting': 'Adapter setting', 'source_type': 'Source type (SAP, MW, BANK)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

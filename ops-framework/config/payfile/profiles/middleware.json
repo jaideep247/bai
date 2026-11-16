@@ -1,0 +1,17 @@
+{
+  "_comment": "Test profile of the payment file fixtures (tools/abaptools/payfile.py): a neutral setup with a middleware between SAP and the bank, SAP jobs as scheduler and a bank acknowledgement source. Not product configuration - the product's template rows are config/payfile/zca_ops_pfmap.csv (inactive).",
+  "name": "middleware",
+  "sources": {"SCHED": "SAPJOB", "TRANSFER": "MWHUB", "ACK": "BANKACK", "STMT": "BANKSTMT"},
+  "statuses": [
+    {"source_id": "SAPJOB", "status": "F", "milestone": "GENERATED", "outcome": "OK"},
+    {"source_id": "SAPJOB", "status": "A", "milestone": "GENERATED", "outcome": "FAILED"},
+    {"source_id": "MWHUB", "status": "RECEIVED", "milestone": "PICKUP", "outcome": "OK"},
+    {"source_id": "MWHUB", "status": "SENT", "milestone": "DELIVERED", "outcome": "OK"},
+    {"source_id": "MWHUB", "status": "SEND_FAILED", "milestone": "DELIVERED", "outcome": "FAILED"},
+    {"source_id": "BANKACK", "status": "TA_OK", "milestone": "RECEIPT", "outcome": "OK"},
+    {"source_id": "BANKACK", "status": "ACK", "milestone": "ACCEPTED", "outcome": "OK"},
+    {"source_id": "BANKACK", "status": "NACK", "milestone": "ACCEPTED", "outcome": "REJECTED"},
+    {"source_id": "BANKACK", "status": "PACK", "milestone": "ACCEPTED", "outcome": "PARTIAL"},
+    {"source_id": "BANKSTMT", "status": "BOOKED", "milestone": "SETTLED", "outcome": "OK"}
+  ]
+}

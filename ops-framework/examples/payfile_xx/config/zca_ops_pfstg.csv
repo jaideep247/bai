@@ -1,0 +1,6 @@
+AREA,FILE_TYPE,MILESTONE,DESCRIPTION,REQUIRED,DUE_KIND,DUE_TIME,DAY_OFFSET,BASIS,OFFSET_MIN,GRACE_MIN,ACTIVE
+ZXX_CASH,XX_SEPA,PAYRUN,Payment run of the day,X,,,,,,,X
+ZXX_CASH,XX_SEPA,GENERATED,Payment medium created by the XX scheduler,X,O,,,PAYRUN,60,,X
+ZXX_CASH,XX_SEPA,DELIVERED,Uploaded to the bank server (no middleware),X,O,,,GENERATED,60,,X
+ZXX_CASH,XX_SEPA,RECEIPT,Received by the bank,X,O,,,DELIVERED,30,,X
+ZXX_CASH,XX_SEPA,ACCEPTED,Accepted by the bank per payment by 10:00 next business day,X,T,100000,1,,,,X

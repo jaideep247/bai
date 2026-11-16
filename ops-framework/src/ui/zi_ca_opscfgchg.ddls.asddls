@@ -192,3 +192,23 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_pftyp
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_pfstg
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_pfmap
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zca_ops_pfadp
+  {
+    last_changed_at as LastChangedAt
+  }

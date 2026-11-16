@@ -23,11 +23,13 @@ INTERFACE lif_c.
   CONSTANTS:
     BEGIN OF gc_el,
       acctpattern                    TYPE string VALUE `ACCTPATTERN`,
+      acklevel                       TYPE string VALUE `ACKLEVEL`,
       active                         TYPE string VALUE `ACTIVE`,
       aggfunc                        TYPE string VALUE `AGGFUNC`,
       approvedby                     TYPE string VALUE `APPROVEDBY`,
       area                           TYPE string VALUE `AREA`,
       backup                         TYPE string VALUE `BACKUP`,
+      basis                          TYPE string VALUE `BASIS`,
       bucket                         TYPE string VALUE `BUCKET`,
       bukrs                          TYPE string VALUE `BUKRS`,
       bukrsfield                     TYPE string VALUE `BUKRSFIELD`,
@@ -48,6 +50,7 @@ INTERFACE lif_c.
       destination                    TYPE string VALUE `DESTINATION`,
       dimension                      TYPE string VALUE `DIMENSION`,
       direction                      TYPE string VALUE `DIRECTION`,
+      duekind                        TYPE string VALUE `DUEKIND`,
       escseverity                    TYPE string VALUE `ESCSEVERITY`,
       evalcategory                   TYPE string VALUE `EVALCATEGORY`,
       evalclass                      TYPE string VALUE `EVALCLASS`,
@@ -67,11 +70,13 @@ INTERFACE lif_c.
       linkid                         TYPE string VALUE `LINKID`,
       maintrans                      TYPE string VALUE `MAINTRANS`,
       matchfield                     TYPE string VALUE `MATCHFIELD`,
+      milestone                      TYPE string VALUE `MILESTONE`,
       minrag                         TYPE string VALUE `MINRAG`,
       minseverity                    TYPE string VALUE `MINSEVERITY`,
       monarea                        TYPE string VALUE `MONAREA`,
       operator                       TYPE string VALUE `OPERATOR`,
       origin                         TYPE string VALUE `ORIGIN`,
+      outcome                        TYPE string VALUE `OUTCOME`,
       owner                          TYPE string VALUE `OWNER`,
       paramarea                      TYPE string VALUE `PARAMAREA`,
       paramname                      TYPE string VALUE `PARAMNAME`,
@@ -89,8 +94,10 @@ INTERFACE lif_c.
       sappattern                     TYPE string VALUE `SAPPATTERN`,
       sensitivity                    TYPE string VALUE `SENSITIVITY`,
       side                           TYPE string VALUE `SIDE`,
+      sourceid                       TYPE string VALUE `SOURCEID`,
       sourcekind                     TYPE string VALUE `SOURCEKIND`,
       sourcename                     TYPE string VALUE `SOURCENAME`,
+      sourcetype                     TYPE string VALUE `SOURCETYPE`,
       stageid                        TYPE string VALUE `STAGEID`,
       statusfield                    TYPE string VALUE `STATUSFIELD`,
       statusop                       TYPE string VALUE `STATUSOP`,
@@ -142,6 +149,10 @@ INTERFACE lif_c.
       linkfield                      TYPE string VALUE `LinkField`,
       linklayer                      TYPE string VALUE `LinkLayer`,
       linkobject                     TYPE string VALUE `LinkObject`,
+      payfileadapter                 TYPE string VALUE `PayFileAdapter`,
+      payfilemilestone               TYPE string VALUE `PayFileMilestone`,
+      payfilestatusmap               TYPE string VALUE `PayFileStatusMap`,
+      payfiletype                    TYPE string VALUE `PayFileType`,
       paymdimtext                    TYPE string VALUE `PaymDimText`,
       paymfeeder                     TYPE string VALUE `PaymFeeder`,
       pilotbaseline                  TYPE string VALUE `PilotBaseline`,
@@ -155,10 +166,12 @@ INTERFACE lif_c.
       zif_ca_ops_alert_channel       TYPE string VALUE `ZIF_CA_OPS_ALERT_CHANNEL`,
       zif_ca_ops_check               TYPE string VALUE `ZIF_CA_OPS_CHECK`,
       zif_ca_ops_flow_source         TYPE string VALUE `ZIF_CA_OPS_FLOW_SOURCE`,
+      zif_ca_ops_pf_adapter          TYPE string VALUE `ZIF_CA_OPS_PF_ADAPTER`,
       zif_ca_ops_purge_target        TYPE string VALUE `ZIF_CA_OPS_PURGE_TARGET`,
     END OF gc_if,
     BEGIN OF gc_mod,
       breaks                         TYPE string VALUE `BREAKS`,
+      cashops                        TYPE string VALUE `CASHOPS`,
       control                        TYPE string VALUE `CONTROL`,
       flow                           TYPE string VALUE `FLOW`,
       jobs                           TYPE string VALUE `JOBS`,
@@ -197,6 +210,10 @@ INTERFACE lif_c.
       linkfield                      TYPE string VALUE `ZCA_OPS_LNKFLD`,
       linklayer                      TYPE string VALUE `ZCA_OPS_LNKLYR`,
       linkobject                     TYPE string VALUE `ZCA_OPS_LNKOBJ`,
+      payfileadapter                 TYPE string VALUE `ZCA_OPS_PFADP`,
+      payfilemilestone               TYPE string VALUE `ZCA_OPS_PFSTG`,
+      payfilestatusmap               TYPE string VALUE `ZCA_OPS_PFMAP`,
+      payfiletype                    TYPE string VALUE `ZCA_OPS_PFTYP`,
       paymdimtext                    TYPE string VALUE `ZCA_OPS_PMDIM`,
       paymfeeder                     TYPE string VALUE `ZCA_OPS_FEEDER`,
       pilotbaseline                  TYPE string VALUE `ZCA_OPS_PILOTBL`,
@@ -245,6 +262,15 @@ INTERFACE lif_c.
       linkfield_sensitivity          TYPE string VALUE `,M,H`,
       linklayer_layerkind            TYPE string VALUE `S,I,C`,
       linkobject_sourcekind          TYPE string VALUE `T,V`,
+      payfileadapter_role            TYPE string VALUE `FILE,TRANSFER,ACK,SCHED,STMT,TICKET,CALENDAR`,
+      payfileadapter_sourcetype      TYPE string VALUE `,SAP,MW,BANK`,
+      payfilemilestone_basis         TYPE string VALUE `,PAYRUN,GENERATED,PICKUP,DELIVERED,RECEIPT,ACCEPTED,SETTLED`,
+      payfilemilestone_duekind       TYPE string VALUE `,T,O`,
+      payfilemilestone_milestone     TYPE string VALUE `PAYRUN,GENERATED,PICKUP,DELIVERED,RECEIPT,ACCEPTED,SETTLED`,
+      payfilestatusmap_milestone     TYPE string VALUE `,PAYRUN,GENERATED,PICKUP,DELIVERED,RECEIPT,ACCEPTED,SETTLED`,
+      payfilestatusmap_outcome       TYPE string VALUE `OK,REJECTED,PARTIAL,FAILED,INFO`,
+      payfiletype_acklevel           TYPE string VALUE `F,B,P,N`,
+      payfiletype_direction          TYPE string VALUE `,D,C`,
       paymdimtext_dimension          TYPE string VALUE `FLOW,SOURCE,TRANSACTION,REQ_STATUS,PAY_STATUS,METHOD_CLASS,DOC_EVENT`,
       runbooklink_matchfield         TYPE string VALUE `RULE_ID,CHECK_CODE,GROUP2`,
       schedulerjob_criticality       TYPE string VALUE `H,M,L`,
@@ -277,6 +303,11 @@ INTERFACE lif_c.
       linkfield_evidence_v           TYPE string VALUE `V`,
       linklayer_active_x             TYPE string VALUE `X`,
       linklayer_layer_kind_c         TYPE string VALUE `C`,
+      payfileadapter_active_x        TYPE string VALUE `X`,
+      payfilemilestone_due_kind_o    TYPE string VALUE `O`,
+      payfilemilestone_due_kind_t    TYPE string VALUE `T`,
+      payfilestatusmap_outcome_okrej TYPE string VALUE `OK,REJECTED,PARTIAL,FAILED`,
+      payfiletype_active_x           TYPE string VALUE `X`,
       process_active_x               TYPE string VALUE `X`,
       registeredcheck_active_x       TYPE string VALUE `X`,
       runbooklink_active_x           TYPE string VALUE `X`,
@@ -345,120 +376,90 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     IF requested_authorizations-%action-Edit = if_abap_behv=>mk-on.
       result-%action-Edit = lcl_auth=>edit( ).
     ENDIF.
-    IF requested_authorizations-%assoc-_AlertRule = if_abap_behv=>mk-on.
-      result-%assoc-_AlertRule = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_AlertChannel = if_abap_behv=>mk-on.
-      result-%assoc-_AlertChannel = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_PurgeTarget = if_abap_behv=>mk-on.
-      result-%assoc-_PurgeTarget = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_Control = if_abap_behv=>mk-on.
-      result-%assoc-_Control = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_ControlText = if_abap_behv=>mk-on.
-      result-%assoc-_ControlText = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_ControlCheck = if_abap_behv=>mk-on.
-      result-%assoc-_ControlCheck = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_Process = if_abap_behv=>mk-on.
-      result-%assoc-_Process = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_RegisteredCheck = if_abap_behv=>mk-on.
-      result-%assoc-_RegisteredCheck = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_AggregateCheck = if_abap_behv=>mk-on.
-      result-%assoc-_AggregateCheck = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_ApprovedTable = if_abap_behv=>mk-on.
-      result-%assoc-_ApprovedTable = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_PaymDimText = if_abap_behv=>mk-on.
-      result-%assoc-_PaymDimText = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_PaymFeeder = if_abap_behv=>mk-on.
-      result-%assoc-_PaymFeeder = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_SchedulerJob = if_abap_behv=>mk-on.
-      result-%assoc-_SchedulerJob = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_RunbookLink = if_abap_behv=>mk-on.
-      result-%assoc-_RunbookLink = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_CorrelationRule = if_abap_behv=>mk-on.
-      result-%assoc-_CorrelationRule = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_LinkLayer = if_abap_behv=>mk-on.
-      result-%assoc-_LinkLayer = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_LinkObject = if_abap_behv=>mk-on.
-      result-%assoc-_LinkObject = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_LinkField = if_abap_behv=>mk-on.
-      result-%assoc-_LinkField = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_Link = if_abap_behv=>mk-on.
-      result-%assoc-_Link = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_LinkCondition = if_abap_behv=>mk-on.
-      result-%assoc-_LinkCondition = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_LinkActivation = if_abap_behv=>mk-on.
-      result-%assoc-_LinkActivation = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_CatalogPackage = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogPackage = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_CatalogProcess = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogProcess = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_CatalogStep = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogStep = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_CatalogTable = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogTable = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_CatalogDependency = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogDependency = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_CatalogActivation = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogActivation = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_BreakAccount = if_abap_behv=>mk-on.
-      result-%assoc-_BreakAccount = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_BreakBucket = if_abap_behv=>mk-on.
-      result-%assoc-_BreakBucket = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_BreakRule = if_abap_behv=>mk-on.
-      result-%assoc-_BreakRule = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_BreakCondition = if_abap_behv=>mk-on.
-      result-%assoc-_BreakCondition = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_PilotBaseline = if_abap_behv=>mk-on.
-      result-%assoc-_PilotBaseline = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_AccountFlow = if_abap_behv=>mk-on.
-      result-%assoc-_AccountFlow = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_FlowAccount = if_abap_behv=>mk-on.
-      result-%assoc-_FlowAccount = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_FlowStage = if_abap_behv=>mk-on.
-      result-%assoc-_FlowStage = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_FlowTileStage = if_abap_behv=>mk-on.
-      result-%assoc-_FlowTileStage = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_FlowStageControl = if_abap_behv=>mk-on.
-      result-%assoc-_FlowStageControl = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
-    IF requested_authorizations-%assoc-_FlowStageRule = if_abap_behv=>mk-on.
-      result-%assoc-_FlowStageRule = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
+    result-%assoc-_AlertRule = COND #( WHEN requested_authorizations-%assoc-_AlertRule = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_AlertChannel = COND #( WHEN requested_authorizations-%assoc-_AlertChannel = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PurgeTarget = COND #( WHEN requested_authorizations-%assoc-_PurgeTarget = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_Control = COND #( WHEN requested_authorizations-%assoc-_Control = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_ControlText = COND #( WHEN requested_authorizations-%assoc-_ControlText = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_ControlCheck = COND #( WHEN requested_authorizations-%assoc-_ControlCheck = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_Process = COND #( WHEN requested_authorizations-%assoc-_Process = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_RegisteredCheck = COND #( WHEN requested_authorizations-%assoc-_RegisteredCheck = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_AggregateCheck = COND #( WHEN requested_authorizations-%assoc-_AggregateCheck = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_ApprovedTable = COND #( WHEN requested_authorizations-%assoc-_ApprovedTable = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PaymDimText = COND #( WHEN requested_authorizations-%assoc-_PaymDimText = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PaymFeeder = COND #( WHEN requested_authorizations-%assoc-_PaymFeeder = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_SchedulerJob = COND #( WHEN requested_authorizations-%assoc-_SchedulerJob = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_RunbookLink = COND #( WHEN requested_authorizations-%assoc-_RunbookLink = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_CorrelationRule = COND #( WHEN requested_authorizations-%assoc-_CorrelationRule = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_LinkLayer = COND #( WHEN requested_authorizations-%assoc-_LinkLayer = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_LinkObject = COND #( WHEN requested_authorizations-%assoc-_LinkObject = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_LinkField = COND #( WHEN requested_authorizations-%assoc-_LinkField = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_Link = COND #( WHEN requested_authorizations-%assoc-_Link = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_LinkCondition = COND #( WHEN requested_authorizations-%assoc-_LinkCondition = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_LinkActivation = COND #( WHEN requested_authorizations-%assoc-_LinkActivation = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_CatalogPackage = COND #( WHEN requested_authorizations-%assoc-_CatalogPackage = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_CatalogProcess = COND #( WHEN requested_authorizations-%assoc-_CatalogProcess = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_CatalogStep = COND #( WHEN requested_authorizations-%assoc-_CatalogStep = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_CatalogTable = COND #( WHEN requested_authorizations-%assoc-_CatalogTable = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_CatalogDependency = COND #( WHEN requested_authorizations-%assoc-_CatalogDependency = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_CatalogActivation = COND #( WHEN requested_authorizations-%assoc-_CatalogActivation = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_BreakAccount = COND #( WHEN requested_authorizations-%assoc-_BreakAccount = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_BreakBucket = COND #( WHEN requested_authorizations-%assoc-_BreakBucket = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_BreakRule = COND #( WHEN requested_authorizations-%assoc-_BreakRule = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_BreakCondition = COND #( WHEN requested_authorizations-%assoc-_BreakCondition = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PilotBaseline = COND #( WHEN requested_authorizations-%assoc-_PilotBaseline = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_AccountFlow = COND #( WHEN requested_authorizations-%assoc-_AccountFlow = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_FlowAccount = COND #( WHEN requested_authorizations-%assoc-_FlowAccount = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_FlowStage = COND #( WHEN requested_authorizations-%assoc-_FlowStage = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_FlowTileStage = COND #( WHEN requested_authorizations-%assoc-_FlowTileStage = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_FlowStageControl = COND #( WHEN requested_authorizations-%assoc-_FlowStageControl = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_FlowStageRule = COND #( WHEN requested_authorizations-%assoc-_FlowStageRule = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PayFileType = COND #( WHEN requested_authorizations-%assoc-_PayFileType = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PayFileMilestone = COND #( WHEN requested_authorizations-%assoc-_PayFileMilestone = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PayFileStatusMap = COND #( WHEN requested_authorizations-%assoc-_PayFileStatusMap = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_PayFileAdapter = COND #( WHEN requested_authorizations-%assoc-_PayFileAdapter = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
   ENDMETHOD.
 
 
@@ -467,120 +468,90 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     DATA(lv_create) = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->create_allowed( ) = abap_true
                               THEN if_abap_behv=>fc-o-enabled
                               ELSE if_abap_behv=>fc-o-disabled ).
-    IF requested_features-%assoc-_AlertRule = if_abap_behv=>mk-on.
-      result-%assoc-_AlertRule = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_AlertChannel = if_abap_behv=>mk-on.
-      result-%assoc-_AlertChannel = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_PurgeTarget = if_abap_behv=>mk-on.
-      result-%assoc-_PurgeTarget = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_Control = if_abap_behv=>mk-on.
-      result-%assoc-_Control = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_ControlText = if_abap_behv=>mk-on.
-      result-%assoc-_ControlText = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_ControlCheck = if_abap_behv=>mk-on.
-      result-%assoc-_ControlCheck = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_Process = if_abap_behv=>mk-on.
-      result-%assoc-_Process = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_RegisteredCheck = if_abap_behv=>mk-on.
-      result-%assoc-_RegisteredCheck = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_AggregateCheck = if_abap_behv=>mk-on.
-      result-%assoc-_AggregateCheck = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_ApprovedTable = if_abap_behv=>mk-on.
-      result-%assoc-_ApprovedTable = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_PaymDimText = if_abap_behv=>mk-on.
-      result-%assoc-_PaymDimText = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_PaymFeeder = if_abap_behv=>mk-on.
-      result-%assoc-_PaymFeeder = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_SchedulerJob = if_abap_behv=>mk-on.
-      result-%assoc-_SchedulerJob = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_RunbookLink = if_abap_behv=>mk-on.
-      result-%assoc-_RunbookLink = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_CorrelationRule = if_abap_behv=>mk-on.
-      result-%assoc-_CorrelationRule = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_LinkLayer = if_abap_behv=>mk-on.
-      result-%assoc-_LinkLayer = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_LinkObject = if_abap_behv=>mk-on.
-      result-%assoc-_LinkObject = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_LinkField = if_abap_behv=>mk-on.
-      result-%assoc-_LinkField = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_Link = if_abap_behv=>mk-on.
-      result-%assoc-_Link = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_LinkCondition = if_abap_behv=>mk-on.
-      result-%assoc-_LinkCondition = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_LinkActivation = if_abap_behv=>mk-on.
-      result-%assoc-_LinkActivation = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_CatalogPackage = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogPackage = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_CatalogProcess = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogProcess = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_CatalogStep = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogStep = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_CatalogTable = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogTable = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_CatalogDependency = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogDependency = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_CatalogActivation = if_abap_behv=>mk-on.
-      result-%assoc-_CatalogActivation = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_BreakAccount = if_abap_behv=>mk-on.
-      result-%assoc-_BreakAccount = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_BreakBucket = if_abap_behv=>mk-on.
-      result-%assoc-_BreakBucket = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_BreakRule = if_abap_behv=>mk-on.
-      result-%assoc-_BreakRule = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_BreakCondition = if_abap_behv=>mk-on.
-      result-%assoc-_BreakCondition = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_PilotBaseline = if_abap_behv=>mk-on.
-      result-%assoc-_PilotBaseline = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_AccountFlow = if_abap_behv=>mk-on.
-      result-%assoc-_AccountFlow = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_FlowAccount = if_abap_behv=>mk-on.
-      result-%assoc-_FlowAccount = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_FlowStage = if_abap_behv=>mk-on.
-      result-%assoc-_FlowStage = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_FlowTileStage = if_abap_behv=>mk-on.
-      result-%assoc-_FlowTileStage = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_FlowStageControl = if_abap_behv=>mk-on.
-      result-%assoc-_FlowStageControl = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_FlowStageRule = if_abap_behv=>mk-on.
-      result-%assoc-_FlowStageRule = lv_create.
-    ENDIF.
+    result-%assoc-_AlertRule = COND #( WHEN requested_features-%assoc-_AlertRule = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_AlertChannel = COND #( WHEN requested_features-%assoc-_AlertChannel = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PurgeTarget = COND #( WHEN requested_features-%assoc-_PurgeTarget = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_Control = COND #( WHEN requested_features-%assoc-_Control = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_ControlText = COND #( WHEN requested_features-%assoc-_ControlText = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_ControlCheck = COND #( WHEN requested_features-%assoc-_ControlCheck = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_Process = COND #( WHEN requested_features-%assoc-_Process = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_RegisteredCheck = COND #( WHEN requested_features-%assoc-_RegisteredCheck = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_AggregateCheck = COND #( WHEN requested_features-%assoc-_AggregateCheck = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_ApprovedTable = COND #( WHEN requested_features-%assoc-_ApprovedTable = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PaymDimText = COND #( WHEN requested_features-%assoc-_PaymDimText = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PaymFeeder = COND #( WHEN requested_features-%assoc-_PaymFeeder = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_SchedulerJob = COND #( WHEN requested_features-%assoc-_SchedulerJob = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_RunbookLink = COND #( WHEN requested_features-%assoc-_RunbookLink = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_CorrelationRule = COND #( WHEN requested_features-%assoc-_CorrelationRule = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_LinkLayer = COND #( WHEN requested_features-%assoc-_LinkLayer = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_LinkObject = COND #( WHEN requested_features-%assoc-_LinkObject = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_LinkField = COND #( WHEN requested_features-%assoc-_LinkField = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_Link = COND #( WHEN requested_features-%assoc-_Link = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_LinkCondition = COND #( WHEN requested_features-%assoc-_LinkCondition = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_LinkActivation = COND #( WHEN requested_features-%assoc-_LinkActivation = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_CatalogPackage = COND #( WHEN requested_features-%assoc-_CatalogPackage = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_CatalogProcess = COND #( WHEN requested_features-%assoc-_CatalogProcess = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_CatalogStep = COND #( WHEN requested_features-%assoc-_CatalogStep = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_CatalogTable = COND #( WHEN requested_features-%assoc-_CatalogTable = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_CatalogDependency = COND #( WHEN requested_features-%assoc-_CatalogDependency = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_CatalogActivation = COND #( WHEN requested_features-%assoc-_CatalogActivation = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_BreakAccount = COND #( WHEN requested_features-%assoc-_BreakAccount = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_BreakBucket = COND #( WHEN requested_features-%assoc-_BreakBucket = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_BreakRule = COND #( WHEN requested_features-%assoc-_BreakRule = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_BreakCondition = COND #( WHEN requested_features-%assoc-_BreakCondition = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PilotBaseline = COND #( WHEN requested_features-%assoc-_PilotBaseline = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_AccountFlow = COND #( WHEN requested_features-%assoc-_AccountFlow = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_FlowAccount = COND #( WHEN requested_features-%assoc-_FlowAccount = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_FlowStage = COND #( WHEN requested_features-%assoc-_FlowStage = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_FlowTileStage = COND #( WHEN requested_features-%assoc-_FlowTileStage = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_FlowStageControl = COND #( WHEN requested_features-%assoc-_FlowStageControl = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_FlowStageRule = COND #( WHEN requested_features-%assoc-_FlowStageRule = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PayFileType = COND #( WHEN requested_features-%assoc-_PayFileType = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PayFileMilestone = COND #( WHEN requested_features-%assoc-_PayFileMilestone = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PayFileStatusMap = COND #( WHEN requested_features-%assoc-_PayFileStatusMap = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_PayFileAdapter = COND #( WHEN requested_features-%assoc-_PayFileAdapter = if_abap_behv=>mk-on
+                                 THEN lv_create ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -5520,6 +5491,562 @@ CLASS lhc_flowstagerule IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_payfiletype DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR PayFileType RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR PayFileType RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileType~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileType~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_payfiletype IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY PayFileType
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-payfiletype.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Direction )
+                                        iv_list  = lif_c=>gc_val-payfiletype_direction ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Direction
+                        v2 = lif_c=>gc_el-direction v3 = lif_c=>gc_val-payfiletype_direction
+                        element = lif_c=>gc_el-direction ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-AckLevel )
+                                        iv_list  = lif_c=>gc_val-payfiletype_acklevel ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-AckLevel
+                        v2 = lif_c=>gc_el-acklevel v3 = lif_c=>gc_val-payfiletype_acklevel
+                        element = lif_c=>gc_el-acklevel ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-payfiletype_active_x ) = abap_true.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-cashops ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-cashops
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-payfiletype.
+        INSERT INITIAL LINE INTO TABLE reported-payfiletype ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-payfiletype.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-payfiletype.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-payfiletype.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_payfilemilestone DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR PayFileMilestone RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR PayFileMilestone RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileMilestone~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileMilestone~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_payfilemilestone IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY PayFileMilestone
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-payfilemilestone.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Milestone )
+                                        iv_list  = lif_c=>gc_val-payfilemilestone_milestone ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Milestone
+                        v2 = lif_c=>gc_el-milestone v3 = lif_c=>gc_val-payfilemilestone_milestone
+                        element = lif_c=>gc_el-milestone ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DueKind )
+                                        iv_list  = lif_c=>gc_val-payfilemilestone_duekind ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DueKind
+                        v2 = lif_c=>gc_el-duekind v3 = lif_c=>gc_val-payfilemilestone_duekind
+                        element = lif_c=>gc_el-duekind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Basis )
+                                        iv_list  = lif_c=>gc_val-payfilemilestone_basis ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Basis
+                        v2 = lif_c=>gc_el-basis v3 = lif_c=>gc_val-payfilemilestone_basis
+                        element = lif_c=>gc_el-basis ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DueKind )
+                                        iv_list  = lif_c=>gc_when-payfilemilestone_due_kind_o ) = abap_true.
+        IF ls_row-Basis IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-basis
+                          v2 = lif_c=>gc_el-duekind v3 = ls_row-DueKind
+                          element = lif_c=>gc_el-basis ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DueKind )
+                                        iv_list  = lif_c=>gc_when-payfilemilestone_due_kind_t ) = abap_true.
+        IF ls_row-Basis IS NOT INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-basis
+                          v2 = lif_c=>gc_el-duekind v3 = ls_row-DueKind
+                          element = lif_c=>gc_el-basis ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-payfilemilestone.
+        INSERT INITIAL LINE INTO TABLE reported-payfilemilestone ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-payfilemilestone.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-payfilemilestone.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-payfilemilestone.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_payfilestatusmap DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR PayFileStatusMap RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR PayFileStatusMap RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileStatusMap~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileStatusMap~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_payfilestatusmap IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY PayFileStatusMap
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-payfilestatusmap.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Milestone )
+                                        iv_list  = lif_c=>gc_val-payfilestatusmap_milestone ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Milestone
+                        v2 = lif_c=>gc_el-milestone v3 = lif_c=>gc_val-payfilestatusmap_milestone
+                        element = lif_c=>gc_el-milestone ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Outcome )
+                                        iv_list  = lif_c=>gc_val-payfilestatusmap_outcome ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Outcome
+                        v2 = lif_c=>gc_el-outcome v3 = lif_c=>gc_val-payfilestatusmap_outcome
+                        element = lif_c=>gc_el-outcome ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Outcome )
+                                        iv_list  = lif_c=>gc_when-payfilestatusmap_outcome_okrej ) = abap_true.
+        IF ls_row-Milestone IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-milestone
+                          v2 = lif_c=>gc_el-outcome v3 = ls_row-Outcome
+                          element = lif_c=>gc_el-milestone ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-payfilestatusmap.
+        INSERT INITIAL LINE INTO TABLE reported-payfilestatusmap ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-payfilestatusmap.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-payfilestatusmap.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-payfilestatusmap.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_payfileadapter DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR PayFileAdapter RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR PayFileAdapter RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileAdapter~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayFileAdapter~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_payfileadapter IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY PayFileAdapter
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-payfileadapter.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Role )
+                                        iv_list  = lif_c=>gc_val-payfileadapter_role ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Role
+                        v2 = lif_c=>gc_el-role v3 = lif_c=>gc_val-payfileadapter_role
+                        element = lif_c=>gc_el-role ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-ClassName IS NOT INITIAL
+         AND zcl_ca_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-ClassName )
+                                                iv_interface = CONV #( lif_c=>gc_if-zif_ca_ops_pf_adapter ) ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-class_invalid v1 = ls_row-ClassName v2 = lif_c=>gc_if-zif_ca_ops_pf_adapter
+                        element = lif_c=>gc_el-classname ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-SourceType )
+                                        iv_list  = lif_c=>gc_val-payfileadapter_sourcetype ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-SourceType
+                        v2 = lif_c=>gc_el-sourcetype v3 = lif_c=>gc_val-payfileadapter_sourcetype
+                        element = lif_c=>gc_el-sourcetype ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-payfileadapter_active_x ) = abap_true.
+        IF ls_row-ClassName IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-classname
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-classname ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-SourceId IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-sourceid
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-sourceid ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-payfileadapter.
+        INSERT INITIAL LINE INTO TABLE reported-payfileadapter ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-payfileadapter.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-payfileadapter.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-payfileadapter.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_ca_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -5575,7 +6102,11 @@ CLASS lsc_zr_ca_opscfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-flowstage table = lif_c=>gc_tab-flowstage )
             ( entity = lif_c=>gc_ent-flowtilestage table = lif_c=>gc_tab-flowtilestage )
             ( entity = lif_c=>gc_ent-flowstagecontrol table = lif_c=>gc_tab-flowstagecontrol )
-            ( entity = lif_c=>gc_ent-flowstagerule table = lif_c=>gc_tab-flowstagerule ) )
+            ( entity = lif_c=>gc_ent-flowstagerule table = lif_c=>gc_tab-flowstagerule )
+            ( entity = lif_c=>gc_ent-payfiletype table = lif_c=>gc_tab-payfiletype )
+            ( entity = lif_c=>gc_ent-payfilemilestone table = lif_c=>gc_tab-payfilemilestone )
+            ( entity = lif_c=>gc_ent-payfilestatusmap table = lif_c=>gc_tab-payfilestatusmap )
+            ( entity = lif_c=>gc_ent-payfileadapter table = lif_c=>gc_tab-payfileadapter ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

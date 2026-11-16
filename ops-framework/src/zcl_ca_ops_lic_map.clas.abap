@@ -136,26 +136,26 @@ CLASS zcl_ca_ops_lic_map DEFINITION
       END OF gc_r012.
     CONSTANTS:
       BEGIN OF gc_r013,
+        obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'MOD',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'CASHOPS',
+        module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CASHOPS',
+        always      TYPE abap_bool VALUE abap_false,
+        seq         TYPE i VALUE 130,
+        description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'FI-CA cash operations: payment file lifecycle',
+      END OF gc_r013.
+    CONSTANTS:
+      BEGIN OF gc_r014,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
         obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_LICENSE',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CORE',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 10,
         description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module CORE',
-      END OF gc_r013.
-    CONSTANTS:
-      BEGIN OF gc_r014,
-        obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
-        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_AGG',
-        module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'ONBOARD',
-        always      TYPE abap_bool VALUE abap_false,
-        seq         TYPE i VALUE 30,
-        description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module ONBOARD',
       END OF gc_r014.
     CONSTANTS:
       BEGIN OF gc_r015,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
-        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_ONBOARD',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_AGG',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'ONBOARD',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 30,
@@ -164,7 +164,7 @@ CLASS zcl_ca_ops_lic_map DEFINITION
     CONSTANTS:
       BEGIN OF gc_r016,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
-        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_OUTAGE',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_ONBOARD',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'ONBOARD',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 30,
@@ -173,16 +173,16 @@ CLASS zcl_ca_ops_lic_map DEFINITION
     CONSTANTS:
       BEGIN OF gc_r017,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
-        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_JOB_FAIL',
-        module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'JOBS',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_OUTAGE',
+        module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'ONBOARD',
         always      TYPE abap_bool VALUE abap_false,
-        seq         TYPE i VALUE 40,
-        description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module JOBS',
+        seq         TYPE i VALUE 30,
+        description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module ONBOARD',
       END OF gc_r017.
     CONSTANTS:
       BEGIN OF gc_r018,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
-        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_JOB_STATE',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_JOB_FAIL',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'JOBS',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 40,
@@ -191,57 +191,84 @@ CLASS zcl_ca_ops_lic_map DEFINITION
     CONSTANTS:
       BEGIN OF gc_r019,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_JOB_STATE',
+        module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'JOBS',
+        always      TYPE abap_bool VALUE abap_false,
+        seq         TYPE i VALUE 40,
+        description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module JOBS',
+      END OF gc_r019.
+    CONSTANTS:
+      BEGIN OF gc_r020,
+        obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
         obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_LINKS',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'LINKS',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 60,
         description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module LINKS',
-      END OF gc_r019.
+      END OF gc_r020.
     CONSTANTS:
-      BEGIN OF gc_r020,
+      BEGIN OF gc_r021,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
         obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_BREAK',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'BREAKS',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 110,
         description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module BREAKS',
-      END OF gc_r020.
+      END OF gc_r021.
     CONSTANTS:
-      BEGIN OF gc_r021,
+      BEGIN OF gc_r022,
+        obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'CLAS',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'ZCL_CA_OPS_CHK_PAYFILE',
+        module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CASHOPS',
+        always      TYPE abap_bool VALUE abap_false,
+        seq         TYPE i VALUE 130,
+        description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Registered check class of module CASHOPS',
+      END OF gc_r022.
+    CONSTANTS:
+      BEGIN OF gc_r023,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'PKG',
         obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'S4CORE',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CORE',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 10,
         description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Product baseline: S/4HANA core standard processes',
-      END OF gc_r021.
+      END OF gc_r023.
     CONSTANTS:
-      BEGIN OF gc_r022,
+      BEGIN OF gc_r024,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'PKG',
         obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'FICA',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CATALOGUE_FICA',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 70,
         description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Industry package: SAP FI-CA standard processes',
-      END OF gc_r022.
+      END OF gc_r024.
     CONSTANTS:
-      BEGIN OF gc_r023,
+      BEGIN OF gc_r025,
+        obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'PRC',
+        obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'FICA_PAYFILE_ACK',
+        module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CASHOPS',
+        always      TYPE abap_bool VALUE abap_false,
+        seq         TYPE i VALUE 130,
+        description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Payment file lifecycle and bank acknowledgement',
+      END OF gc_r025.
+    CONSTANTS:
+      BEGIN OF gc_r026,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'PKG',
         obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'FSCD',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CATALOGUE_FSCD',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 80,
         description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Industry package: SAP FS-CD standard processes',
-      END OF gc_r023.
+      END OF gc_r026.
     CONSTANTS:
-      BEGIN OF gc_r024,
+      BEGIN OF gc_r027,
         obj_kind    TYPE zif_ca_ops_lic_types=>ty_obj_kind VALUE 'PRC',
         obj_name    TYPE zif_ca_ops_lic_types=>ty_obj_name VALUE 'FSCD_FSRI',
         module      TYPE zif_ca_ops_lic_types=>ty_module VALUE 'CATALOGUE_FSRI',
         always      TYPE abap_bool VALUE abap_false,
         seq         TYPE i VALUE 90,
         description TYPE zif_ca_ops_lic_types=>ty_text VALUE 'Reinsurance integration (FS-RI)',
-      END OF gc_r024.
+      END OF gc_r027.
 ENDCLASS.
 
 
@@ -272,7 +299,10 @@ CLASS zcl_ca_ops_lic_map IMPLEMENTATION.
                        ( CORRESPONDING #( gc_r021 ) )
                        ( CORRESPONDING #( gc_r022 ) )
                        ( CORRESPONDING #( gc_r023 ) )
-                       ( CORRESPONDING #( gc_r024 ) ) ).
+                       ( CORRESPONDING #( gc_r024 ) )
+                       ( CORRESPONDING #( gc_r025 ) )
+                       ( CORRESPONDING #( gc_r026 ) )
+                       ( CORRESPONDING #( gc_r027 ) ) ).
   ENDMETHOD.
 
 ENDCLASS.

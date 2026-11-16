@@ -67,6 +67,10 @@ Checks
                       one) has the licence validation in the generated behaviour pool, every catalogue package names a
                       known module; the generated module map ZCL_CA_OPS_LIC_MAP and docs/licensing/modules.md are up
                       to date (tools/licensing.py, shared engine tools/abaptools/licensing.py)
+  payfile             the fixtures of the payment file lifecycle (config/payfile/fixtures.json) give their expected and
+                      identical business results in every integration setup (test profiles and the worked example
+                      XX); the example is wired only through ZIF_CA_OPS_PF_* interfaces and configuration rows; no
+                      product object names it (tools/payfile.py; --abaplint <binary> also compiles the example)
 
 Modification log:
 2026-11-10 | Copied from the parameter framework's checks and extended for the framework.
@@ -79,6 +83,7 @@ Modification log:
 2026-11-15 | flow_config (account flow reconciliation: product flows valid and inactive).
 2026-11-15 | extensions (build H: inventory of extension points, extensible views, worked example of a pack).
 2026-11-15 | licensing (vendor licence: module catalogue valid, module map and document up to date).
+2026-11-15 | payfile (payment file lifecycle: fixtures in two setups, example XX wiring and neutrality).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -250,6 +255,12 @@ def check_licensing(root):
     return licensing._engine.check(root, licensing.PROFILE)
 
 
+def check_payfile(root):
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import payfile  # noqa: E402
+    return payfile.failures(root)
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -274,6 +285,7 @@ CHECKS = [
     ('flow_config', check_flow_config),
     ('extensions', check_extensions),
     ('licensing', check_licensing),
+    ('payfile', check_payfile),
 ]
 
 

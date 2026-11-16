@@ -10,6 +10,7 @@
 *& messages 351-366 of ZCA_OPS. No logic.
 *& Modification log:
 *& 2026-11-15 | Initial version (licensing: vendor licence above the customer's activation).
+*& 2026-11-15 | Module CASHOPS (payment file lifecycle).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - licence types</p>
 INTERFACE zif_ca_ops_lic_types
@@ -40,6 +41,8 @@ INTERFACE zif_ca_ops_lic_types
       paymodel       TYPE ty_module VALUE 'PAYMODEL',
       breaks         TYPE ty_module VALUE 'BREAKS',
       flow           TYPE ty_module VALUE 'FLOW',
+      "! FI-CA cash operations: payment file lifecycle (2026-11-15)
+      cashops        TYPE ty_module VALUE 'CASHOPS',
     END OF gc_module.
 
   "! Kinds of rows of the module map (ZCL_CA_OPS_LIC_MAP, table ZCA_OPS_LICMOD)

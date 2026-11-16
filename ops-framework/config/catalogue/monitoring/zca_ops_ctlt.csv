@@ -8,6 +8,7 @@ E,CA_FICA,FICA_GL_TRANSFER,Review the open exceptions of G/L transfer and reconc
 E,CA_FICA,FICA_INSTALMENT,Review the open exceptions of Instalment plans and record the next action.
 E,CA_FICA,FICA_INTEREST,Review the open exceptions of Interest calculation and record the next action.
 E,CA_FICA,FICA_INVOICING,Review the open exceptions of Invoicing (FI-CA invoicing) and record the next action.
+E,CA_FICA,FICA_PAYFILE_ACK,Review the open exceptions of Payment file lifecycle and bank acknowledgement and record the next action.
 E,CA_FICA,FICA_PAYRUN,Review the open exceptions of Payment run (disbursements and collections) and record the next action.
 E,CA_FICA,FICA_PAY_LOTS,Review the open exceptions of Incoming payment lots and cash journal and record the next action.
 E,CA_FICA,FICA_RETURNS,Review the open exceptions of Returns lots (returned payments) and record the next action.

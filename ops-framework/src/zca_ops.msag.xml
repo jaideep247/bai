@@ -1247,6 +1247,186 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>370</MSGNR>
+     <TEXT>Payment files &amp;1: &amp;2 read (&amp;3 new), &amp;4 evaluated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>371</MSGNR>
+     <TEXT>File &amp;1: bank acceptance missing since &amp;2 (&amp;3 payments, &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>372</MSGNR>
+     <TEXT>File &amp;1: bank receipt missing since &amp;2 (&amp;3 payments, &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>373</MSGNR>
+     <TEXT>File &amp;1: not transferred, &amp;2 missing since &amp;3 (&amp;4 payments)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>374</MSGNR>
+     <TEXT>File &amp;1: generation job &amp;2 failed (&amp;3 payments, &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>375</MSGNR>
+     <TEXT>File &amp;1 rejected by the bank (&amp;2 payments, &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>376</MSGNR>
+     <TEXT>File &amp;1 partly accepted: &amp;2 of &amp;3 not accepted (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>377</MSGNR>
+     <TEXT>Evidence &amp;1 / &amp;2 names no link object or no key value</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>378</MSGNR>
+     <TEXT>File type &amp;1 on &amp;2: &amp;3 of &amp;4 expected files observed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>379</MSGNR>
+     <TEXT>File &amp;1: &amp;2 reached &amp;3 min after its deadline</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>380</MSGNR>
+     <TEXT>File &amp;1 reissued as &amp;2 after delivery: same payments in both (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>381</MSGNR>
+     <TEXT>File &amp;1: bank answered after its reissue as &amp;2 - duplicate risk</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>382</MSGNR>
+     <TEXT>File &amp;1: bank sent accepted and rejected for the same scope (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>383</MSGNR>
+     <TEXT>Source &amp;1 of file type &amp;2 not evaluated: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>384</MSGNR>
+     <TEXT>Source &amp;1 of file type &amp;2 stale: data as of &amp;3 (limit &amp;4 min)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>385</MSGNR>
+     <TEXT>File &amp;1: &amp;2 missing since &amp;3 (&amp;4 payments)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>386</MSGNR>
+     <TEXT>Adapter &amp;1 of file type &amp;2: class &amp;3 cannot be used (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>387</MSGNR>
+     <TEXT>File type &amp;1 of area &amp;2 has no active file source adapter</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>388</MSGNR>
+     <TEXT>Status &amp;1 of source &amp;2 has no mapping: recorded as information</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>389</MSGNR>
+     <TEXT>Ticket for file &amp;1 logged only (&amp;2): no ticket system configured</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>390</MSGNR>
+     <TEXT>Business date &amp;1 of file type &amp;2 not evaluated: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>391</MSGNR>
+     <TEXT>No files on business date &amp;1 of file type &amp;2: valid (zero volume)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>392</MSGNR>
+     <TEXT>&amp;1 is not a business day of calendar &amp;2: no file expected</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>393</MSGNR>
+     <TEXT>Business calendar &amp;1 cannot answer for &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>394</MSGNR>
+     <TEXT>Milestone &amp;1 of file type &amp;2: basis &amp;3 is not configured</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>395</MSGNR>
+     <TEXT>File &amp;1: more than &amp;2 payments, the rest is counted only</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>396</MSGNR>
+     <TEXT>File type &amp;1: &amp;2 more findings not listed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>397</MSGNR>
+     <TEXT>Time zone &amp;1 cannot convert &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>398</MSGNR>
+     <TEXT>File &amp;1: transfer failed at &amp;2 (&amp;3 payments, &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>399</MSGNR>
+     <TEXT>Business date &amp;1 of file type &amp;2: source data as of &amp;3, stale (&amp;4 min)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

@@ -53,6 +53,10 @@ authorization master ( global )
   association _FlowTileStage { create ( features : global ); with draft; }
   association _FlowStageControl { create ( features : global ); with draft; }
   association _FlowStageRule { create ( features : global ); with draft; }
+  association _PayFileType { create ( features : global ); with draft; }
+  association _PayFileMilestone { create ( features : global ); with draft; }
+  association _PayFileStatusMap { create ( features : global ); with draft; }
+  association _PayFileAdapter { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -135,6 +139,14 @@ authorization master ( global )
     validation FlowStageControl ~ validateTransport;
     validation FlowStageRule ~ validateFields;
     validation FlowStageRule ~ validateTransport;
+    validation PayFileType ~ validateFields;
+    validation PayFileType ~ validateTransport;
+    validation PayFileMilestone ~ validateFields;
+    validation PayFileMilestone ~ validateTransport;
+    validation PayFileStatusMap ~ validateFields;
+    validation PayFileStatusMap ~ validateTransport;
+    validation PayFileAdapter ~ validateFields;
+    validation PayFileAdapter ~ validateTransport;
   }
 }
 
@@ -1486,6 +1498,156 @@ etag master LocalLastChangedAt
     SubTrans = sub_trans;
     DebitCredit = debit_credit;
     Description = description;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_PayFileType alias PayFileType
+persistent table zca_ops_pftyp
+with additional save
+draft table zca_d_pftyp
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FileType;
+  field ( mandatory : create ) Area, FileType;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_pftyp
+  {
+    Area = area;
+    FileType = file_type;
+    Description = description;
+    ProcessId = process_id;
+    Direction = direction;
+    AckLevel = ack_level;
+    AckMulti = ack_multi;
+    CalendarId = calendar_id;
+    TimeZone = time_zone;
+    DayCutoff = day_cutoff;
+    ExpectedFiles = expected_files;
+    ZeroOk = zero_ok;
+    StaleMin = stale_min;
+    OpenDays = open_days;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_PayFileMilestone alias PayFileMilestone
+persistent table zca_ops_pfstg
+with additional save
+draft table zca_d_pfstg
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FileType, Milestone;
+  field ( mandatory : create ) Area, FileType, Milestone;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_pfstg
+  {
+    Area = area;
+    FileType = file_type;
+    Milestone = milestone;
+    Description = description;
+    Required = required;
+    DueKind = due_kind;
+    DueTime = due_time;
+    DayOffset = day_offset;
+    Basis = basis;
+    OffsetMin = offset_min;
+    GraceMin = grace_min;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_PayFileStatusMap alias PayFileStatusMap
+persistent table zca_ops_pfmap
+with additional save
+draft table zca_d_pfmap
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, SourceId, Status;
+  field ( mandatory : create ) Area, SourceId, Status;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_pfmap
+  {
+    Area = area;
+    SourceId = source_id;
+    Status = status;
+    Milestone = milestone;
+    Outcome = outcome;
+    Description = description;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_PayFileAdapter alias PayFileAdapter
+persistent table zca_ops_pfadp
+with additional save
+draft table zca_d_pfadp
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area, FileType, Role;
+  field ( mandatory : create ) Area, FileType, Role;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zca_ops_pfadp
+  {
+    Area = area;
+    FileType = file_type;
+    Role = role;
+    SourceId = source_id;
+    ClassName = class_name;
+    Setting = setting;
+    SourceType = source_type;
     Active = active;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;

@@ -1044,6 +1044,72 @@
      "class": "ZCL_CA_OPS_CHK_BREAK"
     }
    ]
+  },
+  {
+   "id": "FICA_PAYFILE_ACK",
+   "license_module": "CASHOPS",
+   "name": "Payment file lifecycle and bank acknowledgement",
+   "component": "FI-CA",
+   "card": "PAYMENTS",
+   "owner_role": "Payment operations lead",
+   "schedule": "Intraday, after every payment medium run",
+   "default_active": false,
+   "seq": 15,
+   "description": "The payment files of the payment runs from generation to the bank: SAP generation (job), transfer (middleware or direct), receipt and acceptance by the bank (per file, batch or payment), posting / settlement evidence - module CASHOPS (docs/PAYMENT_FILE_LIFECYCLE.md). Ingestion ZCA_OPS_PF_RUN, check ZCL_CA_OPS_CHK_PAYFILE; the file types, milestones, status mappings and adapters are the customer's configuration.",
+   "steps": [
+    {
+     "kind": "T",
+     "name": "FPY1",
+     "description": "Payment run (mass activity)"
+    },
+    {
+     "kind": "P",
+     "name": "\u2039payment medium program\u203a",
+     "description": "Payment medium creation of the run (job)",
+     "verify": "V175"
+    },
+    {
+     "kind": "J",
+     "name": "ZCA_OPS_PF_RUN",
+     "description": "Payment file ingestion and evaluation (product report)"
+    },
+    {
+     "kind": "E",
+     "name": "\u2039bank acknowledgement\u203a",
+     "description": "Receipt and acceptance by the bank (customer adapter)",
+     "verify": "V180"
+    }
+   ],
+   "tables": [
+    {
+     "name": "DPAYH",
+     "role": "H",
+     "description": "Payments of a run (the payments of a file)",
+     "link_object": "FICA_PAYMENT_RUN"
+    },
+    {
+     "name": "TBTCO",
+     "role": "L",
+     "description": "Background job that generated the file",
+     "link_object": "S4_BACKGROUND_JOB"
+    }
+   ],
+   "depends_on": [
+    {
+     "id": "FICA_PAYRUN",
+     "kind": "H",
+     "description": "The payment run produces the payments of a file"
+    }
+   ],
+   "monitors": [
+    {
+     "check": "FICA_PAYFILE_ACK",
+     "description": "Payment files stopped before the bank accepted them",
+     "bukrs_aware": true,
+     "schedule_group": "INTRADAY",
+     "class": "ZCL_CA_OPS_CHK_PAYFILE"
+    }
+   ]
   }
  ]
 }

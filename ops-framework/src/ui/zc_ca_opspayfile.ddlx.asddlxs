@@ -1,0 +1,222 @@
+// UI annotations: Payment files (list report and object page, service ZUI_CA_OPS_PAYFILE, 2026-11-15)
+// Default: open files first, most overdue first. One row per file and currency: amounts with their currency, never
+// summed across currencies. Object page: where the file stopped and who owns it, the affected payments (paged, payee
+// masked), the stage timeline, the evidence with navigation, the run, the acknowledgement, the reissue and the
+// evaluation. Navigation by intent (semantic objects ZCaOpsException, ZCaOpsJob, ZCaOpsPaymentTrace) works where the
+// launchpad of the site maps them to an app; otherwise the links are not shown.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment file', typeNamePlural: 'Payment files',
+                  title: { type: #STANDARD, value: 'NativeKey' },
+                  description: { type: #STANDARD, value: 'NextMilestone' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'OverdueMinutes', direction: #DESC },
+                                          { by: 'BusinessDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Open', text: 'Open files', filter: 'State EQ OPEN' },
+                        { qualifier: 'AckMissing', text: 'Bank acceptance missing', filter: 'NextMilestone EQ ACCEPTED' } ]
+annotate entity ZC_CA_OpsPayFile with
+{
+  @UI.facet: [ { id: 'File', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Where it stopped', position: 10 },
+               { id: 'Owner', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Owner',
+                 label: 'Who owns the response', position: 20 },
+               { id: 'Payments', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Affected payments', position: 30,
+                 targetElement: '_Payments' },
+               { id: 'Timeline', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Stage timeline', position: 40,
+                 targetElement: '_Milestones' },
+               { id: 'Evidence', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Evidence', position: 50,
+                 targetElement: '_Evidence' },
+               { id: 'Run', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Run',
+                 label: 'Payment run and job', position: 60 },
+               { id: 'Ack', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Ack',
+                 label: 'Bank acknowledgement', position: 70 },
+               { id: 'Reissue', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Reissue',
+                 label: 'Reissue and ticket', position: 80 },
+               { id: 'Evaluation', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Evaluation',
+                 label: 'Evaluation', position: 90 } ]
+  @EndUserText.label: 'Area'
+  @UI.selectionField: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  Area;
+  @UI.hidden: true
+  FileId;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 90, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 60 } ]
+  @UI.identification: [ { position: 150 } ]
+  Currency;
+  @EndUserText.label: 'File type'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 20 } ]
+  FileType;
+  @EndUserText.label: 'File type name'
+  @UI.identification: [ { position: 30 } ]
+  FileTypeName;
+  @EndUserText.label: 'File'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  NativeKey;
+  @UI.hidden: true
+  ObjectKey;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.identification: [ { position: 50 } ]
+  CompanyCode;
+  @EndUserText.label: 'File source'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 10 } ]
+  SourceId;
+  @EndUserText.label: 'Payment run date'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 10 } ]
+  RunDate;
+  @EndUserText.label: 'Payment run ID'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 20 } ]
+  RunId;
+  @EndUserText.label: 'Payment method'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 30 } ]
+  PaymentMethod;
+  @EndUserText.label: 'House bank'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 40 } ]
+  HouseBank;
+  @EndUserText.label: 'Account ID'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 50 } ]
+  HouseBankAccount;
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  @UI.identification: [ { position: 60 } ]
+  BusinessDate;
+  @EndUserText.label: 'Generated at (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 60 } ]
+  GeneratedAt;
+  @EndUserText.label: 'Generating job'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 70 } ]
+  @UI.lineItem: [ { type: #FOR_INTENT_BASED_NAVIGATION, semanticObject: 'ZCaOpsJob', semanticObjectAction: 'display', label: 'SAP job', position: 200 } ]
+  JobName;
+  @EndUserText.label: 'Job count'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 80 } ]
+  JobCount;
+  @EndUserText.label: 'Stage reached'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 70 } ]
+  StageReached;
+  @EndUserText.label: 'Stopped before'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 50 } ]
+  @UI.identification: [ { position: 80 } ]
+  NextMilestone;
+  @EndUserText.label: 'State'
+  @UI.lineItem: [ { position: 70, importance: #HIGH, criticality: 'StateCriticality' } ]
+  @UI.selectionField: [ { position: 70 } ]
+  @UI.identification: [ { position: 90 } ]
+  State;
+  @UI.hidden: true
+  StateCriticality;
+  @EndUserText.label: 'Deadline (UTC)'
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  @UI.identification: [ { position: 100 } ]
+  DeadlineAt;
+  @EndUserText.label: 'Overdue (minutes)'
+  @UI.lineItem: [ { position: 110, importance: #HIGH } ]
+  @UI.identification: [ { position: 110 } ]
+  OverdueMinutes;
+  @EndUserText.label: 'Business calendar'
+  @UI.identification: [ { position: 120 } ]
+  CalendarId;
+  @EndUserText.label: 'Age (days)'
+  @UI.lineItem: [ { position: 120, importance: #LOW } ]
+  @UI.identification: [ { position: 130 } ]
+  AgeDays;
+  @EndUserText.label: 'Payments'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.identification: [ { position: 140 } ]
+  PaymentCount;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 85, importance: #HIGH } ]
+  @UI.identification: [ { position: 160 } ]
+  Amount;
+  @EndUserText.label: 'Payments with unknown amount'
+  @UI.lineItem: [ { position: 130, importance: #LOW } ]
+  @UI.identification: [ { position: 170 } ]
+  UnknownCount;
+  @EndUserText.label: 'Payments also in another file'
+  @UI.fieldGroup: [ { qualifier: 'Reissue', position: 30 } ]
+  DuplicateCount;
+  @EndUserText.label: 'Possible duplicate exposure'
+  @UI.lineItem: [ { position: 140, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Reissue', position: 40 } ]
+  DuplicateAmount;
+  @EndUserText.label: 'Payments of the file (all currencies)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 60 } ]
+  FilePaymentCount;
+  @EndUserText.label: 'Payment list cut (PF_MAX_PAYMENTS)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 70 } ]
+  PaymentsCut;
+  @EndUserText.label: 'Bank ACK level'
+  @UI.fieldGroup: [ { qualifier: 'Ack', position: 10 } ]
+  AckLevel;
+  @EndUserText.label: 'Bank sent accepted and rejected'
+  @UI.fieldGroup: [ { qualifier: 'Ack', position: 20 } ]
+  AckConflict;
+  @EndUserText.label: 'Payments rejected'
+  @UI.fieldGroup: [ { qualifier: 'Ack', position: 30 } ]
+  PaymentsRejected;
+  @EndUserText.label: 'Payments without answer'
+  @UI.fieldGroup: [ { qualifier: 'Ack', position: 40 } ]
+  PaymentsUnanswered;
+  @EndUserText.label: 'Reached late'
+  @UI.fieldGroup: [ { qualifier: 'Ack', position: 50 } ]
+  LateMilestone;
+  @EndUserText.label: 'Late by (minutes)'
+  @UI.fieldGroup: [ { qualifier: 'Ack', position: 60 } ]
+  LateMinutes;
+  @EndUserText.label: 'Evaluation (C, P, N not evaluated, S stale)'
+  @UI.lineItem: [ { position: 150, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 80 } ]
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 20 } ]
+  EvaluationState;
+  @EndUserText.label: 'Reason'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 30 } ]
+  EvaluationReason;
+  @EndUserText.label: 'Evaluated at'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 40 } ]
+  EvaluatedAt;
+  @EndUserText.label: 'Last complete evaluation'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 50 } ]
+  LastValidAt;
+  @EndUserText.label: 'Last valid state'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 55 } ]
+  LastValidState;
+  @UI.hidden: true
+  PredecessorId;
+  @EndUserText.label: 'Replaces file'
+  @UI.fieldGroup: [ { qualifier: 'Reissue', position: 10 } ]
+  PredecessorKey;
+  @EndUserText.label: 'Ticket'
+  @UI.fieldGroup: [ { qualifier: 'Reissue', position: 20 } ]
+  TicketReference;
+  @EndUserText.label: 'Business process'
+  @UI.fieldGroup: [ { qualifier: 'Owner', position: 10 } ]
+  ProcessId;
+  @EndUserText.label: 'Process owner'
+  @UI.fieldGroup: [ { qualifier: 'Owner', position: 20 } ]
+  ProcessOwner;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 160, importance: #MEDIUM }, { type: #FOR_INTENT_BASED_NAVIGATION, semanticObject: 'ZCaOpsException', semanticObjectAction: 'display', label: 'Exceptions', position: 210 } ]
+  @UI.fieldGroup: [ { qualifier: 'Owner', position: 30 } ]
+  OpenExceptions;
+  @EndUserText.label: 'Exception'
+  @UI.fieldGroup: [ { qualifier: 'Owner', position: 40 } ]
+  ExceptionCode;
+  @EndUserText.label: 'Responsible user'
+  @UI.lineItem: [ { position: 170, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Owner', position: 50 } ]
+  ResponsibleUser;
+  @EndUserText.label: 'Responsible team'
+  @UI.lineItem: [ { position: 180, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 90 } ]
+  @UI.fieldGroup: [ { qualifier: 'Owner', position: 60 } ]
+  ResponsibleTeam;
+  @EndUserText.label: 'Assigned to'
+  @UI.fieldGroup: [ { qualifier: 'Owner', position: 70 } ]
+  AssignedTo;
+}

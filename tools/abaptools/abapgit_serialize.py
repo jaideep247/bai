@@ -37,6 +37,8 @@ Modification log:
            | IGNORE list, secondary indexes and message truncation are settings; output unchanged.
 2026-11-15 | DDLS of an 'extend view entity' (customer extensions): source type EXTEND_SOURCE_TYPE (VERIFY V156),
            | description from the comment line '// Extension: <text>'. Output of every other source unchanged.
+2026-11-15 | Setting message_class optional (a worked example folder of a customer without messages). Output of every
+           | component with one unchanged.
 """
 import json
 import os
@@ -524,6 +526,9 @@ def message_rows(root, msg):
 
 
 def messages(stage, cfg):
+    if 'message_class' not in cfg:
+        # a folder without its own message class (a worked example of a customer's adapters)
+        return []
     msg = cfg['message_class']
     rows = message_rows(stage.root, msg)
     seen = set()

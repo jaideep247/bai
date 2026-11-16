@@ -43,6 +43,12 @@ customer's own business process without catalogue process and its own check clas
 vendor's tool refuses a licence that misses a requirement unless forced. Areas are not licensed (D-L3): an area is the
 customer's grouping, the modules are what runs in it.
 
+
+**Module CASHOPS (2026-11-15, build K).** FI-CA cash operations, first the payment file lifecycle
+(`docs/PAYMENT_FILE_LIFECYCLE.md`): entry points `ZCA_OPS_PF_RUN` and `ZUI_CA_OPS_PAYFILE`, check class
+`ZCL_CA_OPS_CHK_PAYFILE`, configuration entity `PayFileType` (activation refused under `LIC_ENFORCE = X` without the
+module, message 350), gate in `ZCL_CA_OPS_PF_INGEST` (message 352); the catalogue process `FICA_PAYFILE_ACK` names the
+module itself (`license_module`). The exception contract and its evidence rows are CORE.
 ## 2. How it works
 
 ```

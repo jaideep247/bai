@@ -46,6 +46,8 @@
 *& 2026-11-11 | Explainable, versioned results: save_findings stores the configuration version and row of a
 *&            | finding (CFG_VERSION / CFG_RULE - each row keeps its own, nothing inherited) and, for the pilot
 *&            | metrics, its business date and event time (BUS_DATE / EVENT_AT).
+*& 2026-11-15 | Exception contract: save_findings stores the item count, unknown count, duplicate exposure,
+*&            | deadline and calendar, stage, responsible user / team / source and evidence key of a finding.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - DB store (ZCA_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -309,6 +311,17 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
       ls_db-cfg_rule    = <ls_finding>-cfg_rule.
       ls_db-bus_date    = <ls_finding>-business_date.
       ls_db-event_at    = <ls_finding>-event_at.
+      " exception contract (docs/EXCEPTION_CONTRACT.md): each row keeps its own run's view, nothing inherited
+      ls_db-item_count    = <ls_finding>-item_count.
+      ls_db-unknown_count = <ls_finding>-unknown_count.
+      ls_db-dup_amount    = <ls_finding>-dup_amount.
+      ls_db-deadline_at   = <ls_finding>-deadline_at.
+      ls_db-calendar_id   = <ls_finding>-calendar_id.
+      ls_db-stage         = <ls_finding>-stage.
+      ls_db-resp_user     = <ls_finding>-resp_user.
+      ls_db-resp_team     = <ls_finding>-resp_team.
+      ls_db-resp_source   = <ls_finding>-resp_source.
+      ls_db-evid_key      = <ls_finding>-evid_key.
       ls_db-created_at  = lv_now.
       ls_db-created_by  = sy-uname.
       ls_db-last_changed_at = lv_now.

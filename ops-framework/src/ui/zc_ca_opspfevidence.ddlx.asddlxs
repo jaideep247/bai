@@ -1,0 +1,88 @@
+// UI annotations: Evidence (service ZUI_CA_OPS_PAYFILE, 2026-11-15)
+// Every row names the system that holds the record and its own ID; link object and key values start a link walk.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Evidence', typeNamePlural: 'Evidence',
+                  title: { type: #STANDARD, value: 'SourceRecordId' } }
+annotate entity ZC_CA_OpsPfEvidence with
+{
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  EventKey;
+  @UI.hidden: true
+  FileId;
+  @UI.hidden: true
+  CompanyCode;
+  @EndUserText.label: 'Milestone'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  Milestone;
+  @EndUserText.label: 'Outcome'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  Outcome;
+  @EndUserText.label: 'Status at the source'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  NativeStatus;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  SourceId;
+  @EndUserText.label: 'System (SAP, MW, BANK)'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  SourceType;
+  @EndUserText.label: 'Logical system'
+  @UI.lineItem: [ { position: 60, importance: #LOW } ]
+  LogicalSystem;
+  @EndUserText.label: 'Client'
+  @UI.lineItem: [ { position: 70, importance: #LOW } ]
+  SourceClient;
+  @EndUserText.label: 'File at the source'
+  @UI.lineItem: [ { position: 80, importance: #LOW } ]
+  NativeKey;
+  @EndUserText.label: 'Record ID'
+  @UI.lineItem: [ { position: 90, importance: #HIGH } ]
+  SourceRecordId;
+  @EndUserText.label: 'Version'
+  @UI.lineItem: [ { position: 100, importance: #LOW } ]
+  RecordVersion;
+  @EndUserText.label: 'Occurred (UTC)'
+  @UI.lineItem: [ { position: 110, importance: #HIGH } ]
+  OccurredAt;
+  @EndUserText.label: 'Observed (UTC)'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  ObservedAt;
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 130, importance: #LOW } ]
+  BusinessDate;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 140, importance: #MEDIUM } ]
+  Amount;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 150, importance: #MEDIUM } ]
+  Currency;
+  @EndUserText.label: 'Items'
+  @UI.lineItem: [ { position: 160, importance: #LOW } ]
+  ItemCount;
+  @EndUserText.label: 'Scope (F, B, P)'
+  @UI.lineItem: [ { position: 170, importance: #LOW } ]
+  AckScope;
+  @EndUserText.label: 'Batch'
+  @UI.lineItem: [ { position: 180, importance: #LOW } ]
+  BatchId;
+  @EndUserText.label: 'Payment'
+  @UI.lineItem: [ { position: 190, importance: #LOW } ]
+  PaymentKey;
+  @EndUserText.label: 'Match (C confirmed, P probable, U unmatched)'
+  @UI.lineItem: [ { position: 200, importance: #MEDIUM } ]
+  CorrelationQuality;
+  @EndUserText.label: 'Repeated reference'
+  @UI.lineItem: [ { position: 210, importance: #LOW } ]
+  RepeatedReference;
+  @EndUserText.label: 'Link registry object'
+  @UI.lineItem: [ { position: 220, importance: #LOW } ]
+  LinkObject;
+  @EndUserText.label: 'Key values'
+  @UI.lineItem: [ { position: 230, importance: #LOW } ]
+  LinkValues;
+  @EndUserText.label: 'Info'
+  @UI.lineItem: [ { position: 240, importance: #LOW } ]
+  Info;
+}

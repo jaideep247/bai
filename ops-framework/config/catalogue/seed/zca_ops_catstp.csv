@@ -17,6 +17,10 @@ FICA_INSTALMENT,020,T,‹instalment plan breach run›,Deactivate instalment pla
 FICA_INTEREST,010,T,‹interest calculation mass run›,Interest calculation run (mass activity),V,V127
 FICA_INVOICING,010,T,‹invoicing mass run transaction›,Invoicing run (mass activity),V,V127
 FICA_INVOICING,020,M,‹invoicing mass activity type›,Mass activity type of the invoicing run,V,V127
+FICA_PAYFILE_ACK,010,T,FPY1,Payment run (mass activity),C,
+FICA_PAYFILE_ACK,020,P,‹payment medium program›,Payment medium creation of the run (job),V,V175
+FICA_PAYFILE_ACK,030,J,ZCA_OPS_PF_RUN,Payment file ingestion and evaluation (product report),C,
+FICA_PAYFILE_ACK,040,E,‹bank acknowledgement›,Receipt and acceptance by the bank (customer adapter),V,V180
 FICA_PAYRUN,010,T,FPY1,Schedule the payment run (mass activity),C,
 FICA_PAYRUN,020,P,RFKK_MA_SCHEDULER,Mass activity scheduler of the run (job),C,
 FICA_PAYRUN,030,M,‹payment run mass activity type›,Mass activity type of the payment run,V,V127

@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-379 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-369 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 370-399 payment file lifecycle (2026-11-15; `docs/PAYMENT_FILE_LIFECYCLE.md`) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -223,6 +223,36 @@ texts <= 73 characters).
 | 364 | Licence &1 not installed: state &2 |
 | 365 | Signature check could not run (SSF return &1, PSE &2) |
 | 366 | Licence file on the server: maintain the parameters &1 and &2 |
+| 370 | Payment files &1: &2 read (&3 new), &4 evaluated |
+| 371 | File &1: bank acceptance missing since &2 (&3 payments, &4) |
+| 372 | File &1: bank receipt missing since &2 (&3 payments, &4) |
+| 373 | File &1: not transferred, &2 missing since &3 (&4 payments) |
+| 374 | File &1: generation job &2 failed (&3 payments, &4) |
+| 375 | File &1 rejected by the bank (&2 payments, &3) |
+| 376 | File &1 partly accepted: &2 of &3 not accepted (&4) |
+| 377 | Evidence &1 / &2 names no link object or no key value |
+| 378 | File type &1 on &2: &3 of &4 expected files observed |
+| 379 | File &1: &2 reached &3 min after its deadline |
+| 380 | File &1 reissued as &2 after delivery: same payments in both (&3) |
+| 381 | File &1: bank answered after its reissue as &2 - duplicate risk |
+| 382 | File &1: bank sent accepted and rejected for the same scope (&2) |
+| 383 | Source &1 of file type &2 not evaluated: &3 |
+| 384 | Source &1 of file type &2 stale: data as of &3 (limit &4 min) |
+| 385 | File &1: &2 missing since &3 (&4 payments) |
+| 386 | Adapter &1 of file type &2: class &3 cannot be used (&4) |
+| 387 | File type &1 of area &2 has no active file source adapter |
+| 388 | Status &1 of source &2 has no mapping: recorded as information |
+| 389 | Ticket for file &1 logged only (&2): no ticket system configured |
+| 390 | Business date &1 of file type &2 not evaluated: &3 |
+| 391 | No files on business date &1 of file type &2: valid (zero volume) |
+| 392 | &1 is not a business day of calendar &2: no file expected |
+| 393 | Business calendar &1 cannot answer for &2 |
+| 394 | Milestone &1 of file type &2: basis &3 is not configured |
+| 395 | File &1: more than &2 payments, the rest is counted only |
+| 396 | File type &1: &2 more findings not listed |
+| 397 | Time zone &1 cannot convert &2 |
+| 398 | File &1: transfer failed at &2 (&3 payments, &4) |
+| 399 | Business date &1 of file type &2: source data as of &3, stale (&4 min) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

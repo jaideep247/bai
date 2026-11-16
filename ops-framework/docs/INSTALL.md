@@ -279,6 +279,25 @@ missing licence as an exception of `CA_OPS`.
 5. `LIC_ENFORCE` = `X` only when the contract says so and V162 / V163 / V166 / V167 are closed; switch back to `W` at
    once if a module is refused by mistake (CORE never is; stored data stays readable either way).
 
+## 6i. Payment file lifecycle (2026-11-15, module CASHOPS, `docs/PAYMENT_FILE_LIFECYCLE.md`)
+
+1. Pull: tables `ZCA_OPS_PFTYP`, `_PFSTG`, `_PFMAP`, `_PFADP` (configuration, `ZUI_CA_OPS_CFG`), `ZCA_OPS_PFFILE`,
+   `_PFPAY`, `_PFEVT`, `_PFMST`, `_PFSRC`, `_PFDAY` (register; secondary indexes NAT, BDT, PAY, FIL, SRC by hand, V02),
+   `ZCA_OPS_FNDEVI` (evidence of findings) and the new fields of `ZCA_OPS_FINDING` (exception contract,
+   `docs/EXCEPTION_CONTRACT.md`). Bindings `ZUI_CA_OPS_PAYFILE_O4` (OData V4 - UI); republish `ZUI_CA_OPS_EXC_O4`
+   (facets *Payments, deadline and owner*, *Evidence*) and `ZUI_CA_OPS_CFG_O4`.
+2. The licence must name module `CASHOPS` (under `LIC_ENFORCE = W` it runs and is reported).
+3. Activate the catalogue process `FICA_PAYFILE_ACK` for the area (`docs/PROCESS_CATALOGUE.md`); its check
+   `ZCL_CA_OPS_CHK_PAYFILE` arrives as an inactive monitoring row (schedule group `INTRADAY`).
+4. Configure per file type in DV1 (transported): file type (calendar, time zone, cut-off, expectation), milestones and
+   deadlines, adapters (delivered: `ZCL_CA_OPS_PF_SRC_DPAYH`, `ZCL_CA_OPS_PF_SRC_TBTCO` with `PROGRAMS=` the payment
+   medium program, V175; site classes for transfer and acknowledgement), status mappings (templates
+   `config/payfile/zca_ops_pfmap.csv`, source `SAPJOB`). Keep rows inactive while their fields are VERIFY.
+5. Schedule `ZCA_OPS_PF_RUN` per area (e.g. every 15 minutes, test mode off) before the check's schedule group;
+   job user `ZCA_OPS` 16 for the area. Roles for the worklist: `ZCA_OPS` 03 for the area (and company codes).
+6. Optional: a ticket sink class of the site (the delivered one logs only), launchpad target mappings for the semantic
+   objects `ZCaOpsException`, `ZCaOpsJob`, `ZCaOpsPaymentTrace`.
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run

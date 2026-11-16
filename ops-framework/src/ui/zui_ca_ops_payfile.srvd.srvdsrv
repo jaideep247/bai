@@ -1,0 +1,14 @@
+@EndUserText.label: 'Operations framework: payment files'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSPAYFILE'
+// Binding to create in ADT: ZUI_CA_OPS_PAYFILE_O4 (OData V4 - UI). Read-only: no behaviour definition.
+// Payment file lifecycle (build K, 2026-11-15): the worklist of payment files with the affected payments, the stage
+// timeline and the evidence (list report and object page), the overview card by next milestone and the days
+// expected versus observed - docs/PAYMENT_FILE_LIFECYCLE.md. Nothing is changed through this service.
+define service ZUI_CA_OPS_PAYFILE {
+  expose ZC_CA_OpsPayFile     as PayFile;
+  expose ZC_CA_OpsPfPayment   as PayFilePayment;
+  expose ZC_CA_OpsPfMilestone as PayFileMilestone;
+  expose ZC_CA_OpsPfEvidence  as PayFileEvidence;
+  expose ZC_CA_OpsPfDay       as PayFileDay;
+  expose ZC_CA_OpsPfCard      as PayFileCard;
+}

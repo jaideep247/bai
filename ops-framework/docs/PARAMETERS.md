@@ -7,7 +7,7 @@ Area `CA_OPS` (`config/param_areas.csv`); definitions `config/param_definitions.
 `ZCL_CA_OPS_PARAM_SEED` by `tools/param_definitions.py` (check `param_definitions` of `tools/checks.py`).
 Read through `ZCL_CA_OPS_FACTORY=>GET_PARAMS( )`: a name with prefix `ALERT_`, `SLA_`, `RETENTION_` or
 `PURGE_`, `CONTROL_`, `EXC_`, `CHECK_` or `JOB_` - and, for the operations response features (2026-11-11), `RUNBOOK_`,
-`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - and, for build F (2026-11-11), `BRK_` (break analysis) and `PILOT_` (pilot pack) - and, for build G (2026-11-15), `FLOW_` (account flow reconciliation) - and, for licensing (2026-11-15), `LIC_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
+`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - and, for build F (2026-11-11), `BRK_` (break analysis) and `PILOT_` (pilot pack) - and, for build G (2026-11-15), `FLOW_` (account flow reconciliation) - and, for licensing (2026-11-15), `LIC_` - and, for the payment file lifecycle (2026-11-15), `PF_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
 wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS( )`, never silent.
 
 | Name | Type | Default | Read by | Meaning |
@@ -35,6 +35,17 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 | `LIC_WARN_DAYS` | INT 0-365 | 30 | `ZCL_CA_OPS_LIC_POLICY`, `ZI_CA_OpsLicCfg` | Days before a module ends from which it is reported as expiring (exception `LICENSE_EXPIRING`, dashboard amber) |
 | `LIC_SSF_PROFILE` | CHAR | SAPZCAOPS.pse | `ZCL_CA_OPS_LIC_PLATFORM` | PSE of the SSF application that holds the vendor's certificate (STRUST, V166) |
 | `LIC_FILE_PATH` / `LIC_FILE_NAME` | CHAR | - | `ZCA_OPS_LICENSE_INSTALL` | Logical path / file (transaction FILE) of a licence file on the application server |
+| `PF_LOOKBACK_DAYS` | INT 1-31 | 3 | `ZCL_CA_OPS_PF_INGEST` | A first read of a payment file source (no watermark) starts this many days back (`docs/PAYMENT_FILE_LIFECYCLE.md`) |
+| `PF_OVERLAP_MIN` | INT 0-1440 | 60 | `ZCL_CA_OPS_PF_INGEST` | A read starts this many minutes before the source's watermark (late and out-of-order records; stored once) |
+| `PF_OPEN_DAYS` | INT 1-93 | 10 | ingestion, `ZCL_CA_OPS_CHK_PAYFILE` | Days a file stays under watch after its business date when its file type names none |
+| `PF_STALE_MIN` | INT 1-10080 | 120 | ingestion | A source not complete for longer than this is stale: its milestones are unknown, a day `STALE` - never missing |
+| `PF_GRACE_MIN` | INT 0-1440 | 30 | `ZCL_CA_OPS_CHK_PAYFILE` | Minutes overdue a finding stays a warning when its milestone names none |
+| `PF_BREACH_RED_MIN` | INT 0-10080 | 240 | `ZCL_CA_OPS_CHK_PAYFILE` | Minutes overdue from which a finding blocks (B) |
+| `PF_AMOUNT_RED` / `PF_AMOUNT_RED_<area>` | CHAR | - | `ZCL_CA_OPS_CHK_PAYFILE` | Amounts from which a finding blocks: `[company code:]currency amount, ...` (e.g. `USD 1000000, 1000:EUR 500000`); compared only with a finding of that currency (and company code); the area's list first |
+| `PF_MAX_PAYMENTS` | INT 1-100000 | 5000 | ingestion | Payments kept per file; more are counted only (the file is partial) |
+| `PF_MAX_FINDINGS` | INT 1-10000 | 200 | `ZCL_CA_OPS_CHK_PAYFILE` | Findings per file type and run; more are summarised (`PF_MORE_FILES`, partial) |
+| `PF_EVIDENCE_MAX` | INT 1-200 | 20 | `ZCL_CA_OPS_CHK_PAYFILE` | Evidence rows per finding |
+| `PF_RETENTION_DAYS` | INT 0-3660 | 400 | ingestion | Days the payment file register is kept after the business date (0 = never removed) |
 | `RETENTION_DAYS_BREAK` | INT ≥ 30 | 400 | purge target `BREAK` | Break analysis snapshots (the latest per account is kept) |
 | `PILOT_FP_REASON` | CHAR | NOT_AN_ISSUE | pilot CDS (`ZI_CA_OpsPilotCfg`) | Reason code that marks a resolved exception a false positive (`docs/PILOT_PACK.md`) |
 | `PILOT_WINDOW_DAYS` | INT 1-400 | 30 | `ZCA_OPS_PILOT_EXPORT` | Days the export covers without a from date |

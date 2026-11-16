@@ -58,7 +58,7 @@ class FrameworkAppTest(unittest.TestCase):
                               'zca_ops_catdep', 'zca_ops_catact', 'zca_ops_brkacc', 'zca_ops_brkbkt',
                               'zca_ops_brkrul', 'zca_ops_brkcnd', 'zca_ops_pilotbl', 'zca_ops_flow',
                               'zca_ops_flwacc', 'zca_ops_flwstg', 'zca_ops_flwtil', 'zca_ops_flwctl',
-                              'zca_ops_flwrul'])
+                              'zca_ops_flwrul', 'zca_ops_pftyp', 'zca_ops_pfstg', 'zca_ops_pfmap', 'zca_ops_pfadp'])
 
     def test_payment_model_tables_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

@@ -83,6 +83,23 @@ define table zca_ops_finding {
   // (else the business date); blank = not known
   bus_date      : abap.dats;
   event_at      : timestampl;
+  // Exception contract (2026-11-15, docs/EXCEPTION_CONTRACT.md, ZIF_CA_OPS_EXC_CONTRACT): what the finding stands
+  // for and who answers it - the number of items (payments) it stands for, of them those whose amount is not known,
+  // the possible duplicate exposure in its own currency (CURRENCY; kept apart from AMOUNT, the gross), the deadline
+  // the finding is about (UTC) with the business calendar it was computed in, the stage where the process stopped,
+  // the responsible user / team from the configuration and where they came from (C control, P business process,
+  // N none), and the key of its evidence rows (ZCA_OPS_FNDEVI). Blank / 0 = not known or not applicable; not
+  // inherited by the carry-forward (each row keeps its own run's view)
+  item_count    : abap.int4;
+  unknown_count : abap.int4;
+  dup_amount    : abap.dec(23,2);
+  deadline_at   : timestampl;
+  calendar_id   : abap.char(2);
+  stage         : abap.char(12);
+  resp_user     : syuname;
+  resp_team     : abap.char(10);
+  resp_source   : abap.char(1);
+  evid_key      : abap.char(40);
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and

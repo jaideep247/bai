@@ -14,6 +14,7 @@
 *& 2026-11-11 | Process catalogue: business process names its catalogue process (CAT_PROCESS); aggregate
 *&            | row window MAX_AGE_DAYS and time field TIME_FIELD; operator NI (none of a list); a date / time
 *&            | window of an aggregate (outage check).
+*& 2026-11-15 | Exception contract: TY_RESULT-EVIDENCE (typed evidence rows of the findings).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check registry types</p>
 INTERFACE zif_ca_ops_chk_types
@@ -262,6 +263,9 @@ INTERFACE zif_ca_ops_chk_types
       "! X = the check evaluated less than all (a row could not be read): its earlier exceptions stay
       "! open (no auto-resolve); the runner sets it for a check that raised
       partial    TYPE abap_bool,
+      "! Exception contract (2026-11-15): typed evidence rows of the findings (key = the finding's EVID_KEY), stored
+      "! by the runner through ZIF_CA_OPS_EVIDENCE (replacing the rows of the same key; nothing in test mode)
+      evidence   TYPE zif_ca_ops_exc_contract=>tt_evidence,
     END OF ty_result.
 
   "! Result of one run of the runner (report, tests)

@@ -26,6 +26,8 @@
 *&            | does not cover is not run - one finding LICENSE_REFUSED (message 351, error) instead, its open
 *&            | exceptions stay open; under W it runs and the run gets one warning LICENSE_UNLICENSED (353) naming
 *&            | the modules used but not covered by an installed licence. CORE is never refused.
+*& 2026-11-15 | Exception contract: the evidence rows a check returns are saved with its findings
+*&            | (ZIF_CA_OPS_EVIDENCE; never in test mode).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - generic check runner</p>
 "! Report ZCA_OPS_CHECK_RUN (one job per area and schedule group). No check, no business table
@@ -164,6 +166,7 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
     DATA lt_groups TYPE zif_ca_ops_types=>tt_group.
     DATA lv_items TYPE i.
     DATA lt_uncovered TYPE zif_ca_ops_lic_types=>tt_module.
+    DATA lt_evidence TYPE zif_ca_ops_exc_contract=>tt_evidence.
 
     DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     rs_result-run = lo_store->start_run( iv_area      = iv_area
@@ -228,6 +231,7 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
           DATA(ls_one) = run_check( is_check   = <ls_check>
                                     is_context = ls_context ).
           INSERT LINES OF ls_one-findings INTO TABLE rs_result-findings.
+          INSERT LINES OF ls_one-evidence INTO TABLE lt_evidence.
           lv_items += ls_one-item_count.
           rs_result-check_count += 1.
           " only a complete check may resolve what it no longer raises
@@ -243,6 +247,12 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
         ENDIF.
         lo_store->save_findings( EXPORTING it_findings = rs_result-findings
                                  CHANGING  cs_run      = rs_result-run ).
+        " exception contract: the typed evidence rows of the findings, in the run's unit of work
+        IF lt_evidence IS NOT INITIAL AND iv_test_mode = abap_false.
+          zcl_ca_ops_factory=>get_evidence( )->save( iv_area     = iv_area
+                                                     iv_run_id   = rs_result-run-run_id
+                                                     it_evidence = lt_evidence ).
+        ENDIF.
         IF lt_groups IS NOT INITIAL.
           lo_store->reconcile( is_run    = rs_result-run
                                it_groups = lt_groups ).

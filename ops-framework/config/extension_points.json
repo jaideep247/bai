@@ -67,6 +67,21 @@
      "object": "ZIF_CA_OPS_FLOW_SOURCE", "doc": "docs/ACCOUNT_FLOW.md", "evidence": ["src/zif_ca_ops_flow_source.intf.abap"],
      "description": "A customer source of what explains an account's balance",
      "example": "Requests in flight in the customer's request table"},
+    {"id": "PAYFILE_CONFIG", "module": "Payment file lifecycle", "mechanism": "config",
+     "standard": "FI-CA payment runs (DPAYH), SAP background jobs (TBTCO)",
+     "object": "ZCA_OPS_PFTYP", "doc": "docs/PAYMENT_FILE_LIFECYCLE.md",
+     "evidence": ["ddic/zca_ops_pftyp.tabl.ddl", "ddic/zca_ops_pfstg.tabl.ddl", "ddic/zca_ops_pfmap.tabl.ddl",
+                  "ddic/zca_ops_pfadp.tabl.ddl", "config/payfile/zca_ops_pfmap.csv"],
+     "description": "File types, milestones and deadlines, status mappings and adapters of the customer",
+     "example": "The customer's acceptance deadline of 10:00 on the next business day"},
+    {"id": "PAYFILE_ADAPTER", "module": "Payment file lifecycle", "mechanism": "plugin",
+     "standard": "Middleware, bank acknowledgements, schedulers and ticketing the product cannot see",
+     "object": "ZIF_CA_OPS_PF_ADAPTER", "doc": "docs/PAYMENT_FILE_LIFECYCLE.md",
+     "evidence": ["src/zif_ca_ops_pf_adapter.intf.abap", "src/zif_ca_ops_pf_file_src.intf.abap",
+                  "src/zif_ca_ops_pf_event_src.intf.abap", "src/zif_ca_ops_pf_ticket_sink.intf.abap",
+                  "src/zif_ca_ops_pf_calendar.intf.abap"],
+     "description": "A customer source of files, transfers, bank answers, jobs or statements, a ticket sink, a calendar",
+     "example": "The bank acknowledgement table of the customer"},
     {"id": "JOB_RESOLVER", "module": "Job monitoring", "mechanism": "plugin",
      "standard": "SAP background jobs and their logs",
      "object": "ZIF_CA_OPS_JOB_RESOLVER", "doc": "docs/JOB_MONITORING.md", "evidence": ["src/zif_ca_ops_job_resolver.intf.abap"],
@@ -229,6 +244,20 @@
      "anchors": [
        {"id": "COMPANY", "kind": "link", "object": "S4_COMPANY_CODE", "elements": {"CompanyCode": "CompanyCode"}},
        {"id": "CONTROL", "kind": "key", "elements": ["Area", "ControlId"]}],
+     "verify": ["V153", "V154", "V157"]},
+    {"id": "PAYFILE", "module": "Payment file lifecycle", "mechanism": "extension",
+     "standard": "Payment file register of the product (ZCA_OPS_PFFILE), fed from FI-CA payment runs and the adapters",
+     "object": "ZC_CA_OpsPayFile", "doc": "docs/PAYMENT_FILE_LIFECYCLE.md",
+     "description": "Payment file worklist (list report and object page)",
+     "example": "The customer's own file name or business line of a file",
+     "views": [
+       {"code": "PAYFILE_R", "view": "ZR_CA_OpsPayFile", "file": "src/ui/zr_ca_opspayfile.ddls.asddls", "role": "base",
+        "kind": "select", "alias": "Fil"},
+       {"code": "PAYFILE_C", "view": "ZC_CA_OpsPayFile", "file": "src/ui/zc_ca_opspayfile.ddls.asddls",
+        "role": "propagate", "kind": "projection", "source": "PAYFILE_R", "ui": ["lineItem", "identification"]}],
+     "anchors": [
+       {"id": "COMPANY", "kind": "link", "object": "S4_COMPANY_CODE", "elements": {"CompanyCode": "CompanyCode"}},
+       {"id": "FILE", "kind": "key", "elements": ["Area", "FileId", "Currency"]}],
      "verify": ["V153", "V154", "V157"]}
   ]
 }

@@ -1,0 +1,48 @@
+// UI annotations: Evidence of an exception (facet of the exceptions app, service ZUI_CA_OPS_EXC, 2026-11-15)
+// Exception contract: which SAP, middleware or bank record supports the finding; link object and key values are the
+// start of a link registry walk (docs/LINK_REGISTRY.md).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Evidence', typeNamePlural: 'Evidence',
+                  title: { type: #STANDARD, value: 'Label' } }
+annotate entity ZC_CA_OpsFindEvidence with
+{
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  EvidenceKey;
+  @EndUserText.label: 'No.'
+  @UI.lineItem: [ { position: 10, importance: #LOW } ]
+  Sequence;
+  @UI.hidden: true
+  CompanyCode;
+  @EndUserText.label: 'System (SAP, MW, BANK, OPS)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  SystemKind;
+  @EndUserText.label: 'Record type'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  EvidenceType;
+  @EndUserText.label: 'Record'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  Label;
+  @EndUserText.label: 'Key at the source'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  NativeKey;
+  @EndUserText.label: 'Link registry object'
+  @UI.lineItem: [ { position: 60, importance: #LOW } ]
+  LinkObject;
+  @EndUserText.label: 'Key values'
+  @UI.lineItem: [ { position: 70, importance: #LOW } ]
+  LinkValues;
+  @EndUserText.label: 'Occurred (UTC)'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  OccurredAt;
+  @EndUserText.label: 'Observed (UTC)'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  ObservedAt;
+  @EndUserText.label: 'Match (C, P, U)'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  Quality;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 110, importance: #LOW } ]
+  SourceId;
+}

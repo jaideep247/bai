@@ -1,0 +1,14 @@
+// Artifact: zc_ca_opsfindevidence.dcls.asdcls
+// Purpose: Read access to the evidence of exceptions (service ZUI_CA_OPS_EXC): authorization object ZCA_OPS with
+//          ZCA_PARAR = the area and ACTVT 03, and for a row whose finding has a company code the same object with BUKRS =
+//          that company code (company-code isolation, docs/auth_zca_ops.md section 3c) - the rule of the exceptions app.
+// Modification log: 2026-11-15 | Initial version (build K: exception contract).
+// VERIFY-ADT: IS INITIAL in an access condition.
+@EndUserText.label: 'Evidence of exceptions - read access'
+@MappingRole: true
+define role ZC_CA_OpsFindEvidence {
+  grant select on ZC_CA_OpsFindEvidence
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

@@ -50,6 +50,10 @@ define behavior for ZC_CA_OpsCfgAll alias OpsCfgAll
   use association _FlowTileStage { create; with draft; }
   use association _FlowStageControl { create; with draft; }
   use association _FlowStageRule { create; with draft; }
+  use association _PayFileType { create; with draft; }
+  use association _PayFileMilestone { create; with draft; }
+  use association _PayFileStatusMap { create; with draft; }
+  use association _PayFileAdapter { create; with draft; }
 }
 
 define behavior for ZC_CA_AlertRule alias AlertRule
@@ -386,6 +390,42 @@ use etag
 }
 
 define behavior for ZC_CA_FlowStageRule alias FlowStageRule
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_PayFileType alias PayFileType
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_PayFileMilestone alias PayFileMilestone
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_PayFileStatusMap alias PayFileStatusMap
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_PayFileAdapter alias PayFileAdapter
 use etag
 {
   use update;

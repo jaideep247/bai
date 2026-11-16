@@ -69,6 +69,11 @@
 | I_JOURNALENTRYITEM-GLAccount | VERIFY V110 | - | - | - |
 | I_JOURNALENTRYITEM-Ledger | VERIFY V110 | S4_JOURNAL_ITEM | S4_JOURNAL_TO_ITEMS (target key) | - |
 | I_JOURNALENTRYITEM-LedgerGLLineItem | VERIFY V110 | S4_JOURNAL_ITEM | S4_JOURNAL_TO_ITEMS (target key) | - |
+| TBTCO-ENDDATE | confirmed | - | - | - |
+| TBTCO-ENDTIME | confirmed | - | - | - |
+| TBTCO-JOBCOUNT | confirmed | S4_BACKGROUND_JOB | - | - |
+| TBTCO-JOBNAME | confirmed | S4_BACKGROUND_JOB | - | - |
+| TBTCO-STATUS | confirmed | - | - | - |
 | TFK042Z-LAND1 | confirmed | FICA_PAY_METHOD_CFG | FICA_COUNTRY_METHODS (to, inactive (VERIFY))<br/>FICA_COUNTRY_METHODS (target key) | - |
 | TFK042Z-XEINZ | confirmed | - | - | - |
 | TFK042Z-ZLSCH | confirmed | FICA_PAY_METHOD_CFG | FICA_COUNTRY_METHODS (target key) | - |

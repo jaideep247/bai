@@ -8,6 +8,7 @@ CA_FICA,FICA_GL_TRANSFER,G/L transfer and reconciliation keys,ACCOUNTING,,,,,,,1
 CA_FICA,FICA_INSTALMENT,Instalment plans,RECEIVABLES,,,,,,,100
 CA_FICA,FICA_INTEREST,Interest calculation,RECEIVABLES,,,,,,,100
 CA_FICA,FICA_INVOICING,Invoicing (FI-CA invoicing),INVOICING,,,,,,,100
+CA_FICA,FICA_PAYFILE_ACK,Payment file lifecycle and bank acknowledgement,PAYMENTS,,,,,,,100
 CA_FICA,FICA_PAYRUN,Payment run (disbursements and collections),PAYMENTS,,,,,,,100
 CA_FICA,FICA_PAY_LOTS,Incoming payment lots and cash journal,RECEIVABLES,,,,,,,100
 CA_FICA,FICA_RETURNS,Returns lots (returned payments),RECEIVABLES,,,,,,,100

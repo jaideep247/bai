@@ -7,6 +7,7 @@ Solid arrow = active link, dotted arrow = inactive (VERIFY item open, switched o
 ```mermaid
 flowchart LR
   subgraph S4CORE["S4CORE - product baseline (rank 10)"]
+    S4_BACKGROUND_JOB["S4_BACKGROUND_JOB<br/>TBTCO"]
     S4_BANK_STMT_HDR["S4_BANK_STMT_HDR<br/>FEBKO"]
     S4_BANK_STMT_LINE["S4_BANK_STMT_LINE<br/>FEBEP"]
     S4_BUSINESS_PARTNER["S4_BUSINESS_PARTNER<br/>BUT000"]

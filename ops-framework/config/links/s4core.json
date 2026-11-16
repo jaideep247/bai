@@ -41,6 +41,15 @@
        {"name": "PARTNER", "data_element": "BU_PARTNER", "sensitivity": "M", "evidence": "C", "description": "Business partner number (masked)"},
        {"name": "BPEXT", "sensitivity": "M", "evidence": "C", "description": "External partner number (masked)"}
      ]},
+    {"id": "S4_BACKGROUND_JOB", "source": "TBTCO", "kind": "T", "keys": ["JOBNAME", "JOBCOUNT"],
+     "description": "Background job (e.g. the job that generated a payment file)",
+     "fields": [
+       {"name": "JOBNAME", "evidence": "C", "description": "Job name"},
+       {"name": "JOBCOUNT", "evidence": "C", "description": "Job count"},
+       {"name": "STATUS", "evidence": "C", "description": "Job status (F finished, A cancelled, ...)"},
+       {"name": "ENDDATE", "evidence": "C", "description": "End date (system time)"},
+       {"name": "ENDTIME", "evidence": "C", "description": "End time (system time)"}
+     ]},
     {"id": "S4_BANK_STMT_HDR", "source": "FEBKO", "kind": "T", "keys": ["KUKEY"],
      "description": "Electronic bank statement header",
      "fields": [

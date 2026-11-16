@@ -1,0 +1,54 @@
+// UI annotations: overview card "Payment files by next milestone" (service ZUI_CA_OPS_PAYFILE, 2026-11-15)
+// Analytical card: open files per next milestone (bar chart; a count may be summed across currencies, an amount never);
+// the table of the card shows the amount per milestone and currency. A consumer's overview page adds the card on entity
+// PayFileCard with the chart qualifier ByMilestone. VERIFY-ADT: card rendering (OVP V4) - V179.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Milestone', typeNamePlural: 'Payment files by next milestone',
+                  title: { type: #STANDARD, value: 'NextMilestone' } }
+@UI.chart: [ { qualifier: 'ByMilestone', title: 'Open payment files by next milestone', chartType: #BAR,
+               dimensions: [ 'NextMilestone' ], measures: [ 'FileCount' ],
+               dimensionAttributes: [ { dimension: 'NextMilestone', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'FileCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { qualifier: 'ByMilestone', sortOrder: [ { by: 'FileCount', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByMilestone' } ] },
+                           { sortOrder: [ { by: 'MaxOverdueMinutes', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsPfCard with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #LOW } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'File type'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  FileType;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Stopped before'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  NextMilestone;
+  @EndUserText.label: 'State'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  State;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  Currency;
+  @EndUserText.label: 'Files'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  FileCount;
+  @EndUserText.label: 'Payments'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  PaymentCount;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 90, importance: #HIGH } ]
+  Amount;
+  @EndUserText.label: 'Possible duplicate exposure'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  DuplicateAmount;
+  @EndUserText.label: 'Most overdue (minutes)'
+  @UI.lineItem: [ { position: 110, importance: #HIGH } ]
+  MaxOverdueMinutes;
+}

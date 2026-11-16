@@ -26,6 +26,7 @@
 *& 2026-11-11 | GET_BRK_DAO: data access of the clearing-account break analysis (injectable).
 *& 2026-11-15 | GET_FLOW_DAO: data access of the account flow reconciliation (injectable).
 *& 2026-11-15 | GET_LICENSE: the licence API (licensing; injectable, a new instance per call = per run).
+*& 2026-11-15 | GET_EVIDENCE, GET_OWNER (exception contract) and GET_PF_DAO (payment file lifecycle), injectable.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven
@@ -117,6 +118,21 @@ CLASS zcl_ca_ops_factory DEFINITION
       RETURNING
         VALUE(ro_license) TYPE REF TO zif_ca_ops_license.
 
+    "! Evidence rows of findings (exception contract, 2026-11-15)
+    CLASS-METHODS get_evidence
+      RETURNING
+        VALUE(ro_evidence) TYPE REF TO zif_ca_ops_evidence.
+
+    "! Responsible owner of a finding from the configuration (exception contract, 2026-11-15)
+    CLASS-METHODS get_owner
+      RETURNING
+        VALUE(ro_owner) TYPE REF TO zif_ca_ops_owner.
+
+    "! Data access of the payment file lifecycle (2026-11-15)
+    CLASS-METHODS get_pf_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_ca_ops_pf_dao.
+
     "! Planned downtime API: the windows of an area and "is this planned?" (2026-11-11)
     CLASS-METHODS get_downtime
       RETURNING
@@ -176,6 +192,9 @@ CLASS zcl_ca_ops_factory DEFINITION
     CLASS-DATA go_brk_dao_double TYPE REF TO zif_ca_ops_brk_dao.
     CLASS-DATA go_flow_dao_double TYPE REF TO zif_ca_ops_flow_dao.
     CLASS-DATA go_license_double TYPE REF TO zif_ca_ops_license.
+    CLASS-DATA go_evidence_double TYPE REF TO zif_ca_ops_evidence.
+    CLASS-DATA go_owner_double TYPE REF TO zif_ca_ops_owner.
+    CLASS-DATA go_pf_dao_double TYPE REF TO zif_ca_ops_pf_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
     "! Installed ZCA_PARAM release as seen by CHECK_VERSION (test seam: a double release)
     CLASS-DATA gv_param_version_double TYPE string.
@@ -300,6 +319,24 @@ CLASS zcl_ca_ops_factory IMPLEMENTATION.
   METHOD get_flow_dao.
     ro_dao = COND #( WHEN go_flow_dao_double IS BOUND THEN go_flow_dao_double
                      ELSE NEW zcl_ca_ops_flow_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_evidence.
+    ro_evidence = COND #( WHEN go_evidence_double IS BOUND THEN go_evidence_double
+                          ELSE NEW zcl_ca_ops_evidence( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_owner.
+    ro_owner = COND #( WHEN go_owner_double IS BOUND THEN go_owner_double
+                       ELSE NEW zcl_ca_ops_owner( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_pf_dao.
+    ro_dao = COND #( WHEN go_pf_dao_double IS BOUND THEN go_pf_dao_double
+                     ELSE NEW zcl_ca_ops_pf_dao( ) ).
   ENDMETHOD.
 
 

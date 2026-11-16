@@ -1,0 +1,6 @@
+{
+  "_comment": "Integration setup of the fictitious customer XX for the fixtures of the payment file lifecycle (tools/abaptools/payfile.py): which source evidences each role and its status mapping (zca_ops_pfmap.csv of this folder - the rows XX would maintain in ZUI_CA_OPS_CFG). XX has no middleware (its transfer is a folder log), its own scheduler and a bank acknowledgement table.",
+  "name": "example XX (direct folder transfer, own scheduler)",
+  "sources": {"SCHED": "XXSCHED", "TRANSFER": "XXFOLDER", "ACK": "XXACK"},
+  "map": "zca_ops_pfmap.csv"
+}

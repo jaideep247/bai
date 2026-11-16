@@ -1,0 +1,45 @@
+// UI annotations: Stage timeline (service ZUI_CA_OPS_PAYFILE, 2026-11-15)
+// The milestones in the product order; bank receipt and bank acceptance are always two rows.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Milestone', typeNamePlural: 'Stage timeline',
+                  title: { type: #STANDARD, value: 'Milestone' } }
+annotate entity ZC_CA_OpsPfMilestone with
+{
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  FileId;
+  @EndUserText.label: 'Milestone'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  Milestone;
+  @UI.hidden: true
+  CompanyCode;
+  @EndUserText.label: 'Order'
+  @UI.lineItem: [ { position: 5, importance: #LOW } ]
+  Sequence;
+  @EndUserText.label: 'Required'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  IsRequired;
+  @EndUserText.label: 'Status'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  Status;
+  @UI.hidden: true
+  StatusCriticality;
+  @EndUserText.label: 'Outcome'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  Outcome;
+  @EndUserText.label: 'Due (UTC)'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  DueAt;
+  @EndUserText.label: 'Observed (UTC)'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  ObservedAt;
+  @EndUserText.label: 'Late (minutes)'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  LateMinutes;
+  @UI.hidden: true
+  EventKey;
+  @EndUserText.label: 'Evaluated at'
+  @UI.lineItem: [ { position: 80, importance: #LOW } ]
+  EvaluatedAt;
+}

@@ -1,0 +1,50 @@
+// UI annotations: Affected payments (service ZUI_CA_OPS_PAYFILE, 2026-11-15)
+// Paged by the UI; the payee is stored masked only. Payment trace by intent ZCaOpsPaymentTrace where mapped.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment', typeNamePlural: 'Affected payments',
+                  title: { type: #STANDARD, value: 'PaymentKey' } }
+annotate entity ZC_CA_OpsPfPayment with
+{
+  @UI.hidden: true
+  Area;
+  @UI.hidden: true
+  FileId;
+  @EndUserText.label: 'Payment'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  PaymentKey;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  CompanyCode;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  Currency;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  Amount;
+  @EndUserText.label: 'Amount known'
+  @UI.lineItem: [ { position: 50, importance: #LOW } ]
+  AmountKnown;
+  @EndUserText.label: 'Payee (masked)'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  PayeeMasked;
+  @EndUserText.label: 'Payment document'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  PaymentDocument;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 80, importance: #LOW } ]
+  PaymentMethod;
+  @EndUserText.label: 'Batch'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  BatchId;
+  @EndUserText.label: 'Bank answer'
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  AckOutcome;
+  @EndUserText.label: 'Answered at (UTC)'
+  @UI.lineItem: [ { position: 110, importance: #LOW } ]
+  AckAt;
+  @UI.hidden: true
+  OtherFileId;
+  @EndUserText.label: 'Also in another file'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  PossibleDuplicate;
+}

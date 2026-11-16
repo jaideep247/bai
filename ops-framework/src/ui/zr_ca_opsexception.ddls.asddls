@@ -7,6 +7,8 @@
 // children of a parent, the runbook link of the check (ZI_CA_OpsFindRunbook)
 // 2026-11-11 (explainable, versioned results): configuration rule and version of the finding; business date and
 // event time (pilot metrics)
+// 2026-11-15 (exception contract, docs/EXCEPTION_CONTRACT.md): items, items with unknown amount, duplicate exposure,
+// deadline and calendar, stage, responsible user / team / source, evidence key and the evidence rows (_Evidence)
 // VERIFY-ADT: self-associations of the root entity redirected in the projection; IS INITIAL on a RAW element
 define root view entity ZR_CA_OpsException
   as select from zca_ops_finding
@@ -18,6 +20,8 @@ define root view entity ZR_CA_OpsException
   association [0..1] to ZI_CA_OpsCorrCount  as _CorrCount    on  $projection.CorrelationId = _CorrCount.CorrelationId
   association [0..1] to ZI_CA_OpsFindRunbook as _Runbook     on  $projection.RunId     = _Runbook.RunId
                                                             and $projection.FindingNo = _Runbook.FindingNo
+  association [0..*] to ZC_CA_OpsFindEvidence as _Evidence  on  $projection.Area        = _Evidence.Area
+                                                            and $projection.EvidenceKey = _Evidence.EvidenceKey
 {
       @EndUserText.label: 'Run'
   key run_id        as RunId,
@@ -108,11 +112,32 @@ define root view entity ZR_CA_OpsException
       bus_date      as BusinessDate,
       @EndUserText.label: 'Event time'
       event_at      as EventAt,
+      @EndUserText.label: 'Items (payments)'
+      item_count    as ItemCount,
+      @EndUserText.label: 'Items with unknown amount'
+      unknown_count as UnknownCount,
+      @EndUserText.label: 'Possible duplicate exposure'
+      dup_amount    as DuplicateAmount,
+      @EndUserText.label: 'Deadline (UTC)'
+      deadline_at   as DeadlineAt,
+      @EndUserText.label: 'Business calendar'
+      calendar_id   as CalendarId,
+      @EndUserText.label: 'Stage reached'
+      stage         as Stage,
+      @EndUserText.label: 'Responsible user'
+      resp_user     as ResponsibleUser,
+      @EndUserText.label: 'Responsible team'
+      resp_team     as ResponsibleTeam,
+      @EndUserText.label: 'Owner from (C control, P process, N none)'
+      resp_source   as ResponsibleSource,
+      @EndUserText.label: 'Evidence key'
+      evid_key      as EvidenceKey,
       _History,
       _CorrChildren,
       _CorrParent,
       _CorrCount,
-      _Runbook
+      _Runbook,
+      _Evidence
 }
 where
   (

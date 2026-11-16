@@ -8,6 +8,7 @@ FICA_GL_TRANSFER,FICA,G/L transfer and reconciliation keys,FI-CA,ACCOUNTING,Gene
 FICA_INSTALMENT,FICA,Instalment plans,FI-CA,RECEIVABLES,Collections lead,On demand; breach check periodic,,V,V127 V128,110
 FICA_INTEREST,FICA,Interest calculation,FI-CA,RECEIVABLES,Receivables accounting lead,Periodic (monthly or with dunning),,V,V127 V128,90
 FICA_INVOICING,FICA,Invoicing (FI-CA invoicing),FI-CA,INVOICING,Billing and invoicing lead,Daily invoicing run (mass activity),,V,V127 V128,80
+FICA_PAYFILE_ACK,FICA,Payment file lifecycle and bank acknowledgement,FI-CA,PAYMENTS,Payment operations lead,"Intraday, after every payment medium run",,V,V175 V180,15
 FICA_PAYRUN,FICA,Payment run (disbursements and collections),FI-CA,PAYMENTS,Payment operations lead,Daily or intraday per pay cycle (scheduler),,V,V127 V129,10
 FICA_PAY_LOTS,FICA,Incoming payment lots and cash journal,FI-CA,RECEIVABLES,Cash application lead,"Daily, per lot of incoming payments",,V,V127 V128,20
 FICA_RETURNS,FICA,Returns lots (returned payments),FI-CA,RECEIVABLES,Returns processing lead,"Daily, per returns file of the bank",,V,V128,30

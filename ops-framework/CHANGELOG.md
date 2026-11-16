@@ -2,6 +2,54 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build K: payment file lifecycle, module CASHOPS; exception contract)
+
+Goal (user, 2026-11-15): the first release of FI-CA cash operations around the payment file whose SAP job finished but
+whose bank acknowledgement is missing - which payments and amounts, where it stopped, who owns the response, which SAP,
+middleware or bank records prove it; configurable per site; the same controls in two integration setups without an
+edit of a product object.
+
+### Added
+- Payment file lifecycle (`docs/PAYMENT_FILE_LIFECYCLE.md`): milestones `PAYRUN`, `GENERATED`, `PICKUP`, `DELIVERED`,
+  `RECEIPT`, `ACCEPTED`, `SETTLED` (receipt and acceptance never collapsed); configuration `ZCA_OPS_PFTYP` / `_PFSTG` /
+  `_PFMAP` / `_PFADP` in `ZUI_CA_OPS_CFG` (generated; activation of a file type needs module CASHOPS); model
+  `ZCL_CA_OPS_PF_LIFECYCLE` (statuses reached / late / implied / pending / missing / rejected / partial / failed /
+  unknown, file / batch / payment acknowledgement, one ACK for several files, conflicts, overnight cut-off, business
+  calendar, expected versus observed per day: holiday, valid zero volume, stale, not evaluated, pending, missing,
+  partial); adapters `ZIF_CA_OPS_PF_ADAPTER`, `_FILE_SRC`, `_EVENT_SRC` with the roles `_TRANSFER_SRC`, `_ACK_SRC`,
+  `_SCHED_SRC`, `_STMT_SRC`, `_TICKET_SINK`, `_CALENDAR`; delivered `ZCL_CA_OPS_PF_SRC_DPAYH` (payments of the FI-CA
+  runs, grouping setting, payment-order methods), `ZCL_CA_OPS_PF_SRC_TBTCO` (SAP jobs through the job monitor's data
+  access), `ZCL_CA_OPS_PF_TICKET_LOG` (log only), `ZCL_CA_OPS_PF_CALENDAR` (factory calendar); ingestion
+  `ZCA_OPS_PF_RUN` / `ZCL_CA_OPS_PF_INGEST` (watermark and bounded overlap, idempotent evidence at source grain,
+  repeated bank references, reissue linked to its predecessor with both payments marked, source health, ticket once,
+  retention); register `ZCA_OPS_PFFILE`, `_PFPAY`, `_PFEVT`, `_PFMST`, `_PFSRC`, `_PFDAY` (`ZIF_CA_OPS_PF_DAO` /
+  `ZCL_CA_OPS_PF_DAO`, totals per currency aggregated in the database); check `ZCL_CA_OPS_CHK_PAYFILE` (catalogue
+  process `FICA_PAYFILE_ACK` of package FICA, licensed as CASHOPS): `PF_ACK_MISSING` and the other stop findings,
+  conflict, duplicate exposure, answer for an original after its reissue, late, missing files of a day, not evaluated,
+  stale; severity by grace / breach minutes and the amount limit of the currency and company code; worklist
+  `ZUI_CA_OPS_PAYFILE` (`ZR_` / `ZC_CA_OpsPayFile`, `_OpsPfPayment`, `_OpsPfMilestone`, `_OpsPfEvidence`,
+  `_OpsPfDay`, card `ZC_CA_OpsPfCard`, DCLs per area and company code; extension point `PAYFILE`, config / plug-in
+  points `PAYFILE_CONFIG`, `PAYFILE_ADAPTER`); link registry object `S4_BACKGROUND_JOB` (`TBTCO`); parameters `PF_`;
+  messages 370-399; module `CASHOPS` (`config/licensing/modules.json`, map regenerated).
+- Exception contract (`docs/EXCEPTION_CONTRACT.md`): `ZIF_CA_OPS_EXC_CONTRACT` (included in `TY_FINDING`; fields
+  `ZCA_OPS_FINDING-ITEM_COUNT`, `UNKNOWN_COUNT`, `DUP_AMOUNT`, `DEADLINE_AT`, `CALENDAR_ID`, `STAGE`, `RESP_USER`,
+  `RESP_TEAM`, `RESP_SOURCE`, `EVID_KEY`), `ZCL_CA_OPS_EXC_CONTRACT` (evidence key, key values, gaps),
+  `ZIF_CA_OPS_OWNER` / `ZCL_CA_OPS_OWNER` (owner from controls and processes), `ZIF_CA_OPS_EVIDENCE` /
+  `ZCL_CA_OPS_EVIDENCE` with `ZCA_OPS_FNDEVI` (typed evidence rows, walker start); `TY_RESULT-EVIDENCE` of a check;
+  exceptions app facets *Payments, deadline and owner* and *Evidence* (`ZC_CA_OpsFindEvidence`).
+- Worked example of a second customer XX (`examples/payfile_xx`, never seeded): no middleware (folder log), its own
+  scheduler, a bank acknowledgement table - three adapter classes, three tables, configuration rows, its own abaplint
+  configuration; fixtures `config/payfile/fixtures.json` and the reference model `tools/abaptools/payfile.py`; house
+  check `payfile` (`tools/payfile.py`: fixtures identical in both setups, the example wired only through interfaces and
+  configuration, no product object names it; `--abaplint` compiles it); root tests `tools/tests/test_payfile.py`.
+
+### Changed
+- The store writes the contract fields; the runner saves the evidence rows a check returns (never in test mode).
+- `tools/abaptools/rap_generate.py`: an app with more than 37 entities answers global authorisations / features in one
+  statement per association (method length; smaller apps unchanged). `tools/abaptools/abapgit_serialize.py`: message
+  class optional (a folder without messages).
+- Messages: the licensing range is 350-369; 370-399 belong to the payment file lifecycle.
+
 ## [Unreleased] - 2026-11-15 (build I: field references checked against a reference system)
 
 Evidence: the dictionary of 46 SAP standard tables of a reference system (S/4HANA 2025 with FI-CA; the product

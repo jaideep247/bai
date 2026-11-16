@@ -145,6 +145,17 @@
    "config": ["AccountFlow"],
    "gates": ["src/zcl_ca_ops_flow_eval.clas.abap"],
    "docs": ["docs/ACCOUNT_FLOW.md"]
+  },
+  {
+   "code": "CASHOPS",
+   "name": "FI-CA cash operations: payment file lifecycle",
+   "seq": 130,
+   "description": "Payment files from the payment run to the bank: milestones per file type (SAP generation, transfer, bank receipt, bank acceptance, settlement), deadlines on a business calendar, status mappings, adapters for files, transfers, bank acknowledgements, schedulers, statements and tickets, the worklist with payments, stage timeline and evidence, the check of files stopped before the bank accepted them, the exception contract it fills.",
+   "entry_points": ["src/zca_ops_pf_run.prog.abap", "src/ui/zui_ca_ops_payfile.srvd.srvdsrv"],
+   "check_classes": ["ZCL_CA_OPS_CHK_PAYFILE"],
+   "config": ["PayFileType"],
+   "gates": ["src/zcl_ca_ops_pf_ingest.clas.abap"],
+   "docs": ["docs/PAYMENT_FILE_LIFECYCLE.md", "docs/EXCEPTION_CONTRACT.md"]
   }
  ]
 }

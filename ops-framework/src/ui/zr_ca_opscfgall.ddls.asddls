@@ -41,6 +41,10 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_FlowTileStage as _FlowTileStage
   composition [0..*] of ZR_CA_FlowStageControl as _FlowStageControl
   composition [0..*] of ZR_CA_FlowStageRule as _FlowStageRule
+  composition [0..*] of ZR_CA_PayFileType as _PayFileType
+  composition [0..*] of ZR_CA_PayFileMilestone as _PayFileMilestone
+  composition [0..*] of ZR_CA_PayFileStatusMap as _PayFileStatusMap
+  composition [0..*] of ZR_CA_PayFileAdapter as _PayFileAdapter
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -83,7 +87,11 @@ define root view entity ZR_CA_OpsCfgAll
       _FlowStage,
       _FlowTileStage,
       _FlowStageControl,
-      _FlowStageRule
+      _FlowStageRule,
+      _PayFileType,
+      _PayFileMilestone,
+      _PayFileStatusMap,
+      _PayFileAdapter
 }
 where
   I_Language.Language = $session.system_language

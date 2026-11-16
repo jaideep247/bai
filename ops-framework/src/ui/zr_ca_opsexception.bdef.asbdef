@@ -17,7 +17,9 @@ etag master LastChangedAt
                      ResolvedBy, ResolvedAt, Resolution, FirstSeenAt, Occurrences, WaiverUntil, WaiverReqBy,
                      WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt, ReasonCode,
                      DowntimeId, IsPlannedDowntime, CorrelationId, CorrelationRole,
-                     ConfigRule, ConfigVersion, ConfigVersionShort, BusinessDate, EventAt;
+                     ConfigRule, ConfigVersion, ConfigVersionShort, BusinessDate, EventAt,
+                     ItemCount, UnknownCount, DuplicateAmount, DeadlineAt, CalendarId, Stage, ResponsibleUser,
+                     ResponsibleTeam, ResponsibleSource, EvidenceKey;
 
   // VERIFY-ADT: internal create by association (history written only by the actions)
   association _History { internal create; }
@@ -69,6 +71,16 @@ etag master LastChangedAt
     ConfigVersion   = cfg_version;
     BusinessDate    = bus_date;
     EventAt         = event_at;
+    ItemCount         = item_count;
+    UnknownCount      = unknown_count;
+    DuplicateAmount   = dup_amount;
+    DeadlineAt        = deadline_at;
+    CalendarId        = calendar_id;
+    Stage             = stage;
+    ResponsibleUser   = resp_user;
+    ResponsibleTeam   = resp_team;
+    ResponsibleSource = resp_source;
+    EvidenceKey       = evid_key;
   }
 }
 

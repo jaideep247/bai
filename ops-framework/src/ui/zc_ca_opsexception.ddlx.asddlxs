@@ -8,6 +8,9 @@
 //             selected rows, each with its own authorisation and ETag) and "Parent exception" on a child
 // 2026-11-11: explainable, versioned results - facet "Explanation": check, rule, configuration rule and version
 //             of the run that produced the exception, business date and event time
+// 2026-11-15: exception contract (docs/EXCEPTION_CONTRACT.md) - facet "Payments, deadline and owner" (count, items with
+//             unknown amount, duplicate exposure apart from the amount, deadline and calendar, stage, responsible user /
+//             team and where they came from) and facet "Evidence" (typed SAP / middleware / bank records)
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions',
                   title: { type: #STANDARD, value: 'CheckCode' },
@@ -19,6 +22,10 @@ annotate entity ZC_CA_OpsException with
                  label: 'Runbook', position: 15 },
                { id: 'Explanation', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Explanation',
                  label: 'Explanation', position: 17 },
+               { id: 'Contract', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Contract',
+                 label: 'Payments, deadline and owner', position: 18 },
+               { id: 'Evidence', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Evidence', position: 19,
+                 targetElement: '_Evidence' },
                { id: 'History', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'History', position: 20,
                  targetElement: '_History' },
                { id: 'Correlated', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'Correlated exceptions',
@@ -138,6 +145,40 @@ annotate entity ZC_CA_OpsException with
   BusinessDate;
   @UI.fieldGroup: [ { qualifier: 'Explanation', position: 60 } ]
   EventAt;
+  @EndUserText.label: 'Items (payments)'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 10 } ]
+  @UI.lineItem: [ { position: 300, importance: #MEDIUM } ]
+  ItemCount;
+  @EndUserText.label: 'Items with unknown amount'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 20 } ]
+  UnknownCount;
+  @EndUserText.label: 'Possible duplicate exposure'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 30 } ]
+  DuplicateAmount;
+  @EndUserText.label: 'Deadline (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 40 } ]
+  @UI.lineItem: [ { position: 330, importance: #MEDIUM } ]
+  DeadlineAt;
+  @EndUserText.label: 'Business calendar'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 50 } ]
+  CalendarId;
+  @EndUserText.label: 'Stage reached'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 60 } ]
+  @UI.lineItem: [ { position: 350, importance: #MEDIUM } ]
+  Stage;
+  @EndUserText.label: 'Responsible user'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 70 } ]
+  @UI.lineItem: [ { position: 360, importance: #MEDIUM } ]
+  ResponsibleUser;
+  @EndUserText.label: 'Responsible team'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 80 } ]
+  @UI.lineItem: [ { position: 370, importance: #MEDIUM } ]
+  ResponsibleTeam;
+  @EndUserText.label: 'Owner from (C control, P process, N none)'
+  @UI.fieldGroup: [ { qualifier: 'Contract', position: 90 } ]
+  ResponsibleSource;
+  @UI.hidden: true
+  EvidenceKey;
   @UI.hidden: true
   CorrelationId;
   @UI.hidden: true

@@ -47,5 +47,9 @@ define root view entity ZC_CA_OpsCfgAll
       _FlowStage : redirected to composition child ZC_CA_FlowStage,
       _FlowTileStage : redirected to composition child ZC_CA_FlowTileStage,
       _FlowStageControl : redirected to composition child ZC_CA_FlowStageControl,
-      _FlowStageRule : redirected to composition child ZC_CA_FlowStageRule
+      _FlowStageRule : redirected to composition child ZC_CA_FlowStageRule,
+      _PayFileType : redirected to composition child ZC_CA_PayFileType,
+      _PayFileMilestone : redirected to composition child ZC_CA_PayFileMilestone,
+      _PayFileStatusMap : redirected to composition child ZC_CA_PayFileStatusMap,
+      _PayFileAdapter : redirected to composition child ZC_CA_PayFileAdapter
 }

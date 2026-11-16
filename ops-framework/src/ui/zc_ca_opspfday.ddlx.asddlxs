@@ -1,0 +1,56 @@
+// UI annotations: Payment files expected per day (service ZUI_CA_OPS_PAYFILE, 2026-11-15)
+// A stale source, a valid day without files and a holiday are three different results; a failed read is NOT_EVAL.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Business day', typeNamePlural: 'Payment files expected per day',
+                  title: { type: #STANDARD, value: 'BusinessDate' } }
+annotate entity ZC_CA_OpsPfDay with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 5, importance: #LOW } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'File type'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  FileType;
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 30 } ]
+  BusinessDate;
+  @EndUserText.label: 'Day (B business, H holiday)'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  DayKind;
+  @EndUserText.label: 'Expected'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  Expected;
+  @EndUserText.label: 'Observed'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  Observed;
+  @EndUserText.label: 'Result'
+  @UI.lineItem: [ { position: 60, importance: #HIGH, criticality: 'ResultCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Result;
+  @UI.hidden: true
+  ResultCriticality;
+  @EndUserText.label: 'Reason'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  Reason;
+  @EndUserText.label: 'Source complete up to (UTC)'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  SourceAsOf;
+  @EndUserText.label: 'Watermark (UTC)'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  Watermark;
+  @EndUserText.label: 'Completeness (C, P, N, S)'
+  @UI.lineItem: [ { position: 100, importance: #LOW } ]
+  Completeness;
+  @EndUserText.label: 'Evaluated at'
+  @UI.lineItem: [ { position: 110, importance: #LOW } ]
+  EvaluatedAt;
+  @EndUserText.label: 'Last valid result'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  LastValidResult;
+  @EndUserText.label: 'Last valid at'
+  @UI.lineItem: [ { position: 130, importance: #LOW } ]
+  LastValidAt;
+}

@@ -56,6 +56,17 @@ define root view entity ZC_CA_OpsException
       ConfigVersionShort,
       BusinessDate,
       EventAt,
+      // Exception contract (2026-11-15, docs/EXCEPTION_CONTRACT.md)
+      ItemCount,
+      UnknownCount,
+      DuplicateAmount,
+      DeadlineAt,
+      CalendarId,
+      Stage,
+      ResponsibleUser,
+      ResponsibleTeam,
+      ResponsibleSource,
+      EvidenceKey,
       @EndUserText.label: 'Open correlated exceptions'
       _CorrCount.OpenChildren as CorrelatedOpen,
       @EndUserText.label: 'Runbook'
@@ -64,5 +75,6 @@ define root view entity ZC_CA_OpsException
       _Runbook.FirstAction    as FirstAction,
       _History      : redirected to composition child ZC_CA_OpsExcHist,
       _CorrChildren : redirected to ZC_CA_OpsException,
-      _CorrParent   : redirected to ZC_CA_OpsException
+      _CorrParent   : redirected to ZC_CA_OpsException,
+      _Evidence
 }

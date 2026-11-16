@@ -1,0 +1,10 @@
+// Artifact: zc_ca_opspfday.dcls.asdcls
+// Purpose: Read access to the payment files expected per day (service ZUI_CA_OPS_PAYFILE): authorization object ZCA_OPS with ZCA_PARAR = the area and ACTVT 03 (area-level rows, no company code).
+// Modification log: 2026-11-15 | Initial version (build K: payment file lifecycle).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); IS INITIAL in an access condition.
+@EndUserText.label: 'Payment files expected per day - read access'
+@MappingRole: true
+define role ZC_CA_OpsPfDay {
+  grant select on ZC_CA_OpsPfDay
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+}

@@ -8,6 +8,7 @@ CA_FICA,FICA_GL_TRANSFER,G/L transfer and reconciliation keys,,,,‹PFCG role of
 CA_FICA,FICA_INSTALMENT,Instalment plans,,,,‹PFCG role of the area›,,,FICA_INSTALMENT,,110
 CA_FICA,FICA_INTEREST,Interest calculation,,,,‹PFCG role of the area›,,,FICA_INTEREST,,90
 CA_FICA,FICA_INVOICING,Invoicing (FI-CA invoicing),,,,‹PFCG role of the area›,,,FICA_INVOICING,,80
+CA_FICA,FICA_PAYFILE_ACK,Payment file lifecycle and bank acknowledgement,,,,‹PFCG role of the area›,,,FICA_PAYFILE_ACK,,15
 CA_FICA,FICA_PAYRUN,Payment run (disbursements and collections),,,,‹PFCG role of the area›,,,FICA_PAYRUN,,10
 CA_FICA,FICA_PAY_LOTS,Incoming payment lots and cash journal,,,,‹PFCG role of the area›,,,FICA_PAY_LOTS,,20
 CA_FICA,FICA_RETURNS,Returns lots (returned payments),,,,‹PFCG role of the area›,,,FICA_RETURNS,,30
