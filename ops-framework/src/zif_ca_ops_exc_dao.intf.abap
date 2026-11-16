@@ -9,7 +9,7 @@
 *& 2026-11-07 | Purpose: the release approval is no longer a caller (read-only scope).
 *& 2026-11-10 | Concurrency review: FIND_OPEN returns the disposition and change stamp read; RESOLVE writes
 *&            | all or nothing - each exception only while it is as read, else nothing (787).
-*& 2026-11-10 | Moved from ZIF_CD_OPS_EXC_DAO to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception repository</p>
 INTERFACE zif_ca_ops_exc_dao

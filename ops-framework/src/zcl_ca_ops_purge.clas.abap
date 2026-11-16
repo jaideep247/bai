@@ -18,7 +18,7 @@
 *& 2026-11-07 | PURGE_PACKAGE_SIZE / RETENTION_DAYS_ names and default from the types interface; one shared
 *&            | helper PARAM_INT over GET_PARAMS (private int_param removed); retention days in ZCA_PARAM.
 *& 2026-11-10 | RUN also purges the exception history of its findings (HISTORY).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE to the reusable framework ZCA_OPS: built-in targets RUN and
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: built-in targets RUN and
 *&            | ALERT_LOG, consumer targets from the registry ZCA_OPS_PURGE (plug-ins of
 *&            | ZIF_CA_OPS_PURGE_TARGET, retention parameter per row); result column DEPENDENT (was FINDINGS).
 *& 2026-11-10 | Built-in target REVIEW (sign-offs of the daily control review, RETENTION_DAYS_REVIEW 400).

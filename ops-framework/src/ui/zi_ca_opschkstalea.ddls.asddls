@@ -15,7 +15,7 @@ define view entity ZI_CA_OpsChkStaleA
                                          and Val.name = Def.name
                                          and Val.numb = 1
 {
-      // CHECK_STALE_MIN_ZPE_OPS -> ZPE_OPS (the area: a parameter area of ZCA_PARAM)
+      // CHECK_STALE_MIN_ZXX_OPS -> ZXX_OPS (the area: a parameter area of ZCA_PARAM)
   key cast( replace( Def.name, 'CHECK_STALE_MIN_', '' ) as abap.char( 16 ) ) as Area,
       // The framework validates the value type INT (MIN 1) on save, so the text is a number
       cast( case when Val.low is null or Val.low = ''

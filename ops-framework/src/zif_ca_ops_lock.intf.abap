@@ -5,7 +5,7 @@
 *& (engines commit per package) and is released by the engine at the end.
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
-*& 2026-11-10 | Moved from ZIF_CD_OPS_LOCK to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - run lock per area and variant</p>
 INTERFACE zif_ca_ops_lock

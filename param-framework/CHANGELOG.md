@@ -2,6 +2,15 @@
 
 All notable changes of the parameter framework (`param-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build M: blank slate)
+
+Release constant unchanged: no ABAP logic changed.
+
+### Changed
+- The example area of `ZCL_CA_PARAM_BUILDER`'s header and of the README is `ZXX_OPS` (the former example carried a
+  consumer's abbreviation). The component is pack PARAM of the release manifest of the operations framework (first
+  in the import order; `ops-framework/docs/RELEASE_AND_INSTALL.md`).
+
 ## [Unreleased] - 2026-11-11 (SAP component names)
 
 Release constant unchanged: no ABAP object changed.

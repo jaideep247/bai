@@ -8,7 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-10 | RUN purges the exception history of its findings (EV_HISTORY).
-*& 2026-11-10 | Moved from ZIF_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: the framework's targets
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: the framework's targets
 *&            | RUN and ALERT_LOG (ZIF_CA_OPS_PURGE_TARGET) and the registry of consumer targets
 *&            | (GET_TARGETS, table ZCA_OPS_PURGE); the consumer targets left with their owner.
 *& 2026-11-10 | Target REVIEW: sign-offs of the daily control review (ZCA_OPS_REVIEW) by sign-off time.

@@ -10,7 +10,7 @@
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-10 | Refusal saved in its own LUW and ALERT_FAILED on a failing dispatch; abort( ): rollback,
 *&            | aborted run with RUN_ABORTED (trace, error class), durable before the ON_ABORT dispatch.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_RUN_GUARD to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *& 2026-11-15 | refuse_license: persisted, aborted run of the module with LICENSE_REFUSED, committed before
 *&            | it is alerted (licensing).
 *&---------------------------------------------------------------------*

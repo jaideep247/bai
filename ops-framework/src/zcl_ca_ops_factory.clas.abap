@@ -16,7 +16,7 @@
 *& 2026-11-06 | Required plug-in interface checked by RTTI before CREATE OBJECT (audit A62).
 *& 2026-11-07 | get_params: runtime parameters, the session adapter over ZCA_PARAM (store serves no parameters).
 *& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS: framework services only
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: framework services only
 *&            | (consumer services stay in the consumer's factory); CHECK_VERSION (ZCA_PARAM release).
 *& 2026-11-10 | GET_MAIL_TEMPLATE: renderer of alert e-mails from SAP e-mail templates (injectable).
 *& 2026-11-10 | GET_REVIEW_DAO: repository of the daily control review (injectable).

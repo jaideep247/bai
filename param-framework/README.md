@@ -57,9 +57,9 @@ through `docs/VERIFY.md`.
 ```abap
 TRY.
     DATA(lo_param) = zcl_ca_param_factory=>get( ).
-    DATA(lv_max)   = lo_param->get_int( iv_area = 'ZPE_OPS' iv_name = 'MAX_ITEMS' ).
-    DATA(lv_on)    = lo_param->get_bool( iv_area = 'ZPE_OPS' iv_name = 'SEND_MAIL' ).
-    DATA(lt_bukrs) = lo_param->get_range( iv_area = 'ZPE_OPS' iv_name = 'COMPANY_CODES' ).
+    DATA(lv_max)   = lo_param->get_int( iv_area = 'ZXX_OPS' iv_name = 'MAX_ITEMS' ).
+    DATA(lv_on)    = lo_param->get_bool( iv_area = 'ZXX_OPS' iv_name = 'SEND_MAIL' ).
+    DATA(lt_bukrs) = lo_param->get_range( iv_area = 'ZXX_OPS' iv_name = 'COMPANY_CODES' ).
   CATCH zcx_ca_param INTO DATA(lx_error).
     " configuration error: report it (lx_error->get_text( )), never guess a value
 ENDTRY.
@@ -68,7 +68,7 @@ ENDTRY.
 In unit tests, run the real logic over in-memory data:
 
 ```abap
-DATA(lo_param) = NEW zcl_ca_param_builder( )->area( 'ZPE_OPS'
+DATA(lo_param) = NEW zcl_ca_param_builder( )->area( 'ZXX_OPS'
   )->param( iv_name = 'MAX_ITEMS' iv_value_type = 'INT' iv_default = '10' )->row( '25' )->build( ).
 ```
 

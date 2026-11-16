@@ -11,7 +11,7 @@
 *& 2026-11-06 | SLG1 external ID area/run/rule, BAL_LOG_REFRESH after save, partial log reported (audit A45, SLG1).
 *& 2026-11-06 | Test seams around the four BAL calls; return codes kept in locals (coverage gap closure).
 *& 2026-11-10 | Own messages for create (800) and save (801) failures, each with the return code.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_APPLOG to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert channel application log</p>
 CLASS zcl_ca_ops_chn_applog DEFINITION

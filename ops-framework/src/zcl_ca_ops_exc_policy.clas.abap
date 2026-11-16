@@ -6,7 +6,7 @@
 *& it by a different user (four-eyes). Pure: no database, no clock, no user.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_POLICY to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | CAN_CLASSIFY: reason code of an open exception (values of EXC_REASON_CODES).
 *& 2026-11-10 | MAY_ACT: the company-code isolation rule of every action of the exceptions app and of the
 *&            | daily control review (ZCA_OPS with the activity for the area; for a company code also BUKRS).

@@ -8,7 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | inject_auth, inject_lock, inject_purge_dao added.
 *& 2026-11-07 | inject_params added (runtime parameters); reset also drops the session parameter adapter.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_INJECTOR to the reusable framework ZCA_OPS (framework slots only);
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (framework slots only);
 *&            | inject_param_version (double of the installed ZCA_PARAM release, version check).
 *& 2026-11-10 | INJECT_MAIL_TEMPLATE (alert e-mail templates).
 *& 2026-11-10 | INJECT_REVIEW_DAO (daily control review).

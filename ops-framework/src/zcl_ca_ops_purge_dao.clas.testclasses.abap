@@ -16,7 +16,7 @@
 *&            | a cleared payment 91 days old and a version closed 91 days ago are purged.
 *& 2026-11-10 | run_purge_takes_history (exception history purged with its findings), old_file_purged_
 *&            | open_kept (registry by business date, file of an open exception kept).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: tests of RUN and
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: tests of RUN and
 *&            | ALERT_LOG (the suite's targets are tested with a consumer's class); registry test.
 *& 2026-11-10 | old_review_is_deleted (target REVIEW, daily control review).
 *& 2026-11-11 | ended_window_is_deleted (target DOWNTIME, planned downtime windows; ZCA_OPS_DTWIN doubled).

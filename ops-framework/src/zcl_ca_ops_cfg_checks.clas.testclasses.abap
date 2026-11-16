@@ -10,7 +10,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
 *& 2026-11-07 | ltc_destination: CHANNEL_CLASS / INVALID_DESTINATION (SO23 lists).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_CHECKS to the reusable framework ZCA_OPS (test include; generic
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include; generic
 *&            | checks; threshold order and posting areas stay with the consumer's checks).
 *& 2026-11-10 | LTC_TEMPLATE_CHECK: e-mail template ID of a rule / channel (syntax, existence through the
 *&            | injected renderer double LTD_MAIL_TEMPLATE).

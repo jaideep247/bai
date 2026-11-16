@@ -11,7 +11,7 @@
 *& 2026-11-06 | Authorisation seam: injected double is returned.
 *& 2026-11-06 | Interface check before instantiation (audit A62).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | injected_check_dao_returned, real_check_dao_created (check registry, process onboarding).
 *& 2026-11-11 | injected_downtime_returned, real_downtime_created (planned downtime API).
 *& 2026-11-15 | injected_license_returned (licensing).

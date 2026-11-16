@@ -11,6 +11,7 @@
 | `ops-suite/src/` | ABAP source in **abapGit** format (classes, interfaces, programs, tables, message class, packages) |
 | `REQUIREMENTS_FSCD_OPERATIONS_SUITE.md` | The requirements the suite is built against |
 | `tools/abaptools/` | **Shared offline tooling** of the three ABAP components (abapGit serializer, parameter seed and RAP generators, modernize, literal scan, class purpose table, house checks, process scaffold `new_process.py` and its completeness check `onboarding.py`, the customer extension generator `extensions.py`); each component's `tools/` keeps thin wrappers, tests in `tools/tests/` (`python3 -m unittest discover -s tools/tests`) |
+| `tools/qualify/` | **Install harness** of the product: installs the parameter framework then the operations framework into sandbox packages through ADT in the manifest's import order, checks every name against the target system first, activates, runs ABAP Unit / ATC / CDS / OData checks and the licensing proof, writes evidence to `ops-framework/release/qualification/` (`ops-framework/docs/RELEASE_AND_INSTALL.md`; Windows: `Set-ExecutionPolicy -Scope Process Bypass`, then `.\tools\qualify\run.ps1`) |
 | `tools/git-sync/` | Windows scheduled task that keeps a local clone in step with GitHub |
 | `legacy/` | Superseded code and the 65 status documents of the first framework (reference only — do not transport) |
 

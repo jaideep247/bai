@@ -22,7 +22,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-10 | abort( ) for the run boundary of the engines; refuse commits after its dispatch;
 *&            | ALERT_FAILED finding when the dispatch fails (was swallowed).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_RUN_GUARD to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-15 | refuse_license: a module refused by the licence is a persisted, alerted run (licensing).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - refused run (run lock held)</p>

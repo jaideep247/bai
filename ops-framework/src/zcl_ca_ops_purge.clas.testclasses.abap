@@ -15,7 +15,7 @@
 *& 2026-11-07 | Six purge targets (verdicts added): one more empty-target commit.
 *& 2026-11-07 | Seven purge targets (PAY_OUTCOME added): one more empty-target commit.
 *& 2026-11-10 | deletes_in_packages: exception history counted, file registry target (one more empty target).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE to the reusable framework ZCA_OPS: built-in targets RUN and
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: built-in targets RUN and
 *&            | ALERT_LOG; registered_target_purged (registry row: plug-in double and its own retention
 *&            | parameter); wrong_target_class_stops (nothing deleted when a registry class is no target).
 *& 2026-11-11 | deletes_in_packages: one commit per built-in target - REVIEW (was not counted) and DOWNTIME

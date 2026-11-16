@@ -12,7 +12,7 @@
 *& 2026-11-06 | refresh_params: parameter snapshot per run (audit A64).
 *& 2026-11-07 | Parameters split into ZIF_CA_OPS_PARAMS (INTERFACES + ALIASES, no caller changes).
 *& 2026-11-07 | ZIF_CA_OPS_PARAMS no longer included: parameters come from ZCA_PARAM via the factory.
-*& 2026-11-10 | Moved from ZIF_CD_OPS_STORE to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared result store</p>
 "! One auditable store for all areas: run headers (ZCA_OPS_RUN) and

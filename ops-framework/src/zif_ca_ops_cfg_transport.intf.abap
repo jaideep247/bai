@@ -6,7 +6,7 @@
 *& where the client records changes (DV1).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
-*& 2026-11-10 | Moved from ZIF_CD_OPS_CFG_TRANSPORT to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops framework - config apps: transport recording</p>
 INTERFACE zif_ca_ops_cfg_transport

@@ -11,7 +11,7 @@
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-10 | In background an error ends the job with a type E message (was S: the job ended green).
-*& 2026-11-10 | Moved from ZCD_OPS_PURGE to the reusable framework ZCA_OPS (authorisation ZCA_OPS for area
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (authorisation ZCA_OPS for area
 *&            | CA_OPS, registered consumer targets, mode texts as text symbols).
 *&---------------------------------------------------------------------*
 REPORT zca_ops_retention.
