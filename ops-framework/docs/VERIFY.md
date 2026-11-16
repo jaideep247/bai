@@ -200,6 +200,26 @@ and V154 are closed, no consumer extension is imported into a production client.
 | V156 | VERIFY-ADT / abapGit | DDLS of an `extend view entity`: the source type abapGit writes (the serializer writes `E`, constant `EXTEND_SOURCE_TYPE` of `tools/abaptools/abapgit_serialize.py`) and the description; pull order product -> consumer package with its extensions |
 | V157 | VERIFY-ADT / security | The access control of an association target is not evaluated for the path elements of an extension (the product view's DCL governs the row); masked fields masked in the list, the object page, the export and the query; `quota.maximumBytes` against the field lengths of a pack (offline only the number of fields is checked) |
 
+### 2026-11-15 - release and install baseline (`docs/RELEASE_AND_INSTALL.md`)
+
+Build M. V200-V219 are reserved for it (V170-V199 for builds K / L). Nothing run in a system yet; every row open.
+
+| ID | Kind | Item |
+|---|---|---|
+| V200 | Runtime (sandbox) | Clean install of the packs PARAM and CORE with `tools/qualify` on a sandbox without the first customer's objects: `collision`, `activate`, `inventory`, `aunit`, `atc`, `cds`, `odata`, `licensing` pass; first on the reference system A4H (S/4HANA 2025), then on S/4HANA 2023 for the release claim; then the FICA_CASH seed rows entered and the catalogue processes of the pack activated from a date |
+| V201 | System status | Software component releases of the supported releases: S/4HANA 2023 = SAP_BASIS 758 / S4CORE 108; the values of A4H as the harness's `connect` stage records them |
+| V202 | VERIFY-SE11 | The FI-CA dictionary (`DFKKOP`, `DFKKOPK`, `DFKKKO`, `DPAYH`) exists on S/4HANA 2023 without FI-CA in use, so the core activates on any S/4HANA system; otherwise FI-CA-reading objects move to a sub-package (D-M1) |
+| V203 | VERIFY-ADT | Endpoints of the harness not proven by the source harness: data preview on `TADIR` with an `IN` list (stage `collision`) and on `ZCA_OPS_LIC` / `ZCA_PARAM_VAL` (stage `licensing`); quick search for domains, data elements, message classes and authorization objects (stage `ddic`); `/sap/opu/odata4/sap/<binding>/srvd/sap/<service>/0001/$metadata` of a V4 UI binding (stage `odata`); table creation from the product's DDL sources with `include` of the draft admin structure |
+| V204 | VERIFY | Limits marked VERIFY in `release/object_limits.csv`: program 40, service binding 26, SLG0 object 20, SMTG template id 60, namespace 5-10 characters |
+| V205 | Decision follow-up | Registered namespace if R1-D1 is reopened (needed for the Add-On Assembly Kit, R1-D2): reservation, development / repair keys (SE03), abapGit file names of namespaced objects, the two names the namespace report shows breaking |
+| V206 | Runtime (sandbox) | Upgrade replay: previous release installed, then the new one in the same packages; every *adjust* of `release_diff.py` without conversion, every *convert* as predicted, stored rows kept |
+| V207 | Runtime (sandbox) | Rollback: transport of copies of the previous versions (or the previous tag's abapGit ZIP) restores an active, tested state; configuration rolled back by effective-dated activation |
+| V208 | Runtime | Activation and ABAP Unit with no licence installed and `LIC_ENFORCE` = W (harness stage `licensing`); the licence check reports the missing licence as an exception, nothing is refused |
+| V209 | Runtime (target system) | Name clash test (stage `collision`) on each target system before the first import: no product name used by an object outside the target packages |
+| V210 | VERIFY-ADT | Service bindings `<service definition>_O4` (OData V4 - UI) created and published for every service definition of `src/ui` of both components; metadata reachable |
+| V211 | abapGit | Offline ZIP import of each component on SAP_BASIS 7.58 in the manifest order (folder logic PREFIX, sub-packages, demo removed with `zip -d`) |
+| V212 | Decision follow-up | SAP Add-On Assembly Kit for commercial delivery (R1-D2: later, after a registered namespace) - versioned install, upgrade and uninstall |
+
 ### 2026-11-15 - licensing (`docs/LICENSING.md`)
 
 Build J. V153-V161 are taken by build H and its follow-ups; licensing starts at V162. V169 is an item of the first

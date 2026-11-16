@@ -7,7 +7,7 @@
 *& the in-memory DAO, so a consumer test sees exactly the production
 *& semantics (defaults, BOOL off, validation, exceptions). It only stores
 *& data; it decides nothing.
-*&   DATA(lo_param) = NEW zcl_ca_param_builder( )->area( 'ZPE_OPS'
+*&   DATA(lo_param) = NEW zcl_ca_param_builder( )->area( 'ZXX_OPS'
 *&     )->param( iv_name = 'MAX_ITEMS' iv_value_type = 'INT' iv_default = '10'
 *&     )->row( '25' )->build( ).
 *& Modification log:

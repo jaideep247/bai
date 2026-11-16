@@ -16,7 +16,7 @@
 *& 2026-11-07 | Parameters over ZCA_PARAM (zcl_ca_ops_param_seed injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
 *& 2026-11-10 | alert_id_failure_raises: no UUID for the alert log raises 802 (test seam ALERT_ID), nothing sent.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_ROUTER to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | Alert e-mail templates: renderer double LTD_MAIL_TEMPLATE injected (no SMTG call); template
 *&            | rendered after the claim and logged, fallback to the built-in layout logged, rule before
 *&            | channel before generic template, a prepared report in a template (SEND).

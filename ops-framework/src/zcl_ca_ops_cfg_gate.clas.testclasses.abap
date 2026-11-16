@@ -9,7 +9,7 @@
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
 *& 2026-11-07 | Per-table create test withdrawn: new rows only by transport from DV1 (D-3).
 *& 2026-11-08 | MAY_EDIT: any of the activities 01 / 02 / 06 allows editing, none refuses it.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_GATE to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltd_client DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

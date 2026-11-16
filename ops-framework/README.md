@@ -45,7 +45,8 @@ standard. Both components stay separate and are shipped together (user decision 
 Package `ZCA_OPS` (sub-packages `ZCA_OPS_UI` from folder `src/ui` and the optional demo `ZCA_OPS_DEMO` from
 `src/demo`), folder logic PREFIX, starting folder `/src/` of this folder (`/ops-framework/src/` of the
 repository, see `.abapgit.xml`). **Step by step for a new customer, with the checklist before the first pull
-(name clashes on the prefix `ZCA`, reuse rights): `docs/INSTALL.md`.**
+(name clashes on the prefix `ZCA`, reuse rights): `docs/INSTALL.md`; packs, import order, the name clash test on
+the target system and the install harness: `docs/RELEASE_AND_INSTALL.md`.**
 
 - **Offline ZIP**: in a clone of `jaideep247/bai` run
   `git archive HEAD:ops-framework --format=zip -o zca_ops.zip` (without the demo:
@@ -244,6 +245,7 @@ ENDCLASS.
 | Document | Content |
 |---|---|
 | `docs/INSTALL.md` | installing at a new customer: checklist (name clashes, reuse rights), pull order, SU21, roles, SLG0, SO23, parameters, purge job, first area, verification with the demo |
+| `docs/RELEASE_AND_INSTALL.md` | release baseline (2026-11-15): versioned pack manifest `release/manifest.json` (packs PARAM, CORE, FI-CA Cash Operations, demo), blank-slate rule, import order, name clash test and namespace report, upgrade notes and rollback, install harness `../tools/qualify` and its evidence |
 | `docs/auth_zca_ops.md` | authorisation object ZCA_OPS: fields, activities, roles, DCLs |
 | `docs/PARAMETERS.md` | the framework's parameters (area CA_OPS) and the names consumers complete |
 | `docs/ALERT_TEMPLATES.md` | alert e-mail templates: how a mail is built, context keys, configuration, fallback, delivery, VERIFY items |

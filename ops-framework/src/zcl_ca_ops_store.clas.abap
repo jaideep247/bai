@@ -31,7 +31,7 @@
 *&            | keys with a count check; numbering continues after the run's highest finding number.
 *& 2026-11-10 | Observability: start_run stores the job (JOBNAME / JOBCOUNT) and system ID of the run;
 *&            | save_findings stores the error class of a finding raised at a catch boundary.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_STORE to the reusable framework ZCA_OPS: column AREA (parameter area of
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: column AREA (parameter area of
 *&            | ZCA_PARAM); start_run checks the release of ZCA_PARAM (044) and the area (043) first;
 *&            | SLA_DAYS_<area>_<severity> in area CA_OPS.
 *& 2026-11-10 | Carry-forward keeps the reason code of an exception (REASON_CODE, classification).

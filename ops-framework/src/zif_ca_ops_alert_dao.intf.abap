@@ -7,7 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | claim, complete, get_repeat_keys (audit A17, DEFAULT IGNORE).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
-*& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | GET_EXCEPTION_FACTS (business context of the alert e-mail); template fields of rules,
 *&            | channels and log rows.
 *& 2026-11-11 | Operations response features (DEFAULT IGNORE, existing doubles unchanged): GET_MARKS (planned

@@ -15,7 +15,7 @@
 *& 2026-11-07 | param_int over ZCA_PARAM (ZCL_CA_OPS_PARAM_SEED, INT parameter without definition
 *&            | default): a value that is not a number is a logged parameter error and gives the default.
 *& 2026-11-10 | exception_trace, error_class, account_label, job_link (test seam JOB_INFO); format_amount.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_UTIL to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -122,9 +122,9 @@ CLASS ltc_util IMPLEMENTATION.
 
   " Recipient lists accept comma and semicolon and drop blanks
   METHOD list_split_on_comma_and_semi.
-    DATA(lt_tokens) = zcl_ca_ops_util=>split_list( 'a@x.com; b@x.com,,c@x.com ' ).
+    DATA(lt_tokens) = zcl_ca_ops_util=>split_list( 'a@example.com; b@example.com,,c@example.com ' ).
     cl_abap_unit_assert=>assert_equals( act = lines( lt_tokens ) exp = 3 msg = 'Three recipients expected' ).
-    cl_abap_unit_assert=>assert_equals( act = lt_tokens[ 2 ] exp = `b@x.com` msg = 'Tokens must be trimmed' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_tokens[ 2 ] exp = `b@example.com` msg = 'Tokens must be trimmed' ).
   ENDMETHOD.
 
 

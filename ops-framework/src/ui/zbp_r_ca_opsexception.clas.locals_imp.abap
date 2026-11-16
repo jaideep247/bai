@@ -12,7 +12,7 @@
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *& 2026-11-10 | Every action sets LastChangedAt (ETag of the BO, concurrency review: the batch store writes
 *&            | an exception only while its stamp is the one it read).
-*& 2026-11-10 | Moved from ZBP_R_CD_OPSEXCEPTION to the reusable framework ZCA_OPS (local implementations).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (local implementations).
 *& 2026-11-10 | Action classifyException: reason code of an open exception (EXC_REASON_CODES), history CLASSIFY.
 *& 2026-11-10 | Company-code isolation: every action is authorised with the company code of the exception
 *&            | (ZCL_CA_OPS_EXC_POLICY=>MAY_ACT - area, and BUKRS for an exception of a company code).

@@ -9,7 +9,7 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Company-code test uses activity 02 (activity 43 removed, read-only scope).
 *& 2026-11-10 | may_read_table through test seam AUTH_TABLE (S_TABU_NAM 03).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_AUTH to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | user_exists through test seam USER_EXISTS; a blank user is no user.
 *&---------------------------------------------------------------------*
 CLASS ltc_auth DEFINITION FINAL FOR TESTING

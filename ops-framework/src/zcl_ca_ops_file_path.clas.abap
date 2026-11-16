@@ -13,7 +13,7 @@
 *& test seam (FILE_NAME, FILE_VALIDATE, FILE_AUTH); results in locals.
 *& Modification log:
 *& 2026-11-10 | Initial version (directory traversal: logical paths only).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_FILE_PATH to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops framework - file name to logical path (FILE)</p>
 CLASS zcl_ca_ops_file_path DEFINITION

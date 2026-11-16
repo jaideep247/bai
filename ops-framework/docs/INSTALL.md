@@ -6,6 +6,10 @@
 Every path below is relative to the framework folder (`ops-framework/`). Nothing of the framework has
 run in an SAP system yet: the first installation is also the first activation (see `docs/VERIFY.md`).
 
+**Release baseline (2026-11-15, build M):** what ships in which pack, the import order, the blank-slate rule, the
+name clash test on the target system, upgrade and rollback, and the install harness with its evidence are in
+`docs/RELEASE_AND_INSTALL.md` (manifest `release/manifest.json`). This document keeps the configuration after the pull.
+
 ## 0. Before installing at a new customer — checklist
 
 | # | Check | How |
@@ -34,8 +38,10 @@ Names to look up in `TADIR` before the first pull (C3) - patterns, `*` = any cha
 | E-mail templates (SMTG) | `ZCA_OPS_ALERT_DEFAULT` (created in DV1 from `templates/`, section 4a) | - |
 | Roles (PFCG, proposal) | `Z_CA_OPS_*` | `Z_CA_PARAM_*` |
 
-The complete list of each component is its `src/` folder (one file per object); a clash on any single
-name is resolved before the pull (rename on the customer side or a decision to rename the framework -
+The complete list of each component is its `src/` folder (one file per object; with packs and lengths:
+`python3 tools/release_manifest.py --report <folder>`), and the install harness checks every name against TADIR of
+the target system before it writes anything (stage `collision`, `docs/RELEASE_AND_INSTALL.md` section 4); a clash on
+any single name is resolved before the pull (rename on the customer side or a decision to rename the framework -
 the latter is a change of the framework, not of the installation).
 
 ## 1. abapGit pull order

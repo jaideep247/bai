@@ -3,4 +3,3 @@
 # Keep it small: an entry without a reason, or one that no longer matches a line, fails the check.
 # Not needed here: the "Moved from <object> to the reusable framework ZCA_OPS" lines of the modification
 # logs (allowed by the check itself) and the term list customer_terms.txt (never read).
-CHANGELOG.md | replacing the suite's `ZCD_OPS` / `ZCD_PE_AREA`. | change history of release 1.0.0: records which consumer objects the framework's authorisation object replaced

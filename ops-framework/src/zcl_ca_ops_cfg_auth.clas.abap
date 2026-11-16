@@ -10,7 +10,7 @@
 *& 2026-11-06 | Delegates to ZCL_CA_OPS_AUTH (core) - no own AUTHORITY-CHECK.
 *& 2026-11-07 | Purpose: merge note removed.
 *& 2026-11-10 | Purpose names the authorisation field ZCA_PARAR (SU20).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_AUTH to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops framework - config apps: ZCA_OPS check</p>
 CLASS zcl_ca_ops_cfg_auth DEFINITION

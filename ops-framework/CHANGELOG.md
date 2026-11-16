@@ -2,6 +2,34 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build M: clean install and release baseline)
+
+Release constant unchanged (1.0.0): no ABAP logic changed (comments and test data only).
+
+### Added
+- Versioned pack manifest `release/manifest.json`: supported releases (S/4HANA 2023 target, S/4HANA 2025 reference),
+  components with their version constants, prerequisites, packs PARAM / CORE / FICA_CASH (FI-CA Cash Operations) /
+  FSCD_STANDARD (later) / DEMO with their objects (by rules), catalogue processes, licence modules, source contracts,
+  check classes, seed rows by key, open item V161, activation steps and fixtures; import order; blank-slate,
+  namespace and distribution rules. Generated document `release/MANIFEST.md`; limits `release/object_limits.csv`.
+- `tools/release_manifest.py` (engine `../tools/abaptools/release_manifest.py`): `--check` (house check
+  `release_manifest` of `tools/checks.py`), `--report <folder>` (objects, packs, standard-table prerequisites,
+  namespace), `--namespace /NS/` (preparation only - R1-D1: the product stays in Z with the prefix ZCA).
+- `tools/release_diff.py` (engine `../tools/abaptools/release_diff.py`): upgrade notes between two git revisions -
+  objects per pack, dictionary changes classified adjust / convert / drop / settings, configuration files, versions,
+  rollback guidance.
+- Install harness `../tools/qualify` (adapted from the owner's test-tool harness): PARAM then CORE into the user's
+  packages, name clash test against TADIR before any write, activation, ABAP Unit, ATC, CDS / OData, licensing proof
+  without a licence; evidence in `release/qualification/<release>/<UTC>/`.
+- `docs/RELEASE_AND_INSTALL.md`; VERIFY V200-V212; decisions R1-D1 / R1-D2 recorded, D-M1 ... D-M5 proposed.
+
+### Changed
+- Blank slate: the modification-log lines "Moved from <first consumer's object> to the reusable framework" name no
+  consumer object any more (74 lines, sources and the parameter seed template); a test-history line and a test
+  comment no longer name the first consumer's parameter area and posting-area table; a CDS comment uses the example
+  area `ZXX_OPS`; test e-mail addresses on `example.com`; the change-log line of release 1.0.0 that named the
+  consumer's authorisation objects is neutral and its allowlist entry removed.
+
 ## [Unreleased] - 2026-11-15 (build I: field references checked against a reference system)
 
 Evidence: the dictionary of 46 SAP standard tables of a reference system (S/4HANA 2025 with FI-CA; the product
@@ -641,7 +669,7 @@ once per session by `ZCL_CA_OPS_FACTORY=>CHECK_VERSION` at `start_run`, message 
   is a parameter area of ZCA_PARAM (`ZCA_PARAM_AREA`, data element `ZCA_PARAM_AREA_ID`, CHAR 16);
   `start_run` refuses an unknown or inactive area (043).
 - One authorisation object: `ZCA_OPS` in object class `ZCA` (fields `ZCA_PARAR`, `ACTVT`, `BUKRS`),
-  replacing the suite's `ZCD_OPS` / `ZCD_PE_AREA`.
+  replacing the first consumer's own authorisation object and area check.
 
 ### Added
 - Store, exception lifecycle and exceptions app (`ZUI_CA_OPS_EXC`), alert router / policy / DAO /

@@ -15,7 +15,7 @@
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
 *& 2026-11-07 | No SLG1 entry per run and parameter (SLG1 minimum); errors in get_errors( ).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PARAMS_CA to the reusable framework ZCA_OPS: area named by the caller
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: area named by the caller
 *&            | or by the longest registered prefix (consumer prefixes by ADD_PREFIXES, framework prefixes
 *&            | -> CA_OPS); CHECK_AREA over ZIF_CA_PARAM=>CHECK_AREA (one area register).
 *& 2026-11-10 | Prefixes CONTROL_ and EXC_ read in area CA_OPS (control review, exception reason codes).

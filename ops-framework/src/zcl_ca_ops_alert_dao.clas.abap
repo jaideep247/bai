@@ -9,7 +9,7 @@
 *& 2026-11-06 | claim / complete (durable claim before send), get_repeat_keys (audit A17); escalation override read (A46).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | Template fields of rules, channels and log rows; COMPLETE writes the rendered subject and
 *&            | the render outcome; GET_EXCEPTION_FACTS (e-mail context: new / repeated / overdue, due date).
 *& 2026-11-10 | Pilot review: routing decisions were logged with a blank intent key and attempt 0, so with

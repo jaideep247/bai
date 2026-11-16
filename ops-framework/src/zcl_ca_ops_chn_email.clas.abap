@@ -16,7 +16,7 @@
 *& 2026-11-06 | Test seams BCS_SEND / BCS_COMMIT; send result and BCS error in locals; document type constant (coverage gap closure).
 *& 2026-11-07 | Recipients are SO23 shared distribution lists (user decision); CHECK_DESTINATION, test seam DLI_READ.
 *& 2026-11-10 | COMMIT WORK AND WAIT; a failed commit raises 806, so the router logs FAILED, never SENT.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_EMAIL to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert channel e-mail (BCS)</p>
 CLASS zcl_ca_ops_chn_email DEFINITION

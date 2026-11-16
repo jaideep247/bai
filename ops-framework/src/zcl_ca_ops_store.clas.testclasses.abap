@@ -26,7 +26,7 @@
 *&            | a waiver given while reconcile resolves is never overwritten; every write sets the change
 *&            | stamp. The user's action is simulated by the clock double (the run asks the clock for the
 *&            | stamp right after its read).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_STORE to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | Company-code isolation: the company code of a finding is stored (BUKRS); an earlier exception
 *&            | of another company code with the same object, key and check is neither inherited nor
 *&            | superseded (company code = part of the exception's identity).

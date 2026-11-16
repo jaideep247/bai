@@ -8,7 +8,7 @@
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-07 | HTTP webhook channel removed (read-only scope).
 *& 2026-11-07 | CHECK_DESTINATION: the channel validates its own destination (e-mail: SO23 lists).
-*& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT_CHANNEL to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert delivery channel</p>
 INTERFACE zif_ca_ops_alert_channel

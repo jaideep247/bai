@@ -13,9 +13,9 @@
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM); the read semantics pinned before
 *&            | in ZCL_CA_OPS_STORE's tests (blank = default, condensed, range from a list) moved here.
 *& 2026-11-07 | No log channel double: parameter errors are listed only (SLG1 minimum).
-*& 2026-11-08 | Table consolidation: MON_STALE_AFTER_MIN_<area> is read from area CD_OPS (prefix MON_).
-*& 2026-11-08 | POSTAREA_* (customer posting areas) is read from area CD_OPS.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PARAMS_CA to the reusable framework ZCA_OPS: test area ZT_OPS with
+*& 2026-11-08 | Table consolidation: MON_STALE_AFTER_MIN_<area> is read from the consumer's area (prefix MON_).
+*& 2026-11-08 | POSTAREA_* (customer posting areas) is read from the consumer's area.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: test area ZT_OPS with
 *&            | the consumer prefix ZT_ (ADD_PREFIXES), framework prefixes -> CA_OPS, a named area wins,
 *&            | CHECK_AREA.
 *&---------------------------------------------------------------------*

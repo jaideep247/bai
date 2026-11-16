@@ -20,7 +20,7 @@
 *&              (house bank, bank, file, method, payments, amount, payment run, times, overdue; totals per
 *&              currency; most overdue first) and the impact-first subject (a consumer's class); other
 *&              findings stay in the general table. Text version with the same content.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_POLICY to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | Alert e-mail templates (user decisions 2026-11-10): the message carries its business context
 *&            | (standard keys of TY_MAIL_HEADER, table blocks TABLE_SECTION / TABLE_MAIN with their tokens)
 *&            | and the template of the rule or section; HTML / text are the built-in layout

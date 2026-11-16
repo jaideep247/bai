@@ -39,6 +39,10 @@ works unchanged.
                       gates, check classes, configuration validations, catalogue packages), the generated module map of
                       the runtime and its document (--check); the licence payload rules and the decision twin used by the
                       vendor's tools in tools/licensing (issue_license.py, verify_license.py)
+  release_manifest    the versioned pack manifest of the product (ops-framework/release/manifest.json): validation
+                      against the repository (versions, objects by pack, names and limits, import order, modules,
+                      seed rows, blank-slate rules), generated document, object and namespace report (--check)
+  release_diff        upgrade notes between two git revisions (objects per pack, dictionary changes, rollback)
 
 Wrappers find this package two levels above their own file (<repository>/tools). A component
 shipped on its own takes this folder along (tooling only - nothing of it is imported into SAP).
@@ -53,6 +57,7 @@ Modification log:
 2026-11-15 | flow_config (account flow reconciliation of the operations framework).
 2026-11-15 | extensions (customer extensions of the operations framework).
 2026-11-15 | licensing (vendor licence of the operations framework: modules, module map, payload, decision twin).
+2026-11-15 | release_manifest, release_diff (build M: release baseline, blank slate, upgrade notes).
 """
 import importlib.util
 import os

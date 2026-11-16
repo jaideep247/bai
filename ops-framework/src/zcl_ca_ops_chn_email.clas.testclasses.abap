@@ -11,7 +11,7 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Recipients are SO23 shared lists: seam DLI_READ, 027 and CHECK_DESTINATION tests.
 *& 2026-11-10 | commit_failure_raises_806: a failed COMMIT WORK AND WAIT is a failed delivery.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_EMAIL to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

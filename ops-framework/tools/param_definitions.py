@@ -77,7 +77,7 @@ GEN_HEADER = """*&--------------------------------------------------------------
 *& Modification log:
 *& 2026-11-07 | Initial version (generated; parameters moved to ZCA_PARAM).
 *& 2026-11-08 | DEFINITIONS( ) collects parts of at most 100 rows (method length).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PARAM_SEED to the reusable framework ZCA_OPS (area CA_OPS).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (area CA_OPS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - delivered parameter definitions</p>
 "! Delivered area and definitions (generated from config/param_*.csv) and the

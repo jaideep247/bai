@@ -10,7 +10,7 @@
 *& 2026-11-10 | Authorisation field ZCA_PARAR, as defined in SU20 and used by the DCLs.
 *& 2026-11-10 | may_read_table: S_TABU_NAM display (03) before every dynamic read of a configured table
 *&            | (dynamic readers of the consumers); moved here from a consumer's DDIC helper.
-*& 2026-11-10 | Moved from ZIF_CD_OPS_AUTH to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | user_exists: owner and backup of a control are SAP users (control register, check on save).
 *& 2026-11-11 | Comment names the framework's definition sheet docs/auth_zca_ops.md (was a consumer's).
 *&---------------------------------------------------------------------*

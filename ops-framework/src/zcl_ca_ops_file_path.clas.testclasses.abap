@@ -8,7 +8,7 @@
 *& module runs; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-10 | Initial version (directory traversal: logical paths only).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_FILE_PATH to the reusable framework ZCA_OPS (test logical path).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test logical path).
 *&---------------------------------------------------------------------*
 CLASS ltc_file_path DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

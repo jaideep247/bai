@@ -10,7 +10,7 @@
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-07 | Per-table create withdrawn: new rows only by transport from DV1 (user decision, D-3).
 *& 2026-11-08 | MAY_EDIT: editing the singleton needs ZCA_OPS 01, 02 or 06 of the area (activities per child).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_GATE to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops framework - config apps: gate for behaviour pools</p>
 CLASS zcl_ca_ops_cfg_gate DEFINITION

@@ -13,7 +13,7 @@
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Modern-syntax sweep: alert tables.
 *& 2026-11-10 | RUN: exception history of the purged findings deleted first (was orphaned).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: targets RUN and
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: targets RUN and
 *&            | ALERT_LOG only (a consumer's tables are purged by its own target classes), GET_TARGETS
 *&            | (registry ZCA_OPS_PURGE).
 *& 2026-11-10 | Target REVIEW (ZCA_OPS_REVIEW by REVIEWED_AT, daily control review).
