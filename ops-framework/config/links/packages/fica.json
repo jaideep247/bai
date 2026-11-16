@@ -1,5 +1,5 @@
 {
-  "_comment": "Link registry, industry package FICA (SAP FI-CA / FS-CD standard layer: SAP standard tables of contract accounts receivable and payable (FI-CA) and its insurance collections / disbursements extension (FS-CD)): documents, items, reconciliation keys and their summary records, payment runs, cheques, returns, notification-of-change lots, payment methods. Standard objects and standard links only - a customer's own fields (custom fields on these tables) and tables are its overlay. The join facts are confirmed in a reference landscape (quality C) unless marked P; a field still to be confirmed in SE11 is evidence V (V117) and its link is delivered inactive. Since 2026-11-15 every field is evidence C: seen in the dictionary of a reference system (S/4HANA 2025 with FI-CA; the product's target release is S/4HANA 2023) or in a consumer landscape's table definitions. DFKKSUMC is the reconciliation key (status), DFKKSUM its totals per company code, account and currency; the company code of a payment is DPAYH-BBUKR (paying company code), its method DPAYH-RZAWE. Object keys are the fields that identify a row for the walker (business identity, e.g. a document for the items of a document), not necessarily the full DDIC key. docs/LINK_REGISTRY.md.",
+  "_comment": "Link registry, industry package FICA (SAP FI-CA / FS-CD standard layer: SAP standard tables of contract accounts receivable and payable (FI-CA) and its insurance collections / disbursements extension (FS-CD)): documents, items, reconciliation keys and their summary records, payment runs, cheques, returns, notification-of-change lots, payment methods. Standard objects and standard links only - a customer's own fields (custom fields on these tables) and tables are its overlay. The join facts are confirmed in a reference landscape (quality C) unless marked P; a field still to be confirmed in SE11 is evidence V (V117) and its link is delivered inactive. Since 2026-11-15 every field is evidence C: seen in the dictionary of a reference system (S/4HANA 2025 with FI-CA; the product's target release is S/4HANA 2023) or in a consumer landscape's table definitions. DFKKSUMC is the reconciliation key (status), DFKKSUM its totals per company code, account and currency; the company code of a payment is DPAYH-BBUKR (paying company code), its method DPAYH-RZAWE. DFKKKO-STBEL is filled on a reversal document and names the reversed document; the original names its reversal in STORB (seen on the reference system A4H, 2026-11-16). On A4H a cheque issued by a payment run was encashed by the bank statement import (DFKKCR-BNKDT set, DOC2T 01) and its statement line carried the cheque number in FEBEP-CHECT (link FICA_CHEQUE_TO_STMT_LINE). Object keys are the fields that identify a row for the walker (business identity, e.g. a document for the items of a document), not necessarily the full DDIC key. docs/LINK_REGISTRY.md.",
   "layer": {"id": "FICA", "kind": "I", "rank": 20, "prefix": "FICA_", "description": "Industry package: SAP FI-CA / FS-CD (standard)",
             "owner": "OPS FRAMEWORK", "active": true},
   "objects": [
@@ -8,7 +8,8 @@
      "fields": [
        {"name": "OPBEL", "evidence": "C", "description": "Document number (key of the header)"},
        {"name": "FIKEY", "evidence": "C", "description": "Reconciliation key of the document"},
-       {"name": "STBEL", "evidence": "C", "description": "Reversal document"}
+       {"name": "STBEL", "evidence": "C", "description": "Reversed document (on the reversal)"},
+       {"name": "STORB", "data_element": "STORB_KK", "evidence": "C", "description": "Reversal document (on the original)"}
      ]},
     {"id": "FICA_OPEN_ITEM", "source": "DFKKOP", "kind": "T", "keys": ["OPBEL"],
      "description": "Subledger items (walked per document)",
@@ -52,7 +53,11 @@
        {"name": "DOC1R", "evidence": "C", "description": "Payment document of the cheque"},
        {"name": "ZTNUM", "evidence": "C", "description": "Cheque number"},
        {"name": "HBKID", "evidence": "C", "description": "House bank"},
-       {"name": "HKTID", "evidence": "C", "description": "Account ID of the house bank"}
+       {"name": "HKTID", "evidence": "C", "description": "Account ID of the house bank"},
+       {"name": "BNKDT", "data_element": "BANCD", "evidence": "C", "description": "Encashment date (set by the statement import)"},
+       {"name": "DOC2T", "data_element": "DOC2T_PAY", "evidence": "C", "description": "Second document type (01 after encashment)"},
+       {"name": "LAUFD", "evidence": "C", "description": "Run date of the issuing payment run"},
+       {"name": "LAUFI", "evidence": "C", "description": "Run identification of the issuing payment run"}
      ]},
     {"id": "FICA_RETURN_ITEM", "source": "DFKKRP", "kind": "T", "keys": ["SELW1"],
      "description": "Returns lot items (walked per payment reference)",
@@ -124,7 +129,7 @@
      "conditions": [{"kind": "EQ", "from": "DOC1R", "to": "AUGBL"}]},
     {"id": "FICA_CHEQUE_TO_STMT_LINE", "from": "FICA_CHEQUE", "to": "S4_BANK_STMT_LINE", "cardinality": "NM", "quality": "C",
      "verify": "V117", "owner": "OPS FRAMEWORK",
-     "description": "Cheque -> bank lines with its number (cheque method)",
+     "description": "Cheque -> bank lines with its number (seen on A4H)",
      "conditions": [{"kind": "EQ", "from": "ZTNUM", "to": "CHECT", "transform": "RIGHT", "arg": "13"}]},
     {"id": "FICA_STMT_LINE_TO_CHEQUE", "from": "S4_BANK_STMT_LINE", "to": "FICA_CHEQUE", "cardinality": "NM", "quality": "P",
      "verify": "V117", "owner": "OPS FRAMEWORK",

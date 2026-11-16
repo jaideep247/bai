@@ -55,6 +55,8 @@
 *& 2026-11-08 | Exceptions-only worklist: PAY_EXCLUDED retired - the purposes the check used to count are asserted
 *&            | on the shared evaluator (EXCLUDED helper: left out of the check); agg_excluded_in_window removed;
 *&            | not yet snapshotted = after the DOCUMENTS watermark (double).
+*& 2026-11-16 | Reversed payment doubled with DFKKKO-STORB (STBEL is filled on the reversal - reference system
+*&            | A4H).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -1171,13 +1173,14 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a reversed payment (DFKKKO-STBEL) is not in flight and no evidence is read for it
+  " Rule: a reversed payment (DFKKKO-STORB of the payment document) is not in flight and no evidence is
+  " read for it
   METHOD reversed_payment_excluded.
     DATA ls_header TYPE zif_cd_ops_trace_types=>ty_doc_header.
     TRY.
         add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
         ls_header-opbel = gc_doc1.
-        ls_header-stbel = '000000900001'.
+        ls_header-storb = '000000900001'.
         INSERT ls_header INTO TABLE mo_trace->mt_headers.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )

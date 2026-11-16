@@ -20,6 +20,8 @@
 *&            | ALERT_LOG (the suite's targets are tested with a consumer's class); registry test.
 *& 2026-11-10 | old_review_is_deleted (target REVIEW, daily control review).
 *& 2026-11-11 | ended_window_is_deleted (target DOWNTIME, planned downtime windows; ZCA_OPS_DTWIN doubled).
+*& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
+*&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -143,7 +145,8 @@ CLASS ltc_purge_dao IMPLEMENTATION.
   METHOD old_closed_run_is_deleted.
     TRY.
         given_run( iv_run_id = gc-run_old iv_started = gc-old iv_disposition = zif_ca_ops_types=>gc_disposition-resolved ).
-        DATA(lv_runs) = delete_runs( IMPORTING ev_findings = DATA(lv_findings) ).
+        DATA lv_findings TYPE i.
+        DATA(lv_runs) = delete_runs( IMPORTING ev_findings = lv_findings ).
         cl_abap_unit_assert=>assert_equals( act = lv_runs exp = 1 msg = 'The old closed run must be deleted' ).
         cl_abap_unit_assert=>assert_equals( act = lv_findings exp = 1 msg = 'Its findings must be deleted with it' ).
         cl_abap_unit_assert=>assert_equals( act = run_count( ) exp = 0 msg = 'No run may remain' ).

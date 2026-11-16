@@ -4,10 +4,10 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-16"
   },
-  "passed": 35,
-  "total": 35,
+  "passed": 36,
+  "total": 36,
   "abap_files": 381,
-  "declared_unit_methods": 1610,
+  "declared_unit_methods": 1612,
   "measured_coverage": null,
   "checks": [
     {
@@ -131,6 +131,12 @@
       "failures": []
     },
     {
+      "name": "no_inline_in_call",
+      "passed": true,
+      "detail": "No inline declaration DATA( / FINAL( after IMPORTING of a method call in a functional position (right side of an assignment, a condition, an operand of another call): the compiler of the reference system S/4HANA 2025 refuses it, abaplint accepts it - declare the variable before the call.",
+      "failures": []
+    },
+    {
       "name": "auth_fields_defined",
       "passed": true,
       "detail": "Every AUTHORITY-CHECK on ZCA_OPS (zif_ca_ops_auth=>gc_object) and every pfcg_auth( ZCA_OPS, ... ) in a DCL (src/, cds/ and ../ops-framework/src) names only the fields ops-framework/docs/auth_zca_ops.md defines (section 1 fields, section 2 object field list); the retired ZCD_OPS / ZCD_PE_AREA appear nowhere.",
@@ -205,7 +211,7 @@
     {
       "name": "ddic_fields",
       "passed": true,
-      "detail": "Field references compared with the table exports ddic/a4h, ddic/landscape_2026-11-15 (tools/abaptools/ddic_export.py compare): 73 customer field, 2254 exists; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.",
+      "detail": "Field references compared with the table exports ddic/a4h, ddic/landscape_2026-11-15 (tools/abaptools/ddic_export.py compare): 73 customer field, 2268 exists; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.",
       "failures": []
     },
     {

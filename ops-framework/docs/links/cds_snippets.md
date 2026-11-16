@@ -104,7 +104,7 @@ association [0..*] to dfkkop as _OpenItem
 
 ## FICA_CHEQUE_TO_STMT_LINE
 
-Cheque -> bank lines with its number (cheque method) - NM, quality C, active V117.
+Cheque -> bank lines with its number (seen on A4H) - NM, quality C, active V117.
 
 ```
 left outer join febep as To on To.chect = right( From.ztnum, 13 )

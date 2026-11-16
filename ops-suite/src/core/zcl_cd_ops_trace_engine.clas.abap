@@ -40,6 +40,8 @@
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
 *& 2026-11-15 | Cheque row shows DFKKCR-STATE (no CRSTATUS).
 *&            | currency).
+*& 2026-11-16 | Reversal of the clearing document by its DFKKKO-STORB (was STBEL, which is filled on the
+*&            | reversal and names the reversed document - reference system A4H); AUGRD 05 stays the primary signal.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -706,10 +708,11 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     mt_headers = mo_dao->get_doc_headers( lt_docno ).
 
     LOOP AT mt_items INTO ls_item.
-      " Reversal / reset evidence: cleared by a reversal (AUGRD), or the clearing document
-      " itself was reversed (DFKKKO-STBEL) - both VERIFY-SE11
+      " Reversal / reset evidence: cleared by a reversal (AUGRD 05, the primary signal), or the clearing
+      " document itself was reversed (its DFKKKO-STORB names the reversal; STBEL is filled on the reversal
+      " and names the reversed document - reference system A4H)
       DATA(lv_reversed) = xsdbool( ls_item-augrd = zif_cd_ops_trace_types=>gc_reversal_augrd
-                                   OR VALUE zif_cd_ops_trace_types=>ty_docno( mt_headers[ KEY by_opbel opbel = ls_item-augbl ]-stbel
+                                   OR VALUE zif_cd_ops_trace_types=>ty_docno( mt_headers[ KEY by_opbel opbel = ls_item-augbl ]-storb
                                                                               OPTIONAL ) IS NOT INITIAL ).
       DATA(ls_read) = read_source( is_source = ms_cfg-history is_key = VALUE #( key1 = ls_item-opbel ) ).
       DATA(ls_base) = VALUE ty_row( stage        = zif_cd_ops_trace_types=>gc_stage-history

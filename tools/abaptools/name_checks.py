@@ -3,16 +3,23 @@
 limits, the house method naming rule, PCRE only and no CP / NP patterns. Shared engine
 (tools/abaptools), used by every component's check runner (ops-suite/tools/portable_checks.py,
 ops-framework/tools/checks.py, param-framework/tools/checks.py: checks name_lengths, method_names,
-pcre_only, no_cp_patterns).
+pcre_only, no_cp_patterns, no_inline_in_call).
 
 Limits (SAP): object names, CDS entities, DDLS / SRVD / DCLS names, methods, attributes,
 types, local classes and local data 30; transparent tables 16; message classes 20; table
 field names 30. Methods: snake_case, never a data prefix (lv_, it_, mo_, gc_, ...), 30 at most
 (test methods included).
 
+Inline declarations (inline_in_call_failures, check no_inline_in_call of every runner): no DATA( ... ) /
+FINAL( ... ) after IMPORTING of a method call in a functional position (right side of an assignment, a
+condition, an operand of another call) - abaplint accepts it, the compiler of the reference system
+(S/4HANA 2025) refuses it. A standalone call (meth( IMPORTING e = DATA(x) ).) and CALL METHOD stay allowed.
+
 Modification log:
 2026-11-10 | Moved to the shared tools (tools/abaptools); pcre_only also finds a FIND / REPLACE ... REGEX
            | statement that spans lines (the frameworks' statement check).
+2026-11-16 | inline_in_call_failures (house rule no_inline_in_call: the reference system's compiler refuses an
+           | inline declaration in IMPORTING of a functional call).
 """
 import os
 import re
@@ -224,4 +231,95 @@ def cp_pattern_failures(root):
         for no, line in _lines_without_comments(text):
             if _CP_OPTION.search(line):
                 failures.append(f'{rel}:{no}: {line.strip()[:80]}')
+    return failures
+
+
+# Inline declaration in IMPORTING of a functional method call (reference system S/4HANA 2025, 2026-11-16):
+# x = meth( IMPORTING e = DATA(y) ) is refused by the compiler ("The inline declaration DATA(...) is not
+# possible in this position"), abaplint accepts it. Declare the variable first.
+_IMPORTING = re.compile(r'\bIMPORTING\b', re.I)
+_INLINE_DECL = re.compile(r'\b(?:DATA|FINAL)\(', re.I)
+_NEXT_PART = re.compile(r'\b(?:EXPORTING|CHANGING|RECEIVING|EXCEPTIONS)\b', re.I)
+#: statements whose operands are functional positions (a call in them is never standalone); the keyword is
+#: followed by an operand - a method named like a keyword (read( ... ).) is a standalone call
+_OPERAND_STATEMENTS = re.compile(
+    r'^(?:IF|ELSEIF|WHILE|CHECK|CASE|WHEN|ASSERT|RETURN|APPEND|INSERT|MODIFY|COLLECT|LOOP|READ|DELETE|'
+    r'RAISE|MESSAGE|CONCATENATE|SPLIT|WRITE|SORT|CONDENSE|TRANSLATE|SHIFT|FIND|REPLACE)\s+\S', re.I)
+
+
+def _statements_with_lines(text):
+    """(first line number, statement) of the code lines (comments and literal contents removed), split at '.'."""
+    out, buf, start = [], [], None
+    for no, line in _code_lines(text):
+        for part in re.split(r'(\.)', line):
+            if part == '.':
+                if buf and ''.join(buf).strip():
+                    out.append((start, ' '.join(buf)))
+                buf, start = [], None
+                continue
+            if part.strip() and start is None:
+                start = no
+            buf.append(part)
+    if buf and ''.join(buf).strip():
+        out.append((start, ' '.join(buf)))
+    return out
+
+
+def _depth_zero(text):
+    """text without its parenthesised groups."""
+    out, depth = [], 0
+    for ch in text:
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth = max(0, depth - 1)
+        elif depth == 0:
+            out.append(ch)
+    return ''.join(out)
+
+
+def inline_call_statement(stmt):
+    """True when the statement declares inline (DATA( / FINAL() after IMPORTING of a call in a functional
+    position: the call's result is assigned or compared, or the call is an operand of another call."""
+    opens = []
+    parents = {}
+    for i, ch in enumerate(stmt):
+        if ch == '(':
+            opens.append(i)
+        elif ch == ')':
+            if opens:
+                parents[opens.pop()] = i
+    for m in _IMPORTING.finditer(stmt):
+        stack = []
+        for i, ch in enumerate(stmt[:m.start()]):
+            if ch == '(':
+                stack.append(i)
+            elif ch == ')' and stack:
+                stack.pop()
+        if not stack:
+            continue  # CALL METHOD ... IMPORTING without parentheses
+        close = parents.get(stack[-1], len(stmt))
+        segment = stmt[m.end():close]
+        nxt = _NEXT_PART.search(segment)
+        if nxt:
+            segment = segment[:nxt.start()]
+        if not _INLINE_DECL.search(segment):
+            continue
+        if len(stack) > 1:
+            return True  # the call is an operand of another call or expression
+        prefix = _depth_zero(stmt[:stack[0]]).strip()
+        if '=' in prefix.replace('=>', '') or _OPERAND_STATEMENTS.match(prefix):
+            return True
+    return False
+
+
+def inline_in_call_failures(root):
+    """Statements with an inline declaration in IMPORTING of a functional method call (src/, comments and
+    literal contents ignored)."""
+    failures = []
+    for path in _walk(os.path.join(root, 'src'), '.abap'):
+        rel = os.path.relpath(path, root)
+        for no, stmt in _statements_with_lines(_read(path)):
+            if inline_call_statement(stmt):
+                failures.append(f'{rel}:{no}: {" ".join(stmt.split())[:100]}')
     return failures

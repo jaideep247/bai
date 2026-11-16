@@ -206,12 +206,12 @@ country of one object and the method of another) stays CDS text.
    V110). The extension generator follows only "to one" links and renders their ON condition on the anchor elements
    of the product view (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`).
 
-## 8. What the product layers hold (2026-11-15)
+## 8. What the product layers hold (2026-11-16)
 
 | Layer | Objects | Fields | Links | Active | Inactive (VERIFY) |
 |---|---|---|---|---|---|
 | S4CORE | 6 | 33 | 7 | 2 (bank statement line <-> header) | 5 (released view elements V110) |
-| FICA | 9 | 35 | 22 | 18 | 4 (V110 / V117: released views, reference key form, business partner view) |
+| FICA | 9 | 40 | 22 | 18 | 4 (V110 / V117: released views, reference key form, business partner view) |
 
 Every link, its conditions and status: `docs/links/lineage.md`. Join facts are confirmed in a reference landscape
 (S/4HANA 2023) unless the link is quality P; the element names of the released views are V110. **2026-11-15:** every
@@ -219,7 +219,11 @@ table field of the two layers is evidence C - seen in the dictionary of a refere
 the product targets S/4HANA 2023) or in a consumer landscape's table definitions (`tools/abaptools/ddic_export.py
 compare`). The reconciliation key is two tables: `DFKKSUMC` holds the key and its status (`FICA_SUMMARY_RECORD`),
 `DFKKSUM` its totals per company code, G/L account and currency (`FICA_SUMMARY_TOTALS`, linked by `FIKEY`); the
-payment of a run carries the paying company code `DPAYH-BBUKR` and the method `DPAYH-RZAWE`.
+payment of a run carries the paying company code `DPAYH-BBUKR` and the method `DPAYH-RZAWE`. **2026-11-16
+(reference system A4H):** `DFKKKO-STBEL` is filled on the reversal document and names the reversed document; the
+original names its reversal in `DFKKKO-STORB` (field added; V260 until a fixture shows STORB filled). `FICA_CHEQUE`
+adds `BNKDT` (encashment date), `DOC2T` (01 after encashment), `LAUFD` / `LAUFI` (issuing payment run); the cheque ->
+bank line link (`FEBEP-CHECT`) was seen on A4H.
 
 ## 9. Installation and operation
 

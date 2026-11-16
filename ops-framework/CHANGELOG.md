@@ -2,6 +2,36 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-16 (facts of the reference system A4H)
+
+Release constant unchanged (1.0.0): no behaviour change of the ABAP logic; the status text views read another source
+with the same elements. Facts seen by the owner's test tool on the reference system A4H (S/4HANA 2025 with FI-CA).
+
+### Fixed
+- Status texts (V27 answered): `DDCDS_CUSTOMER_DOMAIN_VALUE_T` returns values only for domains of ABAP Cloud packages,
+  nothing for a classic package. The seven text views `ZI_CA_OpsCtlStatusT`, `ZI_CA_OpsReopenT`,
+  `ZI_CA_OpsDtwStatusT`, `ZI_CA_OpsFlowRoleT`, `ZI_CA_OpsFlowRowT`, `ZI_CA_OpsFlowEvStT`, `ZI_CA_OpsFlowTagT` read
+  `DD07L` (values, active version) / `DD07T` (texts, logon language) by domain name; element names unchanged.
+- Inline declarations after `IMPORTING` of a functional call (refused by the A4H compiler, accepted by abaplint):
+  `ZCL_CA_OPS_CHECK_RUNNER=>RUN` (lock holder in the condition), `ZCL_CA_OPS_PURGE` (dependent and history counts) and
+  the test classes of `ZCL_CA_OPS_PURGE_DAO`, `ZCL_CA_OPS_JOB_PURGE`, `ZCL_CA_OPS_BRK_PURGE` declare the variable
+  before the call (same behaviour).
+- Link registry `FICA_DOC_HEADER`: `STBEL` is the reversed document, filled on the reversal ("Reversed document (on
+  the reversal)"); new field `STORB` "Reversal document (on the original)", evidence C.
+
+### Added
+- House check `no_inline_in_call` (`tools/checks.py`, 25 checks; shared rule `inline_in_call_failures` in
+  `../tools/abaptools/name_checks.py`, also in the suite's portable checks and the parameter framework's checks; root
+  tests `tools/tests/test_inline_in_call.py`).
+- Link registry `FICA_CHEQUE`: `BNKDT` (encashment date, set by the bank statement import), `DOC2T` (01 after
+  encashment), `LAUFD` / `LAUFI` (issuing payment run), evidence C; `FICA_CHEQUE_TO_STMT_LINE` seen on A4H (FICA layer
+  40 fields, `docs/LINK_REGISTRY.md` section 8). Generated seed rows, CDS snippets and impact report regenerated.
+
+### Changed
+- VERIFY: V27 answered; V117 narrowed (reference key form `AWKEY` = `FIKEY`, user; `AWTYP` `FKKSU` still open);
+  new section 2026-11-16 with V261 (`GET PERMISSIONS` may return 02 on a refusal - note, tests unchanged); V260 is the
+  first consumer's (reversal direction). `docs/ACCOUNT_FLOW.md` names `DD07L` / `DD07T` for the texts.
+
 ## [Unreleased] - 2026-11-15 (licence installation role)
 
 ### Changed

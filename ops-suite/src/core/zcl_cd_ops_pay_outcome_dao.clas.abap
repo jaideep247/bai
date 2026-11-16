@@ -5,8 +5,8 @@
 *& evidence source after its watermark (tuple order, package size, never
 *& one SELECT per payment): DOCUMENTS = payment / clearing documents by
 *& DFKKKO entry date / time that are DFKKOP-AUGBL of items with a FIN;
-*& REVERSALS = those documents reversed (DFKKKO-STBEL) by the entry time
-*& of the reversal; STATEMENT = statement lines by FEBEP-KUKEY / ESNUM
+*& REVERSALS = those documents reversed (the reversal's DFKKKO-STBEL) by the
+*& entry time of the reversal; STATEMENT = statement lines by FEBEP-KUKEY / ESNUM
 *& (statement references FEBEP-CHECT); RETURNS = returns lot documents by
 *& DFKKKO entry time (DFKKRP-OPBEL) with DFKKRP-SELW1 = AUGBL; GL = G/L
 *& clearing documents by BKPF entry time with BSEG lines whose clearing is
@@ -52,6 +52,8 @@
 *&            | document) stays on the tables (watermark paging and clearing search - Performance_Review.md 14).
 *& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
 *&            | 2025).
+*& 2026-11-16 | REVERSALS: the reversal document's DFKKKO-STBEL names the reversed payment document (reference
+*&            | system A4H) - joined by the reversal's STBEL (was: the original's STBEL = the reversal).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot SQL</p>
 CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
@@ -311,11 +313,12 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
   METHOD reversals.
     DATA(lv_key) = CONV ty_docno( is_watermark-wm_key ).
-    " A changed clearing of a payment already judged: the payment document's reversal document
-    " (DFKKKO-STBEL, VERIFY-SE11) entered after the watermark
+    " A changed clearing of a payment already judged: a reversal document entered after the watermark
+    " whose DFKKKO-STBEL names the payment document (STBEL is filled on the reversal - reference system
+    " A4H; the original carries STORB). The payment document is read by key
     SELECT o~opbel, r~opbel AS reversal, r~cpudt, r~cputm
       FROM dfkkko AS r
-      INNER JOIN dfkkko AS o ON o~stbel = r~opbel
+      INNER JOIN dfkkko AS o ON o~opbel = r~stbel
       WHERE ( r~cpudt > @is_watermark-wm_date
            OR ( r~cpudt = @is_watermark-wm_date AND r~cputm > @is_watermark-wm_time )
            OR ( r~cpudt = @is_watermark-wm_date AND r~cputm = @is_watermark-wm_time AND r~opbel > @lv_key ) )

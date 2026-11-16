@@ -1,9 +1,11 @@
 // Artifact: zi_ca_opsdtwstatust.ddls.asddls
 // Purpose: Texts of the status of a planned downtime window (Awaiting approval, Scheduled, Active, Ended): the
-//          fixed values of domain ZCA_OPS_DTW_STATUS in every language - translated in SE63 like any domain,
+//          fixed values of domain ZCA_OPS_DTW_STATUS in the logon language - translated in SE63 like any domain,
 //          never a literal of a view. Text association of the status in the downtime app. Read-only.
 // Modification log: 2026-11-11 | Initial version (operations response features: planned downtime).
-// VERIFY-ADT: DDCDS_CUSTOMER_DOMAIN_VALUE_T as in ZI_CA_OpsCtlStatusT (V27).
+//                   2026-11-16 | Fixed values from DD07L / DD07T by domain name (logon language, active version):
+//                              | DDCDS_CUSTOMER_DOMAIN_VALUE_T returns nothing for a domain of a classic package
+//                              | (reference system A4H, V27); element names unchanged.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Downtime window status - text'
 @Metadata.ignorePropagatedAnnotations: true
@@ -11,11 +13,19 @@
 @ObjectModel.representativeKey: 'WindowStatus'
 @ObjectModel.usageType: { serviceQuality: #A, sizeCategory: #S, dataClass: #META }
 define view entity ZI_CA_OpsDtwStatusT
-  as select from DDCDS_CUSTOMER_DOMAIN_VALUE_T( p_domain_name : 'ZCA_OPS_DTW_STATUS' )
+  as select from dd07l as Val
+    inner join   dd07t as Txt on  Txt.domname    = Val.domname
+                              and Txt.as4local   = Val.as4local
+                              and Txt.valpos     = Val.valpos
+                              and Txt.as4vers    = Val.as4vers
+                              and Txt.ddlanguage = $session.system_language
 {
-  key cast( value_low as zca_ops_dtw_status )               as WindowStatus,
+  key cast( Val.domvalue_l as zca_ops_dtw_status )        as WindowStatus,
       @Semantics.language: true
-  key language                                              as Language,
+  key Txt.ddlanguage                                      as Language,
       @Semantics.text: true
-      cast( text as abap.char( 60 ) )                       as StatusText
+      cast( Txt.ddtext as abap.char( 60 ) )               as StatusText
 }
+where
+      Val.domname  = 'ZCA_OPS_DTW_STATUS'
+  and Val.as4local = 'A'

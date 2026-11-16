@@ -22,6 +22,7 @@
 *&            | BKPF / BSEG / T001 doubles.
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
 *&            | currency).
+*& 2026-11-16 | Headers also return DFKKKO-STORB (the original's reversal document).
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -382,6 +383,7 @@ CLASS ltc_trace_dao_reads DEFINITION FINAL FOR TESTING
         opbel_1   TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000000101',
         opbel_2   TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000000102',
         stbel     TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000000201',
+        storb     TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000000202',
         fikey     TYPE c LENGTH 12 VALUE 'FK2026110501',
         file_1    TYPE zif_cd_ops_trace_types=>ty_file_id VALUE '000000000000000000000000000000F1',
         file_2    TYPE zif_cd_ops_trace_types=>ty_file_id VALUE '000000000000000000000000000000F2',
@@ -489,6 +491,7 @@ CLASS ltc_trace_dao_reads IMPLEMENTATION.
         ls_row-opbel = gc_test-opbel_1.
         ls_row-fikey = gc_test-fikey.
         ls_row-stbel = gc_test-stbel.
+        ls_row-storb = gc_test-storb.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-opbel = gc_test-opbel_2.
         INSERT ls_row INTO TABLE lt_rows.
@@ -498,7 +501,9 @@ CLASS ltc_trace_dao_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_headers ) exp = 1 msg = 'Only the asked document' ).
         cl_abap_unit_assert=>assert_equals( act = lt_headers[ 1 ]-fikey exp = gc_test-fikey msg = 'FIKEY returned' ).
         cl_abap_unit_assert=>assert_equals( act = lt_headers[ 1 ]-stbel exp = gc_test-stbel
-                                            msg = 'Reversal document returned' ).
+                                            msg = 'Reversed document (STBEL) returned' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_headers[ 1 ]-storb exp = gc_test-storb
+                                            msg = 'Reversal document (STORB) returned' ).
         cl_abap_unit_assert=>assert_initial( act = mo_cut->get_doc_headers( VALUE #( ) )
                                              msg = 'Empty key list reads nothing' ).
       CATCH cx_root INTO DATA(lx_error).

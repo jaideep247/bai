@@ -116,7 +116,7 @@ ZCL_CD_HCK_C_VOLUME,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_DAO,own test include,,31,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
 ZCL_CD_HCK_DASH_CDS_TEST,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
-ZCL_CD_HCK_DOCCHG_DAO,own test include,,2,90,,Not run in target SAP
+ZCL_CD_HCK_DOCCHG_DAO,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_ENGINE,own test include,,31,90,,Not run in target SAP
 ZCL_CD_HCK_EV_BTC_SEQ,own test include,,31,90,,Not run in target SAP
 ZCL_CD_HCK_EV_CHQ_STATUS,own test include,,7,90,,Not run in target SAP
@@ -162,7 +162,7 @@ ZCL_CD_OPS_PATTERN_CHECK,own test include,,19,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_DAO,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_FIXTURE,covered,ZCL_CD_OPS_PAY_OUTCOME,0,90,,"Not run in target SAP; measured in ZCL_CD_OPS_PAY_OUTCOME (test support (shared negative fixtures, no logic): used by the tests of the evaluator, A_INFLIGHT, the trace, the snapshot and the dashboard CDS)"
 ZCL_CD_OPS_PAY_OUTCOME,own test include,,22,90,,Not run in target SAP
-ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,32,90,,Not run in target SAP
+ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,33,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_REQUEST,own test include,,13,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,37,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_SNAP_OP,covered,ZCL_CD_OPS_PAY_SNAPSHOT,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_PAY_SNAPSHOT (bgPF operation (one call): the snapshot tests run it through their queue double (parallel packages); bgPF execution itself - QA case POC-14)

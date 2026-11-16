@@ -1,11 +1,16 @@
 OBJECT_ID,FIELD_NAME,LAYER_ID,SOURCE_NAME,DATA_ELEMENT,SENSITIVITY,EVIDENCE,VERIFY_REF,DESCRIPTION
+FICA_CHEQUE,BNKDT,FICA,DFKKCR,BANCD,,C,,Encashment date (set by the statement import)
 FICA_CHEQUE,DOC1R,FICA,DFKKCR,,,C,,Payment document of the cheque
+FICA_CHEQUE,DOC2T,FICA,DFKKCR,DOC2T_PAY,,C,,Second document type (01 after encashment)
 FICA_CHEQUE,HBKID,FICA,DFKKCR,,,C,,House bank
 FICA_CHEQUE,HKTID,FICA,DFKKCR,,,C,,Account ID of the house bank
+FICA_CHEQUE,LAUFD,FICA,DFKKCR,,,C,,Run date of the issuing payment run
+FICA_CHEQUE,LAUFI,FICA,DFKKCR,,,C,,Run identification of the issuing payment run
 FICA_CHEQUE,ZTNUM,FICA,DFKKCR,,,C,,Cheque number
 FICA_DOC_HEADER,FIKEY,FICA,DFKKKO,,,C,,Reconciliation key of the document
 FICA_DOC_HEADER,OPBEL,FICA,DFKKKO,,,C,,Document number (key of the header)
-FICA_DOC_HEADER,STBEL,FICA,DFKKKO,,,C,,Reversal document
+FICA_DOC_HEADER,STBEL,FICA,DFKKKO,,,C,,Reversed document (on the reversal)
+FICA_DOC_HEADER,STORB,FICA,DFKKKO,STORB_KK,,C,,Reversal document (on the original)
 FICA_NOC_ITEM,INFOF,FICA,DFKKNRP,,,C,,Payment document or payment reference
 FICA_NOC_ITEM,KEYN1,FICA,DFKKNRP,,,C,,Lot
 FICA_NOC_ITEM,POSNA,FICA,DFKKNRP,,,C,,Item of the lot

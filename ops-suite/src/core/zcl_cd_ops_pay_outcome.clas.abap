@@ -10,7 +10,7 @@
 *& blank informational), evidence plug-ins (ZIF_CD_HCK_EVIDENCE, one
 *& collect per kind and parameters for all payments), anomalies of an
 *& evidence, fail closed on an unusable mandatory kind (UNDETERMINED),
-*& reversed payment documents (DFKKKO-STBEL). Also the source attribution
+*& reversed payment documents (DFKKKO-STORB). Also the source attribution
 *& of a FIN number (request log, SUCCESS row rule): two or more sources =
 *& AMBIGUOUS. The verdict names the outcome, the deciding evidence kind and
 *& reference and the finding. A mandatory row whose evidence is PENDING (the
@@ -39,6 +39,8 @@
 *&            | CLEARING_RULE_INVALID only for a configuration error (IS_CONFIG_ERROR: configuration messages
 *&            | GC_CONFIG_MSG, plug-in without its interface); any other error is PAY_EVIDENCE_FAILED with the
 *&            | chained reason (REASON_CHAIN) - both fail closed as before.
+*& 2026-11-16 | Reversed payment = DFKKKO-STORB of the payment document set (was STBEL, which is filled on the
+*&            | reversal and names the reversed document - reference system A4H).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! One instance per run (configuration and listing state); create it through
@@ -414,11 +416,12 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     DATA lt_judged TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
     CLEAR: mt_groups, mt_listed, mt_findings.
 
-    " Reversed payments (DFKKKO-STBEL) are not judged
+    " Reversed payments (the payment document's DFKKKO-STORB names its reversal; STBEL is filled on the
+    " reversal - reference system A4H) are not judged
     DATA(lt_docno) = zcl_cd_hck_ev_support=>docnos( it_payments ).
     IF lt_docno IS NOT INITIAL.
       LOOP AT zcl_cd_ops_factory=>get_trace_dao( )->get_doc_headers( lt_docno ) ASSIGNING FIELD-SYMBOL(<ls_header>)
-           WHERE stbel IS NOT INITIAL.
+           WHERE storb IS NOT INITIAL.
         INSERT CONV string( <ls_header>-opbel ) INTO TABLE lt_reversed.
       ENDLOOP.
     ENDIF.
