@@ -47,6 +47,7 @@
 *& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): payment run key of a file (generation group
 *&            | split by GROUP_FIELDS), payment run totals (fallback), FMON_DEFAULT_CURRENCY.
 *& 2026-11-10 | GC_TABLE_AUTH moved to ZIF_CA_OPS_AUTH (one S_TABU_NAM check for every area).
+*& 2026-11-15 | Payment file lifecycle overlay: settings and link constants of ZCL_CD_PF_FMON_FILES / _EVENTS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -132,6 +133,25 @@ INTERFACE zif_cd_fmon_types
       outbound TYPE ty_direction VALUE 'O',
       inbound  TYPE ty_direction VALUE 'I',
     END OF gc_direction.
+
+  "! Payment file lifecycle of the framework (2026-11-15, docs/Payment_File_Overlay.md): settings of the overlay's
+  "! adapters ZCL_CD_PF_FMON_FILES / ZCL_CD_PF_FMON_EVENTS ("NAME=value,value;NAME=..."), the link registry object
+  "! of a payment run and the key fields of its key values
+  CONSTANTS:
+    BEGIN OF gc_pf_setting,
+      ifaces    TYPE string VALUE `IFACES`,
+      stages    TYPE string VALUE `STAGES`,
+      separator TYPE string VALUE `;`,
+      assign    TYPE string VALUE `=`,
+    END OF gc_pf_setting.
+  CONSTANTS:
+    BEGIN OF gc_pf_link,
+      payrun TYPE c LENGTH 30 VALUE 'FICA_PAYMENT_RUN',
+      laufd  TYPE c LENGTH 30 VALUE 'LAUFD',
+      laufi  TYPE c LENGTH 30 VALUE 'LAUFI',
+    END OF gc_pf_link.
+  "! Separator of the record ID of an FMON event (file ID / event number)
+  CONSTANTS gc_pf_id_separator TYPE string VALUE `/`.
 
   CONSTANTS:
     BEGIN OF gc_file_type,

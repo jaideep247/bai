@@ -9,6 +9,7 @@ State as of 2026-11-11. An activation row is a proposal until a business approve
 | S4_BATCH_JOBS | S4CORE | Background job processing | **ACTIVE** | - | active by default of its package (no activation row) | CD_JOBS/SAP_JOBS; Morning report E_JOBS |
 | S4_BANK_STMT | S4CORE | Electronic bank statement import and posting | **ACTIVE** | 20261111 | In use; monitored by the suite since go-live (proposal - confirm with business) | EBS validation (CD_EBS, BAI2 / CAMT); morning report B_VOL_STMT, A_RECON_3WAY |
 | FICA_PAYRUN | FICA | Payment run (disbursements and collections) | **ACTIVE** | 20261111 | In use; monitored by the suite since go-live (proposal - confirm with business) | Morning report A_INFLIGHT, A_PRQ_NOT_PAID, B_VOL_PAYRUN, C_CHQ_STATUS; payment trace; FMON payment files |
+| FICA_PAYFILE_ACK | FICA | Payment file lifecycle and bank acknowledgement | inactive | - | to confirm with business (no activation row: inactive by default) | - |
 | FICA_PAY_LOTS | FICA | Incoming payment lots and cash journal | inactive | - | to confirm with business (no activation row: inactive by default) | - |
 | FICA_RETURNS | FICA | Returns lots (returned payments) | **ACTIVE** | 20261111 | In use; monitored by the suite since go-live (proposal - confirm with business) | Morning report A_RET_AGED; ACH return files (FMON) |
 | FICA_EBS_LOTS | FICA | Bank statement items to payment lots and clearing | inactive | - | to confirm with business (no activation row: inactive by default) | - |

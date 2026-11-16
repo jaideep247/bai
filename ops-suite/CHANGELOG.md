@@ -3,6 +3,18 @@
 Changes of the ops suite (`ops-suite/`) from 2026-11-15 on; earlier changes are in the modification logs of the
 objects, `docs/Class_Purpose_and_Modification_Log.md`, `docs/Implementation_Order.md` and `docs/history/`.
 
+## 2026-11-15 - payment file lifecycle overlay (build K)
+
+- Setup 1 of the framework's payment file lifecycle (module CASHOPS, `ops-framework/docs/PAYMENT_FILE_LIFECYCLE.md`) on
+  the file monitoring: file source `ZCL_CD_PF_FMON_FILES` (FMON's outbound files, run and house bank from the generation
+  group, payments from DPAYH, regenerations as reissues) and event source `ZCL_CD_PF_FMON_EVENTS` (FMON's audit trail,
+  stage = native status), both through `ZIF_CD_FMON_DAO`; constants in `ZIF_CD_FMON_TYPES`; inactive configuration rows
+  `config/payfile/` (file types ACH / wire, milestones with acceptance by 10:00 of the next business day, status mapping
+  of the FMON stages - receipt `PRISM_DELIVERED` apart from acceptance `ACK_RECEIVED` -, adapters) and the fixture
+  profile `config/payfile/profile.json`; test `tools/tests/test_payfile_overlay.py` (the framework's fixtures identical
+  with its example XX); ABAP Unit of both classes. `docs/Payment_File_Overlay.md`, Implementation_Order, VERIFY_Suite
+  (V182-V186). No framework object changed for the overlay.
+
 ## 2026-11-15 - returned amount from DFKKRP-BETRR
 
 - `DFKKRP` has no `BETRW` (user); the returned amount of a returns lot item is `BETRR`. `ZCL_CD_EBS_SAP_DAO=>GET_RETURN_ITEMS`

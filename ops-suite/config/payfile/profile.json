@@ -1,0 +1,6 @@
+{
+  "_comment": "Integration setup of the ops suite for the fixtures of the framework's payment file lifecycle (ops-framework/config/payfile/fixtures.json, engine tools/abaptools/payfile.py): which source evidences each role and the status mapping of this folder (zca_ops_pfmap.csv - the overlay's rows, delivered inactive). SAP jobs for the generation, the file monitoring's audit trail (FMON stages of PRISM and the bank ACK) for transfer, receipt and acceptance.",
+  "name": "ops suite (PRISM via file monitoring)",
+  "sources": {"SCHED": "CDSAPJOB", "TRANSFER": "CDFMON", "ACK": "CDFMON"},
+  "map": "zca_ops_pfmap.csv"
+}

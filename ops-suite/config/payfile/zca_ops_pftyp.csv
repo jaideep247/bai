@@ -1,0 +1,3 @@
+AREA,FILE_TYPE,DESCRIPTION,PROCESS_ID,DIRECTION,ACK_LEVEL,ACK_MULTI,CALENDAR_ID,TIME_ZONE,DAY_CUTOFF,EXPECTED_FILES,ZERO_OK,STALE_MIN,OPEN_DAYS,ACTIVE
+CD_FMON,CD_ACH,ACH disbursement files to the banks (via PRISM),<business process>,D,F,,<factory calendar>,CST,<cut-off>,0,X,30,10,
+CD_FMON,CD_WIRE,Wire disbursement files to the banks (via PRISM),<business process>,D,F,,<factory calendar>,CST,<cut-off>,0,X,30,10,

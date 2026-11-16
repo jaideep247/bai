@@ -7,7 +7,7 @@ State as of 2026-11-11 (the activation rule of `ZCL_CA_OPS_CATALOG`: package off
 | Package | Kind | Rank | Prefix | Monitoring area | Processes | Active | VERIFY (evidence V) |
 |---|---|---|---|---|---|---|---|
 | S4CORE | product baseline | 10 | `S4_` | CA_S4CORE | 2 | 2 | 1 |
-| FICA | industry package | 20 | `FICA_` | CA_FICA | 14 | 3 | 14 |
+| FICA | industry package | 20 | `FICA_` | CA_FICA | 15 | 3 | 15 |
 | FSCD | industry package | 30 | `FSCD_` | CA_FSCD | 7 | 0 | 7 |
 | CD | customer layer | 100 | `CD_` | - | 1 | 1 | 1 |
 
@@ -18,6 +18,7 @@ State as of 2026-11-11 (the activation rule of `ZCL_CA_OPS_CATALOG`: package off
 | S4_BATCH_JOBS | Background job processing | BC | PLATFORM | yes | default | C  | S4_JOB_FAILURES, S4_JOB_STATES |
 | S4_BANK_STMT | Electronic bank statement import and posting | FI-BL | BANK | yes | activation row | V V129 | S4_EBS_UNPOSTED |
 | FICA_PAYRUN | Payment run (disbursements and collections) | FI-CA | PAYMENTS | yes | activation row | V V127 V129 | FICA_PAYRUN_NOPAY |
+| FICA_PAYFILE_ACK | Payment file lifecycle and bank acknowledgement | FI-CA | PAYMENTS | no | default | V V175 V180 | FICA_PAYFILE_ACK |
 | FICA_PAY_LOTS | Incoming payment lots and cash journal | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_LOT_OPEN, FICA_LOT_CLARIF |
 | FICA_RETURNS | Returns lots (returned payments) | FI-CA | RECEIVABLES | yes | activation row | V V128 | FICA_RET_OPEN |
 | FICA_EBS_LOTS | Bank statement items to payment lots and clearing | FI-CA | BANK | no | default | V V127 V128 | FICA_EBS_NOLOT |
@@ -111,6 +112,30 @@ Depends on: FICA_GL_TRANSFER (soft: Payment documents reach the G/L with their k
 | FICA_PAYRUN_NOPAY | Payments of past runs without a payment document | R1: COUNT `DPAYH`, date LAUFD (>= 1 d), DOC1R EQ , per BBUKR, amber 1 / red ‹red count› | V V129 |
 
 Monitored outside the runner: Morning report A_INFLIGHT, A_PRQ_NOT_PAID, B_VOL_PAYRUN, C_CHQ_STATUS; payment trace; FMON payment files
+
+### FICA_PAYFILE_ACK - Payment file lifecycle and bank acknowledgement
+
+Package FICA · component FI-CA · dashboard card PAYMENTS · business owner role: Payment operations lead · typical schedule: Intraday, after every payment medium run
+
+The payment files of the payment runs from generation to the bank: SAP generation (job), transfer (middleware or direct), receipt and acceptance by the bank (per file, batch or payment), posting / settlement evidence - module CASHOPS (docs/PAYMENT_FILE_LIFECYCLE.md). Ingestion ZCA_OPS_PF_RUN, check ZCL_CA_OPS_CHK_PAYFILE; the file types, milestones, status mappings and adapters are the customer's configuration.
+
+| Step | Kind | SAP object | What it does | Evidence |
+|---|---|---|---|---|
+| 010 | transaction | `FPY1` | Payment run (mass activity) | C  |
+| 020 | program | `‹payment medium program›` | Payment medium creation of the run (job) | V V175 |
+| 030 | background job | `ZCA_OPS_PF_RUN` | Payment file ingestion and evaluation (product report) | C  |
+| 040 | event / BAdI | `‹bank acknowledgement›` | Receipt and acceptance by the bank (customer adapter) | V V180 |
+
+| Table | Role | Link registry object | Meaning | Evidence |
+|---|---|---|---|---|
+| `DPAYH` | header | FICA_PAYMENT_RUN | Payments of a run (the payments of a file) | C  |
+| `TBTCO` | log / history | S4_BACKGROUND_JOB | Background job that generated the file | C  |
+
+Depends on: FICA_PAYRUN (hard: The payment run produces the payments of a file)
+
+| Monitoring check | What it watches | Class / aggregate rows | Evidence |
+|---|---|---|---|
+| FICA_PAYFILE_ACK | Payment files stopped before the bank accepted them | `ZCL_CA_OPS_CHK_PAYFILE` | C |
 
 ### FICA_PAY_LOTS - Incoming payment lots and cash journal
 

@@ -362,6 +362,14 @@ framework's corrected FICA link registry layer and process catalogue (seed rows 
 V159-V161 (`VERIFY_Suite.md` §4) - until then `ZCL_CD_OPS_TRACE_DAO`, `ZCL_CD_EBS_SAP_DAO` and
 `ZCL_CD_OPS_POSTAREA_DAO` read a field the reference system does not have and do not activate in a system without it.
 
+## Build K (2026-11-15): payment file lifecycle overlay (`docs/Payment_File_Overlay.md`)
+
+Framework first (`ops-framework/docs/INSTALL.md` §6i: module CASHOPS, register, worklist, exception contract; V170-V181).
+Then the suite: `ZIF_CD_FMON_TYPES` (overlay constants), `ZCL_CD_PF_FMON_FILES`, `ZCL_CD_PF_FMON_EVENTS` with package
+`ZCD_OPS_FMON`; the rows of `config/payfile/` (area `CD_FMON`) entered **inactive** in `ZUI_CA_OPS_CFG` in DV1 and
+transported. Activate a file type only when V182 and V183 are decided for its banks and the licence names CASHOPS;
+schedule `ZCA_OPS_PF_RUN` for `CD_FMON` after the 5-minute FMON job (FMON fills the audit trail the overlay reads).
+
 ## Ledger drill-down, group reconciliation and document changes (build C, 2026-11-11)
 
 | Step | Objects | Notes |
