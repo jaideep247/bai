@@ -23,6 +23,7 @@
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
 *&            | currency). A credit total (SHKZG H). DPAYH paying company code BBUKR and method RZAWE (DPAYH has no
 *&            | BUKRS / PYMET; reference system S/4HANA 2025).
+*& 2026-11-15 | ZBTR entries are rows of the typed table (ADD_TYPED, source T delivered).
 *&---------------------------------------------------------------------*
 CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -66,7 +67,7 @@ CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
         "! Lifecycle entry of ZBTR (flow + method class, open role list)
         lifecycle TYPE zif_cd_hck_recon_types=>ty_set_id VALUE 'CCRD',
         collected TYPE zif_cd_hck_recon_types=>ty_role VALUE 'COLLECTED',
-        btr       TYPE zif_cd_ops_postarea_types=>ty_area VALUE 'ZBTR',
+        btr       TYPE zif_cd_ops_postarea_types=>ty_purpose VALUE 'BTR',
       END OF gc_test.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
@@ -185,25 +186,25 @@ CLASS ltc_recon_dao IMPLEMENTATION.
     " Bank code roles: entries of the customer posting area ZBTR (USAGE / SCOPE / SCHEME / CODE -> ROLE)
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     DATA(lo_mem) = NEW zcl_cd_ops_postarea_mem( ).
-    lo_mem->add( iv_area    = gc_test-btr
-                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_a }/| &&
-                              |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ gc_test-leg }|
-                 iv_results = |{ zif_cd_hck_recon_types=>gc_role-leg }| ).
+    lo_mem->add_typed( iv_purpose = gc_test-btr
+                       iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_a }/| &&
+                                 |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ gc_test-leg }|
+                       iv_results = |{ zif_cd_hck_recon_types=>gc_role-leg }| ).
     " An ISO entry and a '*' entry are no reconciliation roles (configuration check POSTAREA_INVALID)
-    lo_mem->add( iv_area    = gc_test-btr
-                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_a }/| &&
-                              |{ zif_cd_ebs_types=>gc_scheme-iso }/{ gc_test-redep }|
-                 iv_results = |{ zif_cd_hck_recon_types=>gc_role-redeposit }| ).
-    lo_mem->add( iv_area    = gc_test-btr
-                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_b }/| &&
-                              |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ zif_cd_ops_postarea_types=>gc_generic }|
-                 iv_results = |{ zif_cd_hck_recon_types=>gc_role-ignore }| ).
+    lo_mem->add_typed( iv_purpose = gc_test-btr
+                       iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_a }/| &&
+                                 |{ zif_cd_ebs_types=>gc_scheme-iso }/{ gc_test-redep }|
+                       iv_results = |{ zif_cd_hck_recon_types=>gc_role-redeposit }| ).
+    lo_mem->add_typed( iv_purpose = gc_test-btr
+                       iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_b }/| &&
+                                 |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ zif_cd_ops_postarea_types=>gc_generic }|
+                       iv_results = |{ zif_cd_hck_recon_types=>gc_role-ignore }| ).
     " Table consolidation 2026-11-08: a lifecycle role of the same code (usage LIFECYCLE, scope =
     " flow + method class) must never reach the reconciliation
-    lo_mem->add( iv_area    = gc_test-btr
-                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/{ gc_test-lifecycle }/| &&
-                              |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ gc_test-deposit }|
-                 iv_results = |{ gc_test-collected }| ).
+    lo_mem->add_typed( iv_purpose = gc_test-btr
+                       iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/{ gc_test-lifecycle }/| &&
+                                 |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ gc_test-deposit }|
+                       iv_results = |{ gc_test-collected }| ).
     zcl_cd_ops_postarea_injector=>inject_dao( lo_mem ).
   ENDMETHOD.
 

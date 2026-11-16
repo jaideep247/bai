@@ -15,7 +15,15 @@ annotate entity ZC_CD_OpsCfgAll with
     { id: 'Service', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Business services (health score)', position: 40, targetElement: '_Service' },
     { id: 'ServiceMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'What a business service covers', position: 50, targetElement: '_ServiceMap' }
+      label: 'What a business service covers', position: 50, targetElement: '_ServiceMap' },
+    { id: 'MapReason', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Return / NOC reasons (typed ZRSN)', position: 60, targetElement: '_MapReason' },
+    { id: 'MapMethodClass', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Payment method classes (typed ZPMC)', position: 70, targetElement: '_MapMethodClass' },
+    { id: 'MapBtcCode', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Bank transaction codes (typed ZBTM)', position: 80, targetElement: '_MapBtcCode' },
+    { id: 'MapBtcRole', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Bank code roles (typed ZBTR)', position: 90, targetElement: '_MapBtcRole' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

@@ -20,7 +20,8 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | V139-V141, V144 | Build F: break analysis overlay - assignment carries the payment document (overlay links), bank transaction code lists, accounts of the reconciliation sets and PlanViz on the busiest account; pilot baselines and export path (2026-11-11) | `Break_Analysis_Overlay.md` §6 |
 | V150-V152 | Build G: account flow overlay - accounts of the flows by role, values of the stage rules, findings area of the morning report's checks and PlanViz on the busiest account (2026-11-15) | `Account_Flow_Overlay.md` §4 |
 | V158 | Build H: customer extensions - the pack's generated extensions of the framework views activate from `src/ext` (worklist state of the payment next to the break groups, query copy), PlanViz of the break list with the association (2026-11-15) | `Extensions_Overlay.md` §4 |
-| **V159-V161** (V159, V160 closed) | **Fields the suite's code reads that the reference system does not have (2026-11-15, build I)** | **this document, §4; `ddic/open_fields.csv`** |
+| V159-V161 (closed) | Fields the suite's code reads that the reference system does not have (2026-11-15, build I; V161 closed by build L) | this document, §4 |
+| **V190-V192** | **Build L: source per purpose and typed product mapping tables - activation of the tables, app entities and views, the posting-area purposes in DV1, the migration with transport recording (2026-11-15)** | **this document, §5** |
 | V169 | Build J: licensing - the installation numbers and SIDs of DV1 / QA1 / PS4 sent to the vendor, the vendor's licence installed per system, the modules the suite uses licensed, a module outside the licence refused in QA1 under `X` while the suite's own engines run (2026-11-15) | `Licensing_Overlay.md` §4 |
 | V130, V131 | Process catalogue customer layer: the customer process's table and programs, approval of the activation proposal and the order of the catalogue rows before `CAT_PROCESS` (2026-11-11) | `Process_Catalogue_Overlay.md` §4 |
 
@@ -75,10 +76,23 @@ transfer gaps), `ZCL_CD_HCK_RECON_DAO=>GET_FICA_DAYS`, `ZCL_CD_OPS_TRACE_DAO=>GE
 |---|---|---|
 | V159 | Closed 2026-11-15 | `DFKKCR` has no `CRSTATUS` (user, 2026-11-15; also absent on the reference system). The cheque status is `DFKKCR-STATE` (`CHKSTATE`, CHAR 1: B cashed, V voided, blank open - user 2026-11-07): `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_OPS_TRACE_DAO` and the trace engine read it; rule R07C forbids `V` by default (legacy 255D: status 99 = cancelled), BTC rule `BAI255D` PARAM1 `V`. |
 | V160 | Closed 2026-11-15 | The returned amount of a returns lot item is `DFKKRP-BETRR` (`BETRR_KK`, currency `WAERS`; user, 2026-11-15) - `DFKKRP` has no `BETRW`. Read by `ZCL_CD_EBS_SAP_DAO=>GET_RETURN_ITEMS` for the morning report check `A_INFLIGHT` and the payment trace. |
-| V161 | VERIFY-SE11 / design | `TFK033D` has `FUN01`-`FUN06` (CHAR 12) only - the ZBTM layout has 7 results (`FUN07` = DISPOSITION, audit A26); keys and results are CHAR 12, shorter than the layouts of `FICA_Posting_Areas.md` assume. Decide the ZBTM layout (e.g. disposition combined with another result, or kept in a parameter) before gate 1; `ZCL_CD_OPS_POSTAREA_DAO` reads `FUN07` until then |
+| V161 | Closed 2026-11-15 (build L) | `TFK033D` has `FUN01`-`FUN06` (CHAR 12) only. **User decision 2026-11-15: ZBTM, including its disposition, uses the typed table** `ZCD_OPS_MAPBTM` (7 results, keys of 35 / 15; parameter `POSTAREA_SOURCE_BTM` delivered `T`); ZBTR defaults to its typed table too (keys of 35, role of 15), ZRSN and ZPMC stay posting areas (their layouts fit CHAR 12 and 6 results). `ZCL_CD_OPS_POSTAREA_DAO` no longer reads `FUN07`; a purpose set to `P` whose layout does not fit is refused by the reader and reported by the configuration check (messages 440 / 441) - `FICA_Posting_Areas.md` §1a. Removed from `ddic/open_fields.csv`. |
 
-The three stay read in the code and are listed in `ddic/open_fields.csv`, so the comparison names them instead of
-failing; they block the activation of the reading class in a system without the field. Other facts of the reference
+V159 and V160 were fixed in the code, V161 by the typed table; `ddic/open_fields.csv` lists none of them any more. A
+field still read that the exports show missing would be listed there with its VERIFY item, so the comparison names it
+instead of failing. Other facts of the reference
 system (index lists, the sign of `DFKKSUM-BETRW`, field lengths) are recorded where the items live:
 `Performance_Review.md` §17, `USAA_Known_Tables.md` V101 / V102 / V107 / V108, `Release_Readiness.md`,
 `HCK_MORNING_REPORT.md` §15, `Payment_Trace.md` §9, `FICA_Posting_Areas.md`.
+
+## 5. Build L (2026-11-15) - source per purpose and typed product mapping tables
+
+Product review 2026-11-15: a typed product mapping table behind the existing reader contract is the portable route;
+the posting area stays an adapter where the target layout fits. Source per purpose in `POSTAREA_SOURCE_*` (ZRSN, ZPMC
+`P`; ZBTM `T` by user decision 2026-11-15; ZBTR `T`), active version in `POSTAREA_VERSION_*` (`FICA_Posting_Areas.md`).
+
+| ID | Kind | Item |
+|---|---|---|
+| V190 | VERIFY-ADT | Activation of `ZCD_OPS_MAPRSN` / `_MAPPMC` / `_MAPBTM` / `_MAPBTR` (delivery class C, NUMC key `VERSION`) with their draft tables and the generated entities `MapReason`, `MapMethodClass`, `MapBtcCode`, `MapBtcRole` of `ZUI_CD_OPS_CFG`: an identical key set is refused on create (table key, draft and active), `*` refused in a key its reader cannot apply (message 427), a blank ZBTM disposition refused (413); the union of `ZI_CD_PayMethodCls` (key elements in `UNION ALL`, NUMC version against the `LPAD`ed parameter of `ZI_CD_PostAreaCfg`) |
+| V191 | VERIFY-SE11 (DV1) | The posting-area purposes on the target release S/4HANA 2023: `TFK033D` `KEY01`-`KEY08` / `FUN01`-`FUN06` CHAR 12 as on the reference system (ZRSN, ZPMC fit; `ZCL_CD_OPS_POSTAREA_LAYOUT` holds the capacity). The FQC0 precedence question of `Release_Readiness.md` (d) no longer arises for them: ZRSN and ZPMC have one generic key each, where "exact beats `*`" is the only rule; the typed purposes apply the suite's rule by definition |
+| V192 | VERIFY-ADT (DV1) | `ZCD_OPS_POSTAREA_COPY` in update mode: rows recorded on the customizing request with the relations entity / table of `ZCL_CD_OPS_POSTAREA_LAYOUT` (`ZCL_CA_OPS_CFG_TRANSPORT`), one commit through the store; then the switch of a purpose's source and version by parameter shows the same morning report (`D_POSTAREA_INVALID`, EBS run in test mode) |

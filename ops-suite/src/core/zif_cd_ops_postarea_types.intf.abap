@@ -4,14 +4,20 @@
 *& Named types and constants of the FI-CA customer posting areas the suite
 *& reads its mapping tables from (user decision 2026-11-08: ZRSN return
 *& reasons, ZPMC payment method classes, ZBTM bank transaction codes, ZBTR
-*& bank code roles - maintained by the FI-CA team in FQC0). An entry is
-*& the key values KEY01..KEY08 and the result values FUN01..FUN08 of
-*& TFK033D (VERIFY-SE11: field names and lengths); values are strings, so
-*& nothing is truncated on read - the configuration check compares each
-*& value with the length its reader needs. No logic.
+*& bank code roles - maintained by the FI-CA team in FQC0) and of the typed
+*& product mapping tables ZCD_OPS_MAP* (product review 2026-11-15): the
+*& source of each purpose is a parameter (P posting area, T typed table).
+*& An entry is the key values KEY01..KEY08 and the result values
+*& FUN01..FUN07 - TFK033D holds FUN01..FUN06 (CHAR 12), the 7th result
+*& exists in the typed table only; values are strings, so nothing is
+*& truncated on read - the configuration check compares each value with
+*& the length its reader needs. No logic.
 *& Modification log:
 *& 2026-11-08 | Initial version (customer posting areas replace ZCD_EBS_RSN_MAP, ZCD_HCK_PMCLASS,
 *&            | ZCD_BTC_MAP and ZCD_HCK_BTCROLE).
+*& 2026-11-15 | Source per purpose (POSTAREA_SOURCE_*), active version of a typed table
+*&            | (POSTAREA_VERSION_*), capacity of TFK033D (reference system), typed tables, layout
+*&            | types (from ZCL_CD_OPS_CFG_CHECKS); FUN08 removed (VERIFY V161 closed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - customer posting areas: types</p>
 INTERFACE zif_cd_ops_postarea_types
@@ -27,6 +33,10 @@ INTERFACE zif_cd_ops_postarea_types
   TYPES ty_value TYPE string.
   "! What a posting area is for (one of GC_PURPOSE); its name is a parameter
   TYPES ty_purpose TYPE c LENGTH 3.
+  "! Where the entries of a purpose are read from (one of GC_SOURCE; parameter POSTAREA_SOURCE_*)
+  TYPES ty_source TYPE c LENGTH 1.
+  "! Mapping version of a typed table (the active one is the parameter POSTAREA_VERSION_*)
+  TYPES ty_version TYPE n LENGTH 4.
 
   "! Key fields of an entry (FQC0 columns from the left); '*' = any value (generic)
   TYPES:
@@ -50,8 +60,8 @@ INTERFACE zif_cd_ops_postarea_types
       fun04 TYPE ty_value,
       fun05 TYPE ty_value,
       fun06 TYPE ty_value,
+      "! Typed table only (ZCD_OPS_MAPBTM-DISPOSITION): TFK033D has no 7th result
       fun07 TYPE ty_value,
-      fun08 TYPE ty_value,
     END OF ty_results.
 
   "! One entry of a posting area (application area and chart of accounts of the read)
@@ -67,6 +77,43 @@ INTERFACE zif_cd_ops_postarea_types
   CONSTANTS gc_key_count TYPE i VALUE 8.
   "! Separator of the key values in an entry key text (findings: object key, messages)
   CONSTANTS gc_key_separator TYPE c LENGTH 1 VALUE '/'.
+
+  "! What TFK033D holds (reference system S/4HANA 2025, ddic/a4h/TFK033D.fields.csv): KEY01..KEY08
+  "! (KEYNN_KK) and FUN01..FUN06 (FUNNN_KK), all CHAR 12 - a layout with more results or longer
+  "! fields cannot be a posting area (source T)
+  CONSTANTS:
+    BEGIN OF gc_postarea_capacity,
+      keys    TYPE i VALUE 8,
+      results TYPE i VALUE 6,
+      length  TYPE i VALUE 12,
+    END OF gc_postarea_capacity.
+
+  "! Source of the entries of a purpose (product review 2026-11-15)
+  CONSTANTS:
+    BEGIN OF gc_source,
+      "! FI-CA customer posting area (FQC0 entries, TFK033D) - where the layout fits
+      posting_area TYPE ty_source VALUE 'P',
+      "! Typed product mapping table of the suite (ZCD_OPS_MAP*, configuration app ZUI_CD_OPS_CFG)
+      typed        TYPE ty_source VALUE 'T',
+    END OF gc_source.
+
+  "! Typed mapping table of each purpose (one row = one entry of a mapping version)
+  CONSTANTS:
+    BEGIN OF gc_table,
+      reason   TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ZCD_OPS_MAPRSN',
+      pm_class TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ZCD_OPS_MAPPMC',
+      btc_map  TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ZCD_OPS_MAPBTM',
+      btc_role TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ZCD_OPS_MAPBTR',
+    END OF gc_table.
+
+  "! Entity of each typed table in the configuration app ZUI_CD_OPS_CFG (transport recording)
+  CONSTANTS:
+    BEGIN OF gc_entity,
+      reason   TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'MapReason',
+      pm_class TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'MapMethodClass',
+      btc_map  TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'MapBtcCode',
+      btc_role TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'MapBtcRole',
+    END OF gc_entity.
 
   "! The four mappings held in customer posting areas
   CONSTANTS:
@@ -93,6 +140,16 @@ INTERFACE zif_cd_ops_postarea_types
       pm_class TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_PMC',
       btc_map  TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_BTM',
       btc_role TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_BTR',
+      "! Source per purpose: P posting area / T typed table (product review 2026-11-15)
+      source_reason   TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_SOURCE_RSN',
+      source_pm_class TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_SOURCE_PMC',
+      source_btc_map  TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_SOURCE_BTM',
+      source_btc_role TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_SOURCE_BTR',
+      "! Active mapping version of the typed table per purpose (rollback = the previous number)
+      version_reason   TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_VERSION_RSN',
+      version_pm_class TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_VERSION_PMC',
+      version_btc_map  TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_VERSION_BTM',
+      version_btc_role TYPE zif_ca_ops_types=>ty_param_name VALUE 'POSTAREA_VERSION_BTR',
     END OF gc_param.
 
   "! Delivered defaults of the parameters (names fixed by the user 2026-11-08)
@@ -104,6 +161,16 @@ INTERFACE zif_cd_ops_postarea_types
       pm_class TYPE string VALUE `ZPMC`,
       btc_map  TYPE string VALUE `ZBTM`,
       btc_role TYPE string VALUE `ZBTR`,
+      "! ZRSN (keys / results up to 4 characters, 2 results) and ZPMC (up to 10, 3 results) fit TFK033D
+      source_reason    TYPE string VALUE `P`,
+      source_pm_class  TYPE string VALUE `P`,
+      "! ZBTM: 7 results, keys of 35 / 15; ZBTR: keys of 35, role of 15 - longer than CHAR 12
+      source_btc_map   TYPE string VALUE `T`,
+      source_btc_role  TYPE string VALUE `T`,
+      version_reason   TYPE string VALUE `1`,
+      version_pm_class TYPE string VALUE `1`,
+      version_btc_map  TYPE string VALUE `1`,
+      version_btc_role TYPE string VALUE `1`,
     END OF gc_param_default.
 
   "! Names of the key and result fields of the four posting areas (FQC0 columns of the setup
@@ -140,6 +207,49 @@ INTERFACE zif_cd_ops_postarea_types
   CONSTANTS gc_list_sep TYPE c LENGTH 1 VALUE ','.
   "! Form of a ZBTR scope of usage LIFECYCLE: flow D / C + method class (PCRE, whole value)
   CONSTANTS gc_scope_form TYPE string VALUE `[DC][A-Z0-9_]{1,3}`.
+
+  "! A key or result field of a layout (keys first, then results, in FQC0 / column order)
+  TYPES:
+    BEGIN OF ty_field,
+      name     TYPE zif_ca_ops_cfg_types=>ty_name,
+      "! Characters the reader takes (0 = no limit)
+      length   TYPE i,
+      "! '*' allowed - the reader applies it as FQC0 does
+      generic  TYPE abap_bool,
+      "! A key that must hold a value or '*'
+      required TYPE abap_bool,
+    END OF ty_field.
+  TYPES tt_field TYPE STANDARD TABLE OF ty_field WITH EMPTY KEY.
+
+  "! Layout of a purpose (FICA_Posting_Areas.md section 2; lengths from the readers' own types)
+  TYPES:
+    BEGIN OF ty_layout,
+      purpose TYPE ty_purpose,
+      area    TYPE ty_area,
+      keys    TYPE tt_field,
+      results TYPE tt_field,
+    END OF ty_layout.
+
+  "! Status of an entry in the copy from a posting area into a typed table (ZCD_OPS_POSTAREA_COPY)
+  TYPES ty_copy_status TYPE c LENGTH 12.
+  CONSTANTS:
+    BEGIN OF gc_copy,
+      "! Copied (update mode) / to be copied (test mode)
+      copy         TYPE ty_copy_status VALUE 'COPY',
+      "! Written to the typed table (update mode)
+      written      TYPE ty_copy_status VALUE 'WRITTEN',
+      "! A value is longer than the typed column (layout length): left out, enter it in the app
+      too_long     TYPE ty_copy_status VALUE 'TOO_LONG',
+      "! The target version already has rows: nothing is copied (choose an unused version)
+      version_used TYPE ty_copy_status VALUE 'VERSION_USED',
+    END OF gc_copy.
+
+  "! One posting area entry of the copy and its status
+  TYPES BEGIN OF ty_copy_row.
+  TYPES status TYPE ty_copy_status.
+  INCLUDE TYPE ty_entry.
+  TYPES END OF ty_copy_row.
+  TYPES tt_copy_row TYPE STANDARD TABLE OF ty_copy_row WITH EMPTY KEY.
 
   "! Finding of the configuration check of the posting areas (one per invalid entry)
   TYPES:

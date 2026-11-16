@@ -78,8 +78,12 @@ PAIRS = [
      'src/ebs/zif_cd_ebs_types.intf.abap', 'gc_param_default-feb_credit_ind', 'equal', None),
     # Payment model (2026-11-11): the posting-area parameters CDS reads from the ZCA_PARAM tables
     ('postarea_param_names', 'src/core/zi_cd_postareacfg.ddls.asddls', r"Def\.name\s*=\s*'(POSTAREA_\w+)'",
-     'src/core/zif_cd_ops_postarea_types.intf.abap', ['gc_param-applk', 'gc_param-pm_class', 'gc_param-ktopl'],
+     'src/core/zif_cd_ops_postarea_types.intf.abap', ['gc_param-applk', 'gc_param-pm_class', 'gc_param-ktopl',
+                                                      'gc_param-source_pm_class', 'gc_param-version_pm_class'],
      'set', None),
+    # Source per purpose (2026-11-15): the method classes are read from the posting area (P) or the typed table (T)
+    ('postarea_source_values', 'src/core/zi_cd_paymethodcls.ddls.asddls', r"MethodClassSource\s*=\s*'(\w)'",
+     'src/core/zif_cd_ops_postarea_types.intf.abap', ['gc_source-posting_area', 'gc_source-typed'], 'set', None),
     # Reversal: clearing reason 05 is the only reversal reason (user decision 2026-11-07)
     ('reversal_clearing_reason', 'cds/zi_cd_trxfinflow.ddls.asddls',
      r"ClearingReason\s*=\s*'(\w+)'",

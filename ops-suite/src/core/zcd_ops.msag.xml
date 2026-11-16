@@ -1907,6 +1907,54 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>440</MSGNR>
+     <TEXT>&amp;1 needs &amp;2 characters, posting area fields hold &amp;3 - use source T</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>441</MSGNR>
+     <TEXT>Layout needs &amp;1 keys/results, posting area holds &amp;2 - use source T</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>442</MSGNR>
+     <TEXT>Another entry of &amp;1 has the same keys - only one of them applies</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>443</MSGNR>
+     <TEXT>&amp;1 must not be blank (allowed: &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>444</MSGNR>
+     <TEXT>&amp;1 has no entries in version &amp;2 - nothing is mapped</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>445</MSGNR>
+     <TEXT>&amp;1 entries to copy into &amp;2 version &amp;3, &amp;4 left out (nothing written)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>446</MSGNR>
+     <TEXT>&amp;1 entries copied into &amp;2 version &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>447</MSGNR>
+     <TEXT>Version &amp;1 of &amp;2 already has entries - choose an unused version</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>500</MSGNR>
      <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
     </T100>

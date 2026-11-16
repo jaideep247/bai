@@ -42,6 +42,8 @@ Modification log:
            | consumer-specific abbreviation). Output unchanged.
 2026-11-15 | Check kind 'module' (licence of the operations framework: activation of a row of an unlicensed
            | module refused on save, message license_refused). Output unchanged for apps without it.
+2026-11-15 | Check kind 'generic' (typed mapping tables of a consumer: '*' refused in a key its reader cannot
+           | apply, message generic_key). Output unchanged for apps without it.
 """
 import os, re
 
@@ -89,6 +91,8 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         (ZCL_CA_OPS_CFG_CHECKS=>MODULE_LICENSED; refused under LIC_ENFORCE = X only) - message
 #         gc_msg-license_refused on the element of the enclosing condition. A row whose module follows from a
 #         field uses ('valid', field, 'zcl_ca_ops_cfg_checks=><x>_licensed', 'license_refused') instead
+#         ('generic', field): the field must not be the generic value * - a key of a typed mapping table
+#         whose reader cannot apply * (consumer apps only: message gc_msg-generic_key of the consumer)
 #         ('approved', field, table_field): the field of the table must be approved in the
 #         consumer's approved-table list (field-level lookup approval of the consumer's
 #         ZCL_<p>_OPS_CFG_CHECKS=>LOOKUP_APPROVED, the runtime check; consumer apps only) - message 812
@@ -533,6 +537,13 @@ def abap_check(t, chk, root, when=None):
                 f"       AND zcl_xx_ops_cfg_checks=>lookup_approved( iv_table = CONV #( ls_row-{tab} )",
                 f"                                                   iv_field = CONV #( ls_row-{e} ) ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}lookup_not_approved v1 = ls_row-{e} v2 = ls_row-{tab}",
+                f"                      element = {el(e)} ) INTO TABLE lt_msg.",
+                '    ENDIF.']
+    if kind == 'generic':
+        e = fmap[chk[1]]
+        star = const('val', 'generic', '*')
+        return [f"    IF ls_row-{e} = {star}.",
+                f"      INSERT VALUE #( number = {msg}generic_key v1 = {el(e)}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'window':

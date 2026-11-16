@@ -16,6 +16,10 @@ define behavior for ZC_CD_OpsCfgAll alias OpsCfgAll
   use association _PayStage { create; with draft; }
   use association _Service { create; with draft; }
   use association _ServiceMap { create; with draft; }
+  use association _MapReason { create; with draft; }
+  use association _MapMethodClass { create; with draft; }
+  use association _MapBtcCode { create; with draft; }
+  use association _MapBtcRole { create; with draft; }
 }
 
 define behavior for ZC_CD_ApprovedTable alias ApprovedTable
@@ -46,6 +50,42 @@ use etag
 }
 
 define behavior for ZC_CD_ServiceMap alias ServiceMap
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_MapReason alias MapReason
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_MapMethodClass alias MapMethodClass
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_MapBtcCode alias MapBtcCode
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_MapBtcRole alias MapBtcRole
 use etag
 {
   use update;

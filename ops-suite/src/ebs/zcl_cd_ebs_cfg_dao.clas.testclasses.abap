@@ -13,6 +13,7 @@
 *& 2026-11-07 | Read-only scope: blocks-posting flag (A27) removed.
 *& 2026-11-08 | Customer posting areas: ltc_postarea_reads - BTC map from ZBTM and reasons from ZRSN with
 *&            | the in-memory posting areas (ZCL_CD_OPS_POSTAREA_MEM); BTC map / reason map OSQL tests removed.
+*& 2026-11-15 | ZBTM entries are rows of the typed table (ADD_TYPED, user decision 2026-11-15).
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -349,7 +350,7 @@ CLASS ltc_postarea_reads DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_test,
-        btm        TYPE zif_cd_ops_postarea_types=>ty_area VALUE 'ZBTM',
+        btm        TYPE zif_cd_ops_postarea_types=>ty_purpose VALUE 'BTM',
         rsn        TYPE zif_cd_ops_postarea_types=>ty_area VALUE 'ZRSN',
         bank       TYPE zif_cd_ebs_types=>ty_bank_key VALUE 'JPMC',
         bai_code   TYPE zif_cd_ebs_types=>ty_btc_code VALUE '495',
@@ -410,12 +411,12 @@ CLASS ltc_postarea_reads IMPLEMENTATION.
     IF is_flags-btc_entries = abap_true.
       " SCHEME / CODE (ISO domain) / FAMILY / SUB-FAMILY / BANK / FLOW ->
       " CATEGORY / RULE_GROUP / EXP_CDI / PAY_METHOD / POSTING_RULE / ACTION / DISPOSITION
-      mo_mem->add( iv_area = gc_test-btm iv_keys = |BAI2/{ gc_test-bai_code }///*/*|
-                   iv_results = |{ gc_test-category }//D/WIRE//AUTO_POST/| ).
-      mo_mem->add( iv_area = gc_test-btm iv_keys = |ISO/PMNT/ICDT/*/{ gc_test-bank }/D|
-                   iv_results = |W02/W01/D/WIRE//AUTO_POST/| ).
-      mo_mem->add( iv_area = gc_test-btm iv_keys = |ISO/PMNT/ICDT/ARET/*/C|
-                   iv_results = |D02//C/ACH//EXCEPTION/NOT_POSTED| ).
+      mo_mem->add_typed( iv_purpose = gc_test-btm iv_keys = |BAI2/{ gc_test-bai_code }///*/*|
+                         iv_results = |{ gc_test-category }//D/WIRE//AUTO_POST/POSTED| ).
+      mo_mem->add_typed( iv_purpose = gc_test-btm iv_keys = |ISO/PMNT/ICDT/*/{ gc_test-bank }/D|
+                         iv_results = |W02/W01/D/WIRE//AUTO_POST/POSTED| ).
+      mo_mem->add_typed( iv_purpose = gc_test-btm iv_keys = |ISO/PMNT/ICDT/ARET/*/C|
+                         iv_results = |D02//C/ACH//EXCEPTION/NOT_POSTED| ).
     ENDIF.
     IF is_flags-reason_entries = abap_true.
       mo_mem->add( iv_area = gc_test-rsn iv_keys = |{ gc_test-reason_ret }| iv_results = |{ gc_test-fica_ret }/| ).

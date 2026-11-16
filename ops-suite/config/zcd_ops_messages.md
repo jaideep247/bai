@@ -322,6 +322,14 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 431 | Payment method &1 of flow &2 has no entry with house bank * (&3) |
 | 432 | Posting area &1 has no entries - nothing is mapped |
 | 433 | &1 differs between the entries of &2 (&3) |
+| 440 | &1 needs &2 characters, posting area fields hold &3 - use source T |
+| 441 | Layout needs &1 keys/results, posting area holds &2 - use source T |
+| 442 | Another entry of &1 has the same keys - only one of them applies |
+| 443 | &1 must not be blank (allowed: &2) |
+| 444 | &1 has no entries in version &2 - nothing is mapped |
+| 445 | &1 entries to copy into &2 version &3, &4 left out (nothing written) |
+| 446 | &1 entries copied into &2 version &3 |
+| 447 | Version &1 of &2 already has entries - choose an unused version |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |

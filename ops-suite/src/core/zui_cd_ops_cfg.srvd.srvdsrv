@@ -6,4 +6,8 @@ define service ZUI_CD_OPS_CFG {
   expose ZC_CD_PayStage as PayStage;
   expose ZC_CD_Service as Service;
   expose ZC_CD_ServiceMap as ServiceMap;
+  expose ZC_CD_MapReason as MapReason;
+  expose ZC_CD_MapMethodClass as MapMethodClass;
+  expose ZC_CD_MapBtcCode as MapBtcCode;
+  expose ZC_CD_MapBtcRole as MapBtcRole;
 }

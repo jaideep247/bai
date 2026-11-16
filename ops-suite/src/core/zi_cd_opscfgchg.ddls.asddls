@@ -22,3 +22,23 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zcd_ops_maprsn
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zcd_ops_mappmc
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zcd_ops_mapbtm
+  {
+    last_changed_at as LastChangedAt
+  }
+union all
+  select from zcd_ops_mapbtr
+  {
+    last_changed_at as LastChangedAt
+  }
