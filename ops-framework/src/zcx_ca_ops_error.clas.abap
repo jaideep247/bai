@@ -11,7 +11,7 @@
 *& for its own message class and calls the superclass for every other.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-10 | Moved from ZCX_CD_OPS_ERROR to the reusable framework ZCA_OPS (message class ZCA_OPS,
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (message class ZCA_OPS,
 *&            | not final: consumers inherit; CLASSIFY replaces the message-number rules of the utility).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - checked exception</p>

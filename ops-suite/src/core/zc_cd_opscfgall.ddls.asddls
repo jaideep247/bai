@@ -13,5 +13,9 @@ define root view entity ZC_CD_OpsCfgAll
       _ApprovedTable : redirected to composition child ZC_CD_ApprovedTable,
       _PayStage : redirected to composition child ZC_CD_PayStage,
       _Service : redirected to composition child ZC_CD_Service,
-      _ServiceMap : redirected to composition child ZC_CD_ServiceMap
+      _ServiceMap : redirected to composition child ZC_CD_ServiceMap,
+      _MapReason : redirected to composition child ZC_CD_MapReason,
+      _MapMethodClass : redirected to composition child ZC_CD_MapMethodClass,
+      _MapBtcCode : redirected to composition child ZC_CD_MapBtcCode,
+      _MapBtcRole : redirected to composition child ZC_CD_MapBtcRole
 }

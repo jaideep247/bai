@@ -336,7 +336,7 @@ CLASS ltc_pf_ingest IMPLEMENTATION.
     mo_ack = NEW #( ).
     mo_license = NEW #( ).
     mo_seed = NEW #( ).
-    zcl_ca_ops_injector=>inject_pf_dao( mo_dao ).
+    zcl_ca_ops_pf_injector=>inject_dao( mo_dao ).
     zcl_ca_ops_injector=>inject_license( mo_license ).
     zcl_ca_ops_injector=>inject_auth( NEW ltd_pf_auth( ) ).
     zcl_ca_ops_injector=>inject_clock( NEW ltd_pf_clock( ) ).
@@ -351,7 +351,7 @@ CLASS ltc_pf_ingest IMPLEMENTATION.
 
 
   METHOD teardown.
-    zcl_ca_ops_injector=>reset( ).
+    zcl_ca_ops_pf_injector=>reset( ).
   ENDMETHOD.
 
 
@@ -427,14 +427,14 @@ CLASS ltc_pf_ingest IMPLEMENTATION.
     run( ).
     DATA(ls_first) = file( ).
     DATA(lt_first) = VALUE zif_ca_ops_pf_types=>tt_ms( FOR ls_m IN mo_dao->mt_ms ( milestone = ls_m-milestone status = ls_m-status ) ).
-    cl_abap_unit_assert=>assert_equals( act = mo_license->mv_module exp = zif_ca_ops_lic_types=>gc_module-cashops
-                                        msg = 'Module CASHOPS gated' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_license->mv_module exp = zif_ca_ops_lic_types=>gc_module-cash_ops
+                                        msg = 'Module CASH_OPS gated' ).
     cl_abap_unit_assert=>assert_equals( act = ls_first-next_ms exp = zif_ca_ops_pf_types=>gc_milestone-accepted
                                         msg = 'Flagship: acceptance missing' ).
     cl_abap_unit_assert=>assert_equals( act = ls_first-overdue_min exp = 60 msg = 'Overdue an hour' ).
     cl_abap_unit_assert=>assert_equals( act = ls_first-gen_job exp = 'ZT_MEDIUM' msg = 'Job of the run' ).
 
-    zcl_ca_ops_injector=>reset( ).
+    zcl_ca_ops_pf_injector=>reset( ).
     fresh( ).
     given( direct( ) ).
     run( ).

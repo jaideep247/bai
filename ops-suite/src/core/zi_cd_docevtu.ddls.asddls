@@ -2,8 +2,9 @@
 // Purpose: Document-change events of the payment engine for the payment model (section document_event of
 //          config/payment_model/mapping.json, build C): UNION ALL of
 //          REVERSAL - a payment document reversed in the payment engine: the payment's document header (DFKKKO) carries
-//                     the reversal document in STBEL (the reversal evidence of the trace, Payment_Trace.md section 4.2,
-//                     and of the snapshot source REVERSALS); date / time / user of the reversal document's header;
+//                     the reversal document in STORB (STBEL is filled on the reversal and names the reversed document -
+//                     reference system A4H; the snapshot source REVERSALS reads that side); the reversal's header is read
+//                     by key; date / time / user of the reversal document's header;
 //          VOID     - a cheque payment stopped (DPAYH-ZZ_PAYMENT_STATUS STOPPED, confirmed 2026-11-08); the status change
 //                     time is not stored, so the date is the run date of the payment; the reissue is a separate payment
 //                     with a new payment document and cheque number (confirmed) - its link to the stopped one needs the
@@ -14,8 +15,10 @@
 //          Dashboard_Production_Support.md section 9); returns (DFKKRP) stay the returns evidence, not a change event.
 //          Read-only.
 // Modification log: 2026-11-11 | Initial version (reversal and reset-clearing tracking, build C).
-// VERIFY-SE11: DFKKKO-STBEL (reversal document), CPUDT, CPUTM (as the snapshot source REVERSALS), ERNAM (user of the
-//              reversal document - not read elsewhere in the suite).
+//                   2026-11-16 | Reversal by the payment document's STORB (was STBEL, which is filled on the reversal and
+//                              | names the reversed document - reference system A4H).
+// VERIFY: V260 STORB filled on the original by a reversal (fixture); CPUDT, CPUTM (as the snapshot source REVERSALS),
+//         ERNAM (user of the reversal document - not read elsewhere in the suite).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Payment model - document-change events'
 @Metadata.ignorePropagatedAnnotations: true
@@ -23,7 +26,7 @@
 define view entity ZI_CD_DocEvtU
   as select from ZI_CD_PayLifeRun as Pay
     inner join   dfkkko           as Org on Org.opbel = Pay.PaymentDocument
-    inner join   dfkkko           as Rev on Rev.opbel = Org.stbel
+    inner join   dfkkko           as Rev on Rev.opbel = Org.storb
 {
   key cast( Pay.PaymentDocument as abap.char( 20 ) )        as PaymentDocument,
   key cast( 'REVERSAL' as abap.char( 16 ) )                 as EventType,
@@ -39,7 +42,7 @@ define view entity ZI_CD_DocEvtU
       cast( 'SUBLEDGER' as abap.char( 10 ) )                as EventSource
 }
 where
-  Org.stbel <> ''
+  Org.storb <> ''
 union all select from ZI_CD_PayLifeRun as Pay
 {
   key cast( Pay.PaymentDocument as abap.char( 20 ) )        as PaymentDocument,

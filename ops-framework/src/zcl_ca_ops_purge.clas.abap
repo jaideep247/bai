@@ -18,11 +18,13 @@
 *& 2026-11-07 | PURGE_PACKAGE_SIZE / RETENTION_DAYS_ names and default from the types interface; one shared
 *&            | helper PARAM_INT over GET_PARAMS (private int_param removed); retention days in ZCA_PARAM.
 *& 2026-11-10 | RUN also purges the exception history of its findings (HISTORY).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE to the reusable framework ZCA_OPS: built-in targets RUN and
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: built-in targets RUN and
 *&            | ALERT_LOG, consumer targets from the registry ZCA_OPS_PURGE (plug-ins of
 *&            | ZIF_CA_OPS_PURGE_TARGET, retention parameter per row); result column DEPENDENT (was FINDINGS).
 *& 2026-11-10 | Built-in target REVIEW (sign-offs of the daily control review, RETENTION_DAYS_REVIEW 400).
 *& 2026-11-11 | Built-in target DOWNTIME (ended planned downtime windows, DOWNTIME_RETENTION_DAYS 400).
+*& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
+*&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge</p>
 CLASS zcl_ca_ops_purge DEFINITION
@@ -132,12 +134,14 @@ CLASS zcl_ca_ops_purge IMPLEMENTATION.
                                                                iv_today  = lv_today ).
       ELSE.
         DO.
+          DATA lv_dependent TYPE i.
+          DATA lv_history TYPE i.
           DATA(lv_deleted) = <ls_target>-handler->delete_package( EXPORTING iv_target    = <ls_target>-target
                                                                             iv_cutoff    = lv_cutoff_ts
                                                                             iv_today     = lv_today
                                                                             iv_max       = lv_package
-                                                                  IMPORTING ev_dependent = DATA(lv_dependent)
-                                                                            ev_history   = DATA(lv_history) ).
+                                                                  IMPORTING ev_dependent = lv_dependent
+                                                                            ev_history   = lv_history ).
           lo_store->commit( ).
           ls_result-rows      += lv_deleted.
           ls_result-dependent += lv_dependent.

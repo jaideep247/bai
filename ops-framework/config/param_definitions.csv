@@ -24,6 +24,30 @@ CA_OPS,BRK_PACKAGE_SIZE,P,INT,1,5000,500,,,,,Assignments per journal-line read o
 CA_OPS,BRK_STALE_DAYS,P,INT,0,31,2,,,,,Days after which a break snapshot of an account is stale,OPS FRAMEWORK
 CA_OPS,BRK_TIMING_DAYS,P,INT,0,10,3,,,,,Last days of a month / days to clear that count as timing,OPS FRAMEWORK
 CA_OPS,BRK_UNEXPLAINED_DAYS,P,INT,0,365,5,,,,,Days after which an unexplained break is an exception,OPS FRAMEWORK
+CA_OPS,CASH_CALENDAR,P,CHAR,,,,"[A-Z0-9]{0,2}",,,,Factory calendar of the cash checks (blank = days unknown),OPS FRAMEWORK
+CA_OPS,CASH_CLR_AUGRD,P,LIST,,,,,,,,Clearing reasons of a reset after payout (blank = any),OPS FRAMEWORK
+CA_OPS,CASH_CLR_DAYS,P,INT,1,31,1,,,,,Days back a clearing reset or payment reversal is reported,OPS FRAMEWORK
+CA_OPS,CASH_EBS_ACCOUNT_DAYS,P,INT,1,92,30,,,,,Days back an account with a statement is expected daily,OPS FRAMEWORK
+CA_OPS,CASH_EBS_FICA_BANKS,P,LIST,,,,,,,,House banks whose statements go to FI-CA (blank = pending),OPS FRAMEWORK
+CA_OPS,CASH_EBS_LAG_DAYS,P,INT,0,7,1,,,,,Days after the statement date a statement is expected,OPS FRAMEWORK
+CA_OPS,CASH_EBS_POST_DAYS,P,INT,0,31,1,,,,,Days after import a statement line must be posted,OPS FRAMEWORK
+CA_OPS,CASH_GLKEY_GL_DAYS,P,INT,0,31,1,,,,,Days after closing a reconciliation key must reach the G/L,OPS FRAMEWORK
+CA_OPS,CASH_GLKEY_OPEN_DAYS,P,INT,0,31,1,,,,,Days a reconciliation key may stay open,OPS FRAMEWORK
+CA_OPS,CASH_GL_AWTYP,P,CHAR,,,,"[A-Z0-9]{0,5}",,,,Reference type of the G/L transfer (blank = pending),OPS FRAMEWORK
+CA_OPS,CASH_LOOKBACK_DAYS,P,INT,1,62,7,,,,,Days of the expected-day window of the cash checks,OPS FRAMEWORK
+CA_OPS,CASH_LOT_CLARIF_DAYS,P,INT,0,62,3,,,,,Days a payment lot item may wait in clarification,OPS FRAMEWORK
+CA_OPS,CASH_LOT_DAYS,P,INT,0,31,1,,,,,Days a payment lot may stay not posted or not closed,OPS FRAMEWORK
+CA_OPS,CASH_LOT_DONE_STATUS,P,LIST,,,,,,,,Status values of a posted / closed payment lot (pending),OPS FRAMEWORK
+CA_OPS,CASH_MAX_ROWS,P,INT,1,10000,500,,,,,Most objects one rule of a cash check reads,OPS FRAMEWORK
+CA_OPS,CASH_PAYRUN_BUKRS,P,LIST,,,,,,,,Company codes expected to pay each working day (blank = any),OPS FRAMEWORK
+CA_OPS,CASH_PAYRUN_GAP_ACTIVE,P,BOOL,,,,,,,,Proposal-to-payment gap rule on (X; after VERIFY V221),OPS FRAMEWORK
+CA_OPS,CASH_PAYRUN_JOBNAME,P,CHAR,,,,"[A-Z0-9_*/.-]{0,32}",,,,Job name of the payment run (* = any characters),OPS FRAMEWORK
+CA_OPS,CASH_PAYRUN_LAG_DAYS,P,INT,0,7,1,,,,,Days after the run date a payment run is expected,OPS FRAMEWORK
+CA_OPS,CASH_PAYRUN_MIN_AGE_DAYS,P,INT,0,31,1,,,,,Days after the run date its payments must be complete,OPS FRAMEWORK
+CA_OPS,CASH_PAYRUN_ORDER_METHODS,P,LIST,,,,,,,,Payment-order methods: no payment document by design (list),OPS FRAMEWORK
+CA_OPS,CASH_RET_CLARIF_DAYS,P,INT,0,62,3,,,,,Days a return may wait in clarification,OPS FRAMEWORK
+CA_OPS,CASH_RET_DAYS,P,INT,0,31,1,,,,,Days a returns lot or its returns document may be pending,OPS FRAMEWORK
+CA_OPS,CASH_RET_DONE_STATUS,P,LIST,,,,,,,,Status values of a closed returns lot (pending),OPS FRAMEWORK
 CA_OPS,CAT_OUTAGE_DAYS,P,INT,1,31,3,,,,,Days back the outage check evaluates ended downtime windows,OPS FRAMEWORK
 CA_OPS,CAT_OUTAGE_MARGIN_DAYS,P,INT,0,7,1,,,,,Days after a downtime window rows without a time field cover,OPS FRAMEWORK
 CA_OPS,CHECK_STALE_MIN_DEFAULT,P,INT,1,,1500,,,,,Area dashboard: a run older than this is stale (minutes),OPS FRAMEWORK

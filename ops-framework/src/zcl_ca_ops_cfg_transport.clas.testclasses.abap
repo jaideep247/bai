@@ -7,8 +7,8 @@
 *& is replaced by TEST-INJECTION; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
-*& 2026-11-08 | Example table ZT_CONFIG (ZT_CONFIG_OLD is now the customer posting area ZBTM).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_TRANSPORT to the reusable framework ZCA_OPS (test include).
+*& 2026-11-08 | Example table ZT_CONFIG (ZT_CONFIG_OLD is now a customer posting area).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_transport DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

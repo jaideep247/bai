@@ -1907,6 +1907,54 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>440</MSGNR>
+     <TEXT>&amp;1 needs &amp;2 characters, posting area fields hold &amp;3 - use source T</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>441</MSGNR>
+     <TEXT>Layout needs &amp;1 keys/results, posting area holds &amp;2 - use source T</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>442</MSGNR>
+     <TEXT>Another entry of &amp;1 has the same keys - only one of them applies</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>443</MSGNR>
+     <TEXT>&amp;1 must not be blank (allowed: &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>444</MSGNR>
+     <TEXT>&amp;1 has no entries in version &amp;2 - nothing is mapped</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>445</MSGNR>
+     <TEXT>&amp;1 entries to copy into &amp;2 version &amp;3, &amp;4 left out (nothing written)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>446</MSGNR>
+     <TEXT>&amp;1 entries copied into &amp;2 version &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>447</MSGNR>
+     <TEXT>Version &amp;1 of &amp;2 already has entries - choose an unused version</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>500</MSGNR>
      <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
     </T100>
@@ -3193,6 +3241,138 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>863</MSGNR>
      <TEXT>Document changes: read capped at &amp;1 rows (window &amp;2 to &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>900</MSGNR>
+     <TEXT>Cheque &amp;1 pending (status &amp;2) for &amp;3 days, payment &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>901</MSGNR>
+     <TEXT>Cheque &amp;1 pending (status &amp;2) for &amp;3 days: no cheque register row</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>902</MSGNR>
+     <TEXT>&amp;1: &amp;2 open item(s) in currency &amp;3, oldest &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>903</MSGNR>
+     <TEXT>Cheque payment &amp;1 of run &amp;2 (method &amp;3, bank &amp;4) has no cheque number</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>904</MSGNR>
+     <TEXT>Check &amp;1 not evaluated: &amp;2 is blank or a placeholder</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>905</MSGNR>
+     <TEXT>Check &amp;1: read capped at &amp;2 rows (window &amp;3 to &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>906</MSGNR>
+     <TEXT>&amp;1: file due &amp;2 by &amp;3 not generated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>907</MSGNR>
+     <TEXT>&amp;1: file due &amp;2 by &amp;3 first seen at &amp;4 (late)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>908</MSGNR>
+     <TEXT>&amp;1: file due &amp;2 is empty (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>909</MSGNR>
+     <TEXT>&amp;1: due file not evaluated -</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>910</MSGNR>
+     <TEXT>Request &amp;1 SCHEDULED &amp;2 h ago: no answer of the source</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>911</MSGNR>
+     <TEXT>Request &amp;1 rejected by the source &amp;2 h ago: no successful refund</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>912</MSGNR>
+     <TEXT>Request &amp;1 rejected by the source: premium refund failed (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>913</MSGNR>
+     <TEXT>Deadline: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>914</MSGNR>
+     <TEXT>Age (days): &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>915</MSGNR>
+     <TEXT>Control: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>916</MSGNR>
+     <TEXT>Age (hours): &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>917</MSGNR>
+     <TEXT>Evidence: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>918</MSGNR>
+     <TEXT>no DEADLINE row of day type * in ZCD_FMON_SLA</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>919</MSGNR>
+     <TEXT>Factory calendar '&amp;1' cannot be read (CAL of the check row)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>920</MSGNR>
+     <TEXT>interface not active in ZCD_FMON_IFACE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>921</MSGNR>
+     <TEXT>Due rule &amp;1 unknown (WHEN=BUSDAY or WHEN=RETURNS)</TEXT>
     </T100>
    </T100>
   </asx:values>

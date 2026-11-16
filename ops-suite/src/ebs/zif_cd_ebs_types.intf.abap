@@ -42,6 +42,8 @@
 *& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *& 2026-11-08 | Customer posting areas: TY_BTC_MAP (ZBTM, RET_REASON dropped - read by no rule) and TY_REASON_MAP
 *&            | (ZRSN) are entries of FI-CA posting areas; GC_ISO_SEPARATOR.
+*& 2026-11-15 | GC_DISPOSITION-POSTED: ZBTM is the typed table ZCD_OPS_MAPBTM (user decision 2026-11-15),
+*&            | every row states its disposition.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -323,13 +325,15 @@ INTERFACE zif_cd_ebs_types
       action      TYPE zif_ca_ops_types=>ty_action,
       active      TYPE abap_bool,
       description TYPE c LENGTH 60,
-      "! A26: expected disposition - blank = posted as usual, NOT_POSTED = never posted
+      "! A26: expected disposition - POSTED (or blank) = posted as usual, NOT_POSTED = never posted
       disposition TYPE c LENGTH 10,
     END OF ty_btc_map.
 
   "! Expected disposition of a bank transaction code (posting area ZBTM, result DISPOSITION)
   CONSTANTS:
     BEGIN OF gc_disposition,
+      "! Posted as usual (typed table ZCD_OPS_MAPBTM: stated on every row, user decision 2026-11-15)
+      posted     TYPE c LENGTH 10 VALUE 'POSTED',
       not_posted TYPE c LENGTH 10 VALUE 'NOT_POSTED',
     END OF gc_disposition.
   TYPES tt_btc_map TYPE STANDARD TABLE OF ty_btc_map WITH EMPTY KEY.

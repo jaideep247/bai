@@ -18,7 +18,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Test seam CTS_API; API error kept in a local, raised after the seam (coverage gap closure).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_TRANSPORT to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops framework - config apps: transport recording</p>
 CLASS zcl_ca_ops_cfg_transport DEFINITION

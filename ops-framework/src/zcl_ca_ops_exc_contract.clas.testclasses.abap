@@ -6,10 +6,12 @@
 *& evidence row join FIELD=value pairs (blank values left out) and come
 *& back as the same pairs (ZCL_CA_OPS_EVIDENCE=>PAIRS); MISSING names every
 *& gap of an empty finding and none of a complete one, and a finding whose
-*& payments all have unknown amounts needs no currency. Pure. Does not
-*& prove live SAP runtime behavior.
+*& payments all have unknown amounts needs no currency (nor does an absence
+*& with UNKNOWN_COUNT 1); a notice (action NOTIFY) needs no deadline.
+*& Pure. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-15 | Initial version (build K: exception contract).
+*& 2026-11-16 | NOTICE_NEEDS_NO_DEADLINE (merge with build N's cash checks).
 *&---------------------------------------------------------------------*
 CLASS ltc_exc_contract DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -21,6 +23,7 @@ CLASS ltc_exc_contract DEFINITION FINAL FOR TESTING
     METHODS gaps_of_empty         FOR TESTING.
     METHODS complete_has_no_gap   FOR TESTING.
     METHODS unknown_needs_no_cur  FOR TESTING.
+    METHODS notice_needs_no_deadline FOR TESTING.
 ENDCLASS.
 
 
@@ -68,6 +71,23 @@ CLASS ltc_exc_contract IMPLEMENTATION.
                                                                resp_source = zif_ca_ops_exc_contract=>gc_resp_source-process
                                                                evid_key = 'K' ) ).
     cl_abap_unit_assert=>assert_initial( act = lt_gaps msg = 'Amounts not known: no currency to name' ).
+  ENDMETHOD.
+
+
+
+  METHOD notice_needs_no_deadline.
+    DATA(lt_gaps) = zcl_ca_ops_exc_contract=>missing( VALUE #( action = zif_ca_ops_types=>gc_action-notify
+                                                               unknown_count = 1 stage = 'JOB'
+                                                               resp_source = zif_ca_ops_exc_contract=>gc_resp_source-none
+                                                               evid_key = 'K' ) ).
+    cl_abap_unit_assert=>assert_initial( act = lt_gaps msg = 'A rule not evaluated asks for no response by a deadline' ).
+    lt_gaps = zcl_ca_ops_exc_contract=>missing( VALUE #( action = zif_ca_ops_types=>gc_action-exception
+                                                         unknown_count = 1 stage = 'JOB'
+                                                         resp_source = zif_ca_ops_exc_contract=>gc_resp_source-none
+                                                         evid_key = 'K' ) ).
+    cl_abap_unit_assert=>assert_equals( act = lt_gaps exp = VALUE zif_ca_ops_exc_contract=>tt_gap(
+                                                                ( zif_ca_ops_exc_contract=>gc_gap-deadline ) )
+                                        msg = 'An exception needs its deadline' ).
   ENDMETHOD.
 
 ENDCLASS.

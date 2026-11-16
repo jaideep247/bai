@@ -153,7 +153,7 @@ CLASS ltc_chk_payfile IMPLEMENTATION.
   METHOD setup.
     mo_dao = NEW #( ).
     mo_seed = NEW #( ).
-    zcl_ca_ops_injector=>inject_pf_dao( mo_dao ).
+    zcl_ca_ops_pf_injector=>inject_dao( mo_dao ).
     zcl_ca_ops_injector=>inject_owner( NEW ltd_chk_owner( ) ).
     zcl_ca_ops_injector=>inject_catalog( NEW ltd_chk_catalog( ) ).
     zcl_ca_ops_injector=>inject_clock( NEW ltd_chk_clock( ) ).
@@ -162,7 +162,7 @@ CLASS ltc_chk_payfile IMPLEMENTATION.
 
 
   METHOD teardown.
-    zcl_ca_ops_injector=>reset( ).
+    zcl_ca_ops_pf_injector=>reset( ).
   ENDMETHOD.
 
 

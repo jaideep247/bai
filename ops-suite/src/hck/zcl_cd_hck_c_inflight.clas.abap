@@ -81,6 +81,8 @@
 *&            | ageing by the shared rule ZCL_CD_HCK_PAY_AGEING (the snapshot marks late payments with it); not yet
 *&            | snapshotted = entered after the DOCUMENTS watermark (a deleted clean payment is not re-evaluated
 *&            | live).
+*& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
+*&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none (also the calendar of
@@ -898,8 +900,9 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
     " (a) per payment: the bank ACK of the payment older than the grace while the status says ISSUED
     IF lt_due IS NOT INITIAL.
+      DATA lv_has_time TYPE abap_bool.
       DATA(lt_acks) = acks_of( EXPORTING it_payments = lt_due
-                               IMPORTING ev_has_time = DATA(lv_has_time) ).
+                               IMPORTING ev_has_time = lv_has_time ).
       LOOP AT lt_due ASSIGNING FIELD-SYMBOL(<ls_payment>).
         DATA(lv_status) = VALUE #( lt_due_status[ doc1r = <ls_payment>-doc1r ]-status OPTIONAL ).
         READ TABLE lt_acks ASSIGNING FIELD-SYMBOL(<ls_ack>) WITH TABLE KEY doc1r = <ls_payment>-doc1r.

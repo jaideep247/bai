@@ -27,7 +27,7 @@
 *& 2026-11-10 | An alert ID that cannot be generated raises 802 (was: initial ID, the second one a duplicate
 *&            | key); the caller records ALERT_FAILED. Test seam ALERT_ID. Decisions logged before the error
 *&            | are still written. A failed delivery keeps the exception trace in ZCA_OPS_ALLOG-ERROR.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_ROUTER to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | Alert e-mail templates (user decisions 2026-11-10): settings of the e-mail (ALERT_TIME_ZONE,
 *&            | ALERT_EXC_APP_LINK) and the stored exceptions of the run (GET_EXCEPTION_FACTS) for the
 *&            | context; template of the message, else the channel's, else ALERT_TEMPLATE_DEFAULT; rendered

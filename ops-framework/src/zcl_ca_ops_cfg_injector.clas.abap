@@ -6,7 +6,7 @@
 *& GLOBAL FRIEND.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_INJECTOR to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops framework - config apps: test injector</p>
 CLASS zcl_ca_ops_cfg_injector DEFINITION

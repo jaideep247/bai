@@ -10,6 +10,9 @@
 *& 2026-11-08 | ltc_posting_areas: configuration check of the customer posting areas (in-memory posting
 *&            | areas ZCL_CD_OPS_POSTAREA_MEM, EBS rule groups from a configuration double) - every validation.
 *& 2026-11-10 | Tests of the generic checks moved with them to the framework ZCA_OPS (ZCL_CA_OPS_CFG_CHECKS).
+*& 2026-11-15 | Source per purpose: ZBTM / ZBTR are typed tables (ADD_TYPED; ZBTM disposition stated, user
+*&            | decision 2026-11-15); posting area refused for a layout that does not fit (440 / 441),
+*&            | duplicate key sets (442), missing disposition (443), empty active version (444).
 *&---------------------------------------------------------------------*
 CLASS ltc_checks DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -83,6 +86,12 @@ CLASS ltc_posting_areas DEFINITION FINAL FOR TESTING
         btm TYPE zif_cd_ops_postarea_types=>ty_area VALUE 'ZBTM',
         btr TYPE zif_cd_ops_postarea_types=>ty_area VALUE 'ZBTR',
       END OF gc_area.
+    "! Purposes read from the typed tables (delivered source T)
+    CONSTANTS:
+      BEGIN OF gc_typed,
+        btm TYPE zif_cd_ops_postarea_types=>ty_purpose VALUE 'BTM',
+        btr TYPE zif_cd_ops_postarea_types=>ty_purpose VALUE 'BTR',
+      END OF gc_typed.
     CONSTANTS gc_group TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'W01'.
 
     TYPES:
@@ -102,9 +111,12 @@ CLASS ltc_posting_areas DEFINITION FINAL FOR TESTING
         recon_scheme    TYPE abap_bool,
         rule_group      TYPE abap_bool,
         iso_parts       TYPE abap_bool,
+        duplicates      TYPE abap_bool,
+        no_disposition  TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_mem TYPE REF TO zcl_cd_ops_postarea_mem.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     METHODS setup.
     METHODS teardown.
@@ -125,6 +137,10 @@ CLASS ltc_posting_areas DEFINITION FINAL FOR TESTING
     METHODS recon_scheme_bai2_no_compare FOR TESTING.
     METHODS rule_group_needs_active_rule FOR TESTING.
     METHODS iso_code_needs_its_parts     FOR TESTING.
+    METHODS posting_area_misfit_refused  FOR TESTING.
+    METHODS duplicate_key_sets           FOR TESTING.
+    METHODS disposition_required         FOR TESTING.
+    METHODS empty_version_is_warning     FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -149,7 +165,8 @@ CLASS ltc_posting_areas IMPLEMENTATION.
     DATA(lo_ebs) = NEW ltd_ebs_cfg( ).
     INSERT VALUE #( rule_group = gc_group active = abap_true ) INTO TABLE lo_ebs->mt_rules.
     zcl_cd_ebs_injector=>inject_cfg_dao( lo_ebs ).
-    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     mo_mem = NEW #( ).
     zcl_cd_ops_postarea_injector=>inject_dao( mo_mem ).
   ENDMETHOD.
@@ -159,7 +176,7 @@ CLASS ltc_posting_areas IMPLEMENTATION.
     zcl_cd_ops_postarea_injector=>reset( ).
     zcl_cd_ops_injector=>reset( ).
     zcl_cd_ebs_injector=>reset( ).
-    CLEAR mo_mem.
+    CLEAR: mo_mem, mo_params.
   ENDMETHOD.
 
 
@@ -175,24 +192,24 @@ CLASS ltc_posting_areas IMPLEMENTATION.
     mo_mem->add( iv_area = gc_area-pmc iv_keys = `D/G/*` iv_results = `ACH/VALUE_DATE/` ).
     mo_mem->add( iv_area = gc_area-pmc iv_keys = `D/X/*` iv_results = `ACI/VALUE_DATE/` ).
     mo_mem->add( iv_area = gc_area-pmc iv_keys = `D/X/BARC1` iv_results = `ACI//GB` ).
-    mo_mem->add( iv_area = gc_area-btm iv_keys = `BAI2/495///*/*` iv_results = `W01//D/WIRE//AUTO_POST/` ).
-    mo_mem->add( iv_area = gc_area-btm iv_keys = `ISO/PMNT/ICDT/*/JPMC/D` iv_results = `W02/W01/D/WIRE//AUTO_POST/` ).
-    mo_mem->add( iv_area = gc_area-btm iv_keys = `PRTRY/NOC///*/*` iv_results = `N01//*/ACH//BLOCK/` ).
-    mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/DWIR/BAI2/495` iv_results = `ORIGINAL/` ).
-    mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/DACH/BAI2/168` iv_results = `RETURNED/X` ).
-    mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/DACI/ISO/PMNT/ICDT/ARET` iv_results = `RETURNED/X` ).
-    mo_mem->add( iv_area = gc_area-btr iv_keys = `RECON/DISB_WIRE/BAI2/495` iv_results = `LEG` ).
+    mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `BAI2/495///*/*` iv_results = `W01//D/WIRE//AUTO_POST/POSTED` ).
+    mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `ISO/PMNT/ICDT/*/JPMC/D` iv_results = `W02/W01/D/WIRE//AUTO_POST/POSTED` ).
+    mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `PRTRY/NOC///*/*` iv_results = `N01//*/ACH//BLOCK/POSTED` ).
+    mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/DWIR/BAI2/495` iv_results = `ORIGINAL/` ).
+    mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/DACH/BAI2/168` iv_results = `RETURNED/X` ).
+    mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/DACI/ISO/PMNT/ICDT/ARET` iv_results = `RETURNED/X` ).
+    mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `RECON/DISB_WIRE/BAI2/495` iv_results = `LEG` ).
     " One invalid entry per scenario
     IF is_flags-generic_keys = abap_true.
-      mo_mem->add( iv_area = gc_area-btm iv_keys = `*/196///*/*` iv_results = `W01//D/WIRE//AUTO_POST/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `*/196///*/*` iv_results = `W01//D/WIRE//AUTO_POST/POSTED` ).
       mo_mem->add( iv_area = gc_area-pmc iv_keys = `*/E/*` iv_results = `WIR/VALUE_DATE/` ).
-      mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/DWIR/BAI2/*` iv_results = `ORIGINAL/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/DWIR/BAI2/*` iv_results = `ORIGINAL/` ).
     ENDIF.
     IF is_flags-too_long = abap_true.
       mo_mem->add( iv_area = gc_area-rsn iv_keys = `R02` iv_results = `ABCD/` ).
     ENDIF.
     IF is_flags-blank_bank = abap_true.
-      mo_mem->add( iv_area = gc_area-btm iv_keys = `BAI2/466///` iv_results = `W01//D/ACH//AUTO_POST/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `BAI2/466///` iv_results = `W01//D/ACH//AUTO_POST/POSTED` ).
     ENDIF.
     IF is_flags-noc_flag = abap_true.
       mo_mem->add( iv_area = gc_area-rsn iv_keys = `C02` iv_results = `/Y` ).
@@ -210,25 +227,32 @@ CLASS ltc_posting_areas IMPLEMENTATION.
       mo_mem->add( iv_area = gc_area-pmc iv_keys = `D/H/*` iv_results = `ACH/ISSUE_DATE/` ).
     ENDIF.
     IF is_flags-unknown_class = abap_true.
-      mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/DCHQ/BAI2/581` iv_results = `CASHED/R` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/DCHQ/BAI2/581` iv_results = `CASHED/R` ).
     ENDIF.
     IF is_flags-roles_per_usage = abap_true.
-      mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/DACH/BAI2/466` iv_results = `LEG/` ).
-      mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/DACH/BAI2/166` iv_results = `/` ).
-      mo_mem->add( iv_area = gc_area-btr iv_keys = `RECON/DISB_ACH/BAI2/466` iv_results = `ORIGINAL` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/DACH/BAI2/466` iv_results = `LEG/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/DACH/BAI2/166` iv_results = `/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `RECON/DISB_ACH/BAI2/466` iv_results = `ORIGINAL` ).
     ENDIF.
     IF is_flags-scope_form = abap_true.
-      mo_mem->add( iv_area = gc_area-btr iv_keys = `LIFECYCLE/XACH/BAI2/466` iv_results = `ORIGINAL/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `LIFECYCLE/XACH/BAI2/466` iv_results = `ORIGINAL/` ).
     ENDIF.
     IF is_flags-recon_scheme = abap_true.
-      mo_mem->add( iv_area = gc_area-btr iv_keys = `RECON/DISB_ACH/PRTRY/X1` iv_results = `LEG/X` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btr iv_keys = `RECON/DISB_ACH/PRTRY/X1` iv_results = `LEG/X` ).
     ENDIF.
     IF is_flags-rule_group = abap_true.
-      mo_mem->add( iv_area = gc_area-btm iv_keys = `BAI2/475///*/*` iv_results = `K01/G99/D/CHECK//AUTO_POST/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `BAI2/475///*/*` iv_results = `K01/G99/D/CHECK//AUTO_POST/POSTED` ).
+    ENDIF.
+    IF is_flags-duplicates = abap_true.
+      " Same keys in another case: one of the two rows never applies
+      mo_mem->add( iv_area = gc_area-rsn iv_keys = `r01` iv_results = `R2/` ).
+    ENDIF.
+    IF is_flags-no_disposition = abap_true.
+      mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `BAI2/699///*/*` iv_results = `W01//D/WIRE//AUTO_POST/` ).
     ENDIF.
     IF is_flags-iso_parts = abap_true.
-      mo_mem->add( iv_area = gc_area-btm iv_keys = `ISO/PMNT///*/C` iv_results = `W01//C/WIRE//AUTO_POST/` ).
-      mo_mem->add( iv_area = gc_area-btm iv_keys = `BAI2/142/RCDT//*/*` iv_results = `W01//C/ACH//AUTO_POST/` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `ISO/PMNT///*/C` iv_results = `W01//C/WIRE//AUTO_POST/POSTED` ).
+      mo_mem->add_typed( iv_purpose = gc_typed-btm iv_keys = `BAI2/142/RCDT//*/*` iv_results = `W01//C/ACH//AUTO_POST/POSTED` ).
     ENDIF.
   ENDMETHOD.
 
@@ -464,6 +488,86 @@ CLASS ltc_posting_areas IMPLEMENTATION.
                         iv_number = zif_cd_ops_cfg_types=>gc_msg-required iv_msg = 'ISO family required' ).
         assert_message( it_messages = lt_messages iv_area = gc_area-btm iv_entry = `BAI2/142/RCDT//*/*`
                         iv_number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank iv_msg = 'BAI2 has no family' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+
+  " Rule (source per purpose): source P for a layout TFK033D cannot hold (ZBTM: keys of 35 / 15, 7 results)
+  " is reported per field and for the results - and nothing is read from the posting area
+  METHOD posting_area_misfit_refused.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        mo_params->set( iv_name  = zif_cd_ops_postarea_types=>gc_param-source_btc_map
+                        iv_value = zif_cd_ops_postarea_types=>gc_source-posting_area ).
+        mo_mem->add( iv_area = gc_area-btm iv_keys = `BAI2/495///*/*` iv_results = `W01//D/WIRE//AUTO_POST` ).
+        DATA(lt_messages) = check( ).
+        assert_message( it_messages = lt_messages iv_area = gc_area-btm iv_entry = ``
+                        iv_number = zif_cd_ops_cfg_types=>gc_msg-postarea_too_short iv_msg = 'Fields longer than 12' ).
+        assert_message( it_messages = lt_messages iv_area = gc_area-btm iv_entry = ``
+                        iv_number = zif_cd_ops_cfg_types=>gc_msg-postarea_too_few iv_msg = '7 results, TFK033D has 6' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( lt_messages[ number = zif_cd_ops_cfg_types=>gc_msg-postarea_too_short
+                                                   v1     = zif_cd_ops_postarea_types=>gc_field-bank_key ] ) )
+          msg = 'BANK_KEY (15) named' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_messages ) exp = 5
+                                            msg = 'CODE, FAMILY, SUB_FAMILY, BANK_KEY and the results; nothing else' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_mem->reads( ) exp = 2
+                                            msg = 'ZRSN and ZPMC read from TFK033D, ZBTM refused' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_ops_postarea_factory=>get_reader( )->entries( zif_cd_ops_postarea_types=>gc_purpose-btc_map )
+          msg = 'The reader returns no ZBTM entry from the posting area' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: two entries with the same key set (case ignored) - only one of them applies
+  METHOD duplicate_key_sets.
+    TRY.
+        configure_scenario( VALUE #( duplicates = abap_true ) ).
+        DATA(lt_messages) = check( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( lt_messages[ area = gc_area-rsn number = zif_cd_ops_cfg_types=>gc_msg-duplicate_keys ] ) )
+          msg = 'R01 and r01 are the same keys' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_messages ) exp = 1 msg = 'One finding for the second row' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (user decision 2026-11-15): every ZBTM row states its disposition - POSTED or NOT_POSTED
+  METHOD disposition_required.
+    TRY.
+        configure_scenario( VALUE #( no_disposition = abap_true ) ).
+        DATA(lt_messages) = check( ).
+        assert_message( it_messages = lt_messages iv_area = gc_area-btm iv_entry = `BAI2/699///*/*`
+                        iv_number = zif_cd_ops_cfg_types=>gc_msg-disposition_missing iv_msg = 'Blank disposition refused' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_messages ) exp = 1 msg = 'Only the missing disposition' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Boundary: the active version of a typed table has no rows - one warning naming table and version
+  METHOD empty_version_is_warning.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        mo_params->set( iv_name = zif_cd_ops_postarea_types=>gc_param-version_btc_role iv_value = '2' ).
+        DATA(lt_messages) = check( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_messages ) exp = 1 msg = 'One message' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-number exp = zif_cd_ops_cfg_types=>gc_msg-version_empty
+                                            msg = 'Message 444' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-v1 exp = zif_cd_ops_postarea_types=>gc_table-btc_role
+                                            msg = 'Names the typed table' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-v2 exp = '2' msg = 'Names the version' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-warning
+                                            msg = 'A warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

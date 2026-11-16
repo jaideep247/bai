@@ -36,6 +36,8 @@
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
 *& 2026-11-15 | Cheque status STATE only (DFKKCR has no CRSTATUS, user).
 *&            | currency). cheque status STATE (V159 closed).
+*& 2026-11-16 | GET_DOC_HEADERS also reads DFKKKO-STORB (the original's reversal document; STBEL is filled on
+*&            | the reversal - reference system A4H).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -276,8 +278,9 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_trace_dao~get_doc_headers.
     CHECK it_docno IS NOT INITIAL.
-    " DFKKKO by key OPBEL. VERIFY-SE11: STBEL (reversal document), CPUDT, CPUTM
-    SELECT opbel, fikey, stbel, budat, cpudt, cputm
+    " DFKKKO by key OPBEL: STBEL (on a reversal: the reversed document), STORB (on the original: its
+    " reversal; reference system A4H), CPUDT, CPUTM
+    SELECT opbel, fikey, stbel, storb, budat, cpudt, cputm
       FROM dfkkko
       FOR ALL ENTRIES IN @it_docno
       WHERE opbel = @it_docno-table_line

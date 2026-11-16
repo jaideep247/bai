@@ -171,7 +171,7 @@ INTERFACE lif_c.
     END OF gc_if,
     BEGIN OF gc_mod,
       breaks                         TYPE string VALUE `BREAKS`,
-      cashops                        TYPE string VALUE `CASHOPS`,
+      cash_ops                       TYPE string VALUE `CASH_OPS`,
       control                        TYPE string VALUE `CONTROL`,
       flow                           TYPE string VALUE `FLOW`,
       jobs                           TYPE string VALUE `JOBS`,
@@ -5564,8 +5564,8 @@ CLASS lhc_payfiletype IMPLEMENTATION.
       ENDIF.
       IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
                                         iv_list  = lif_c=>gc_when-payfiletype_active_x ) = abap_true.
-        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-cashops ) = abap_false.
-          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-cashops
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-cash_ops ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-cash_ops
                           element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
         ENDIF.
       ENDIF.

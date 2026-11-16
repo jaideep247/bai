@@ -8,7 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | inject_auth, inject_lock, inject_purge_dao added.
 *& 2026-11-07 | inject_params added (runtime parameters); reset also drops the session parameter adapter.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_INJECTOR to the reusable framework ZCA_OPS (framework slots only);
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (framework slots only);
 *&            | inject_param_version (double of the installed ZCA_PARAM release, version check).
 *& 2026-11-10 | INJECT_MAIL_TEMPLATE (alert e-mail templates).
 *& 2026-11-10 | INJECT_REVIEW_DAO (daily control review).
@@ -18,7 +18,7 @@
 *& 2026-11-11 | INJECT_BRK_DAO (clearing-account break analysis).
 *& 2026-11-15 | INJECT_FLOW_DAO (account flow reconciliation).
 *& 2026-11-15 | INJECT_LICENSE (licensing).
-*& 2026-11-15 | INJECT_EVIDENCE, INJECT_OWNER (exception contract), INJECT_PF_DAO (payment file lifecycle).
+*& 2026-11-15 | INJECT_EVIDENCE, INJECT_OWNER (exception contract).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - test injector for the factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -97,7 +97,7 @@ CLASS zcl_ca_ops_injector DEFINITION
       IMPORTING
         io_license TYPE REF TO zif_ca_ops_license.
 
-    "! Evidence of findings, responsible owner (exception contract) and payment file data access (2026-11-15)
+    "! Evidence of findings and responsible owner (exception contract, 2026-11-15)
     CLASS-METHODS inject_evidence
       IMPORTING
         io_evidence TYPE REF TO zif_ca_ops_evidence.
@@ -105,10 +105,6 @@ CLASS zcl_ca_ops_injector DEFINITION
     CLASS-METHODS inject_owner
       IMPORTING
         io_owner TYPE REF TO zif_ca_ops_owner.
-
-    CLASS-METHODS inject_pf_dao
-      IMPORTING
-        io_dao TYPE REF TO zif_ca_ops_pf_dao.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -223,11 +219,6 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD inject_pf_dao.
-    zcl_ca_ops_factory=>go_pf_dao_double = io_dao.
-  ENDMETHOD.
-
-
   METHOD inject_plugin.
     DATA(lv_name) = CONV zif_ca_ops_types=>ty_class_name( to_upper( condense( CONV string( iv_class_name ) ) ) ).
     DELETE zcl_ca_ops_factory=>gt_plugin_double
@@ -263,7 +254,6 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
            zcl_ca_ops_factory=>go_license_double,
            zcl_ca_ops_factory=>go_evidence_double,
            zcl_ca_ops_factory=>go_owner_double,
-           zcl_ca_ops_factory=>go_pf_dao_double,
            zcl_ca_ops_factory=>gt_plugin_double,
            zcl_ca_ops_factory=>gv_param_version_double,
            zcl_ca_ops_factory=>gv_version_ok,

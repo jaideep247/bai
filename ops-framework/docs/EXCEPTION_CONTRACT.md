@@ -55,6 +55,25 @@ version).
 | Process step reached (e.g. lot posted, clearing open) | `STAGE` |
 | Documents, lots, statement lines, jobs | evidence rows with their link registry objects (`FICA_DOC_HEADER`, `FICA_PAYMENT_RUN`, `S4_BANK_STMT_LINE`, `S4_BACKGROUND_JOB`, ...) |
 
+**Adopted by the six FI-CA cash checks of build N (merge of 2026-11-16).** The checks still fill only
+`ZIF_CA_OPS_CASH_TYPES=>TY_EXCEPTION`; the one mapping `ZCL_CA_OPS_CASH_EXC=>TO_FINDING` now fills the contract too,
+and `ZCL_CA_OPS_CASH_CTX=>FINDING` adds the evidence key and collects the evidence rows that each check returns:
+
+| `TY_EXCEPTION` | Contract field |
+|---|---|
+| `ITEM_COUNT` | `ITEM_COUNT` (unchanged); `UNKNOWN_COUNT` = 1 for an absence (no run, no statement, job failed, rule not evaluated: `ITEM_COUNT` 0), = `ITEM_COUNT` for items counted without any amount (e.g. the accounts of a stale statement import), else 0 |
+| `AMOUNT` / `CURRENCY` | `AMOUNT` / `CURRENCY` (unchanged, one currency per finding) |
+| `CUTOFF` (next working day of `CASH_CALENDAR` at the control's `CUTOFF_TIME`, in `CONTROL_TIME_ZONE`) | `DEADLINE_AT` (UTC; initial when the cutoff is unknown) and `CALENDAR_ID` = `CASH_CALENDAR` |
+| `STAGE` | `STAGE` (and `RULE_ID`, unchanged) |
+| `OWNER` (the active control covering the check, else the process owner - the same rule as `ZIF_CA_OPS_OWNER`) | `RESP_USER` / `RESP_TEAM`; `RESP_SOURCE` `C` control, `P` process owner, `N` none |
+| `EVIDENCE` keys (`LAUFD/LAUFI`, `OPBEL`, `KUKEY`, `FIKEY`, `JOBNAME/JOBCOUNT`, ...) | `EVID_KEY` (area, check ID, object key, company code) and one evidence row per key (`ZCL_CA_OPS_CASH_EXC=>EVIDENCE_ROWS`: kind `SAP`, type `RUN` / `JOB` / `PAYDOC` / `STMT` / `EVENT`, quality `C`, link objects `FICA_PAYMENT_RUN`, `FICA_DOC_HEADER`, `S4_BANK_STMT_HDR`, `FICA_SUMMARY_RECORD`, `S4_BACKGROUND_JOB`; other keys keep their value without a link object) |
+
+Two rules of `MISSING` follow from it and hold for every module: items whose amount is unknown need no currency
+(`CURRENCY` is a gap only for an amount, or for more items than unknown ones), and a notice (action `NOTIFY`: a rule
+not evaluated, a result capped, a non-working day, zero volume) needs no deadline. `ZCL_CA_OPS_CASH_EXC` and
+`ZCL_CA_OPS_CASH_CTX` assert `MISSING( )` empty in ABAP Unit; `tools/tests/test_cash_fixtures.py` asserts it for every
+expected finding of `config/cash/fixtures.json`.
+
 ## 4. Limits
 
 - The owner is the configuration at finding time; a reassignment in the exceptions app is the separate `OWNER`.

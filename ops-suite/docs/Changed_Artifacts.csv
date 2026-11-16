@@ -260,11 +260,19 @@ ddic/a4h/VBHDR.acds,Other,
 ddic/a4h/VBHDR.fields.csv,Doc,
 ddic/a4h/VBHDR.indexes.csv,Doc,
 ddic/a4h/manifest.json,Doc,
+ddic/core/zcd_d_mapbtm.tabl.ddl,DDIC,
+ddic/core/zcd_d_mapbtr.tabl.ddl,DDIC,
+ddic/core/zcd_d_mappmc.tabl.ddl,DDIC,
+ddic/core/zcd_d_maprsn.tabl.ddl,DDIC,
 ddic/core/zcd_d_opscfg.tabl.ddl,DDIC,
 ddic/core/zcd_d_opstabwl.tabl.ddl,DDIC,
 ddic/core/zcd_d_paystage.tabl.ddl,DDIC,
 ddic/core/zcd_d_svc.tabl.ddl,DDIC,
 ddic/core/zcd_d_svcmap.tabl.ddl,DDIC,
+ddic/core/zcd_ops_mapbtm.tabl.ddl,DDIC,
+ddic/core/zcd_ops_mapbtr.tabl.ddl,DDIC,
+ddic/core/zcd_ops_mappmc.tabl.ddl,DDIC,
+ddic/core/zcd_ops_maprsn.tabl.ddl,DDIC,
 ddic/core/zcd_ops_paystage.tabl.ddl,DDIC,
 ddic/core/zcd_ops_svc.tabl.ddl,DDIC,
 ddic/core/zcd_ops_svcmap.tabl.ddl,DDIC,
@@ -358,6 +366,7 @@ docs/PRISM_Status_API.md,Doc,
 docs/Payment_File_Overlay.md,Doc,
 docs/Payment_Trace.md,Doc,
 docs/Performance_Review.md,Doc,
+docs/Pilot_Acceptance.md,Doc,
 docs/Process_Catalogue_Overlay.md,Doc,
 docs/Process_Flow_Card.md,Doc,
 docs/QA1_Pilot.md,Doc,
@@ -381,10 +390,6 @@ docs/links/lineage.md,Doc,
 docs/processes/CD_COLL_BASE_REQ_LIFE.md,Doc,
 docs/processes/CD_HCK_GL_CLEAR_BRK.md,Doc,
 docs/processes/CD_JOBS_SAP_JOBS.md,Doc,
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.abap,ABAP,Check COLL_R2_SCHEDULED of process BASE_REQ_LIFE (area CD_COLL):
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.testclasses.abap,ABAP,Tests of check COLL_R2_SCHEDULED through ZIF_CA_OPS_CHECK~RUN with a data access
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_refund.clas.abap,ABAP,Check COLL_R3_REFUND of process BASE_REQ_LIFE (area CD_COLL):
-docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_refund.clas.testclasses.abap,ABAP,Tests of check COLL_R3_REFUND through ZIF_CA_OPS_CHECK~RUN with a data access
 docs/text_elements/zcd_ebs_validate.prog.texts.md,Doc,
 docs/text_elements/zcd_fmon_monitor.prog.texts.md,Doc,
 docs/text_elements/zcd_morning_report.prog.texts.md,Doc,
@@ -392,6 +397,7 @@ docs/text_elements/zcd_ops_pattern_check.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_pattern_migrate.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_pay_snapshot.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_payment_trace.prog.texts.md,Doc,
+docs/text_elements/zcd_ops_postarea_copy.prog.texts.md,Doc,
 docs/text_elements/zcl_cd_hck_report_html.clas.texts.md,Doc,
 lint_stubs/if_bgmc_op_single_tx_uncontr.intf.abap,ABAP,
 lint_stubs/if_bgmc_op_single_tx_uncontr.intf.xml,abapGit,
@@ -405,6 +411,22 @@ src/core/zc_cd_approvedtable.ddls.asddls,CDS,
 src/core/zc_cd_approvedtable.ddls.xml,abapGit,
 src/core/zc_cd_approvedtable.ddlx.asddlxs,CDS,
 src/core/zc_cd_approvedtable.ddlx.xml,abapGit,
+src/core/zc_cd_mapbtccode.ddls.asddls,CDS,
+src/core/zc_cd_mapbtccode.ddls.xml,abapGit,
+src/core/zc_cd_mapbtccode.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapbtccode.ddlx.xml,abapGit,
+src/core/zc_cd_mapbtcrole.ddls.asddls,CDS,
+src/core/zc_cd_mapbtcrole.ddls.xml,abapGit,
+src/core/zc_cd_mapbtcrole.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapbtcrole.ddlx.xml,abapGit,
+src/core/zc_cd_mapmethodclass.ddls.asddls,CDS,
+src/core/zc_cd_mapmethodclass.ddls.xml,abapGit,
+src/core/zc_cd_mapmethodclass.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapmethodclass.ddlx.xml,abapGit,
+src/core/zc_cd_mapreason.ddls.asddls,CDS,
+src/core/zc_cd_mapreason.ddls.xml,abapGit,
+src/core/zc_cd_mapreason.ddlx.asddlxs,CDS,
+src/core/zc_cd_mapreason.ddlx.xml,abapGit,
 src/core/zc_cd_opscfgall.bdef.asbdef,RAP,
 src/core/zc_cd_opscfgall.bdef.xml,abapGit,
 src/core/zc_cd_opscfgall.ddls.asddls,CDS,
@@ -479,12 +501,20 @@ src/core/zc_cd_trxretnoc.ddls.asddls,CDS,
 src/core/zc_cd_trxretnoc.ddls.xml,abapGit,
 src/core/zc_cd_trxretnoc.ddlx.asddlxs,CDS,
 src/core/zc_cd_trxretnoc.ddlx.xml,abapGit,
+src/core/zcd_d_mapbtm.tabl.xml,abapGit,
+src/core/zcd_d_mapbtr.tabl.xml,abapGit,
+src/core/zcd_d_mappmc.tabl.xml,abapGit,
+src/core/zcd_d_maprsn.tabl.xml,abapGit,
 src/core/zcd_d_opscfg.tabl.xml,abapGit,
 src/core/zcd_d_opstabwl.tabl.xml,abapGit,
 src/core/zcd_d_paystage.tabl.xml,abapGit,
 src/core/zcd_d_svc.tabl.xml,abapGit,
 src/core/zcd_d_svcmap.tabl.xml,abapGit,
 src/core/zcd_ops.msag.xml,abapGit,
+src/core/zcd_ops_mapbtm.tabl.xml,abapGit,
+src/core/zcd_ops_mapbtr.tabl.xml,abapGit,
+src/core/zcd_ops_mappmc.tabl.xml,abapGit,
+src/core/zcd_ops_maprsn.tabl.xml,abapGit,
 src/core/zcd_ops_pattern_check.prog.abap,ABAP,"Pattern check (read-only, user decision 2026-11-06): for one pattern area"
 src/core/zcd_ops_pattern_check.prog.xml,abapGit,
 src/core/zcd_ops_pattern_migrate.prog.abap,ABAP,One-off migration of the configured CP wildcard patterns to PCRE (user
@@ -494,6 +524,8 @@ src/core/zcd_ops_pay_snapshot.prog.xml,abapGit,
 src/core/zcd_ops_payment_trace.prog.abap,ABAP,360 degree payment trace for L1 / L2 support (read-only): enter a FIN
 src/core/zcd_ops_payment_trace.prog.xml,abapGit,
 src/core/zcd_ops_paystage.tabl.xml,abapGit,
+src/core/zcd_ops_postarea_copy.prog.abap,ABAP,Migration step of the typed product mapping tables (product review
+src/core/zcd_ops_postarea_copy.prog.xml,abapGit,
 src/core/zcd_ops_svc.tabl.xml,abapGit,
 src/core/zcd_ops_svcmap.tabl.xml,abapGit,
 src/core/zcd_ops_tabwl.tabl.xml,abapGit,
@@ -501,6 +533,15 @@ src/core/zcd_pay_outcome.tabl.xml,abapGit,
 src/core/zcd_pay_outpkg.tabl.xml,abapGit,
 src/core/zcd_pay_outpkgm.tabl.xml,abapGit,
 src/core/zcd_pay_outwm.tabl.xml,abapGit,
+src/core/zcl_cd_coll_c_no_answer.clas.abap,ABAP,"Check COLL_R2_SCHEDULED of process BASE_REQ_LIFE (area CD_COLL, control"
+src/core/zcl_cd_coll_c_no_answer.clas.testclasses.abap,ABAP,Tests of check COLL_R2_SCHEDULED through ZIF_CA_OPS_CHECK~RUN with doubles
+src/core/zcl_cd_coll_c_no_answer.clas.xml,abapGit,
+src/core/zcl_cd_coll_c_refund.clas.abap,ABAP,"Check COLL_R3_REFUND of process BASE_REQ_LIFE (area CD_COLL, control"
+src/core/zcl_cd_coll_c_refund.clas.testclasses.abap,ABAP,Tests of check COLL_R3_REFUND through ZIF_CA_OPS_CHECK~RUN with doubles of
+src/core/zcl_cd_coll_c_refund.clas.xml,abapGit,
+src/core/zcl_cd_coll_rules.clas.abap,ABAP,Shared rules of the collections request checks (process CD_COLL /
+src/core/zcl_cd_coll_rules.clas.testclasses.abap,ABAP,Unit tests of the shared rules of the collections request checks: the
+src/core/zcl_cd_coll_rules.clas.xml,abapGit,
 src/core/zcl_cd_job_dao.clas.abap,ABAP,SQL of the suite's SAP job monitor plug-ins (read only): payments of
 src/core/zcl_cd_job_dao.clas.testclasses.abap,ABAP,SQL tests of the suite's SAP job monitor plug-in data access on
 src/core/zcl_cd_job_dao.clas.xml,abapGit,
@@ -533,6 +574,9 @@ src/core/zcl_cd_ops_injector.clas.xml,abapGit,
 src/core/zcl_cd_ops_ovw_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of the production-support overview page
 src/core/zcl_cd_ops_ovw_cds_test.clas.testclasses.abap,ABAP,CDS tests of the production-support overview page on
 src/core/zcl_cd_ops_ovw_cds_test.clas.xml,abapGit,
+src/core/zcl_cd_ops_pamap_dao.clas.abap,ABAP,SQL of the typed product mapping tables (product review 2026-11-15): one
+src/core/zcl_cd_ops_pamap_dao.clas.testclasses.abap,ABAP,"OSQL tests of the typed mapping table repository (ZCD_OPS_MAPRSN,"
+src/core/zcl_cd_ops_pamap_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_param_seed.clas.abap,ABAP,Delivered parameter areas and definitions of the suite in the framework
 src/core/zcl_cd_ops_param_seed.clas.testclasses.abap,ABAP,Unit tests of the delivered parameter definitions with the REAL framework
 src/core/zcl_cd_ops_param_seed.clas.xml,abapGit,
@@ -561,17 +605,23 @@ src/core/zcl_cd_ops_pay_snap_queue.clas.xml,abapGit,
 src/core/zcl_cd_ops_pay_snapshot.clas.abap,ABAP,"The payment worklist ZCD_PAY_OUTCOME: open payments, open payment"
 src/core/zcl_cd_ops_pay_snapshot.clas.testclasses.abap,ABAP,Unit tests of the payment worklist snapshot (FAST / NIGHTLY / SWEEP) with
 src/core/zcl_cd_ops_pay_snapshot.clas.xml,abapGit,
-src/core/zcl_cd_ops_postarea.clas.abap,ABAP,Reader of the FI-CA customer posting areas (ZIF_CD_OPS_POSTAREA): the
+src/core/zcl_cd_ops_postarea.clas.abap,ABAP,Reader of the mapping tables (ZIF_CD_OPS_POSTAREA): the posting area of
 src/core/zcl_cd_ops_postarea.clas.testclasses.abap,ABAP,Application tests of the posting area reader with the in-memory posting
 src/core/zcl_cd_ops_postarea.clas.xml,abapGit,
+src/core/zcl_cd_ops_postarea_copy.clas.abap,ABAP,Migration of the entries of a purpose from its FI-CA customer posting
+src/core/zcl_cd_ops_postarea_copy.clas.testclasses.abap,ABAP,Application tests of the copy from a posting area into a typed mapping
+src/core/zcl_cd_ops_postarea_copy.clas.xml,abapGit,
 src/core/zcl_cd_ops_postarea_dao.clas.abap,ABAP,SQL of the posting area reader: one set-based read of the stored FQC0
 src/core/zcl_cd_ops_postarea_dao.clas.testclasses.abap,ABAP,OSQL tests of the posting area repository (TFK033D doubled): only the
 src/core/zcl_cd_ops_postarea_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_postarea_factory.clas.abap,ABAP,Factory of the customer posting area reader: one reader per internal
 src/core/zcl_cd_ops_postarea_factory.clas.xml,abapGit,
-src/core/zcl_cd_ops_postarea_injector.clas.abap,ABAP,Test injector of ZCL_CD_OPS_POSTAREA_FACTORY: a repository double (the
+src/core/zcl_cd_ops_postarea_injector.clas.abap,ABAP,Test injector of ZCL_CD_OPS_POSTAREA_FACTORY: repository doubles (the
 src/core/zcl_cd_ops_postarea_injector.clas.xml,abapGit,
-src/core/zcl_cd_ops_postarea_mem.clas.abap,ABAP,In-memory posting areas (test double of ZIF_CD_OPS_POSTAREA_DAO): the
+src/core/zcl_cd_ops_postarea_layout.clas.abap,ABAP,"Layouts of the four mapping purposes (ZRSN, ZPMC, ZBTM, ZBTR): key and"
+src/core/zcl_cd_ops_postarea_layout.clas.testclasses.abap,ABAP,Domain tests of the mapping layouts: the fit of each purpose to TFK033D
+src/core/zcl_cd_ops_postarea_layout.clas.xml,abapGit,
+src/core/zcl_cd_ops_postarea_mem.clas.abap,ABAP,In-memory mappings (test double of ZIF_CD_OPS_POSTAREA_DAO and of
 src/core/zcl_cd_ops_postarea_mem.clas.xml,abapGit,
 src/core/zcl_cd_ops_purge_target.clas.abap,ABAP,Purge targets of the payment engine suite for the framework's retention
 src/core/zcl_cd_ops_purge_target.clas.testclasses.abap,ABAP,"OSQL tests of the suite's purge targets: FMON events, PRISM events and HCK"
@@ -659,12 +709,16 @@ src/core/zi_cd_trxitempay.ddls.asddls,CDS,
 src/core/zi_cd_trxitempay.ddls.xml,abapGit,
 src/core/zi_cd_trxretnocu.ddls.asddls,CDS,
 src/core/zi_cd_trxretnocu.ddls.xml,abapGit,
+src/core/zif_cd_coll_types.intf.abap,ABAP,Types and constants of the collections request checks of process
+src/core/zif_cd_coll_types.intf.xml,abapGit,
 src/core/zif_cd_job_dao.intf.abap,ABAP,Data access of the suite's SAP job monitor plug-ins: payments of payment
 src/core/zif_cd_job_dao.intf.xml,abapGit,
 src/core/zif_cd_job_types.intf.abap,ABAP,Types and constants of the suite's adoption of the framework's SAP job
 src/core/zif_cd_job_types.intf.xml,abapGit,
 src/core/zif_cd_ops_cfg_types.intf.abap,ABAP,Field check messages (class ZCD_OPS) of the suite's configuration apps
 src/core/zif_cd_ops_cfg_types.intf.xml,abapGit,
+src/core/zif_cd_ops_pamap_dao.intf.abap,ABAP,"SQL seam of the typed product mapping tables (ZCD_OPS_MAPRSN, _MAPPMC,"
+src/core/zif_cd_ops_pamap_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_pattern_dao.intf.abap,ABAP,Repository of the pattern check and the pattern migration: configured
 src/core/zif_cd_ops_pattern_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_pattern_types.intf.abap,ABAP,Types and constants of the pattern check and the pattern migration
@@ -679,7 +733,7 @@ src/core/zif_cd_ops_pay_snap_queue.intf.abap,ABAP,Seam for the parallel packages
 src/core/zif_cd_ops_pay_snap_queue.intf.xml,abapGit,
 src/core/zif_cd_ops_payout_types.intf.abap,ABAP,Types and constants of the canonical payment outcome: the outcome
 src/core/zif_cd_ops_payout_types.intf.xml,abapGit,
-src/core/zif_cd_ops_postarea.intf.abap,ABAP,Reader of the FI-CA customer posting areas of the suite (FQC0 entries):
+src/core/zif_cd_ops_postarea.intf.abap,ABAP,Reader of the mapping tables of the suite: per purpose the FI-CA customer
 src/core/zif_cd_ops_postarea.intf.xml,abapGit,
 src/core/zif_cd_ops_postarea_dao.intf.abap,ABAP,SQL seam of the posting area reader: the stored FQC0 entries of one
 src/core/zif_cd_ops_postarea_dao.intf.xml,abapGit,
@@ -693,6 +747,14 @@ src/core/zif_cd_ops_types.intf.abap,ABAP,"Shared by Health Check (HCK), File Mon
 src/core/zif_cd_ops_types.intf.xml,abapGit,
 src/core/zr_cd_approvedtable.ddls.asddls,CDS,
 src/core/zr_cd_approvedtable.ddls.xml,abapGit,
+src/core/zr_cd_mapbtccode.ddls.asddls,CDS,
+src/core/zr_cd_mapbtccode.ddls.xml,abapGit,
+src/core/zr_cd_mapbtcrole.ddls.asddls,CDS,
+src/core/zr_cd_mapbtcrole.ddls.xml,abapGit,
+src/core/zr_cd_mapmethodclass.ddls.asddls,CDS,
+src/core/zr_cd_mapmethodclass.ddls.xml,abapGit,
+src/core/zr_cd_mapreason.ddls.asddls,CDS,
+src/core/zr_cd_mapreason.ddls.xml,abapGit,
 src/core/zr_cd_opscfgall.bdef.asbdef,RAP,
 src/core/zr_cd_opscfgall.bdef.xml,abapGit,
 src/core/zr_cd_opscfgall.ddls.asddls,CDS,
@@ -1134,6 +1196,9 @@ src/fmon/zcl_cd_fmon_chk_ack_match.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_deadline.clas.abap,ABAP,Plug-in check STAGE_DEADLINE_MISSED: the stage of a DEADLINE row of ZCD_FMON_SLA must be
 src/fmon/zcl_cd_fmon_chk_deadline.clas.testclasses.abap,ABAP,"Domain tests of the stage deadline check (pure, context built field by"
 src/fmon/zcl_cd_fmon_chk_deadline.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_chk_due_file.clas.abap,ABAP,Plug-in check of an outbound file due on a business day by a clock time
+src/fmon/zcl_cd_fmon_chk_due_file.clas.testclasses.abap,ABAP,Unit tests of the due-file check: the 2nd working day of the month skips
+src/fmon/zcl_cd_fmon_chk_due_file.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_duplicate.clas.abap,ABAP,Plug-in check DUPLICATE_FILE: the same file generated/received twice
 src/fmon/zcl_cd_fmon_chk_duplicate.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_late.clas.abap,ABAP,"Plug-in check FILE_LATE: a file arrived after its calendar window, or"
@@ -1420,6 +1485,9 @@ src/hck/zcl_cd_hck_c_alert_health.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_applog.clas.abap,ABAP,Mass-run health: application-log (SLG1) error rate per object/subobject
 src/hck/zcl_cd_hck_c_applog.clas.testclasses.abap,ABAP,Unit tests of the application log error-rate check: rate and error count
 src/hck/zcl_cd_hck_c_applog.clas.xml,abapGit,
+src/hck/zcl_cd_hck_c_chq_no_id.clas.abap,ABAP,"Check C_CHQ_NO_ID (control MISSING_CHECK_IDS, proposal P6, build R): the"
+src/hck/zcl_cd_hck_c_chq_no_id.clas.testclasses.abap,ABAP,Unit tests of the check for cheque payments without a cheque number: every
+src/hck/zcl_cd_hck_c_chq_no_id.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_chq_status.clas.abap,ABAP,Check: cheque status went backwards in ZCD_CHECK_HIST (IRIS status via
 src/hck/zcl_cd_hck_c_chq_status.clas.testclasses.abap,ABAP,Unit tests of the cheque status regression check: a terminal status that
 src/hck/zcl_cd_hck_c_chq_status.clas.xml,abapGit,
@@ -1429,6 +1497,9 @@ src/hck/zcl_cd_hck_c_config_drift.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_docchg.clas.abap,ABAP,"Document-change risk check A_DOC_CHANGE (build C, severity E, through the"
 src/hck/zcl_cd_hck_c_docchg.clas.testclasses.abap,ABAP,Unit tests of the document-change risk check A_DOC_CHANGE: a payment
 src/hck/zcl_cd_hck_c_docchg.clas.xml,abapGit,
+src/hck/zcl_cd_hck_c_ect_pending.clas.abap,ABAP,"Check C_ECT_PENDING (control ECT_PENDING, proposal P3, build R): COUNT and"
+src/hck/zcl_cd_hck_c_ect_pending.clas.testclasses.abap,ABAP,Unit tests of the ECT pending check: a cheque whose latest valid status is
+src/hck/zcl_cd_hck_c_ect_pending.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_framework.clas.abap,ABAP,Adapter of the framework's check contract to the health check (process
 src/hck/zcl_cd_hck_c_framework.clas.testclasses.abap,ABAP,Unit tests of the framework check adapter: the framework check named in
 src/hck/zcl_cd_hck_c_framework.clas.xml,abapGit,
@@ -1486,6 +1557,9 @@ src/hck/zcl_cd_hck_c_volume.clas.xml,abapGit,
 src/hck/zcl_cd_hck_canonical.clas.abap,ABAP,Pure canonical serialization of a table row for the configuration-drift
 src/hck/zcl_cd_hck_canonical.clas.testclasses.abap,ABAP,Unit tests of the canonical row serialization used by the drift hash;
 src/hck/zcl_cd_hck_canonical.clas.xml,abapGit,
+src/hck/zcl_cd_hck_cheque_dao.clas.abap,ABAP,SQL of the cheque pilot checks (build R). Cheque register rows of a set of
+src/hck/zcl_cd_hck_cheque_dao.clas.testclasses.abap,ABAP,OSQL tests of the cheque pilot reads: register rows by cheque number
+src/hck/zcl_cd_hck_cheque_dao.clas.xml,abapGit,
 src/hck/zcl_cd_hck_cycle_eval.clas.abap,ABAP,Pure job-cycle rules: derive the state of a cycle step from TBTCO job
 src/hck/zcl_cd_hck_cycle_eval.clas.testclasses.abap,ABAP,"Unit tests of job-cycle step state derivation (NOT_STARTED, RUNNING,"
 src/hck/zcl_cd_hck_cycle_eval.clas.xml,abapGit,
@@ -1537,6 +1611,9 @@ src/hck/zcl_cd_hck_ev_support.clas.xml,abapGit,
 src/hck/zcl_cd_hck_export.clas.abap,ABAP,Writes a complete report file or none (audit A61): the content goes to a
 src/hck/zcl_cd_hck_export.clas.testclasses.abap,ABAP,Unit tests of the complete-or-nothing export with an LTD file double;
 src/hck/zcl_cd_hck_export.clas.xml,abapGit,
+src/hck/zcl_cd_hck_exposure.clas.abap,ABAP,"Exposure of a finding set of the pilot acceptance checks (build R),"
+src/hck/zcl_cd_hck_exposure.clas.testclasses.abap,ABAP,Unit tests of the exposure per currency: items of two currencies give two
+src/hck/zcl_cd_hck_exposure.clas.xml,abapGit,
 src/hck/zcl_cd_hck_factory.clas.abap,ABAP,Single resolution point of the HCK data access object and engine;
 src/hck/zcl_cd_hck_factory.clas.xml,abapGit,
 src/hck/zcl_cd_hck_injector.clas.abap,ABAP,Test seam of the HCK factory: injects a DAO double; reset( ) clears it.
@@ -1625,6 +1702,10 @@ src/hck/zi_cd_opsvaru.ddls.asddls,CDS,
 src/hck/zi_cd_opsvaru.ddls.xml,abapGit,
 src/hck/zif_cd_hck_check.intf.abap,ABAP,Contract of a health check plug-in. One class per check type; the
 src/hck/zif_cd_hck_check.intf.xml,abapGit,
+src/hck/zif_cd_hck_cheque_dao.intf.abap,ABAP,Reads of the cheque pilot checks (build R): cheque register rows (DFKKCR)
+src/hck/zif_cd_hck_cheque_dao.intf.xml,abapGit,
+src/hck/zif_cd_hck_cheque_types.intf.abap,ABAP,Types and constants of the pilot acceptance checks of the first
+src/hck/zif_cd_hck_cheque_types.intf.xml,abapGit,
 src/hck/zif_cd_hck_dao.intf.abap,ABAP,"Data access of the health check payment engine area: customizing, metric history,"
 src/hck/zif_cd_hck_dao.intf.xml,abapGit,
 src/hck/zif_cd_hck_docchg_dao.intf.abap,ABAP,Reads of the document-change risk check A_DOC_CHANGE (build C): the

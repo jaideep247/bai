@@ -28,6 +28,8 @@
 *&            | the modules used but not covered by an installed licence. CORE is never refused.
 *& 2026-11-15 | Exception contract: the evidence rows a check returns are saved with its findings
 *&            | (ZIF_CA_OPS_EVIDENCE; never in test mode).
+*& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
+*&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - generic check runner</p>
 "! Report ZCA_OPS_CHECK_RUN (one job per area and schedule group). No check, no business table
@@ -137,9 +139,10 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
                                             iv_area     = iv_area ).
     DATA(lo_lock) = zcl_ca_ops_factory=>get_lock( ).
     DATA(lv_variant) = CONV zif_ca_ops_types=>ty_variant( iv_sched_group ).
+    DATA lv_holder TYPE syuname.
     IF lo_lock->acquire( EXPORTING iv_area    = iv_area
                                    iv_variant = lv_variant
-                         IMPORTING ev_holder  = DATA(lv_holder) ) = abap_false.
+                         IMPORTING ev_holder  = lv_holder ) = abap_false.
       DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_area    = iv_area
                                                        iv_variant = lv_variant
                                                        iv_holder  = lv_holder ).

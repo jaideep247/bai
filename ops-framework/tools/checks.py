@@ -15,6 +15,9 @@ Checks
                       Purpose and Modification log lines
   pcre_only           no POSIX regular expressions (regex =, FIND/REPLACE ... REGEX, CREATE_POSIX)
   no_cp_patterns      no CP / NP comparisons and no option 'CP' / 'NP'
+  no_inline_in_call   no inline declaration (DATA( / FINAL() after IMPORTING of a method call in a functional
+                      position (right side of an assignment, a condition, an operand of another call): the
+                      compiler of the reference system refuses it, abaplint accepts it
   no_inline_texts     no user text as a literal in production code: MESSAGE with a text literal, or a
                       sentence-like literal outside declarations (test data of test includes allowed)
   no_select_star      explicit field lists in every SELECT
@@ -67,6 +70,12 @@ Checks
                       one) has the licence validation in the generated behaviour pool, every catalogue package names a
                       known module; the generated module map ZCL_CA_OPS_LIC_MAP and docs/licensing/modules.md are up
                       to date (tools/licensing.py, shared engine tools/abaptools/licensing.py)
+  release_manifest    the versioned pack manifest (release/manifest.json) against the repository: components and their
+                      version constants, every object of src/ in exactly one pack, product names within their limits,
+                      no collision, import order and object references, licence modules, catalogue, source contracts,
+                      checks, seed rows per pack, open items, fixtures, blank-slate rules (no e-mail address, customer
+                      value, foreign object or append field in the delivery); release/MANIFEST.md up to date
+                      (tools/release_manifest.py, shared engine tools/abaptools/release_manifest.py)
   payfile             the fixtures of the payment file lifecycle (config/payfile/fixtures.json) give their expected and
                       identical business results in every integration setup (test profiles and the worked example
                       XX); the example is wired only through ZIF_CA_OPS_PF_* interfaces and configuration rows; no
@@ -83,6 +92,8 @@ Modification log:
 2026-11-15 | flow_config (account flow reconciliation: product flows valid and inactive).
 2026-11-15 | extensions (build H: inventory of extension points, extensible views, worked example of a pack).
 2026-11-15 | licensing (vendor licence: module catalogue valid, module map and document up to date).
+2026-11-15 | release_manifest (build M: versioned pack manifest and blank-slate rules).
+2026-11-16 | no_inline_in_call (shared rule: inline declaration in IMPORTING of a functional call).
 2026-11-15 | payfile (payment file lifecycle: fixtures in two setups, example XX wiring and neutrality).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
@@ -98,7 +109,8 @@ from abaptools import checks as _shared  # noqa: E402
 from abaptools import onboarding as _onboarding  # noqa: E402
 from abaptools.checks import (files, read, strip_comments, statements, check_test_path,  # noqa: E402,F401
                               check_name_lengths, check_method_names, check_artifact_header, check_pcre_only,
-                              check_no_cp, check_no_select_star, check_final, check_test_classes)
+                              check_no_cp, check_no_inline_in_call, check_no_select_star, check_final,
+                              check_test_classes)
 
 DECLARATION = re.compile(r'^\s*(CONSTANTS|TYPES|DATA|CLASS-DATA|STATICS)\b', re.I)
 LITERAL = re.compile(r"'(?:[^'\n]|'')*'|`(?:[^`\n]|``)*`")
@@ -255,6 +267,12 @@ def check_licensing(root):
     return licensing._engine.check(root, licensing.PROFILE)
 
 
+def check_release_manifest(root):
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import release_manifest  # noqa: E402
+    profile = release_manifest.PROFILE
+    return release_manifest._engine.check(os.path.dirname(os.path.abspath(root)),
+                                          os.path.join(root, profile['manifest']), os.path.join(root, profile['doc']))
 def check_payfile(root):
     sys.path.insert(0, os.path.join(root, 'tools'))
     import payfile  # noqa: E402
@@ -267,6 +285,7 @@ CHECKS = [
     ('artifact_header', check_artifact_header),
     ('pcre_only', check_pcre_only),
     ('no_cp_patterns', check_no_cp),
+    ('no_inline_in_call', check_no_inline_in_call),
     ('no_inline_texts', check_no_inline_texts),
     ('no_select_star', check_no_select_star),
     ('final_classes', check_final),
@@ -285,6 +304,7 @@ CHECKS = [
     ('flow_config', check_flow_config),
     ('extensions', check_extensions),
     ('licensing', check_licensing),
+    ('release_manifest', check_release_manifest),
     ('payfile', check_payfile),
 ]
 

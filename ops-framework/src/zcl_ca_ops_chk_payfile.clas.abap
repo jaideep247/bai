@@ -2,7 +2,7 @@
 *& Artifact: zcl_ca_ops_chk_payfile.clas.abap
 *& Purpose:
 *& Registered check of the payment file lifecycle (catalogue process
-*& FICA_PAYFILE_ACK, module CASHOPS; docs/PAYMENT_FILE_LIFECYCLE.md
+*& FICA_PAYFILE_ACK, module CASH_OPS; docs/PAYMENT_FILE_LIFECYCLE.md
 *& section 8): per active file type of the area whose business process is
 *& in effect, the files under watch as the last ingestion evaluated them
 *& (ZCA_OPS_PFFILE / PFMST), one finding per file and currency where the
@@ -26,6 +26,8 @@
 *& ZIF_CA_OPS_PF_DAO; writes nothing.
 *& Modification log:
 *& 2026-11-15 | Initial version (build K: payment file lifecycle).
+*& 2026-11-16 | Merge with the release packs: data access through ZCL_CA_OPS_PF_FACTORY; licence module CASH_OPS
+*&            | (one FI-CA Cash Operations licence with the cash checks).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check: payment file lifecycle</p>
 "! A job failure is one finding (PF_JOB_FAILED, reference = the job monitor's object key of the job, name / count;
@@ -158,7 +160,7 @@ CLASS zcl_ca_ops_chk_payfile IMPLEMENTATION.
 
   METHOD zif_ca_ops_check~run.
     ms_check = is_check.
-    mo_dao = zcl_ca_ops_factory=>get_pf_dao( ).
+    mo_dao = zcl_ca_ops_pf_factory=>get_dao( ).
     ms_limits = limits( is_check-area ).
     DATA(lt_off) = zcl_ca_ops_factory=>get_catalog( )->inactive_onboarded( iv_area = is_check-area
                                                                            iv_date = is_context-today ).
@@ -229,7 +231,7 @@ CLASS zcl_ca_ops_chk_payfile IMPLEMENTATION.
 
 
   METHOD zif_ca_ops_check_config~config_lines.
-    DATA(lo_dao) = zcl_ca_ops_factory=>get_pf_dao( ).
+    DATA(lo_dao) = zcl_ca_ops_pf_factory=>get_dao( ).
     INSERT zcl_ca_ops_cfg_version=>line( iv_kind = 'PF_PARAM' is_row = limits( is_check-area ) ) INTO TABLE rt_lines.
     LOOP AT lo_dao->get_file_types( is_check-area ) ASSIGNING FIELD-SYMBOL(<ls_type>).
       INSERT zcl_ca_ops_cfg_version=>line( iv_kind = 'PFTYP' is_row = <ls_type> ) INTO TABLE rt_lines.

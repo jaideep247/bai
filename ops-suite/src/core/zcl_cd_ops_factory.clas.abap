@@ -18,6 +18,7 @@
 *& 2026-11-10 | Framework services moved to the reusable framework ZCA_OPS (ZCL_CA_OPS_FACTORY); get_params
 *&            | returns the framework adapter with the suite's name prefixes (areas CD_OPS, CD_EBS,
 *&            | CD_FMON, CD_HCK) added.
+*& 2026-11-16 | Name prefix COLL_ -> area CD_OPS (collections request checks, build R).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for the suite's shared services. Framework services come
@@ -97,6 +98,7 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-payout   area = zif_cd_ops_types=>gc_param_area-ops )
       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-monitor  area = zif_cd_ops_types=>gc_param_area-ops )
       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-postarea area = zif_cd_ops_types=>gc_param_area-ops )
+      ( prefix = zif_cd_ops_types=>gc_param_area_prefix-coll     area = zif_cd_ops_types=>gc_param_area-ops )
       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-ebs      area = zif_cd_ops_types=>gc_param_area-ebs )
       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-fmon     area = zif_cd_ops_types=>gc_param_area-fmon )
       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-hck      area = zif_cd_ops_types=>gc_param_area-hck ) ).

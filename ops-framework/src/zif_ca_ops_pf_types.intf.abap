@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_ca_ops_pf_types.intf.abap
 *& Purpose:
-*& Types and constants of the payment file lifecycle (module CASHOPS,
+*& Types and constants of the payment file lifecycle (module CASH_OPS,
 *& docs/PAYMENT_FILE_LIFECYCLE.md): milestones of a payment file (payment
 *& run, SAP generation, middleware pickup, onward delivery, bank receipt,
 *& bank acceptance, posting / settlement - receipt and acceptance are two

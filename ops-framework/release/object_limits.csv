@@ -1,0 +1,23 @@
+TYPE,KIND,LIMIT,STATUS,NOTE
+tabl,Transparent table (database table),16,confirmed,Namespace counts inside the 16 characters; draft tables included
+tabl_structure,Structure,30,confirmed,The product delivers no structure of its own (tables only)
+dtel,Data element,30,confirmed,
+doma,Domain,30,confirmed,
+clas,Class,30,confirmed,
+intf,Interface,30,confirmed,
+prog,Program (report),40,VERIFY,House limit 30 (tools/checks.py name_lengths); the product stays within 30
+ddls,CDS view entity / DDL source,30,confirmed,The DDL source name equals the entity name
+ddlx,CDS metadata extension,30,confirmed,
+dcls,CDS access control,30,confirmed,
+bdef,Behaviour definition,30,confirmed,Equals the root entity name
+srvd,Service definition,30,confirmed,
+srvb,Service binding,26,VERIFY,Not serialized: <service definition>_O4 created in ADT
+msag,Message class,20,confirmed,
+suso,Authorization object,10,confirmed,
+auth,Authorization field,10,confirmed,
+susc,Authorization object class,4,confirmed,A registered namespace does not fit into four characters
+devc,Package,30,confirmed,
+balobj,Application log object (SLG0),20,VERIFY,Not serialized
+smtg,E-mail template (SMTG),60,VERIFY,Not serialized
+role,PFCG role,30,confirmed,Not serialized; built by the customer
+namespace,Registered namespace with both slashes,10,VERIFY,Between 5 and 10 characters including the slashes

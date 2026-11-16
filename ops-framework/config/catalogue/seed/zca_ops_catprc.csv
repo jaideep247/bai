@@ -2,7 +2,7 @@ PROCESS_ID,PKG_ID,DESCRIPTION,COMPONENT,DASH_CARD,OWNER_ROLE,SCHEDULE,DFLT_ACTIV
 FICA_CLEARING,FICA,Clearing and reset of clearing,FI-CA,RECEIVABLES,Receivables accounting lead,Continuous; mass clearing nightly,,V,V127 V128,50
 FICA_CORRESP,FICA,Correspondence,FI-CA,CUSTOMER,Customer communication lead,Daily correspondence print run,,V,V127 V128,130
 FICA_DEFERRAL,FICA,Deferral of due dates,FI-CA,RECEIVABLES,Collections lead,On demand,,V,V127 V128,120
-FICA_DUNNING,FICA,Dunning,FI-CA,DUNNING,Collections and dunning lead,Daily dunning proposal and activity run,,V,V127 V128,70
+FICA_DUNNING,FICA,Dunning,FI-CA,DUNNING,Collections and dunning lead,Daily dunning proposal and activity run,,V,V128,70
 FICA_EBS_LOTS,FICA,Bank statement items to payment lots and clearing,FI-CA,BANK,Bank reconciliation lead,"Daily, after the bank statement import",,V,V127 V128,40
 FICA_GL_TRANSFER,FICA,G/L transfer and reconciliation keys,FI-CA,ACCOUNTING,General ledger reconciliation lead,"Daily, after the posting runs",,V,V127 V128 V129,140
 FICA_INSTALMENT,FICA,Instalment plans,FI-CA,RECEIVABLES,Collections lead,On demand; breach check periodic,,V,V127 V128,110
@@ -13,7 +13,7 @@ FICA_PAYRUN,FICA,Payment run (disbursements and collections),FI-CA,PAYMENTS,Paym
 FICA_PAY_LOTS,FICA,Incoming payment lots and cash journal,FI-CA,RECEIVABLES,Cash application lead,"Daily, per lot of incoming payments",,V,V127 V128,20
 FICA_RETURNS,FICA,Returns lots (returned payments),FI-CA,RECEIVABLES,Returns processing lead,"Daily, per returns file of the bank",,V,V128,30
 FICA_REVERSAL,FICA,Document reversal,FI-CA,ACCOUNTING,Receivables accounting lead,On demand; mass reversal periodic,,V,V128,60
-FICA_WRITEOFF,FICA,Write-off,FI-CA,RISK,Receivables risk lead,On demand; mass write-off periodic,,V,V127 V128 V129,100
+FICA_WRITEOFF,FICA,Write-off,FI-CA,RISK,Receivables risk lead,On demand; mass write-off periodic,,V,V128 V129,100
 FSCD_BROKER,FSCD,Broker collections (broker reports),FS-CD,INSURANCE,Broker accounting lead,Per broker statement,,V,V127 V128,30
 FSCD_CLAIMS,FSCD,Claims disbursement (standard claims interface),FS-CD,INSURANCE,Claims payments lead,Continuous; payment runs intraday,,V,V127 V128,60
 FSCD_COINSURANCE,FSCD,Coinsurance settlement,FS-CD,INSURANCE,Coinsurance accounting lead,Per settlement period,,V,V127 V128,40

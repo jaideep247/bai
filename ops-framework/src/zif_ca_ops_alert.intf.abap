@@ -9,7 +9,7 @@
 *& 2026-11-05 | dispatch( ) added: configurable rules, channels, throttling.
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-07 | Comment: recipients ALERT_<route> in ZCA_PARAM (the former parameter table retired).
-*& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | SEND: optional e-mail template around the prepared report (alert e-mail templates).
 *& 2026-11-11 | ESCALATE (DEFAULT IGNORE): escalation until acknowledged - job ZCA_OPS_ESCALATE.
 *&---------------------------------------------------------------------*

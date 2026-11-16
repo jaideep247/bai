@@ -19,7 +19,7 @@
 | 100 | `PAYMODEL` | Payment model generator |  | - | contract | - | - |
 | 110 | `BREAKS` | Clearing-account break analysis and pilot pack |  | - | runtime | BreakAccount | `zcl_ca_ops_brk_analyzer.clas.abap`, `zca_ops_pilot_export.prog.abap` |
 | 120 | `FLOW` | Account flow reconciliation |  | - | runtime | AccountFlow | `zcl_ca_ops_flow_eval.clas.abap` |
-| 130 | `CASHOPS` | FI-CA cash operations: payment file lifecycle |  | - | runtime | PayFileType | `zcl_ca_ops_pf_ingest.clas.abap` |
+| 130 | `CASH_OPS` | FI-CA Cash Operations: cash checks and payment files |  | `CATALOGUE_FICA` | runtime | PayFileType | `zcl_ca_ops_pf_ingest.clas.abap` |
 
 ## What each module is
 
@@ -119,13 +119,13 @@ Account flows by stage and role with movement, opening, closing and unexplained,
 - Registered check classes: -
 - Documents: `docs/ACCOUNT_FLOW.md`
 
-### `CASHOPS` - FI-CA cash operations: payment file lifecycle
+### `CASH_OPS` - FI-CA Cash Operations: cash checks and payment files
 
-Payment files from the payment run to the bank: milestones per file type (SAP generation, transfer, bank receipt, bank acceptance, settlement), deadlines on a business calendar, status mappings, adapters for files, transfers, bank acknowledgements, schedulers, statements and tickets, the worklist with payments, stage timeline and evidence, the check of files stopped before the bank accepted them, the exception contract it fills.
+Runnable checks on SAP standard FI-CA tables for the cash cycle: payment run expected / completed and proposal-to-payment gaps, payment lot posting and clarification ageing, returns lots and reversal pending, bank statement arrival and posting, clearing reset and payment reversal after payout, reconciliation key to the G/L. Every exception carries count and amount per currency, oldest item and age, next cutoff, owner, stage and evidence keys at source grain; a rule that cannot be evaluated is reported, never green; the payment file lifecycle: payment files from the payment run to the bank - milestones per file type (SAP generation, transfer, bank receipt, bank acceptance, settlement), deadlines on a business calendar, status mappings, adapters for files, transfers, bank acknowledgements, schedulers, statements and tickets, the worklist and the check of files stopped before the bank accepted them. One licence for the FI-CA Cash Operations pack.
 
-- Entry points: `src/zca_ops_pf_run.prog.abap`, `src/ui/zui_ca_ops_payfile.srvd.srvdsrv`
-- Registered check classes: `ZCL_CA_OPS_CHK_PAYFILE`
-- Documents: `docs/PAYMENT_FILE_LIFECYCLE.md`, `docs/EXCEPTION_CONTRACT.md`
+- Entry points: `src/cash/zcl_ca_ops_cash_ctx.clas.abap`, `src/cash/zcl_ca_ops_cash_dao.clas.abap`, `src/zca_ops_pf_run.prog.abap`, `src/ui/zui_ca_ops_payfile.srvd.srvdsrv`
+- Registered check classes: `ZCL_CA_OPS_CHK_CASH_PAYRUN`, `ZCL_CA_OPS_CHK_CASH_PAYLOT`, `ZCL_CA_OPS_CHK_CASH_RETURN`, `ZCL_CA_OPS_CHK_CASH_EBS`, `ZCL_CA_OPS_CHK_CASH_CLEAR`, `ZCL_CA_OPS_CHK_CASH_GLKEY`, `ZCL_CA_OPS_CHK_PAYFILE`
+- Documents: `docs/FICA_CASH_OPERATIONS.md`, `docs/PAYMENT_FILE_LIFECYCLE.md`, `docs/EXCEPTION_CONTRACT.md`
 
 ## Configuration whose module follows from the row
 
@@ -152,7 +152,7 @@ Payment files from the payment run to the bank: milestones per file type (SAP ge
 | MOD | `PAYMODEL` | `PAYMODEL` |  | Payment model generator |
 | MOD | `BREAKS` | `BREAKS` |  | Clearing-account break analysis and pilot pack |
 | MOD | `FLOW` | `FLOW` |  | Account flow reconciliation |
-| MOD | `CASHOPS` | `CASHOPS` |  | FI-CA cash operations: payment file lifecycle |
+| MOD | `CASH_OPS` | `CASH_OPS` |  | FI-CA Cash Operations: cash checks and payment files |
 | CLAS | `ZCL_CA_OPS_CHK_LICENSE` | `CORE` |  | Registered check class of module CORE |
 | CLAS | `ZCL_CA_OPS_CHK_AGG` | `ONBOARD` |  | Registered check class of module ONBOARD |
 | CLAS | `ZCL_CA_OPS_CHK_ONBOARD` | `ONBOARD` |  | Registered check class of module ONBOARD |
@@ -161,9 +161,15 @@ Payment files from the payment run to the bank: milestones per file type (SAP ge
 | CLAS | `ZCL_CA_OPS_CHK_JOB_STATE` | `JOBS` |  | Registered check class of module JOBS |
 | CLAS | `ZCL_CA_OPS_CHK_LINKS` | `LINKS` |  | Registered check class of module LINKS |
 | CLAS | `ZCL_CA_OPS_CHK_BREAK` | `BREAKS` |  | Registered check class of module BREAKS |
-| CLAS | `ZCL_CA_OPS_CHK_PAYFILE` | `CASHOPS` |  | Registered check class of module CASHOPS |
+| CLAS | `ZCL_CA_OPS_CHK_CASH_CLEAR` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
+| CLAS | `ZCL_CA_OPS_CHK_CASH_EBS` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
+| CLAS | `ZCL_CA_OPS_CHK_CASH_GLKEY` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
+| CLAS | `ZCL_CA_OPS_CHK_CASH_PAYLOT` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
+| CLAS | `ZCL_CA_OPS_CHK_CASH_PAYRUN` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
+| CLAS | `ZCL_CA_OPS_CHK_CASH_RETURN` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
+| CLAS | `ZCL_CA_OPS_CHK_PAYFILE` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
 | PKG | `S4CORE` | `CORE` |  | Product baseline: S/4HANA core standard processes |
 | PKG | `FICA` | `CATALOGUE_FICA` |  | Industry package: SAP FI-CA standard processes |
-| PRC | `FICA_PAYFILE_ACK` | `CASHOPS` |  | Payment file lifecycle and bank acknowledgement |
+| PRC | `FICA_PAYFILE_ACK` | `CASH_OPS` |  | Payment file lifecycle and bank acknowledgement |
 | PKG | `FSCD` | `CATALOGUE_FSCD` |  | Industry package: SAP FS-CD standard processes |
 | PRC | `FSCD_FSRI` | `CATALOGUE_FSRI` |  | Reinsurance integration (FS-RI) |

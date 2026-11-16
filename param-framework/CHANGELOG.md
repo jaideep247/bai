@@ -2,6 +2,29 @@
 
 All notable changes of the parameter framework (`param-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-16 (domain value helps on DD07L / DD07T)
+
+Release constant unchanged: the value helps keep their elements; no ABAP logic changed.
+
+### Fixed
+- A15 answered on the reference system A4H (S/4HANA 2025): `DDCDS_CUSTOMER_DOMAIN_VALUE_T` returns values only for
+  domains of ABAP Cloud packages, nothing for a classic package. `ZI_CA_ParamKindVH`, `ZI_CA_ParamValueTypeVH`,
+  `ZI_CA_ParamSignVH`, `ZI_CA_ParamOptionVH` read `DD07L` (values, active version) with `DD07T` (texts, logon
+  language) by domain name; element names unchanged.
+
+### Added
+- House check `no_inline_in_call` (`tools/checks.py`; shared rule of `../tools/abaptools/name_checks.py`): no inline
+  declaration after `IMPORTING` of a functional method call (the A4H compiler refuses it). No occurrence here.
+
+## [Unreleased] - 2026-11-15 (build M: blank slate)
+
+Release constant unchanged: no ABAP logic changed.
+
+### Changed
+- The example area of `ZCL_CA_PARAM_BUILDER`'s header and of the README is `ZXX_OPS` (the former example carried a
+  consumer's abbreviation). The component is pack PARAM of the release manifest of the operations framework (first
+  in the import order; `ops-framework/docs/RELEASE_AND_INSTALL.md`).
+
 ## [Unreleased] - 2026-11-11 (SAP component names)
 
 Release constant unchanged: no ABAP object changed.

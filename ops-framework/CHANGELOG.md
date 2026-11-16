@@ -2,7 +2,123 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
-## [Unreleased] - 2026-11-15 (build K: payment file lifecycle, module CASHOPS; exception contract)
+## [Unreleased] - 2026-11-16 (merge: payment file lifecycle with FI-CA cash checks and release packs)
+
+Release constant unchanged (1.0.0). Build K (payment file lifecycle, exception contract) merged with builds L/M/N.
+
+### Changed
+- Licensing: one FI-CA Cash Operations licence. Module `CASH_OPS` (build N) now also covers the payment file
+  lifecycle (`ZCL_CA_OPS_CHK_PAYFILE`, `ZCA_OPS_PF_RUN`, worklist `ZUI_CA_OPS_PAYFILE`, configuration `PayFileType`,
+  gate in `ZCL_CA_OPS_PF_INGEST`); build K's module `CASHOPS` is dropped (`config/licensing/modules.json`, generated
+  `ZCL_CA_OPS_LIC_MAP`, `docs/licensing/modules.md`, `ZIF_CA_OPS_LIC_TYPES=>GC_MODULE-CASH_OPS`).
+- Exception contract adopted by the six cash checks (decision D-K1): `ZCL_CA_OPS_CASH_EXC=>TO_FINDING` fills
+  `UNKNOWN_COUNT`, `DEADLINE_AT` / `CALENDAR_ID` (the cutoff; `TY_CUTOFF-CALENDAR_ID` new), `STAGE`,
+  `RESP_USER` / `RESP_TEAM` / `RESP_SOURCE`; `ZCL_CA_OPS_CASH_CTX=>FINDING` sets `EVID_KEY` and collects the typed
+  evidence rows (`EVIDENCE_ROWS`, new), returned by each check in `TY_RESULT-EVIDENCE`. The earlier mapping is
+  unchanged. `ZCL_CA_OPS_EXC_CONTRACT=>MISSING`: a notice (action `NOTIFY`) needs no deadline, items with unknown
+  amount need no currency. ABAP Unit (`ZCL_CA_OPS_CASH_EXC`, `ZCL_CA_OPS_CASH_CTX`, `ZCL_CA_OPS_EXC_CONTRACT`) and
+  `tools/tests/test_cash_fixtures.py` assert no gap for every cash finding.
+- Release manifest: pack `FICA_CASH` also holds the payment file run-time objects (`Z*_CA_OPS_PF_*` but the adapter /
+  type interfaces, `ZCL_CA_OPS_CHK_PAYFILE`, `ZCA_OPS_PF_RUN`, the register tables, the worklist and its views); the
+  configuration tables, drafts and entities composed by the core configuration app and the exception contract, owner,
+  evidence and `ZCA_OPS_FNDEVI` stay in `CORE`; `examples/` is not shipped.
+- The payment file data access left `ZCL_CA_OPS_FACTORY` / `ZCL_CA_OPS_INJECTOR` for `ZCL_CA_OPS_PF_FACTORY` /
+  `ZCL_CA_OPS_PF_INJECTOR` (new), so no core object names an object of pack `FICA_CASH`.
+- Parameter prefixes `PF_` and `CASH_`, check registry (`tools/checks.py`: `release_manifest`, `no_inline_in_call`,
+  `payfile`), messages (350-369 licensing, 370-399 payment file lifecycle, 500-549 cash), INSTALL section 6j (payment
+  file lifecycle after section 6i cash operations), VERIFY V182-V186 kept next to builds L/M/N's rows.
+
+## [Unreleased] - 2026-11-16 (facts of the reference system A4H)
+
+Release constant unchanged (1.0.0): no behaviour change of the ABAP logic; the status text views read another source
+with the same elements. Facts seen by the owner's test tool on the reference system A4H (S/4HANA 2025 with FI-CA).
+
+### Fixed
+- Status texts (V27 answered): `DDCDS_CUSTOMER_DOMAIN_VALUE_T` returns values only for domains of ABAP Cloud packages,
+  nothing for a classic package. The seven text views `ZI_CA_OpsCtlStatusT`, `ZI_CA_OpsReopenT`,
+  `ZI_CA_OpsDtwStatusT`, `ZI_CA_OpsFlowRoleT`, `ZI_CA_OpsFlowRowT`, `ZI_CA_OpsFlowEvStT`, `ZI_CA_OpsFlowTagT` read
+  `DD07L` (values, active version) / `DD07T` (texts, logon language) by domain name; element names unchanged.
+- Inline declarations after `IMPORTING` of a functional call (refused by the A4H compiler, accepted by abaplint):
+  `ZCL_CA_OPS_CHECK_RUNNER=>RUN` (lock holder in the condition), `ZCL_CA_OPS_PURGE` (dependent and history counts) and
+  the test classes of `ZCL_CA_OPS_PURGE_DAO`, `ZCL_CA_OPS_JOB_PURGE`, `ZCL_CA_OPS_BRK_PURGE` declare the variable
+  before the call (same behaviour).
+- Link registry `FICA_DOC_HEADER`: `STBEL` is the reversed document, filled on the reversal ("Reversed document (on
+  the reversal)"); new field `STORB` "Reversal document (on the original)", evidence C.
+
+### Added
+- House check `no_inline_in_call` (`tools/checks.py`, 25 checks; shared rule `inline_in_call_failures` in
+  `../tools/abaptools/name_checks.py`, also in the suite's portable checks and the parameter framework's checks; root
+  tests `tools/tests/test_inline_in_call.py`).
+- Link registry `FICA_CHEQUE`: `BNKDT` (encashment date, set by the bank statement import), `DOC2T` (01 after
+  encashment), `LAUFD` / `LAUFI` (issuing payment run), evidence C; `FICA_CHEQUE_TO_STMT_LINE` seen on A4H (FICA layer
+  40 fields, `docs/LINK_REGISTRY.md` section 8). Generated seed rows, CDS snippets and impact report regenerated.
+
+### Changed
+- VERIFY: V27 answered; V117 narrowed (reference key form `AWKEY` = `FIKEY`, user; `AWTYP` `FKKSU` still open);
+  new section 2026-11-16 with V261 (`GET PERMISSIONS` may return 02 on a refusal - note, tests unchanged); V260 is the
+  first consumer's (reversal direction). `docs/ACCOUNT_FLOW.md` names `DD07L` / `DD07T` for the texts.
+
+## [Unreleased] - 2026-11-15 (licence installation role)
+
+### Changed
+- Decision D-L5: the vendor's licence is installed with the existing configuration role `Z_CA_OPS_CONFIG` (`ZCA_OPS`
+  01 / 03 for `CA_OPS`); the proposed role `Z_CA_OPS_LICENSE` is dropped (`docs/auth_zca_ops.md`, `LICENSING.md`, INSTALL).
+## [Unreleased] - 2026-11-15 (build M: clean install and release baseline)
+
+Release constant unchanged (1.0.0): no ABAP logic changed (comments and test data only).
+
+### Added
+- Versioned pack manifest `release/manifest.json`: supported releases (S/4HANA 2023 target, S/4HANA 2025 reference),
+  components with their version constants, prerequisites, packs PARAM / CORE / FICA_CASH (FI-CA Cash Operations) /
+  FSCD_STANDARD (later) / DEMO with their objects (by rules), catalogue processes, licence modules, source contracts,
+  check classes, seed rows by key, open item V161, activation steps and fixtures; import order; blank-slate,
+  namespace and distribution rules. Generated document `release/MANIFEST.md`; limits `release/object_limits.csv`.
+- `tools/release_manifest.py` (engine `../tools/abaptools/release_manifest.py`): `--check` (house check
+  `release_manifest` of `tools/checks.py`), `--report <folder>` (objects, packs, standard-table prerequisites,
+  namespace), `--namespace /NS/` (preparation only - R1-D1: the product stays in Z with the prefix ZCA).
+- `tools/release_diff.py` (engine `../tools/abaptools/release_diff.py`): upgrade notes between two git revisions -
+  objects per pack, dictionary changes classified adjust / convert / drop / settings, configuration files, versions,
+  rollback guidance.
+- Install harness `../tools/qualify` (adapted from the owner's test-tool harness): PARAM then CORE into the user's
+  packages, name clash test against TADIR before any write, activation, ABAP Unit, ATC, CDS / OData, licensing proof
+  without a licence; evidence in `release/qualification/<release>/<UTC>/`.
+- `docs/RELEASE_AND_INSTALL.md`; VERIFY V200-V212; decisions R1-D1 / R1-D2 recorded, D-M1 ... D-M5 proposed.
+
+### Changed
+- Blank slate: the modification-log lines "Moved from <first consumer's object> to the reusable framework" name no
+  consumer object any more (74 lines, sources and the parameter seed template); a test-history line and a test
+  comment no longer name the first consumer's parameter area and posting-area table; a CDS comment uses the example
+  area `ZXX_OPS`; test e-mail addresses on `example.com`; the change-log line of release 1.0.0 that named the
+  consumer's authorisation objects is neutral and its allowlist entry removed.
+## [Unreleased] - 2026-11-15 (build N: FI-CA cash coverage)
+
+Release 1 build N (`docs/release/RELEASE_1_PLAN.md`): runnable checks of the FI-CA Cash Operations pack on SAP
+standard tables, with expected / observed / unknown apart and the exception content of the pack on every finding.
+
+### Added
+- Sub-package `ZCA_OPS_CASH` (`src/cash`, `config/repository.json`): six check classes `ZCL_CA_OPS_CHK_CASH_PAYRUN`,
+  `_PAYLOT`, `_RETURN`, `_EBS`, `_CLEAR`, `_GLKEY` (payment run expected / completed and proposal gap, payment lot
+  posting and clarification, returns lot and reversal pending, bank statement arrival / stale source / posting /
+  transfer to FI-CA, clearing reset and payment reversal after payout, reconciliation key open / error / not in the
+  G/L); data access `ZIF_CA_OPS_CASH_DAO` / `ZCL_CA_OPS_CASH_DAO` (every count, sum and oldest date on the database,
+  capped, a read error = message 521); the G/L header view `ZI_CA_OpsCashJrnl` on `I_JournalEntry`; the exception
+  builder `ZCL_CA_OPS_CASH_EXC` (typed exception, one mapping into the finding); the run context
+  `ZCL_CA_OPS_CASH_CTX` (business calendar window, owner from the control register, next cutoff in
+  `CONTROL_TIME_ZONE`, "not evaluated", cap); factory / injector; types `ZIF_CA_OPS_CASH_TYPES`.
+- Catalogue monitors `FICA_CASH_*` with their class in `config/catalogue/packages/fica.json` (registry and control
+  coverage rows regenerated, inactive); licence module `CASH_OPS` (module map regenerated); messages 500-539;
+  parameters `CASH_*` (prefix registered in `ZCL_CA_OPS_PARAMS`); VERIFY V220-V237.
+- Offline fixture spec `config/cash/fixtures.json` (30 scenarios incl. the failure injection "job finished, output
+  incomplete") validated by the root test `tools/tests/test_cash_fixtures.py`; ABAP Unit tests per class.
+- `docs/FICA_CASH_OPERATIONS.md`.
+
+### Changed
+- Exceptions app list (`ZC_CA_OpsException` metadata extension, annotations only): columns Currency and Business date.
+- `tools/abaptools/licensing.py`: check class sources are found in sub-packages of `src/` too.
+- Catalogue `FICA` / `FSCD` (facts of the user's test tool, reference system A4H): `FICA_PAYRUN_NOPAY` counts
+  payments only (`XVORL` blank, still V129); step names `FPVA`, `FP04M` (evidence C), `RFKKFIKEYCLOSE`
+  (user), `RFKKGL00`, `RFKKKA00`, `FPINTM1`, mass activity type `PAYP` (still V127).
+## [Unreleased] - 2026-11-15 (build K: payment file lifecycle, licence module CASH_OPS; exception contract)
 
 Goal (user, 2026-11-15): the first release of FI-CA cash operations around the payment file whose SAP job finished but
 whose bank acknowledgement is missing - which payments and amounts, where it stopped, who owns the response, which SAP,
@@ -12,7 +128,7 @@ edit of a product object.
 ### Added
 - Payment file lifecycle (`docs/PAYMENT_FILE_LIFECYCLE.md`): milestones `PAYRUN`, `GENERATED`, `PICKUP`, `DELIVERED`,
   `RECEIPT`, `ACCEPTED`, `SETTLED` (receipt and acceptance never collapsed); configuration `ZCA_OPS_PFTYP` / `_PFSTG` /
-  `_PFMAP` / `_PFADP` in `ZUI_CA_OPS_CFG` (generated; activation of a file type needs module CASHOPS); model
+  `_PFMAP` / `_PFADP` in `ZUI_CA_OPS_CFG` (generated; activation of a file type needs licence module CASH_OPS); model
   `ZCL_CA_OPS_PF_LIFECYCLE` (statuses reached / late / implied / pending / missing / rejected / partial / failed /
   unknown, file / batch / payment acknowledgement, one ACK for several files, conflicts, overnight cut-off, business
   calendar, expected versus observed per day: holiday, valid zero volume, stale, not evaluated, pending, missing,
@@ -24,13 +140,13 @@ edit of a product object.
   repeated bank references, reissue linked to its predecessor with both payments marked, source health, ticket once,
   retention); register `ZCA_OPS_PFFILE`, `_PFPAY`, `_PFEVT`, `_PFMST`, `_PFSRC`, `_PFDAY` (`ZIF_CA_OPS_PF_DAO` /
   `ZCL_CA_OPS_PF_DAO`, totals per currency aggregated in the database); check `ZCL_CA_OPS_CHK_PAYFILE` (catalogue
-  process `FICA_PAYFILE_ACK` of package FICA, licensed as CASHOPS): `PF_ACK_MISSING` and the other stop findings,
+  process `FICA_PAYFILE_ACK` of package FICA, licensed as CASH_OPS): `PF_ACK_MISSING` and the other stop findings,
   conflict, duplicate exposure, answer for an original after its reissue, late, missing files of a day, not evaluated,
   stale; severity by grace / breach minutes and the amount limit of the currency and company code; worklist
   `ZUI_CA_OPS_PAYFILE` (`ZR_` / `ZC_CA_OpsPayFile`, `_OpsPfPayment`, `_OpsPfMilestone`, `_OpsPfEvidence`,
   `_OpsPfDay`, card `ZC_CA_OpsPfCard`, DCLs per area and company code; extension point `PAYFILE`, config / plug-in
   points `PAYFILE_CONFIG`, `PAYFILE_ADAPTER`); link registry object `S4_BACKGROUND_JOB` (`TBTCO`); parameters `PF_`;
-  messages 370-399; module `CASHOPS` (`config/licensing/modules.json`, map regenerated).
+  messages 370-399; module `CASH_OPS` (`config/licensing/modules.json`, map regenerated).
 - Exception contract (`docs/EXCEPTION_CONTRACT.md`): `ZIF_CA_OPS_EXC_CONTRACT` (included in `TY_FINDING`; fields
   `ZCA_OPS_FINDING-ITEM_COUNT`, `UNKNOWN_COUNT`, `DUP_AMOUNT`, `DEADLINE_AT`, `CALENDAR_ID`, `STAGE`, `RESP_USER`,
   `RESP_TEAM`, `RESP_SOURCE`, `EVID_KEY`), `ZCL_CA_OPS_EXC_CONTRACT` (evidence key, key values, gaps),
@@ -689,7 +805,7 @@ once per session by `ZCL_CA_OPS_FACTORY=>CHECK_VERSION` at `start_run`, message 
   is a parameter area of ZCA_PARAM (`ZCA_PARAM_AREA`, data element `ZCA_PARAM_AREA_ID`, CHAR 16);
   `start_run` refuses an unknown or inactive area (043).
 - One authorisation object: `ZCA_OPS` in object class `ZCA` (fields `ZCA_PARAR`, `ACTVT`, `BUKRS`),
-  replacing the suite's `ZCD_OPS` / `ZCD_PE_AREA`.
+  replacing the first consumer's own authorisation object and area check.
 
 ### Added
 - Store, exception lifecycle and exceptions app (`ZUI_CA_OPS_EXC`), alert router / policy / DAO /

@@ -4,10 +4,10 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-16"
   },
-  "passed": 35,
-  "total": 35,
-  "abap_files": 377,
-  "declared_unit_methods": 1593,
+  "passed": 36,
+  "total": 36,
+  "abap_files": 404,
+  "declared_unit_methods": 1643,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,13 +79,13 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (4075 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (4444 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "435 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "456 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {
@@ -131,6 +131,12 @@
       "failures": []
     },
     {
+      "name": "no_inline_in_call",
+      "passed": true,
+      "detail": "No inline declaration DATA( / FINAL( after IMPORTING of a method call in a functional position (right side of an assignment, a condition, an operand of another call): the compiler of the reference system S/4HANA 2025 refuses it, abaplint accepts it - declare the variable before the call.",
+      "failures": []
+    },
+    {
       "name": "auth_fields_defined",
       "passed": true,
       "detail": "Every AUTHORITY-CHECK on ZCA_OPS (zif_ca_ops_auth=>gc_object) and every pfcg_auth( ZCA_OPS, ... ) in a DCL (src/, cds/ and ../ops-framework/src) names only the fields ops-framework/docs/auth_zca_ops.md defines (section 1 fields, section 2 object field list); the retired ZCD_OPS / ZCD_PE_AREA appear nowhere.",
@@ -157,13 +163,13 @@
     {
       "name": "param_definitions_complete",
       "passed": true,
-      "detail": "148 delivered definitions in 5 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CA_OPS_PARAMS derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
+      "detail": "168 delivered definitions in 5 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CA_OPS_PARAMS derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
       "failures": []
     },
     {
       "name": "cds_abap_parity",
       "passed": true,
-      "detail": "33 CDS literal(s) / ABAP constant pairs agree (XBLNR rule, dashboard date windows, credit indicator, reversal reason, completed run statuses, stale thresholds).",
+      "detail": "34 CDS literal(s) / ABAP constant pairs agree (XBLNR rule, dashboard date windows, credit indicator, reversal reason, completed run statuses, stale thresholds).",
       "failures": []
     },
     {
@@ -205,19 +211,19 @@
     {
       "name": "ddic_fields",
       "passed": true,
-      "detail": "Field references compared with the table exports ddic/a4h, ddic/landscape_2026-11-15 (tools/abaptools/ddic_export.py compare): 73 customer field, 2319 exists, 1 missing, open; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.",
+      "detail": "Field references compared with the table exports ddic/a4h, ddic/landscape_2026-11-15 (tools/abaptools/ddic_export.py compare): 73 customer field, 2814 exists; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.",
       "failures": []
     },
     {
       "name": "abaplint_clean",
       "passed": true,
-      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 377 files.",
+      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 404 files.",
       "failures": []
     },
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1438 file(s), 3 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1513 file(s), 3 documented exemption(s).",
       "failures": []
     }
   ]

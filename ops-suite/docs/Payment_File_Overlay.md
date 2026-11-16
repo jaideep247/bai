@@ -5,7 +5,7 @@
 > **Analogy:** a universal parcel tracker plugged into one courier's own scanner feed: the tracker's rules stay the same,
 > only the translation of the courier's scan codes is the courier's.
 
-Build K, 2026-11-15. Framework module CASHOPS: `ops-framework/docs/PAYMENT_FILE_LIFECYCLE.md`. Nothing activated; every
+Build K, 2026-11-15. Framework module CASH_OPS: `ops-framework/docs/PAYMENT_FILE_LIFECYCLE.md`. Nothing activated; every
 overlay row delivered **inactive** (`config/payfile/`).
 
 ## 1. Setup 1 of the framework's two setups

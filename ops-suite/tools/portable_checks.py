@@ -19,6 +19,7 @@ Modification log:
 2026-11-15 | flow_config (overlay account flows valid with the product flows, all inactive).
 2026-11-15 | extensions (customer plug-in pack: extensions of the framework views valid, generated files current).
 2026-11-15 | ddic_fields (link registry, catalogue and code field references exist in the table exports of ddic/).
+2026-11-16 | no_inline_in_call (shared rule: inline declaration in IMPORTING of a functional call).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -148,6 +149,10 @@ check('pcre_only', name_checks.posix_regex_failures(ROOT),
 check('no_cp_patterns', name_checks.cp_pattern_failures(ROOT),
       'Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP '
       "comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).")
+check('no_inline_in_call', name_checks.inline_in_call_failures(ROOT),
+      'No inline declaration DATA( / FINAL( after IMPORTING of a method call in a functional position (right '
+      'side of an assignment, a condition, an operand of another call): the compiler of the reference system '
+      'S/4HANA 2025 refuses it, abaplint accepts it - declare the variable before the call.')
 
 # Authorisation object ZCA_OPS (framework, replaced ZCD_OPS 2026-11-10): only the fields SU20 / SU21 define
 import auth_checks  # noqa: E402

@@ -1,4 +1,4 @@
-# Payment file lifecycle (module CASHOPS)
+# Payment file lifecycle (module CASH_OPS)
 
 > **First principle:** a payment is only safe when every hand-off of its file - generated in SAP, picked up,
 > delivered, received by the bank, accepted by the bank, settled - is proven by a record, on time; a hand-off
@@ -10,6 +10,17 @@
 Release 2026-11-15 (build K), first module of the FI-CA cash operations release. Status: built and lint-clean
 (abaplint, 7.58 syntax), offline fixtures green in two integration setups; **not activated, ABAP Unit not executed**
 (`docs/VERIFY.md` V170-V181).
+
+**Licence and release pack (merge of 2026-11-16).** One FI-CA Cash Operations licence: module `CASH_OPS` covers the six
+cash checks (`docs/FICA_CASH_OPERATIONS.md`) and this lifecycle (`config/licensing/modules.json`). In the release
+manifest the lifecycle's run-time objects - `ZCL_CA_OPS_PF_*` / `ZIF_CA_OPS_PF_*` (but the adapter and type
+interfaces), `ZCL_CA_OPS_CHK_PAYFILE`, `ZCA_OPS_PF_RUN`, the register tables `ZCA_OPS_PF{FILE,PAY,EVT,MST,SRC,DAY}`
+and the worklist `ZUI_CA_OPS_PAYFILE` with its views - are in pack `FICA_CASH`. Core (`CORE`) keeps the exception
+contract (`ZIF_CA_OPS_EXC_CONTRACT`, `ZCL_CA_OPS_EXC_CONTRACT`), owner and evidence services, `ZCA_OPS_FNDEVI` and its
+views, and - because the core configuration app `ZUI_CA_OPS_CFG` composes them - the configuration tables
+`ZCA_OPS_PFTYP` / `PFSTG` / `PFMAP` / `PFADP`, their drafts `ZCA_D_PF*` and entities, and the interfaces
+`ZIF_CA_OPS_PF_ADAPTER` / `ZIF_CA_OPS_PF_TYPES` they name. The data access comes from `ZCL_CA_OPS_PF_FACTORY`
+(doubles: `ZCL_CA_OPS_PF_INJECTOR`), so no core object names an object of `FICA_CASH`.
 
 ## 1. What a support user sees - the flagship case
 
@@ -79,7 +90,7 @@ Rules (`ZCL_CA_OPS_PF_LIFECYCLE`, mirrored by `tools/abaptools/payfile.py`):
 
 | Table | Entity | What a site maintains |
 |---|---|---|
-| `ZCA_OPS_PFTYP` | `PayFileType` | file types: business process (owner), direction, ACK level, one ACK for several files, factory calendar, time zone, overnight cut-off, files expected per business day, zero volume valid, stale limit, days under watch (activation needs module CASHOPS, message 350) |
+| `ZCA_OPS_PFTYP` | `PayFileType` | file types: business process (owner), direction, ACK level, one ACK for several files, factory calendar, time zone, overnight cut-off, files expected per business day, zero volume valid, stale limit, days under watch (activation needs module CASH_OPS, message 350) |
 | `ZCA_OPS_PFSTG` | `PayFileMilestone` | which milestones apply, which are required, deadline kind (clock / offset), due time, business days after the business date, basis and offset, grace minutes |
 | `ZCA_OPS_PFMAP` | `PayFileStatusMap` | native status of a source -> milestone and outcome (`OK`, `REJECTED`, `PARTIAL`, `FAILED`, `INFO`); an unmapped value is evidence that moves nothing (message 388) |
 | `ZCA_OPS_PFADP` | `PayFileAdapter` | the adapter of each role per file type: source ID, class, setting, source type (`SAP`, `MW`, `BANK`) |
@@ -116,7 +127,7 @@ stored as evidence anyway) and stored once (event key = SHA-1 of source, record 
 a repeated bank reference is counted (`REPEAT_NO`); a source that fails is recorded **not evaluated** with its reason and
 keeps its watermark. Then every file under watch is evaluated with the health of the sources of its milestones, a file
 that became overdue is handed to the ticket sink once, every business day of the watch is evaluated. One unit of work per
-file type; the register older than `PF_RETENTION_DAYS` is removed. Test mode writes nothing. Licence module CASHOPS.
+file type; the register older than `PF_RETENTION_DAYS` is removed. Test mode writes nothing. Licence module CASH_OPS.
 
 ## 6. Exception contract
 
@@ -126,7 +137,7 @@ amount (`UNKNOWN_COUNT`), possible duplicate exposure (`DUP_AMOUNT`, only on `PF
 `PF_ORIG_ACK_AFTER_REISSUE`, whose gross is 0 - related findings count the gross once), the deadline (`DEADLINE_AT`, UTC)
 and its calendar, the stage reached, the responsible user / team / source and the evidence key with its typed rows.
 
-## 7. Findings of `ZCL_CA_OPS_CHK_PAYFILE` (catalogue process `FICA_PAYFILE_ACK`, module CASHOPS)
+## 7. Findings of `ZCL_CA_OPS_CHK_PAYFILE` (catalogue process `FICA_PAYFILE_ACK`, module CASH_OPS)
 
 | Code | When | Severity |
 |---|---|---|

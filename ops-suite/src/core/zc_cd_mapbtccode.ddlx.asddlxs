@@ -1,0 +1,69 @@
+// UI annotations: Approved tables and payment stages - Bank transaction codes (typed ZBTM)
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Bank transaction code',
+                     typeNamePlural: 'Bank transaction codes (typed ZBTM)',
+                     title: { type: #STANDARD, value: 'Version' } } }
+annotate entity ZC_CD_MapBtcCode with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Version;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Scheme;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Code;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Family;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  SubFamily;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  Bank;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  Flow;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  Category;
+
+  @UI.identification: [{ position: 90 }]
+  RuleGroup;
+
+  @UI.identification: [{ position: 100 }]
+  ExpCdi;
+
+  @UI.identification: [{ position: 110 }]
+  PayMethod;
+
+  @UI.identification: [{ position: 120 }]
+  PostingRule;
+
+  @UI.identification: [{ position: 130 }]
+  ActionCode;
+
+  @UI.identification: [{ position: 140 }]
+  Disposition;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

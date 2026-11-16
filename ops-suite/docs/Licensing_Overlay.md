@@ -47,7 +47,7 @@ may list all three systems when they share the installation number - the vendor 
    grace days of the contract) and checks it with `verify_license.py` for each system's identity.
 3. Basis prepares each system: SSF application and PSE, the vendor's certificate in its certificate list (STRUST),
    parameter `LIC_SSF_PROFILE` (framework INSTALL 6h).
-4. The licence administrator (role `Z_CA_OPS_LICENSE`) installs the file per system with `ZCA_OPS_LICENSE_INSTALL` -
+4. The licence administrator (existing role `Z_CA_OPS_CONFIG`, assigned in each system) installs the file per system with `ZCA_OPS_LICENSE_INSTALL` -
    test mode first, then for real. The licence is never transported; a renewal is a new file installed the same way.
 5. The morning run of `CA_OPS` (check `LICENSE`) and the dashboard `ZUI_CA_OPS_LIC` show the modules; the suite's alert
    rule for licence findings is a copy of `ops-framework/config/licensing/alert_rules_license.csv` with the suite's

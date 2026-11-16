@@ -12,7 +12,7 @@
 *& 2026-11-07 | Initial version (split from the store interface; get_range added).
 *& 2026-11-07 | Served by ZCA_PARAM; get_errors added; the definition default wins over the caller's
 *&            | default; BOOL blank = off.
-*& 2026-11-10 | Moved from ZIF_CD_OPS_PARAMS to the reusable framework ZCA_OPS: optional IV_AREA on every
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: optional IV_AREA on every
 *&            | read (else the area of the name prefix), ADD_PREFIXES (a consumer's prefixes), AREA_OF,
 *&            | CHECK_AREA (the area of a run is a registered parameter area).
 *&---------------------------------------------------------------------*

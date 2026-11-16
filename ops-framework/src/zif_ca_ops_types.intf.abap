@@ -52,6 +52,7 @@
 *& 2026-11-15 | Name prefix LIC_ read in area CA_OPS (licensing).
 *& 2026-11-15 | Exception contract (ZIF_CA_OPS_EXC_CONTRACT=>TY_CONTRACT included in TY_FINDING); name prefix PF_
 *&            | read in area CA_OPS (payment file lifecycle).
+*& 2026-11-15 | Name prefix CASH_ read in area CA_OPS (FI-CA cash operations checks, build N).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -176,6 +177,8 @@ INTERFACE zif_ca_ops_types
       license     TYPE ty_param_name VALUE 'LIC_',
       "! Payment file lifecycle (ZIF_CA_OPS_PF_TYPES=>GC_PARAM, 2026-11-15)
       payfile     TYPE ty_param_name VALUE 'PF_',
+      "! FI-CA cash operations checks (ZIF_CA_OPS_CASH_TYPES=>GC_PARAM, 2026-11-15, build N)
+      cash        TYPE ty_param_name VALUE 'CASH_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters

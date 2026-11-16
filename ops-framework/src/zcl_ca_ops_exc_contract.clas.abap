@@ -11,6 +11,8 @@
 *& could not fill. Pure: no database, no state.
 *& Modification log:
 *& 2026-11-15 | Initial version (build K: exception contract).
+*& 2026-11-16 | MISSING: a notice (action NOTIFY) needs no deadline; items with unknown amount need no currency
+*&            | (adopted by the FI-CA cash checks of build N).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception contract helpers</p>
 CLASS zcl_ca_ops_exc_contract DEFINITION
@@ -36,8 +38,9 @@ CLASS zcl_ca_ops_exc_contract DEFINITION
       RETURNING
         VALUE(rv_value) TYPE zif_ca_ops_exc_contract=>ty_link_value.
 
-    "! Contract gaps of a finding (GC_GAP): COUNT no item and no unknown item, CURRENCY an amount or items without
-    "! currency, DEADLINE none, OWNER no source of the responsible owner, STAGE none, EVIDENCE no evidence key
+    "! Contract gaps of a finding (GC_GAP): COUNT no item and no unknown item, CURRENCY an amount or items with a known
+    "! amount without currency, DEADLINE none (a notice - action NOTIFY - needs none), OWNER no source of the
+    "! responsible owner, STAGE none, EVIDENCE no evidence key
     CLASS-METHODS missing
       IMPORTING
         is_finding     TYPE zif_ca_ops_types=>ty_finding
@@ -69,10 +72,11 @@ CLASS zcl_ca_ops_exc_contract IMPLEMENTATION.
       INSERT zif_ca_ops_exc_contract=>gc_gap-count INTO TABLE rt_gaps.
     ENDIF.
     IF is_finding-currency IS INITIAL
-       AND ( is_finding-amount <> 0 OR is_finding-dup_amount <> 0 OR is_finding-item_count > 0 ).
+       AND ( is_finding-amount <> 0 OR is_finding-dup_amount <> 0 OR is_finding-item_count > is_finding-unknown_count ).
       INSERT zif_ca_ops_exc_contract=>gc_gap-currency INTO TABLE rt_gaps.
     ENDIF.
-    IF is_finding-deadline_at IS INITIAL.
+    " a notice (action NOTIFY: a rule not evaluated, a result capped) asks for no response by a deadline
+    IF is_finding-deadline_at IS INITIAL AND is_finding-action <> zif_ca_ops_types=>gc_action-notify.
       INSERT zif_ca_ops_exc_contract=>gc_gap-deadline INTO TABLE rt_gaps.
     ENDIF.
     IF is_finding-resp_source IS INITIAL.

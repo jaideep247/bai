@@ -17,7 +17,7 @@
 *&            | sy-dbcnt counted) - a half-written closure is never possible: a count short of the exceptions
 *&            | raises 787 before the history insert; LAST_CHANGED_AT set; history inserted accepting duplicate
 *&            | keys with a count check.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_DAO to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception repository</p>
 CLASS zcl_ca_ops_exc_dao DEFINITION

@@ -13,7 +13,7 @@
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | PCRE instead of the obsolete POSIX regex in matches( ).
 *& 2026-11-07 | CHANNEL_CLASS / INVALID_DESTINATION: alert destinations checked by their channel.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_CHECKS to the reusable framework ZCA_OPS (generic checks only);
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (generic checks only);
 *&            | AREA_VALID (one area register) and PARAM_EXISTS (purge registry) added.
 *& 2026-11-10 | TEMPLATE_VALID: e-mail template ID of a rule / channel (syntax, existence where the SMTG API
 *&            | is available; message 436).

@@ -6,7 +6,7 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_POLICY to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | Classification: allowed codes only (case ignored), open exceptions only.
 *& 2026-11-10 | Company-code isolation (MAY_ACT): a user of one company code acts on its exceptions and on
 *&            | area-level ones, never on another company code's or another area's (injected authorisations).

@@ -37,6 +37,7 @@
 *& 2026-11-10 | Sizing for 200 000-400 000 payments a normal day and 2 million on a peak day: defaults
 *&            | PAYOUT_MAX_PACKAGES 60 (was 20), PAYOUT_PARALLEL 8 (was 4), PAYOUT_BATCH_MAX_PACKAGES 1500
 *&            | (was 1000) - as config/param_definitions.csv; docs/Performance_Review.md section 10a.
+*& 2026-11-16 | Comments: reversal by DFKKKO-STORB / the reversal's STBEL (reference system A4H).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -63,7 +64,7 @@ INTERFACE zif_cd_ops_payout_types
   "! IN_FLIGHT purpose); UNDETERMINED: mandatory evidence could not be evaluated (fail closed);
   "! INCONSISTENT: some but not all evidence of a purpose, or an anomaly of an evidence kind;
   "! AMBIGUOUS: the FIN number is in two or more sources - never attributed to one; REVERSED:
-  "! the payment document is reversed (DFKKKO-STBEL)
+  "! the payment document is reversed (DFKKKO-STORB of the payment document)
   CONSTANTS:
     BEGIN OF gc_outcome,
       in_flight    TYPE ty_outcome VALUE 'IN_FLIGHT',
@@ -195,8 +196,8 @@ INTERFACE zif_cd_ops_payout_types
       "! Payment and clearing documents posted since the watermark (DFKKKO entry date / time of
       "! DFKKOP-AUGBL): new payment runs (DPAYH-DOC1R) and new or changed DFKKOP clearing
       documents TYPE ty_source_id VALUE 'DOCUMENTS',
-      "! Payment documents reversed since the watermark (entry date / time of the reversal document
-      "! DFKKKO-STBEL): a changed clearing of a payment already judged
+      "! Payment documents reversed since the watermark (entry date / time of the reversal document,
+      "! whose DFKKKO-STBEL names the payment document): a changed clearing of a payment already judged
       reversals TYPE ty_source_id VALUE 'REVERSALS',
       "! Statement lines imported since the watermark (FEBEP-KUKEY ascending)
       statement TYPE ty_source_id VALUE 'STATEMENT',

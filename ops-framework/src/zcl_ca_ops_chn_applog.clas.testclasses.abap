@@ -8,7 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-10 | Create and save failures: own messages 800 / 801 with the return code.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_APPLOG to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_applog DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

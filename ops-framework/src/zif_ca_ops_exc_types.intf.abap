@@ -8,7 +8,7 @@
 *& 2026-11-07 | History action RELEASE removed with the blocked-line release (read-only scope).
 *& 2026-11-10 | Concurrency review: TY_EXC_OPEN (key with the disposition and change stamp read - the
 *&            | guard of a resolve; replaces TY_EXC_KEY), code EXC_CHANGED_DEFERRED, messages 786-788.
-*& 2026-11-10 | Moved from ZIF_CD_OPS_EXC_TYPES to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *& 2026-11-10 | Classification of an open exception: action CLASSIFY, reason codes (parameter
 *&            | EXC_REASON_CODES, delivered TIMING and INVESTIGATING), message 068.
 *& 2026-11-11 | Reason code NOT_AN_ISSUE (false positive; pilot pack metric), delivered in EXC_REASON_CODES.

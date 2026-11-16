@@ -6,6 +6,10 @@
 Every path below is relative to the framework folder (`ops-framework/`). Nothing of the framework has
 run in an SAP system yet: the first installation is also the first activation (see `docs/VERIFY.md`).
 
+**Release baseline (2026-11-15, build M):** what ships in which pack, the import order, the blank-slate rule, the
+name clash test on the target system, upgrade and rollback, and the install harness with its evidence are in
+`docs/RELEASE_AND_INSTALL.md` (manifest `release/manifest.json`). This document keeps the configuration after the pull.
+
 ## 0. Before installing at a new customer — checklist
 
 | # | Check | How |
@@ -34,8 +38,10 @@ Names to look up in `TADIR` before the first pull (C3) - patterns, `*` = any cha
 | E-mail templates (SMTG) | `ZCA_OPS_ALERT_DEFAULT` (created in DV1 from `templates/`, section 4a) | - |
 | Roles (PFCG, proposal) | `Z_CA_OPS_*` | `Z_CA_PARAM_*` |
 
-The complete list of each component is its `src/` folder (one file per object); a clash on any single
-name is resolved before the pull (rename on the customer side or a decision to rename the framework -
+The complete list of each component is its `src/` folder (one file per object; with packs and lengths:
+`python3 tools/release_manifest.py --report <folder>`), and the install harness checks every name against TADIR of
+the target system before it writes anything (stage `collision`, `docs/RELEASE_AND_INSTALL.md` section 4); a clash on
+any single name is resolved before the pull (rename on the customer side or a decision to rename the framework -
 the latter is a change of the framework, not of the installation).
 
 ## 1. abapGit pull order
@@ -269,8 +275,9 @@ missing licence as an exception of `CA_OPS`.
 1. Binding `ZUI_CA_OPS_LIC_O4` (OData V4 - UI); republish `ZUI_CA_OPS_CFG_O4` (activation now checks the licence,
    message 350, refused only under `X`).
 2. Basis, per system (DV1, QA1, PS4): SSF application and PSE for the licence, the vendor's certificate in its
-   certificate list (STRUST); parameter `LIC_SSF_PROFILE` = the PSE (V166). Role `Z_CA_OPS_LICENSE` (`ZCA_OPS` 01 / 03
-   for `CA_OPS`) for the licence administrator (`docs/auth_zca_ops.md`).
+   certificate list (STRUST); parameter `LIC_SSF_PROFILE` = the PSE (V166). The licence is installed with the
+   existing configuration role `Z_CA_OPS_CONFIG` (`ZCA_OPS` 01 / 03 for `CA_OPS`), assigned in each system (D-L5,
+   `docs/auth_zca_ops.md`).
 3. Per system: `ZCA_OPS_LICENSE_INSTALL` in test mode, then without - the licence file the vendor issued for that
    system's installation number and SID; check the dashboard and the next run of the `LICENSE` check (registry row
    `CA_OPS / LICENSE`, group `MORNING`, delivered active). The licence is per system - never transported.
@@ -279,14 +286,33 @@ missing licence as an exception of `CA_OPS`.
 5. `LIC_ENFORCE` = `X` only when the contract says so and V162 / V163 / V166 / V167 are closed; switch back to `W` at
    once if a module is refused by mistake (CORE never is; stored data stays readable either way).
 
-## 6i. Payment file lifecycle (2026-11-15, module CASHOPS, `docs/PAYMENT_FILE_LIFECYCLE.md`)
+## 6i. FI-CA Cash Operations checks (2026-11-15, build N, `docs/FICA_CASH_OPERATIONS.md`)
+
+Sub-package `ZCA_OPS_CASH` (folder `src/cash`): pulled with the framework, after the parameter framework and the
+root package (it uses the framework's types, store, runner, parameters and control register). Nothing runs until the
+registry rows are switched on.
+
+1. Licence module `CASH_OPS` (requires `CATALOGUE_FICA`); under `LIC_ENFORCE` = `W` nothing is refused.
+2. Seed the catalogue monitoring rows of area `CA_FICA` (`config/catalogue/monitoring`): the six registry rows
+   `FICA_CASH_*` and their control coverage are delivered **inactive**.
+3. Per process control (`FICA_PAYRUN`, `FICA_PAY_LOTS`, `FICA_RETURNS`, `FICA_EBS_LOTS`, `FICA_CLEARING`,
+   `FICA_GL_TRANSFER`): owner, backup, team and `CUTOFF_TIME` (the owner and the next cutoff of every exception, V234).
+4. Parameters (`docs/PARAMETERS.md`, prefix `CASH_`): `CASH_CALENDAR` (factory calendar), `CASH_PAYRUN_JOBNAME`,
+   `CASH_PAYRUN_BUKRS`; the pending values `CASH_LOT_DONE_STATUS`, `CASH_RET_DONE_STATUS`, `CASH_EBS_FICA_BANKS`,
+   `CASH_GL_AWTYP` only after their VERIFY items (V222, V224, V227, V229) - until then those rules report "not
+   evaluated", which is intended.
+5. Activate one registry row at a time (test mode run first: `ZCA_OPS_CHECK_RUN` for `CA_FICA`, group `DAILY`); never
+   together with the aggregate template of the same rule (D-N1).
+6. ABAP Unit of the package `ZCA_OPS_CASH` (V233) and the fixture replay (V235) before the pilot.
+## 6j. Payment file lifecycle (2026-11-15, licence module CASH_OPS, `docs/PAYMENT_FILE_LIFECYCLE.md`)
 
 1. Pull: tables `ZCA_OPS_PFTYP`, `_PFSTG`, `_PFMAP`, `_PFADP` (configuration, `ZUI_CA_OPS_CFG`), `ZCA_OPS_PFFILE`,
    `_PFPAY`, `_PFEVT`, `_PFMST`, `_PFSRC`, `_PFDAY` (register; secondary indexes NAT, BDT, PAY, FIL, SRC by hand, V02),
    `ZCA_OPS_FNDEVI` (evidence of findings) and the new fields of `ZCA_OPS_FINDING` (exception contract,
    `docs/EXCEPTION_CONTRACT.md`). Bindings `ZUI_CA_OPS_PAYFILE_O4` (OData V4 - UI); republish `ZUI_CA_OPS_EXC_O4`
    (facets *Payments, deadline and owner*, *Evidence*) and `ZUI_CA_OPS_CFG_O4`.
-2. The licence must name module `CASHOPS` (under `LIC_ENFORCE = W` it runs and is reported).
+2. The licence must name module `CASH_OPS` - the one FI-CA Cash Operations licence of section 6i (under `LIC_ENFORCE = W` it
+   runs and is reported).
 3. Activate the catalogue process `FICA_PAYFILE_ACK` for the area (`docs/PROCESS_CATALOGUE.md`); its check
    `ZCL_CA_OPS_CHK_PAYFILE` arrives as an inactive monitoring row (schedule group `INTRADAY`).
 4. Configure per file type in DV1 (transported): file type (calendar, time zone, cut-off, expectation), milestones and

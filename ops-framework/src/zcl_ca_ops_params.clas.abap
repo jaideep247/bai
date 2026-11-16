@@ -15,7 +15,7 @@
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
 *& 2026-11-07 | No SLG1 entry per run and parameter (SLG1 minimum); errors in get_errors( ).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PARAMS_CA to the reusable framework ZCA_OPS: area named by the caller
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: area named by the caller
 *&            | or by the longest registered prefix (consumer prefixes by ADD_PREFIXES, framework prefixes
 *&            | -> CA_OPS); CHECK_AREA over ZIF_CA_PARAM=>CHECK_AREA (one area register).
 *& 2026-11-10 | Prefixes CONTROL_ and EXC_ read in area CA_OPS (control review, exception reason codes).
@@ -29,6 +29,7 @@
 *& 2026-11-15 | Prefix FLOW_ (account flow reconciliation) read in area CA_OPS.
 *& 2026-11-15 | Prefix LIC_ (licensing) read in area CA_OPS.
 *& 2026-11-15 | Prefix PF_ (payment file lifecycle) read in area CA_OPS.
+*& 2026-11-15 | Prefix CASH_ (FI-CA cash operations checks, build N) read in area CA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CA_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
@@ -101,7 +102,8 @@ CLASS zcl_ca_ops_params IMPLEMENTATION.
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-pilot       area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-flow        area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-license     area = zif_ca_ops_types=>gc_param_area )
-      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-payfile     area = zif_ca_ops_types=>gc_param_area ) ).
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-payfile     area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-cash        area = zif_ca_ops_types=>gc_param_area ) ).
   ENDMETHOD.
 
 

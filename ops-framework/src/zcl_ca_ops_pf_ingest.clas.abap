@@ -24,6 +24,8 @@
 *& is removed. Test mode writes nothing. Read-only towards business data.
 *& Modification log:
 *& 2026-11-15 | Initial version (build K: payment file lifecycle).
+*& 2026-11-16 | Merge with the release packs: data access through ZCL_CA_OPS_PF_FACTORY; licence module CASH_OPS
+*&            | (one FI-CA Cash Operations licence with the cash checks).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - payment file ingestion and evaluation</p>
 CLASS zcl_ca_ops_pf_ingest DEFINITION
@@ -199,12 +201,12 @@ CLASS zcl_ca_ops_pf_ingest IMPLEMENTATION.
     zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
                                             iv_area     = iv_area ).
     " licence of the module (refused only under LIC_ENFORCE = X: 352, nothing read or written)
-    zcl_ca_ops_factory=>get_license( )->gate( iv_module = zif_ca_ops_lic_types=>gc_module-cashops
+    zcl_ca_ops_factory=>get_license( )->gate( iv_module = zif_ca_ops_lic_types=>gc_module-cash_ops
                                               iv_area   = iv_area
                                               iv_entry  = 'ZCA_OPS_PF_RUN' ).
     mv_area = iv_area.
     mv_test = iv_test_mode.
-    mo_dao = zcl_ca_ops_factory=>get_pf_dao( ).
+    mo_dao = zcl_ca_ops_pf_factory=>get_dao( ).
     DATA(lo_clock) = zcl_ca_ops_factory=>get_clock( ).
     mv_now = lo_clock->now( ).
     mv_today = lo_clock->today( ).

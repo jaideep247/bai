@@ -29,6 +29,7 @@
 *&            | I_CompanyCode) instead of T001; same rows and assertions.
 *& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
 *&            | 2025).
+*& 2026-11-15 | ZBTR entries are rows of the typed table (ADD_TYPED, source T delivered).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -545,15 +546,16 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     lo_mem->add( iv_area = 'ZPMC' iv_keys = '*/Y/*' iv_results = 'OTH' ).
     lo_mem->add( iv_area = 'ZPMC' iv_keys = 'C/Z/*' ).
     " Customer posting area ZBTR (USAGE / SCOPE / SCHEME / CODE / FAMILY / SUB-FAMILY -> ROLE / COMPARE)
-    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/CCRD/BAI2/195|
-                 iv_results = 'PAYOUT_RECEIVED' ).
-    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/DACI/ISO/PMNT/ICDT/ARET|
-                 iv_results = |RETURNED/{ zif_cd_hck_runtime_types=>gc_compare-returns_lot }| ).
-    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/DACH/BAI2/*|
-                 iv_results = 'ORIGINAL' ).
+    lo_mem->add_typed( iv_purpose = 'BTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/CCRD/BAI2/195|
+                       iv_results = 'PAYOUT_RECEIVED' ).
+    lo_mem->add_typed( iv_purpose = 'BTR'
+                       iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/DACI/ISO/PMNT/ICDT/ARET|
+                       iv_results = |RETURNED/{ zif_cd_hck_runtime_types=>gc_compare-returns_lot }| ).
+    lo_mem->add_typed( iv_purpose = 'BTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/DACH/BAI2/*|
+                       iv_results = 'ORIGINAL' ).
     " Reconciliation entry of the same code (set STRIPE_US): never a lifecycle role
-    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-recon }/STRIPE_US/BAI2/195|
-                 iv_results = 'DEPOSIT' ).
+    lo_mem->add_typed( iv_purpose = 'BTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-recon }/STRIPE_US/BAI2/195|
+                       iv_results = 'DEPOSIT' ).
     zcl_cd_ops_postarea_injector=>inject_dao( lo_mem ).
     ls_rule-flow = 'D'.
     ls_rule-method_class = 'WIR'.

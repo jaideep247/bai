@@ -9,7 +9,7 @@
 *& every business day (expected versus observed) and commits per file
 *& type. The registered check ZCL_CA_OPS_CHK_PAYFILE turns the result into
 *& findings. Test mode (default) writes nothing. Authorisation ZCA_OPS 16
-*& for the area; module CASHOPS of the licence. Read-only towards
+*& for the area; module CASH_OPS of the licence. Read-only towards
 *& business data: no posting, no restart or retransmission of a file, no
 *& IDoc, no incident in SAP. One job log line per file type (370) and
 *& per note of the run; in background an error ends the job cancelled.

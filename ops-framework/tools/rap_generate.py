@@ -42,7 +42,7 @@ Modification log:
            | business process / catalogue activation by its catalogue process, a registered check by its class, a
            | catalogue package by its module ('valid' with the *_LICENSED checks). Deactivation is always allowed.
 2026-11-15 | Payment file lifecycle (docs/PAYMENT_FILE_LIFECYCLE.md): file types (ACK level, calendar, time zone,
-           | cut-off, expectation; module CASHOPS), milestones (product vocabulary, clock / offset deadlines), status
+           | cut-off, expectation; module CASH_OPS), milestones (product vocabulary, clock / offset deadlines), status
            | mappings (an outcome needs a milestone) and adapters (class of ZIF_CA_OPS_PF_ADAPTER, role, source).
 """
 import os
@@ -238,7 +238,7 @@ SPEC = {
               ('when', 'line_source', 'F', [('blank', 'ref_type')])]),
             ('zca_ops_pftyp', 'PayFileType', 'zca_d_pftyp', 'File type', 'Payment file types', [],
              [('area', 'area', False), ('enum', 'direction', ',D,C'), ('enum', 'ack_level', 'F,B,P,N'),
-              ('when', 'active', 'X', [('module', 'CASHOPS')])]),
+              ('when', 'active', 'X', [('module', 'CASH_OPS')])]),
             ('zca_ops_pfstg', 'PayFileMilestone', 'zca_d_pfstg', 'Milestone', 'Payment file milestones', [],
              [('area', 'area', False), ('enum', 'milestone', PF_MILESTONES), ('enum', 'due_kind', ',T,O'),
               ('enum', 'basis', ',' + PF_MILESTONES),

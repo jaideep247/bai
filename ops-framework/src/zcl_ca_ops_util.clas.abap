@@ -18,7 +18,7 @@
 *&              CONFIG / CODE), account_label (house bank / account ID or masked number), job_link
 *&              (batch job of the running program; GET_JOB_RUNTIME_INFO in test seam JOB_INFO).
 *& 2026-11-10 | format_amount: thousands separators and two decimals (missing bank ACK alert).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_UTIL to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - pure helper functions</p>
 "! Stateless helpers. No database access.

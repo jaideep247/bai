@@ -11,7 +11,7 @@
 *& 2026-11-10 | mail_names_system_and_job: system ID in the subject, run and job in the body (message 803).
 *& 2026-11-10 | ack_mail_subject_and_table: missing bank ACK subject and own table; other findings stay in
 *&            | the general table.
-*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_POLICY to the reusable framework ZCA_OPS: the bank ACK table is a
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS: the bank ACK table is a
 *&            | consumer section - section_owns_its_findings with the section double LTD_SECTION.
 *& 2026-11-10 | Alert e-mail templates: amounts only with SHOW_AMOUNTS, standard context keys and the findings
 *&            | block, business context of a finding, new / repeated / overdue from the stored exceptions.

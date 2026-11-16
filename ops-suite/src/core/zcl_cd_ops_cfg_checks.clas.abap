@@ -24,6 +24,10 @@
 *& 2026-11-10 | Generic field checks (DDIC names, tables, fields, plug-in classes, lists, windows, alert
 *&            | destinations) moved to the reusable framework ZCA_OPS (ZCL_CA_OPS_CFG_CHECKS); this class
 *&            | keeps the payment engine checks (R21 lookup approval, threshold order, posting areas).
+*& 2026-11-15 | Source per purpose (product review 2026-11-15): a posting area that cannot hold the layout
+*&            | is reported (440 / 441) instead of read; typed tables checked with the same rules plus
+*&            | duplicate key sets (442), the ZBTM disposition POSTED / NOT_POSTED (443, user decision
+*&            | 2026-11-15) and an empty active version (444); layouts moved to ZCL_CD_OPS_POSTAREA_LAYOUT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: field checks</p>
 CLASS zcl_cd_ops_cfg_checks DEFINITION
@@ -57,45 +61,34 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! takes, a blank key that must be a value or '*', allowed values per key and usage, roles
     "! per usage, LIFECYCLE scope form, method class of a scope present, one class per payment
     "! method, calendar of a house-bank entry, rule group with an active rule in ZCD_BTC_RULE,
-    "! RECON scheme BAI2, an empty posting area. One message per finding (entry and message).
+    "! RECON scheme BAI2, an empty posting area. Per purpose the source of its parameter: a posting
+    "! area that cannot hold the layout is reported (440 / 441) and not read; a typed table is
+    "! checked with the same rules, an empty active version is a warning (444). Both sources: two
+    "! entries with the same keys (442). One message per finding (entry and message).
     CLASS-METHODS check_posting_areas
       RETURNING
         VALUE(rt_messages) TYPE zif_cd_ops_postarea_types=>tt_check_message.
 
   PRIVATE SECTION.
-    "! A key or result field of a posting area (keys first, then results, in FQC0 order)
-    TYPES:
-      BEGIN OF ty_field,
-        name     TYPE zif_ca_ops_cfg_types=>ty_name,
-        "! Characters the reader takes (0 = no limit)
-        length   TYPE i,
-        "! '*' allowed - the reader applies it as FQC0 does
-        generic  TYPE abap_bool,
-        "! A key that must hold a value or '*'
-        required TYPE abap_bool,
-      END OF ty_field.
-    TYPES tt_field TYPE STANDARD TABLE OF ty_field WITH EMPTY KEY.
-
-    "! Layout of the posting area of a purpose (setup guide, Implementation_Order.md)
-    TYPES:
-      BEGIN OF ty_layout,
-        purpose TYPE zif_cd_ops_postarea_types=>ty_purpose,
-        area    TYPE zif_cd_ops_postarea_types=>ty_area,
-        keys    TYPE tt_field,
-        results TYPE tt_field,
-      END OF ty_layout.
-
+    "! Layout of the purpose (ZCL_CD_OPS_POSTAREA_LAYOUT) with the configured area name
     CLASS-METHODS layout
       IMPORTING
         iv_purpose       TYPE zif_cd_ops_postarea_types=>ty_purpose
       RETURNING
-        VALUE(rs_layout) TYPE ty_layout.
+        VALUE(rs_layout) TYPE zif_cd_ops_postarea_types=>ty_layout.
 
-    "! '*' where the reader cannot apply it, blank keys, values longer than the reader takes,
-    "! an area without entries
+    "! Two entries with the same key set (case ignored): only the first one applies (442)
+    CLASS-METHODS check_duplicates
+      IMPORTING
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
+        it_entries  TYPE zif_cd_ops_postarea_types=>tt_entry
+      CHANGING
+        ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
+
+    "! '*' where the reader cannot apply it, blank keys, values longer than the reader takes
     CLASS-METHODS check_layout
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         it_entries  TYPE zif_cd_ops_postarea_types=>tt_entry
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
@@ -103,7 +96,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! ZRSN: NOC flag X or blank
     CLASS-METHODS check_reasons
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         it_entries  TYPE zif_cd_ops_postarea_types=>tt_entry
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
@@ -112,7 +105,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! of a house-bank entry and one class per payment method, one ageing basis / calendar per class
     CLASS-METHODS check_pm_classes
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         it_entries  TYPE zif_cd_ops_postarea_types=>tt_entry
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
@@ -120,7 +113,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! ZBTM: allowed values, ISO code parts, rule group with an active rule in ZCD_BTC_RULE
     CLASS-METHODS check_btc_map
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         it_entries  TYPE zif_cd_ops_postarea_types=>tt_entry
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
@@ -129,9 +122,9 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! required and not a reconciliation role, compare amount; RECON role, scheme BAI2, no compare
     CLASS-METHODS check_btc_roles
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         it_entries  TYPE zif_cd_ops_postarea_types=>tt_entry
-        is_classes  TYPE ty_layout
+        is_classes  TYPE zif_cd_ops_postarea_types=>ty_layout
         it_classes  TYPE zif_cd_ops_postarea_types=>tt_entry
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
@@ -139,7 +132,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! ISO codes need family and sub-family, other schemes leave both blank
     CLASS-METHODS check_code_parts
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         is_entry    TYPE zif_cd_ops_postarea_types=>ty_entry
       CHANGING
         ct_messages TYPE zif_cd_ops_postarea_types=>tt_check_message.
@@ -147,7 +140,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! Message 413 when the value of the field is not in the list ('*' is the layout check's)
     CLASS-METHODS check_value
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         is_entry    TYPE zif_cd_ops_postarea_types=>ty_entry
         iv_name     TYPE zif_ca_ops_cfg_types=>ty_name
         iv_list     TYPE string
@@ -156,7 +149,7 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
 
     CLASS-METHODS add_message
       IMPORTING
-        is_layout   TYPE ty_layout
+        is_layout   TYPE zif_cd_ops_postarea_types=>ty_layout
         is_entry    TYPE zif_cd_ops_postarea_types=>ty_entry
         iv_number   TYPE zif_ca_ops_cfg_types=>ty_msg_number
         iv_v1       TYPE csequence OPTIONAL
@@ -169,13 +162,13 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! Value of a named key or result field of the layout (blank when the layout has none)
     CLASS-METHODS value
       IMPORTING
-        is_layout       TYPE ty_layout
+        is_layout       TYPE zif_cd_ops_postarea_types=>ty_layout
         is_entry        TYPE zif_cd_ops_postarea_types=>ty_entry
         iv_name         TYPE zif_ca_ops_cfg_types=>ty_name
       RETURNING
         VALUE(rv_value) TYPE string.
 
-    "! Value at a position of the entry (1-8 keys, 9-16 results)
+    "! Value at a position of the entry (1-8 keys, 9-15 results)
     CLASS-METHODS value_at
       IMPORTING
         is_entry        TYPE zif_cd_ops_postarea_types=>ty_entry
@@ -189,13 +182,6 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
         is_entry       TYPE zif_cd_ops_postarea_types=>ty_entry
       RETURNING
         VALUE(rv_text) TYPE string.
-
-    "! Characters of a character-like field of a reader's structure
-    CLASS-METHODS length_of
-      IMPORTING
-        iv_field         TYPE any
-      RETURNING
-        VALUE(rv_length) TYPE i.
 
     "! Comma list of the values; iv_blank: blank allowed (leading comma, as IN_LIST reads it)
     CLASS-METHODS list
@@ -239,10 +225,40 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
                            ( zif_cd_ops_postarea_types=>gc_purpose-btc_role ) ).
     LOOP AT lt_purposes ASSIGNING FIELD-SYMBOL(<lv_purpose>).
       DATA(ls_layout) = layout( <lv_purpose> ).
+      DATA(lv_source) = lo_reader->source( <lv_purpose> ).
+      " Source P for a layout TFK033D cannot hold: reported, never read (the reader refuses it)
+      IF lv_source = zif_cd_ops_postarea_types=>gc_source-posting_area.
+        DATA(lt_misfits) = zcl_cd_ops_postarea_layout=>misfits( <lv_purpose> ).
+        IF lt_misfits IS NOT INITIAL.
+          LOOP AT lt_misfits ASSIGNING FIELD-SYMBOL(<ls_misfit>).
+            <ls_misfit>-purpose = ls_layout-purpose.
+            <ls_misfit>-area    = ls_layout-area.
+            INSERT <ls_misfit> INTO TABLE rt_messages.
+          ENDLOOP.
+          CONTINUE.
+        ENDIF.
+      ENDIF.
       DATA(lt_entries) = lo_reader->entries( <lv_purpose> ).
+      IF lt_entries IS INITIAL.
+        add_message( EXPORTING is_layout   = ls_layout
+                               is_entry    = VALUE #( )
+                               iv_number   = COND #( WHEN lv_source = zif_cd_ops_postarea_types=>gc_source-typed
+                                                     THEN zif_cd_ops_cfg_types=>gc_msg-version_empty
+                                                     ELSE zif_cd_ops_cfg_types=>gc_msg-area_empty )
+                               iv_v1       = COND #( WHEN lv_source = zif_cd_ops_postarea_types=>gc_source-typed
+                                                     THEN zcl_cd_ops_postarea_layout=>table_of( <lv_purpose> )
+                                                     ELSE ls_layout-area )
+                               iv_v2       = |{ lo_reader->version( <lv_purpose> ) ALPHA = OUT }|
+                               iv_severity = zif_ca_ops_types=>gc_severity-warning
+                     CHANGING  ct_messages = rt_messages ).
+        CONTINUE.
+      ENDIF.
       check_layout( EXPORTING is_layout   = ls_layout
                               it_entries  = lt_entries
                     CHANGING  ct_messages = rt_messages ).
+      check_duplicates( EXPORTING is_layout   = ls_layout
+                                  it_entries  = lt_entries
+                        CHANGING  ct_messages = rt_messages ).
       CASE <lv_purpose>.
         WHEN zif_cd_ops_postarea_types=>gc_purpose-reason.
           check_reasons( EXPORTING is_layout   = ls_layout
@@ -268,97 +284,29 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
 
 
   METHOD layout.
-    " The reader's own types give the lengths: a value longer than its reader takes is a finding,
-    " never truncated (VERIFY-SE11: TFK033D KEYnn / FUNnn hold at least these lengths)
-    DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
-    DATA ls_map    TYPE zif_cd_ebs_types=>ty_btc_map.
-    DATA ls_class  TYPE zif_cd_hck_runtime_types=>ty_pm_class.
-    DATA ls_role   TYPE zif_cd_hck_runtime_types=>ty_btc_role_row.
-    DATA lv_pymet  TYPE zif_cd_hck_runtime_types=>ty_pymet.
-    DATA lv_usage  TYPE zif_cd_hck_types=>ty_btc_usage.
-    DATA lv_set    TYPE zif_cd_hck_recon_types=>ty_set_id.
+    rs_layout = zcl_cd_ops_postarea_layout=>layout( iv_purpose ).
+    rs_layout-area = zcl_cd_ops_postarea_factory=>get_reader( )->area( iv_purpose ).
+  ENDMETHOD.
 
-    rs_layout-purpose = iv_purpose.
-    rs_layout-area    = zcl_cd_ops_postarea_factory=>get_reader( )->area( iv_purpose ).
-    CASE iv_purpose.
-      WHEN zif_cd_ops_postarea_types=>gc_purpose-reason.
-        rs_layout-keys = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-reason
-                                    length = length_of( ls_reason-reason ) generic = abap_true required = abap_true ) ).
-        rs_layout-results = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-fica_reason
-                                       length = length_of( ls_reason-fica_reason ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-is_noc
-                                       length = length_of( ls_reason-is_noc ) ) ).
-      WHEN zif_cd_ops_postarea_types=>gc_purpose-pm_class.
-        rs_layout-keys = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-flow
-                                    length = length_of( ls_class-flow ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-pay_method
-                                    length = length_of( lv_pymet ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-house_bank
-                                    length = length_of( ls_class-hbkid ) generic = abap_true required = abap_true ) ).
-        rs_layout-results = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-method_class
-                                       length = length_of( ls_class-method_class ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-age_basis
-                                       length = length_of( ls_class-age_basis ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-calendar
-                                       length = length_of( ls_class-calendar ) ) ).
-      WHEN zif_cd_ops_postarea_types=>gc_purpose-btc_map.
-        rs_layout-keys = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-scheme
-                                    length = length_of( ls_map-scheme ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-code
-                                    length = length_of( ls_map-btc_code ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-family
-                                    length = length_of( ls_map-btc_code ) )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-sub_family
-                                    length = length_of( ls_map-btc_code ) generic = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-bank_key
-                                    length = length_of( ls_map-bank_key ) generic = abap_true required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-flow
-                                    length = length_of( ls_map-flow_type ) generic = abap_true required = abap_true ) ).
-        rs_layout-results = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-category
-                                       length = length_of( ls_map-category ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-rule_group
-                                       length = length_of( ls_map-rule_group ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-exp_cdi
-                                       length = length_of( ls_map-exp_cdi ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-pay_method
-                                       length = length_of( ls_map-pay_method ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-posting_rule
-                                       length = length_of( ls_map-posting_rule ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-action
-                                       length = length_of( ls_map-action ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-disposition
-                                       length = length_of( ls_map-disposition ) ) ).
-      WHEN zif_cd_ops_postarea_types=>gc_purpose-btc_role.
-        rs_layout-keys = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-usage
-                                    length = length_of( lv_usage ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-scope
-                                    length = length_of( lv_set ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-scheme
-                                    length = length_of( ls_role-scheme ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-code
-                                    length = length_of( ls_role-btc_code ) required = abap_true )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-family
-                                    length = length_of( ls_role-btc_code ) )
-                                  ( name = zif_cd_ops_postarea_types=>gc_field-sub_family
-                                    length = length_of( ls_role-btc_code ) ) ).
-        rs_layout-results = VALUE #( ( name = zif_cd_ops_postarea_types=>gc_field-role
-                                       length = length_of( ls_role-role ) )
-                                     ( name = zif_cd_ops_postarea_types=>gc_field-compare_amount
-                                       length = length_of( ls_role-compare_amount ) ) ).
-    ENDCASE.
+
+  METHOD check_duplicates.
+    DATA lt_seen TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.
+
+    LOOP AT it_entries ASSIGNING FIELD-SYMBOL(<ls_entry>).
+      DATA(lv_keys) = to_upper( entry_text( <ls_entry> ) ).
+      INSERT lv_keys INTO TABLE lt_seen.
+      IF sy-subrc <> 0.
+        add_message( EXPORTING is_layout   = is_layout
+                               is_entry    = <ls_entry>
+                               iv_number   = zif_cd_ops_cfg_types=>gc_msg-duplicate_keys
+                               iv_v1       = is_layout-area
+                     CHANGING  ct_messages = ct_messages ).
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
   METHOD check_layout.
-    IF it_entries IS INITIAL.
-      add_message( EXPORTING is_layout   = is_layout
-                             is_entry    = VALUE #( )
-                             iv_number   = zif_cd_ops_cfg_types=>gc_msg-area_empty
-                             iv_v1       = is_layout-area
-                             iv_severity = zif_ca_ops_types=>gc_severity-warning
-                   CHANGING  ct_messages = ct_messages ).
-      RETURN.
-    ENDIF.
     LOOP AT it_entries ASSIGNING FIELD-SYMBOL(<ls_entry>).
       LOOP AT is_layout-keys ASSIGNING FIELD-SYMBOL(<ls_key>).
         DATA(lv_key_index) = sy-tabix.
@@ -550,8 +498,9 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
                                                   ( CONV #( zif_ca_ops_types=>gc_action-notify ) )
                                                   ( CONV #( zif_ca_ops_types=>gc_action-on_account ) ) )
                              iv_blank  = abap_true ).
-    DATA(lv_dispositions) = list( it_values = VALUE #( ( CONV #( zif_cd_ebs_types=>gc_disposition-not_posted ) ) )
-                                  iv_blank  = abap_true ).
+    " User decision 2026-11-15: ZBTM uses the typed table, its disposition is always stated
+    DATA(lv_dispositions) = list( VALUE #( ( CONV #( zif_cd_ebs_types=>gc_disposition-posted ) )
+                                           ( CONV #( zif_cd_ebs_types=>gc_disposition-not_posted ) ) ) ).
     LOOP AT it_entries ASSIGNING FIELD-SYMBOL(<ls_entry>).
       check_value( EXPORTING is_layout = is_layout is_entry = <ls_entry>
                              iv_name   = zif_cd_ops_postarea_types=>gc_field-scheme iv_list = lv_schemes
@@ -565,9 +514,19 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
       check_value( EXPORTING is_layout = is_layout is_entry = <ls_entry>
                              iv_name   = zif_cd_ops_postarea_types=>gc_field-action iv_list = lv_actions
                    CHANGING  ct_messages = ct_messages ).
-      check_value( EXPORTING is_layout = is_layout is_entry = <ls_entry>
-                             iv_name   = zif_cd_ops_postarea_types=>gc_field-disposition iv_list = lv_dispositions
-                   CHANGING  ct_messages = ct_messages ).
+      IF value( is_layout = is_layout is_entry = <ls_entry>
+                iv_name   = zif_cd_ops_postarea_types=>gc_field-disposition ) IS INITIAL.
+        add_message( EXPORTING is_layout   = is_layout
+                               is_entry    = <ls_entry>
+                               iv_number   = zif_cd_ops_cfg_types=>gc_msg-disposition_missing
+                               iv_v1       = zif_cd_ops_postarea_types=>gc_field-disposition
+                               iv_v2       = lv_dispositions
+                     CHANGING  ct_messages = ct_messages ).
+      ELSE.
+        check_value( EXPORTING is_layout = is_layout is_entry = <ls_entry>
+                               iv_name   = zif_cd_ops_postarea_types=>gc_field-disposition iv_list = lv_dispositions
+                     CHANGING  ct_messages = ct_messages ).
+      ENDIF.
       check_code_parts( EXPORTING is_layout   = is_layout
                                   is_entry    = <ls_entry>
                         CHANGING  ct_messages = ct_messages ).
@@ -788,11 +747,6 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
       DELETE lt_keys INDEX lines( lt_keys ).
     ENDWHILE.
     rv_text = concat_lines_of( table = lt_keys sep = zif_cd_ops_postarea_types=>gc_key_separator ).
-  ENDMETHOD.
-
-
-  METHOD length_of.
-    DESCRIBE FIELD iv_field LENGTH rv_length IN CHARACTER MODE.
   ENDMETHOD.
 
 

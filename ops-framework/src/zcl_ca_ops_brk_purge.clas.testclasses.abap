@@ -7,6 +7,8 @@
 *& package size bounds a delete. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-11 | Initial version (build F: clearing-account break analysis).
+*& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
+*&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
 *&---------------------------------------------------------------------*
 CLASS ltc_brk_purge DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -86,11 +88,12 @@ CLASS ltc_brk_purge IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->count_purgeable( iv_target = 'BREAK' iv_cutoff = gc-cutoff
                                                                            iv_today  = '20261102' )
                                             exp = 1 msg = 'One purgeable snapshot' ).
+        DATA lv_dependent TYPE i.
         DATA(lv_count) = mo_cut->delete_package( EXPORTING iv_target    = 'BREAK'
                                                            iv_cutoff    = gc-cutoff
                                                            iv_today     = '20261102'
                                                            iv_max       = 10
-                                                 IMPORTING ev_dependent = DATA(lv_dependent) ).
+                                                 IMPORTING ev_dependent = lv_dependent ).
         cl_abap_unit_assert=>assert_equals( act = lv_count exp = 1 msg = 'One snapshot deleted' ).
         cl_abap_unit_assert=>assert_equals( act = lv_dependent exp = 2 msg = 'Its group and line' ).
         SELECT snap_id FROM zca_ops_brkrun ORDER BY snap_id INTO TABLE @DATA(lt_left).

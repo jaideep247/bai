@@ -8,14 +8,16 @@
 *& repository, HCK DAO). Read-only: the interface has no write method.
 *& Modification log:
 *& 2026-11-11 | Initial version (reversal and reset-clearing tracking, build C).
+*& 2026-11-16 | Reversal direction: the reversal document's STBEL names the payment document (reference
+*&            | system A4H); comment only.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - document-change reads</p>
 "! Implementation ZCL_CD_HCK_DOCCHG_DAO, factory ZCL_CD_HCK_FACTORY=>GET_DOCCHG_DAO.
 INTERFACE zif_cd_hck_docchg_dao
   PUBLIC.
 
-  "! Payment documents (DPAYH-DOC1R, no proposal run) whose document header carries a reversal
-  "! document (DFKKKO-STBEL) entered in iv_from .. iv_to, one row per payment run, at most
+  "! Payment documents (DPAYH-DOC1R, no proposal run) named by a reversal document (its DFKKKO-STBEL)
+  "! entered in iv_from .. iv_to, one row per payment run, at most
   "! iv_max_rows rows (reaching it = capped)
   METHODS get_reversed_payments
     IMPORTING

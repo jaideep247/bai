@@ -1523,6 +1523,234 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>500</MSGNR>
+     <TEXT>Payment run expected on &amp;1 not found (company code &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>501</MSGNR>
+     <TEXT>Payment run job &amp;1 of &amp;2 ended with status &amp;3 (count &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>502</MSGNR>
+     <TEXT>Run &amp;1: &amp;2 proposed item(s) not paid, gap &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>503</MSGNR>
+     <TEXT>Run &amp;1: &amp;2 payment(s) without payment document, &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>504</MSGNR>
+     <TEXT>Job &amp;1 finished, run &amp;2 incomplete: &amp;3 payment(s) without document, &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>505</MSGNR>
+     <TEXT>Payment lot &amp;1 not posted after &amp;2 day(s): &amp;3 item(s), &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>506</MSGNR>
+     <TEXT>Payment lot &amp;1: &amp;2 item(s) in clarification, &amp;3, oldest &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>507</MSGNR>
+     <TEXT>Returns lot &amp;1 not closed after &amp;2 day(s): &amp;3 item(s), &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>508</MSGNR>
+     <TEXT>Returns lot &amp;1: &amp;2 return(s) in clarification, &amp;3, oldest &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>509</MSGNR>
+     <TEXT>Returns lot &amp;1: &amp;2 return(s) without returns document, &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>510</MSGNR>
+     <TEXT>No bank statement of &amp;1 for house bank &amp;2 account &amp;3 (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>511</MSGNR>
+     <TEXT>No bank statement of &amp;1 for any of &amp;2 known account(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>512</MSGNR>
+     <TEXT>Statement &amp;1 (&amp;2): &amp;3 line(s) not posted, &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>513</MSGNR>
+     <TEXT>Statement &amp;1 (&amp;2): &amp;3 line(s) not transferred to FI-CA, &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>514</MSGNR>
+     <TEXT>Clearing by payment &amp;1 reset after payout: &amp;2 item(s), &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>515</MSGNR>
+     <TEXT>Payment document &amp;1 of run &amp;2 reversed after payout: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>516</MSGNR>
+     <TEXT>Reconciliation key &amp;1 open since &amp;2: &amp;3 total line(s), &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>517</MSGNR>
+     <TEXT>Reconciliation key &amp;1: G/L transfer error, &amp;2 total line(s), &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>518</MSGNR>
+     <TEXT>Reconciliation key &amp;1 closed &amp;2, no G/L document (&amp;3): &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>519</MSGNR>
+     <TEXT>&amp;1 not evaluated: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>520</MSGNR>
+     <TEXT>Parameter &amp;1 not maintained (value pending)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>521</MSGNR>
+     <TEXT>Source &amp;1 could not be read</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>522</MSGNR>
+     <TEXT>Business calendar &amp;1 could not be read for &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>523</MSGNR>
+     <TEXT>No business calendar in parameter &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>524</MSGNR>
+     <TEXT>&amp;1: &amp;2 object(s) read, the limit - further objects not reported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>525</MSGNR>
+     <TEXT>&amp;1 on &amp;2: job &amp;3 finished without output (valid zero volume)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>526</MSGNR>
+     <TEXT>&amp;1: &amp;2 is not a working day of calendar &amp;3 (not expected)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>527</MSGNR>
+     <TEXT>No bank statement in the last &amp;1 day(s): expected accounts unknown</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>530</MSGNR>
+     <TEXT>Stage: &amp;1 / evaluation: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>531</MSGNR>
+     <TEXT>Count: &amp;1 / amount: &amp;2 &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>532</MSGNR>
+     <TEXT>Oldest item: &amp;1 / age: &amp;2 day(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>533</MSGNR>
+     <TEXT>Next cutoff: &amp;1 &amp;2 &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>534</MSGNR>
+     <TEXT>Owner: &amp;1 / backup: &amp;2 / team: &amp;3 / control: &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>535</MSGNR>
+     <TEXT>Evidence &amp;1: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>536</MSGNR>
+     <TEXT>Source: &amp;1 / rule parameter: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>537</MSGNR>
+     <TEXT>Job &amp;1 (&amp;2): status &amp;3, ended &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>538</MSGNR>
+     <TEXT>Owner: not assigned (no active control or process owner for &amp;1)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>539</MSGNR>
+     <TEXT>Next cutoff: unknown (&amp;1 / &amp;2 cutoff time not maintained)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>742</MSGNR>
      <TEXT>Alert rule &amp;1: pattern &amp;2 is not valid PCRE - rule not applied</TEXT>
     </T100>

@@ -21,7 +21,7 @@
 // SubTransactionText: V103 sub-transaction text table (TFKTVOT candidate) not confirmed - blank
 // ContractAccount: V101 VERIFY-SE11 DFKKOP-VKONT
 // BusinessPartner: masked to the last four by the product view (trace rule)
-// ClearingReason: AUGRD 05 = reversal (confirmed 2026-11-07)
+// ClearingReason: AUGRD 05 = reversal (user, seen on A4H 2026-11-15)
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Payment model - adapter subledger item of a payment'
 @Metadata.ignorePropagatedAnnotations: true

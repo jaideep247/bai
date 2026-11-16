@@ -8,7 +8,7 @@
 *& no other behavior and is never configured.
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A62).
-*& 2026-11-10 | Moved from ZCL_CD_OPS_PLUGIN_PROBE to the reusable framework ZCA_OPS (test support of the
+*& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test support of the
 *&            | plug-in creation of ZCL_CA_OPS_FACTORY).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - plug-in probe (test support)</p>

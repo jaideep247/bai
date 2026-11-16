@@ -123,7 +123,7 @@ A process switched **on** reverses each line from the next run / the next read o
 checks. Summary: 23 processes (42 steps, 48 tables, 7 dependencies) - S4CORE 2, FICA 14, FSCD 7; 22 carry at least one VERIFY item and are delivered
 inactive; `S4_BATCH_JOBS` is the only one active by default. VERIFY items: **V127** program / transaction / mass
 activity names, **V128** tables and fields, **V129** monitoring conditions, values and limits. Every monitoring row
-of the product (`config/catalogue/monitoring`, 27 checks, 26 aggregate rows) is delivered **inactive**; a name that
+of the product (`config/catalogue/monitoring`, 34 checks, 26 aggregate rows) is delivered **inactive**; a name that
 is not known yet is a placeholder in angle quotes.
 
 Names treated as confirmed (evidence C) are the ones confirmed in a reference landscape or stable SAP standard:
@@ -139,6 +139,35 @@ field used in a monitoring condition is a VERIFY item until checked in SE11 of t
 | `FICA_WO_LIMIT` - write-offs above a limit | `FICA_WRITEOFF` | no-code aggregate: `DFKKOP` items cleared with the write-off clearing reason in the **last day** (`MAX_AGE_DAYS` 1, new window of the aggregate rows) with the local-currency amount above the limit, per company code | the write-off clearing reason value, the limit (V129) |
 | `FICA_WO_REASON` - write-offs outside the reason list | `FICA_WRITEOFF` | no-code aggregate: the same items whose write-off reason is **none of** the approved list (operator `NI`, new) | the approved reasons (V129) |
 | `FICA_GL_OUTAGE` - accounting around a planned downtime | `FICA_GL_TRANSFER` | class `ZCL_CA_OPS_CHK_OUTAGE`: for every **approved planned downtime window** of the area (`ZIF_CA_OPS_DOWNTIME`) that ended within `CAT_OUTAGE_DAYS`, each of its aggregate rows is measured in the window - `OUT_POST`: documents entered inside the window (date **and time**, new `TIME_FIELD`); `OUT_GLKEY`: reconciliation keys of the window's days plus `CAT_OUTAGE_MARGIN_DAYS` not transferred to the G/L. Findings per window, rule and company code; the check is always partial - an operator closes the exception after the accounting was confirmed | the window's time zone against the entry time of the documents, the key status table (V128, V129); a downtime window entered in the check's area |
+
+### FI-CA Cash Operations checks (2026-11-15, build N)
+
+Six runnable checks of the pack (module `CASH_OPS`, `docs/FICA_CASH_OPERATIONS.md`) are monitors of their catalogue
+process with a check class instead of aggregate rows; each reads only SAP standard tables, the released view
+`I_JournalEntry` and the framework's configuration, and is delivered inactive. Every exception carries count and
+amount per currency, oldest item and age, next cutoff, owner (the process control covering the check), stage and
+evidence keys at source grain; a rule that cannot be evaluated (status value pending, calendar missing, read failed)
+reports "not evaluated" and keeps the check partial.
+
+| Check | Process | Class | Configure before activation |
+|---|---|---|---|
+| `FICA_CASH_PAYRUN` | `FICA_PAYRUN` | `ZCL_CA_OPS_CHK_CASH_PAYRUN` | `CASH_CALENDAR`, `CASH_PAYRUN_JOBNAME`, `CASH_PAYRUN_BUKRS`; gap rule after V221 |
+| `FICA_CASH_PAYLOT` | `FICA_PAY_LOTS` | `ZCL_CA_OPS_CHK_CASH_PAYLOT` | `CASH_LOT_DONE_STATUS` (V222) |
+| `FICA_CASH_RETURNS` | `FICA_RETURNS` | `ZCL_CA_OPS_CHK_CASH_RETURN` | `CASH_RET_DONE_STATUS` (V224) |
+| `FICA_CASH_EBS` | `FICA_EBS_LOTS` | `ZCL_CA_OPS_CHK_CASH_EBS` | `CASH_CALENDAR`, `CASH_EBS_FICA_BANKS` (V227) |
+| `FICA_CASH_CLEARING` | `FICA_CLEARING` | `ZCL_CA_OPS_CHK_CASH_CLEAR` | `CASH_CLR_AUGRD` (optional) |
+| `FICA_CASH_GLKEY` | `FICA_GL_TRANSFER` | `ZCL_CA_OPS_CHK_CASH_GLKEY` | `CASH_GL_AWTYP` (V229) |
+
+The aggregate templates of the same rules (`FICA_PAYRUN_NOPAY`, `FICA_LOT_OPEN`, `FICA_LOT_CLARIF`, `FICA_RET_OPEN`,
+`FICA_EBS_NOLOT`, `FICA_CLR_RESET`, `FICA_GL_OPENKEY`) stay delivered: activate one of the two, never both (D-N1).
+`FICA_PAYRUN_NOPAY` counts payments only (`XVORL` blank, a proposal row has no document by design); it cannot leave
+out payment-order methods (no document until the bank confirms) - a customer with such methods uses the class check
+(`CASH_PAYRUN_ORDER_METHODS`) or keeps the template off.
+
+Names filled 2026-11-15 from the user's test tool (reference system A4H unless noted): `FPVA` (dunning, activity run
+`FPVB`) and `FP04M` evidence C; `RFKKFIKEYCLOSE` closes the keys (user); `RFKKGL00` (G/L
+transfer of `FPG1`), `RFKKKA00` (statement items to payment lots), `FPINTM1` (interest) and the mass activity type
+`PAYP` of the payment run (a test value) stay V127.
 
 ## 7. How a customer activates, deactivates or adds a process
 

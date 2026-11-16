@@ -16,21 +16,21 @@ State as of 2026-11-11 (the activation rule of `ZCL_CA_OPS_CATALOG`: package off
 |---|---|---|---|---|---|---|---|
 | S4_BATCH_JOBS | Background job processing | BC | PLATFORM | yes | default | C  | S4_JOB_FAILURES, S4_JOB_STATES |
 | S4_BANK_STMT | Electronic bank statement import and posting | FI-BL | BANK | no | default | V V129 | S4_EBS_UNPOSTED |
-| FICA_PAYRUN | Payment run (disbursements and collections) | FI-CA | PAYMENTS | no | default | V V127 V129 | FICA_PAYRUN_NOPAY |
+| FICA_PAYRUN | Payment run (disbursements and collections) | FI-CA | PAYMENTS | no | default | V V127 V129 | FICA_PAYRUN_NOPAY, FICA_CASH_PAYRUN |
 | FICA_PAYFILE_ACK | Payment file lifecycle and bank acknowledgement | FI-CA | PAYMENTS | no | default | V V175 V180 | FICA_PAYFILE_ACK |
-| FICA_PAY_LOTS | Incoming payment lots and cash journal | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_LOT_OPEN, FICA_LOT_CLARIF |
-| FICA_RETURNS | Returns lots (returned payments) | FI-CA | RECEIVABLES | no | default | V V128 | FICA_RET_OPEN |
-| FICA_EBS_LOTS | Bank statement items to payment lots and clearing | FI-CA | BANK | no | default | V V127 V128 | FICA_EBS_NOLOT |
-| FICA_CLEARING | Clearing and reset of clearing | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_CLR_RESET |
+| FICA_PAY_LOTS | Incoming payment lots and cash journal | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_LOT_OPEN, FICA_LOT_CLARIF, FICA_CASH_PAYLOT |
+| FICA_RETURNS | Returns lots (returned payments) | FI-CA | RECEIVABLES | no | default | V V128 | FICA_RET_OPEN, FICA_CASH_RETURNS |
+| FICA_EBS_LOTS | Bank statement items to payment lots and clearing | FI-CA | BANK | no | default | V V127 V128 | FICA_EBS_NOLOT, FICA_CASH_EBS |
+| FICA_CLEARING | Clearing and reset of clearing | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_CLR_RESET, FICA_CASH_CLEARING |
 | FICA_REVERSAL | Document reversal | FI-CA | ACCOUNTING | no | default | V V128 | FICA_REV_DAY |
-| FICA_DUNNING | Dunning | FI-CA | DUNNING | no | default | V V127 V128 | FICA_DUN_NOACT |
+| FICA_DUNNING | Dunning | FI-CA | DUNNING | no | default | V V128 | FICA_DUN_NOACT |
 | FICA_INVOICING | Invoicing (FI-CA invoicing) | FI-CA | INVOICING | no | default | V V127 V128 | FICA_INV_BACKLOG |
 | FICA_INTEREST | Interest calculation | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_INT_MISSED |
-| FICA_WRITEOFF | Write-off | FI-CA | RISK | no | default | V V127 V128 V129 | FICA_WO_LIMIT, FICA_WO_REASON |
+| FICA_WRITEOFF | Write-off | FI-CA | RISK | no | default | V V128 V129 | FICA_WO_LIMIT, FICA_WO_REASON |
 | FICA_INSTALMENT | Instalment plans | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_IP_BREACH |
 | FICA_DEFERRAL | Deferral of due dates | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_DEF_EXPIRED |
 | FICA_CORRESP | Correspondence | FI-CA | CUSTOMER | no | default | V V127 V128 | FICA_CORR_OPEN |
-| FICA_GL_TRANSFER | G/L transfer and reconciliation keys | FI-CA | ACCOUNTING | no | default | V V127 V128 V129 | FICA_GL_OPENKEY, FICA_GL_OUTAGE, FICA_GL_BREAKS |
+| FICA_GL_TRANSFER | G/L transfer and reconciliation keys | FI-CA | ACCOUNTING | no | default | V V127 V128 V129 | FICA_GL_OPENKEY, FICA_GL_OUTAGE, FICA_GL_BREAKS, FICA_CASH_GLKEY |
 | FSCD_PAYPLAN | Payment plans and debit entry (insurance) | FS-CD | INSURANCE | no | default | V V127 V128 | FSCD_PP_NOT_DEBITED |
 | FSCD_PREMIUM | Premium collection | FS-CD | INSURANCE | no | default | V V128 | FSCD_PREM_OVERDUE |
 | FSCD_BROKER | Broker collections (broker reports) | FS-CD | INSURANCE | no | default | V V127 V128 | FSCD_BRO_OPEN |
@@ -86,7 +86,7 @@ Package FICA · component FI-CA · dashboard card PAYMENTS · business owner rol
 |---|---|---|---|---|
 | 010 | transaction | `FPY1` | Schedule the payment run (mass activity) | C  |
 | 020 | program | `RFKK_MA_SCHEDULER` | Mass activity scheduler of the run (job) | C  |
-| 030 | mass activity type | `‹payment run mass activity type›` | Mass activity type of the payment run | V V127 |
+| 030 | mass activity type | `PAYP` | Mass activity type of the payment run (test value) | V V127 |
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
@@ -101,13 +101,14 @@ Depends on: FICA_GL_TRANSFER (soft: Payment documents reach the G/L with their k
 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
-| FICA_PAYRUN_NOPAY | Payments of past runs without a payment document | R1: COUNT `DPAYH`, date LAUFD (>= 1 d), DOC1R EQ , per BBUKR, amber 1 / red ‹red count› | V V129 |
+| FICA_PAYRUN_NOPAY | Payments of past runs without a payment document | R1: COUNT `DPAYH`, date LAUFD (>= 1 d), DOC1R EQ , XVORL EQ , per BBUKR, amber 1 / red ‹red count› | V V129 |
+| FICA_CASH_PAYRUN | Cash: payment run expected / completed, documents, gap | `ZCL_CA_OPS_CHK_CASH_PAYRUN` | C |
 
 ### FICA_PAYFILE_ACK - Payment file lifecycle and bank acknowledgement
 
 Package FICA · component FI-CA · dashboard card PAYMENTS · business owner role: Payment operations lead · typical schedule: Intraday, after every payment medium run
 
-The payment files of the payment runs from generation to the bank: SAP generation (job), transfer (middleware or direct), receipt and acceptance by the bank (per file, batch or payment), posting / settlement evidence - module CASHOPS (docs/PAYMENT_FILE_LIFECYCLE.md). Ingestion ZCA_OPS_PF_RUN, check ZCL_CA_OPS_CHK_PAYFILE; the file types, milestones, status mappings and adapters are the customer's configuration.
+The payment files of the payment runs from generation to the bank: SAP generation (job), transfer (middleware or direct), receipt and acceptance by the bank (per file, batch or payment), posting / settlement evidence - module CASH_OPS (docs/PAYMENT_FILE_LIFECYCLE.md). Ingestion ZCA_OPS_PF_RUN, check ZCL_CA_OPS_CHK_PAYFILE; the file types, milestones, status mappings and adapters are the customer's configuration.
 
 | Step | Kind | SAP object | What it does | Evidence |
 |---|---|---|---|---|
@@ -147,6 +148,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 |---|---|---|---|
 | FICA_LOT_OPEN | Payment lots not posted and closed after n days | R1: AGE `DFKKZK`, date ERDAT (>= 1 d), ‹lot status field› NE ‹closed value›, amber 1 / red 3 | V V128 |
 | FICA_LOT_CLARIF | Payment lot items waiting in clarification | R1: COUNT `DFKKZP`, date ‹lot item date field› (>= 1 d), ‹clarification flag› EQ X, amber 1 / red ‹red count› | V V128 |
+| FICA_CASH_PAYLOT | Cash: payment lots not posted, clarification ageing | `ZCL_CA_OPS_CHK_CASH_PAYLOT` | C |
 
 ### FICA_RETURNS - Returns lots (returned payments)
 
@@ -167,6 +169,7 @@ Depends on: FICA_PAYRUN (soft: Returns of payments of the payment run)
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
 | FICA_RET_OPEN | Returns lots not posted and closed after n days | R1: AGE `DFKKRK`, date ERDAT (>= 1 d), STARS NE ‹closed value›, amber 1 / red 3 | V V128 |
+| FICA_CASH_RETURNS | Cash: returns lots open, clarification, reversal pending | `ZCL_CA_OPS_CHK_CASH_RETURN` | C |
 
 ### FICA_EBS_LOTS - Bank statement items to payment lots and clearing
 
@@ -174,7 +177,7 @@ Package FICA · component FI-CA · dashboard card BANK · business owner role: B
 
 | Step | Kind | SAP object | What it does | Evidence |
 |---|---|---|---|---|
-| 010 | program | `‹transfer of bank statement items to FI-CA›` | Bank statement items into payment lots | V V127 |
+| 010 | program | `RFKKKA00` | Bank statement items into payment lots (documented) | V V127 |
 | 020 | transaction | `FEBAN` | Post-process items the transfer could not clear | C  |
 
 | Table | Role | Link registry object | Meaning | Evidence |
@@ -188,6 +191,7 @@ Depends on: S4_BANK_STMT (hard: Needs the imported bank statement)
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
 | FICA_EBS_NOLOT | Statement items of past days not transferred to FI-CA | R1: COUNT `FEBEP`, date BUDAT (>= 1 d), ‹FI-CA transfer flag› NE X, amber 1 / red ‹red count› | V V128 |
+| FICA_CASH_EBS | Cash: statement missing / stale, lines not posted / in FI-CA | `ZCL_CA_OPS_CHK_CASH_EBS` | C |
 
 ### FICA_CLEARING - Clearing and reset of clearing
 
@@ -206,6 +210,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 | Monitoring check | What it watches | Class / aggregate rows | Evidence |
 |---|---|---|---|
 | FICA_CLR_RESET | Clearings reset in the last day above a limit | R1: COUNT `DFKKRAPT`, date STDAT (<= 1 d), amber ‹amber count› / red ‹red count› | V V128 |
+| FICA_CASH_CLEARING | Cash: clearing reset / payment reversed after payout | `ZCL_CA_OPS_CHK_CASH_CLEAR` | C |
 
 ### FICA_REVERSAL - Document reversal
 
@@ -231,7 +236,7 @@ Package FICA · component FI-CA · dashboard card DUNNING · business owner role
 |---|---|---|---|---|
 | 010 | transaction | `FPVA` | Dunning proposal (mass activity) | C  |
 | 020 | transaction | `FPVB` | Dunning activity run (mass activity) | C  |
-| 030 | mass activity type | `‹dunning mass activity types›` | Mass activity types of proposal and activity run | V V127 |
+| 030 | transaction | `FPVA` | Dunning proposal run (activity run FPVB) | C  |
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
@@ -269,7 +274,7 @@ Package FICA · component FI-CA · dashboard card RECEIVABLES · business owner 
 
 | Step | Kind | SAP object | What it does | Evidence |
 |---|---|---|---|---|
-| 010 | transaction | `‹interest calculation mass run›` | Interest calculation run (mass activity) | V V127 |
+| 010 | transaction | `FPINTM1` | Interest calculation run (mass activity) | V V127 |
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
@@ -289,7 +294,7 @@ Carries the generic write-off risk checks: write-offs above an amount limit and 
 | Step | Kind | SAP object | What it does | Evidence |
 |---|---|---|---|---|
 | 010 | transaction | `FP04` | Write off items | C  |
-| 020 | transaction | `‹mass write-off transaction›` | Mass write-off (mass activity) | V V127 |
+| 020 | transaction | `FP04M` | Mass write-off (mass activity) | C  |
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
@@ -362,9 +367,9 @@ Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): d
 
 | Step | Kind | SAP object | What it does | Evidence |
 |---|---|---|---|---|
-| 010 | transaction | `‹close reconciliation keys›` | Close the reconciliation keys of the day | V V127 |
+| 010 | program | `RFKKFIKEYCLOSE` | Close the reconciliation keys of the day | C  |
 | 020 | transaction | `FPG1` | Transfer the summary records to the general ledger | C  |
-| 030 | program | `‹G/L transfer program›` | G/L transfer program (job) | V V127 |
+| 030 | program | `RFKKGL00` | G/L transfer program of FPG1 (job, documented) | V V127 |
 
 | Table | Role | Link registry object | Meaning | Evidence |
 |---|---|---|---|---|
@@ -377,6 +382,7 @@ Carries the generic accounting-around-an-outage check (ZCL_CA_OPS_CHK_OUTAGE): d
 | FICA_GL_OPENKEY | Reconciliation keys not transferred after n days | R1: AGE `DFKKSUMC`, date CPUDT (>= 1 d), ‹key status field› NE ‹transferred value›, amber 1 / red 2 | V V128 |
 | FICA_GL_OUTAGE | Risk: postings in a planned downtime, G/L transfer gaps around it | `ZCL_CA_OPS_CHK_OUTAGE` with OUT_POST: COUNT `DFKKKO`, date CPUDT CPUTM, amber 1 / red ‹red count›; OUT_GLKEY: COUNT `DFKKSUMC`, date CPUDT, ‹key status field› NE ‹transferred value›, amber 1 / red 1 | V V128 V129 |
 | FICA_GL_BREAKS | Clearing-account breaks not explained after n days | `ZCL_CA_OPS_CHK_BREAK` | C |
+| FICA_CASH_GLKEY | Cash: reconciliation key open, in error, not in the G/L | `ZCL_CA_OPS_CHK_CASH_GLKEY` | C |
 
 ### FSCD_PAYPLAN - Payment plans and debit entry (insurance)
 
