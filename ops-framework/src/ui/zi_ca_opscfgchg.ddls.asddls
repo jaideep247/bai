@@ -212,3 +212,8 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zca_ops_maact
+  {
+    last_changed_at as LastChangedAt
+  }

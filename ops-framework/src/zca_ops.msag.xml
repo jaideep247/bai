@@ -1895,6 +1895,150 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>600</MSGNR>
+     <TEXT>Run &amp;1 planned &amp;2 never started: no SAP job &amp;3 (scheduler: &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>601</MSGNR>
+     <TEXT>Run &amp;1 planned &amp;2: scheduler &amp;3, but SAP has no job &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>602</MSGNR>
+     <TEXT>Run &amp;1 planned &amp;2: SAP job &amp;3 waits (status &amp;4), not started</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>603</MSGNR>
+     <TEXT>Run &amp;1 planned &amp;2 waits for &amp;3: not ended successfully (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>604</MSGNR>
+     <TEXT>Run &amp;1 planned &amp;2 is held at the scheduler (since &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>605</MSGNR>
+     <TEXT>Run &amp;1 planned &amp;2 started &amp;3 minutes late (SAP job &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>606</MSGNR>
+     <TEXT>Scheduler source &amp;1 is stale: newest record &amp;2 (limit &amp;3 min)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>607</MSGNR>
+     <TEXT>Scheduler source &amp;1 could not be read: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>608</MSGNR>
+     <TEXT>Expected runs: &amp;1 not usable: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>609</MSGNR>
+     <TEXT>SAP jobs read reached the cap &amp;1: expected runs not all judged</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>610</MSGNR>
+     <TEXT>No business calendar: parameter &amp;1 names no class</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>611</MSGNR>
+     <TEXT>Scheduler: &amp;1 &amp;2 run &amp;3, state &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>612</MSGNR>
+     <TEXT>SAP job: &amp;1 / &amp;2, status &amp;3, started &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>613</MSGNR>
+     <TEXT>Predecessor: &amp;1, SAP job &amp;2, status &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>614</MSGNR>
+     <TEXT>Scheduler row &amp;1 / &amp;2: run days &amp;3 not seven characters X or blank</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>615</MSGNR>
+     <TEXT>Run &amp;1 of &amp;2: &amp;3 of &amp;4 interval(s) failed or did not finish</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>616</MSGNR>
+     <TEXT>Job &amp;1 ended OK, run &amp;2 of &amp;3: &amp;4 interval(s) failed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>617</MSGNR>
+     <TEXT>Run &amp;1 of &amp;2: interval &amp;3 running &amp;4 minutes (over the limit)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>618</MSGNR>
+     <TEXT>Run &amp;1 of &amp;2: &amp;3 of &amp;4 expected documents output</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>619</MSGNR>
+     <TEXT>Job &amp;1 ended OK, run &amp;2 output &amp;3 of &amp;4 expected documents</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>620</MSGNR>
+     <TEXT>Mass activity &amp;1 not usable: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>621</MSGNR>
+     <TEXT>Run &amp;1, activity type &amp;2, parent job &amp;3, status &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>622</MSGNR>
+     <TEXT>Interval &amp;1: job &amp;2, status &amp;3, &amp;4 minutes</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>623</MSGNR>
+     <TEXT>Output &amp;1: expected &amp;2, observed &amp;3 (failed intervals &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>630</MSGNR>
      <TEXT>Link &amp;1 is ambiguous by design: &amp;2 of &amp;3 not covered by its conditions</TEXT>
     </T100>

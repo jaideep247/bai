@@ -36,8 +36,8 @@
 | Pack | Name | Status | Requires | Objects (rule) | Licence modules | Source contracts |
 |---|---|---|---|---|---|---|
 | PARAM | Parameter framework | release, required | - | ZCA_PARAM: src, src/ui | - | - |
-| CORE | Operations framework core | release, required | PARAM | ZCA_OPS: src, src/ui | CORE, CONTROL, ONBOARD, JOBS, RESPONSE, LINKS, PAYMODEL | CHECK_CLASS, JOB_RESOLVER, JOB_ENRICHER, ALERT_SECTION, ALERT_CHANNEL, PURGE_TARGET |
-| FICA_CASH | FI-CA Cash Operations | release | CORE | ZCA_OPS: src/cash, names `Z(CL|IF)_CA_OPS_PF_(?!ADAPTER$|TYPES$)\w+`, names `ZCL_CA_OPS_CHK_PAYFILE`, names `ZCA_OPS_PF_RUN`, names `ZCA_OPS_PF(FILE|PAY|EVT|MST|SRC|DAY)`, names `Z[RCI]_CA_OPSP(F\w+|AYFILE)`, names `ZUI_CA_OPS_PAYFILE` | CATALOGUE_FICA, CASH_OPS, BREAKS, FLOW | FLOW_SOURCE |
+| CORE | Operations framework core | release, required | PARAM | ZCA_OPS: src, src/ui | CORE, CONTROL, ONBOARD, JOBS, RESPONSE, LINKS, PAYMODEL | CHECK_CLASS, JOB_RESOLVER, JOB_ENRICHER, ALERT_SECTION, ALERT_CHANNEL, PURGE_TARGET, XRUN_SOURCE |
+| FICA_CASH | FI-CA Cash Operations | release | CORE | ZCA_OPS: src/cash, names `Z(CL|IF)_CA_OPS_PF_(?!ADAPTER$|TYPES$)\w+`, names `ZCL_CA_OPS_CHK_PAYFILE`, names `ZCA_OPS_PF_RUN`, names `ZCA_OPS_PF(FILE|PAY|EVT|MST|SRC|DAY)`, names `Z[RCI]_CA_OPSP(F\w+|AYFILE)`, names `ZUI_CA_OPS_PAYFILE` | CATALOGUE_FICA, CASH_OPS, BREAKS, FLOW | FLOW_SOURCE, MA_RUN_SOURCE |
 | FSCD_STANDARD | Standard FS-CD (catalogue content) | later | FICA_CASH | ZCA_OPS: none (content pack) | CATALOGUE_FSCD, CATALOGUE_FSRI | - |
 | DEMO | Demo consumer (sandbox only) | release, never in production | CORE | ZCA_OPS: src/demo | - | - |
 
@@ -79,13 +79,15 @@ Licence modules and plug-in contracts that no pack names belong to `CORE`.
 - Seed rows by key: area CA_FICA, layer FICA, package FICA, prefix FICA_
 - Fixture (offline): `ops-framework/config/flows` - Account flow templates DISB / COLL (inactive) checked by tools/checks.py flow_config
 - Fixture (offline): `ops-framework/config/breaks` - Break buckets and product rules checked by tools/checks.py break_rules
+- Fixture (offline): `ops-framework/config/expected_runs/fixtures.json` - Expected runs and mass activity fixtures (scorecard 1) checked by tools/tests/test_expected_runs.py
 
 | Step | By | Activation |
 |---|---|---|
 | 1 | configuration | Customizing request: product rows of the seed files of this pack (catalogue package FICA, link layer FICA, break rules, account flow templates) - every monitoring row and flow template delivered inactive |
 | 2 | configuration | Catalogue activation of the qualified processes of this pack from a date, with reason and approver (four-eyes) - effective-dated, reversible |
 | 3 | configuration | Per process: area, owner, approved tables (security sign-off), checks, control, alert rule (docs/ADDING_A_BUSINESS_PROCESS.md) |
-| 4 | verify | VERIFY items of the pack (catalogue V124-V129, links V116-V120, breaks V135-V138, flows V145-V149, cash checks V220-V237) and the cash fixtures config/cash/fixtures.json |
+| 4 | verify | VERIFY items of the pack (catalogue V124-V129, links V116-V120, breaks V135-V138, flows V145-V149, cash checks V220-V237, expected runs and mass activities V290-V306) and the cash fixtures config/cash/fixtures.json |
+| 5 | configuration | Mass activities of the area (ZCA_OPS_MAACT, rows of config/expected_runs/zca_ops_maact.csv delivered inactive with placeholders): activity type, parent job, output rule - after V298-V303 |
 
 ### FSCD_STANDARD - Standard FS-CD (catalogue content)
 
@@ -144,6 +146,7 @@ Within a component the install harness follows the object order of `tools/qualif
 | `ops-framework/config/flows/zca_ops_flwrul.csv` | ZCA_OPS_FLWRUL | AREA | area |
 | `ops-framework/config/flows/zca_ops_flwstg.csv` | ZCA_OPS_FLWSTG | AREA | area |
 | `ops-framework/config/flows/zca_ops_flwtil.csv` | ZCA_OPS_FLWTIL | AREA | area |
+| `ops-framework/config/expected_runs/zca_ops_maact.csv` | ZCA_OPS_MAACT | AREA | area |
 | `ops-framework/config/check_registry.csv` | ZCA_OPS_CHECK | whole file | pack |
 | `ops-framework/config/param_areas.csv` | ZCA_PARAM_AREA | whole file | loader ZCL_CA_OPS_PARAM_SEED |
 | `ops-framework/config/param_definitions.csv` | ZCA_PARAM_DEF | whole file | loader ZCL_CA_OPS_PARAM_SEED |

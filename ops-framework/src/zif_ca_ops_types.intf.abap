@@ -55,6 +55,7 @@
 *& 2026-11-15 | Name prefix CASH_ read in area CA_OPS (FI-CA cash operations checks, build N).
 *& 2026-11-16 | Name prefix EVAL_ read in area CA_OPS (evaluation and coverage, build O); TY_ALERT_LOG-DLV_*
 *&            | (delivery confirmation of an alert, separate from its submission).
+*& 2026-11-16 | Name prefixes XRUN_ (expected runs) and MA_ (FI-CA mass activities) read in area CA_OPS (build P).
 *& 2026-11-16 | Name prefix GATE_ read in area CA_OPS (extension and release-gate proof, build Q).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
@@ -184,6 +185,10 @@ INTERFACE zif_ca_ops_types
       payfile     TYPE ty_param_name VALUE 'PF_',
       "! FI-CA cash operations checks (ZIF_CA_OPS_CASH_TYPES=>GC_PARAM, 2026-11-15, build N)
       cash        TYPE ty_param_name VALUE 'CASH_',
+      "! Expected runs from the scheduler (ZIF_CA_OPS_XRUN_TYPES=>GC_PARAM, 2026-11-16, build P)
+      xrun        TYPE ty_param_name VALUE 'XRUN_',
+      "! FI-CA mass activities (ZIF_CA_OPS_MA_TYPES=>GC_PARAM, 2026-11-16, build P)
+      mass_act    TYPE ty_param_name VALUE 'MA_',
       "! Extension and release-gate proof (ZIF_CA_OPS_LINK_TYPES=>GC_PARAM-LAYERS_OFF, 2026-11-16, build Q)
       gate        TYPE ty_param_name VALUE 'GATE_',
     END OF gc_param_area_prefix.

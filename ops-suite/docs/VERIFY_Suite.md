@@ -27,6 +27,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | **V260** | **Facts of the reference system A4H from the owner's test tool (2026-11-16): reversal pointer direction (`DFKKKO-STBEL` on the reversal, `STORB` on the original); notes on V86 / V67 (scheduler run IDs), V108** | **this document, §6** |
 
 | **V240-V258** | **Build R: pilot acceptance items of the first customer's five open daily controls - ECT pending, BlackLine extracts, base-rejected items, missing check IDs, returns notification (2026-11-16)** | **this document, §5; `Pilot_Acceptance.md`** |
+| **V307** | **Build P: expected runs - run days, planned start, calendar and predecessor of the disbursement cycle's scheduler rows from the Control-M export** | **this document, §8** |
 | V130, V131 | Process catalogue customer layer: the customer process's table and programs, approval of the activation proposal and the order of the catalogue rows before `CAT_PROCESS` (2026-11-11) | `Process_Catalogue_Overlay.md` §4 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping
@@ -167,3 +168,15 @@ each row is the fact still open and who answers it. A row is closed only with th
 | V256 | ABAP Unit (DV1) | `ltc_ect_pending`, `ltc_chq_no_id`, `ltc_cheque_dao` (OSQL), `ltc_exposure`, `ltc_due_file`, `ltc_check` of `ZCL_CD_COLL_C_NO_ANSWER` / `_C_REFUND` - doubles only, offline |
 | V257 | QA1 | The tests ECT-1/2, BL-1/2/3, BR-1/2, MC-1, RN-1/2/3 of `Pilot_Acceptance.md` with their expected results |
 | V258 | QA1 | *Not evaluated* is never green: a check with a placeholder left (HCK `PLUGIN_ERROR`, runner `CHECK_FAILED`, FMON `DUE_FILE_NOT_EVALUATED`) leaves a finding under the control's check, so the daily review never shows the control *Healthy* (the framework-wide evaluation state of build O shows it as *not evaluated* once merged) |
+
+## 8. Build P (2026-11-16) - expected runs of the first customer's scheduler
+
+The framework's expected runs (`ops-framework/docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`) read the plan columns of the
+scheduler rows (`config/scheduler_jobs.csv`, `ZCA_OPS_JOBSCH`). The rows of the disbursement cycle carry placeholders
+for run days, planned start, calendar and predecessor; every row stays inactive. V307 is the first customer's item of
+the framework's range V290-V309.
+
+| ID | Kind | Item |
+|---|---|---|
+| V307 | Control-M export | Run days, planned start (system time of PS4), factory calendar and predecessor of each `DISB_DAY` job from the Control-M export (the cycle numbers 010 ... 090 order the jobs; whether each waits for the one before is the export's, not assumed); then the plan columns of the rows, `XRUN_SOURCES` of the area `CD_JOBS` and the registry row `EXPECTED_RUNS` of `CD_JOBS` (group `FAST`) - or a source class on the Control-M plan export instead of the configured plan. |
+

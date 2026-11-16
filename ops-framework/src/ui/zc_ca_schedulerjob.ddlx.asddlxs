@@ -36,6 +36,25 @@ annotate entity ZC_CA_SchedulerJob with
   @UI.identification: [{ position: 70 }]
   Seq;
 
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  PlanDays;
+
+  @UI.identification: [{ position: 90 }]
+  PlanTime;
+
+  @UI.identification: [{ position: 100 }]
+  LateMin;
+
+  @UI.identification: [{ position: 110 }]
+  CalendarId;
+
+  @UI.identification: [{ position: 120 }]
+  PredFolder;
+
+  @UI.identification: [{ position: 130 }]
+  PredJob;
+
   @UI.hidden: true
   LastChangedBy;
 

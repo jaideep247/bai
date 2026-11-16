@@ -1,0 +1,918 @@
+{
+ "_comment": "Offline fixture spec of build P (ops-framework/docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md section 6): the expected runs of an external scheduler compared with SAP's jobs (kind xrun, check ZCL_CA_OPS_CHK_XRUN) and the FI-CA mass activity runs with their intervals and document output (kind ma, check ZCL_CA_OPS_CHK_MA_INTERVAL). Each scenario names its ABAP Unit test (the same scenario on test doubles), the records at source grain that produce it on a real system (scheduler plan, TBTCO with the parent of each interval as the resolvers would link it, DPAYH, FKKMAKO), the parameters and the expected findings: check code, severity, stage, object key, count, amount, currency, deadline, owner and evidence. Values in 'given' (job names, activity types, statuses) are test values, never SAP facts (VERIFY V290-V303). Times are the server clock, equal to UTC here. Validated by tools/tests/test_expected_runs.py through the reference model tools/abaptools/expected_runs.py; replay on a system is VERIFY V306.",
+ "spec_version": 1,
+ "today": "2026-11-16",
+ "now": "2026-11-16T09:00:00",
+ "defaults": {
+  "area": "ZT_OPS_A",
+  "owner": {
+   "control": "the control covering the check",
+   "owner": "ZT_OWNER",
+   "team": "ZT_TEAM",
+   "cutoff_time": "10:00:00"
+  },
+  "calendar": {
+   "id": "ZT",
+   "non_working": [
+    "2026-11-14",
+    "2026-11-15"
+   ]
+  },
+  "xrun": {
+   "late_min": 30,
+   "early_min": 60,
+   "match_min": 720,
+   "stale_min": 60
+  },
+  "ma": {
+   "run_limit_min": 120,
+   "now": "2026-11-16T08:00:00"
+  }
+ },
+ "fixtures": [
+  {
+   "check": "EXPECTED_RUNS",
+   "class": "ZCL_CA_OPS_CHK_XRUN",
+   "kind": "xrun",
+   "id": "XRUN-01",
+   "abap_unit": "never_started_no_sap_job",
+   "scorecard": [],
+   "title": "Never started: the scheduler planned ZT_PAY_PREP for 06:00, SAP has no job of its names at 09:00",
+   "given": {
+    "source": "ZT_EXPORT",
+    "plan": {
+     "newest_at": "2026-11-16T09:00:00",
+     "stale_min": 0,
+     "runs": [
+      {
+       "folder": "ZT_FOLDER",
+       "job": "ZT_PAY_PREP",
+       "run_id": "R-ZT_PAY_PREP",
+       "pattern": "ZT_PAYPREP.*",
+       "plan": "2026-11-16T06:00:00",
+       "late_min": 0,
+       "pred_folder": "",
+       "pred_job": "",
+       "state": "",
+       "state_at": ""
+      }
+     ],
+     "not_expected": []
+    },
+    "TBTCO": []
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "XRUN_NEVER_STARTED",
+      "severity": "E",
+      "action": "EXCEPTION",
+      "stage": "SCHEDULER",
+      "object_key": "ZT_PAY_PREP/202611160600",
+      "item_count": 1,
+      "unknown_count": 1,
+      "amount": "0.00",
+      "currency": "",
+      "deadline": "2026-11-16T06:30:00",
+      "owner": "ZT_OWNER",
+      "evidence": [
+       {
+        "kind": "SCHD",
+        "type": "RUN",
+        "quality": "C"
+       },
+       {
+        "kind": "SAP",
+        "type": "JOB",
+        "quality": "U"
+       }
+      ]
+     }
+    ],
+    "evaluation": "FINDINGS",
+    "partial": false
+   }
+  },
+  {
+   "check": "EXPECTED_RUNS",
+   "class": "ZCL_CA_OPS_CHK_XRUN",
+   "kind": "xrun",
+   "id": "XRUN-02",
+   "abap_unit": "predecessor_not_finished",
+   "scorecard": [],
+   "title": "Predecessor not finished: ZT_PAY_PREP was cancelled, ZT_PAY_RUN (after it, 07:00) never started",
+   "given": {
+    "source": "ZT_EXPORT",
+    "plan": {
+     "newest_at": "2026-11-16T09:00:00",
+     "stale_min": 0,
+     "runs": [
+      {
+       "folder": "ZT_FOLDER",
+       "job": "ZT_PAY_PREP",
+       "run_id": "R-ZT_PAY_PREP",
+       "pattern": "ZT_PAYPREP.*",
+       "plan": "2026-11-16T06:00:00",
+       "late_min": 0,
+       "pred_folder": "",
+       "pred_job": "",
+       "state": "",
+       "state_at": ""
+      },
+      {
+       "folder": "ZT_FOLDER",
+       "job": "ZT_PAY_RUN",
+       "run_id": "R-ZT_PAY_RUN",
+       "pattern": "ZT_PAYRUN.*",
+       "plan": "2026-11-16T07:00:00",
+       "late_min": 0,
+       "pred_folder": "ZT_FOLDER",
+       "pred_job": "ZT_PAY_PREP",
+       "state": "",
+       "state_at": ""
+      }
+     ],
+     "not_expected": []
+    },
+    "TBTCO": [
+     {
+      "name": "ZT_PAYPREP_DAILY",
+      "count": "06010001",
+      "status": "A",
+      "start": "2026-11-16T06:01:00",
+      "end": "2026-11-16T06:04:00"
+     }
+    ]
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "XRUN_PRED_NOT_FINISHED",
+      "severity": "E",
+      "action": "EXCEPTION",
+      "stage": "WAIT_PRED",
+      "object_key": "ZT_PAY_RUN/202611160700",
+      "item_count": 1,
+      "unknown_count": 1,
+      "amount": "0.00",
+      "currency": "",
+      "deadline": "2026-11-16T07:30:00",
+      "owner": "ZT_OWNER",
+      "evidence": [
+       {
+        "kind": "SCHD",
+        "type": "RUN",
+        "quality": "C"
+       },
+       {
+        "kind": "SAP",
+        "type": "JOB",
+        "quality": "U"
+       },
+       {
+        "kind": "SCHD",
+        "type": "RUN",
+        "quality": "C"
+       },
+       {
+        "kind": "SAP",
+        "type": "JOB",
+        "quality": "P"
+       }
+      ]
+     }
+    ],
+    "evaluation": "FINDINGS",
+    "partial": false
+   }
+  },
+  {
+   "check": "EXPECTED_RUNS",
+   "class": "ZCL_CA_OPS_CHK_XRUN",
+   "kind": "xrun",
+   "id": "XRUN-03",
+   "abap_unit": "stale_source_is_stale",
+   "scorecard": [
+    4
+   ],
+   "title": "Stale scheduler source: the export is from 07:00 (limit 60 minutes); its run of 10:00 is not due",
+   "given": {
+    "source": "ZT_EXPORT",
+    "plan": {
+     "newest_at": "2026-11-16T07:00:00",
+     "stale_min": 60,
+     "runs": [
+      {
+       "folder": "ZT_FOLDER",
+       "job": "ZT_PAY_PREP",
+       "run_id": "R-ZT_PAY_PREP",
+       "pattern": "ZT_PAYPREP.*",
+       "plan": "2026-11-16T10:00:00",
+       "late_min": 0,
+       "pred_folder": "",
+       "pred_job": "",
+       "state": "",
+       "state_at": ""
+      }
+     ],
+     "not_expected": []
+    },
+    "TBTCO": []
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "XRUN_SOURCE_STALE",
+      "severity": "W",
+      "action": "NOTIFY",
+      "stage": "SOURCE",
+      "object_key": "ZT_EXPORT",
+      "item_count": 0,
+      "unknown_count": 1,
+      "amount": "0.00",
+      "currency": "",
+      "deadline": "",
+      "owner": "ZT_OWNER"
+     }
+    ],
+    "evaluation": "STALE",
+    "partial": false
+   }
+  },
+  {
+   "check": "EXPECTED_RUNS",
+   "class": "ZCL_CA_OPS_CHK_XRUN",
+   "kind": "xrun",
+   "id": "XRUN-04",
+   "abap_unit": "holiday_not_expected",
+   "scorecard": [
+    4
+   ],
+   "also_abap_unit": [
+    "ZCL_CA_OPS_XRUN_SRC_JOBSCH=>HOLIDAY_NOT_EXPECTED",
+    "ZCL_CA_OPS_MA_CALENDAR=>BUSINESS_DAY_AND_HOLIDAY"
+   ],
+   "title": "Holiday: Monday 16 November is not a business day of the row's calendar ZT - no run expected, not missing",
+   "given": {
+    "source": "JOBSCH",
+    "calendar_holidays": [
+     "2026-11-16"
+    ],
+    "plan": {
+     "newest_at": "2026-11-16T09:00:00",
+     "stale_min": 0,
+     "runs": [],
+     "not_expected": [
+      {
+       "folder": "ZT_FOLDER",
+       "job": "ZT_PAY_PREP",
+       "date": "2026-11-16",
+       "calendar": "ZT"
+      }
+     ]
+    },
+    "TBTCO": []
+   },
+   "expect": {
+    "findings": [],
+    "evaluation": "HOLIDAY",
+    "partial": false
+   }
+  },
+  {
+   "check": "EXPECTED_RUNS",
+   "class": "ZCL_CA_OPS_CHK_XRUN",
+   "kind": "xrun",
+   "id": "XRUN-05",
+   "abap_unit": "unreadable_source_not_eval",
+   "scorecard": [
+    4
+   ],
+   "title": "The scheduler source cannot be read - not evaluated, never 'nothing expected'",
+   "given": {
+    "source": "ZT_EXPORT",
+    "source_fails": true,
+    "TBTCO": []
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "XRUN_SOURCE_FAILED",
+      "severity": "W",
+      "action": "NOTIFY",
+      "stage": "SOURCE",
+      "object_key": "ZT_EXPORT",
+      "item_count": 0,
+      "unknown_count": 1,
+      "amount": "0.00",
+      "currency": "",
+      "deadline": "",
+      "owner": "ZT_OWNER"
+     }
+    ],
+    "evaluation": "NOT_EVAL",
+    "partial": true
+   }
+  },
+  {
+   "check": "EXPECTED_RUNS",
+   "class": "ZCL_CA_OPS_CHK_XRUN",
+   "kind": "xrun",
+   "id": "XRUN-06",
+   "abap_unit": "failed_before_sap",
+   "scorecard": [],
+   "title": "Failed before SAP: the scheduler ended the run not OK at 06:05, SAP never had a job",
+   "given": {
+    "source": "ZT_EXPORT",
+    "plan": {
+     "newest_at": "2026-11-16T09:00:00",
+     "stale_min": 0,
+     "runs": [
+      {
+       "folder": "ZT_FOLDER",
+       "job": "ZT_PAY_PREP",
+       "run_id": "R-ZT_PAY_PREP",
+       "pattern": "ZT_PAYPREP.*",
+       "plan": "2026-11-16T06:00:00",
+       "late_min": 0,
+       "pred_folder": "",
+       "pred_job": "",
+       "state": "ENDED_NOK",
+       "state_at": "2026-11-16T06:05:00"
+      }
+     ],
+     "not_expected": []
+    },
+    "TBTCO": []
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "XRUN_NEVER_STARTED",
+      "severity": "E",
+      "action": "EXCEPTION",
+      "stage": "HANDOVER",
+      "object_key": "ZT_PAY_PREP/202611160600",
+      "item_count": 1,
+      "unknown_count": 1,
+      "amount": "0.00",
+      "currency": "",
+      "deadline": "2026-11-16T06:30:00",
+      "owner": "ZT_OWNER",
+      "evidence": [
+       {
+        "kind": "SCHD",
+        "type": "RUN",
+        "quality": "C"
+       },
+       {
+        "kind": "SAP",
+        "type": "JOB",
+        "quality": "U"
+       }
+      ]
+     }
+    ],
+    "evaluation": "FINDINGS",
+    "partial": false
+   }
+  },
+  {
+   "check": "FICA_MA_INTERVALS",
+   "class": "ZCL_CA_OPS_CHK_MA_INTERVAL",
+   "kind": "ma",
+   "id": "MA-01",
+   "abap_unit": "job_ok_interval_failed_short",
+   "scorecard": [
+    1
+   ],
+   "injection": "job_ok_interval_failed_output_short",
+   "title": "Scorecard 1: the SAP job finished, a child interval failed, and the payment run produced 2 of 3 expected payment documents",
+   "parameters": {
+    "MA_LOOKBACK_DAYS": "4",
+    "CASH_CALENDAR": "ZT"
+   },
+   "given": {
+    "activity": {
+     "act_id": "PAYRUN",
+     "aktyp": "ZPAY",
+     "parent_program": "RFKK_MA_SCHEDULER",
+     "job_pattern": "ZT_FPY1_.*",
+     "output_kind": "PAYDOC",
+     "min_output": 0,
+     "run_limit_min": 0
+    },
+    "TBTCO": [
+     {
+      "role": "parent",
+      "name": "ZT_FPY1_PAY01",
+      "count": "06000001",
+      "status": "F",
+      "start": "2026-11-12T06:00:00",
+      "end": "2026-11-12T06:30:00"
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010001",
+      "status": "F",
+      "created": "2026-11-12T06:01:00",
+      "start": "2026-11-12T06:01:00",
+      "minutes": 10
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010002",
+      "status": "A",
+      "created": "2026-11-12T06:02:00",
+      "start": "2026-11-12T06:02:00",
+      "minutes": 12
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010003",
+      "status": "F",
+      "created": "2026-11-12T06:03:00",
+      "start": "2026-11-12T06:03:00",
+      "minutes": 11
+     }
+    ],
+    "DPAYH": [
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "PAY01",
+      "XVORL": "",
+      "BBUKR": "ZT01",
+      "WAERS": "EUR",
+      "RWBTR": "400.00",
+      "DOC1R": "000000000001",
+      "RZAWE": "T"
+     },
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "PAY01",
+      "XVORL": "",
+      "BBUKR": "ZT01",
+      "WAERS": "EUR",
+      "RWBTR": "250.00",
+      "DOC1R": "",
+      "RZAWE": "T"
+     },
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "PAY01",
+      "XVORL": "",
+      "BBUKR": "ZT01",
+      "WAERS": "EUR",
+      "RWBTR": "250.00",
+      "DOC1R": "000000000003",
+      "RZAWE": "T"
+     }
+    ]
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "MA_OUTPUT_SHORT",
+      "severity": "E",
+      "action": "EXCEPTION",
+      "stage": "JOB_OK",
+      "object_key": "PAYRUN/20261112/PAY01/ZT01/EUR",
+      "company_code": "ZT01",
+      "currency": "EUR",
+      "item_count": 1,
+      "amount": "250.00",
+      "unknown_count": 0,
+      "owner": "ZT_OWNER",
+      "evidence": [
+       {
+        "name": "AKTYP/LAUFD/LAUFI",
+        "value": "ZPAY/20261112/PAY01"
+       },
+       {
+        "name": "JOBNAME/JOBCOUNT",
+        "value": "ZT_FPY1_PAY01/06000001"
+       },
+       {
+        "name": "LAUFD/LAUFI",
+        "value": "20261112/PAY01"
+       },
+       {
+        "name": "INTERVAL",
+        "value": "2"
+       },
+       {
+        "name": "JOBNAME/JOBCOUNT",
+        "value": "ZT_FPY1_PAY01_W/06010002"
+       }
+      ],
+      "deadline": "2026-11-16T10:00:00"
+     }
+    ],
+    "evaluation": "FINDINGS",
+    "partial": false
+   }
+  },
+  {
+   "check": "FICA_MA_INTERVALS",
+   "class": "ZCL_CA_OPS_CHK_MA_INTERVAL",
+   "kind": "ma",
+   "id": "MA-02",
+   "abap_unit": "interval_failed_no_output",
+   "scorecard": [
+    1
+   ],
+   "title": "No output rule: the parent job ended OK while interval 2 was cancelled",
+   "given": {
+    "activity": {
+     "act_id": "PAYRUN",
+     "aktyp": "ZPAY",
+     "parent_program": "RFKK_MA_SCHEDULER",
+     "job_pattern": "ZT_FPY1_.*",
+     "output_kind": "NONE",
+     "min_output": 0,
+     "run_limit_min": 0
+    },
+    "TBTCO": [
+     {
+      "role": "parent",
+      "name": "ZT_FPY1_PAY01",
+      "count": "06000001",
+      "status": "F",
+      "start": "2026-11-12T06:00:00",
+      "end": "2026-11-12T06:30:00"
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010001",
+      "status": "F",
+      "created": "2026-11-12T06:01:00",
+      "start": "2026-11-12T06:01:00",
+      "minutes": 10
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010002",
+      "status": "A",
+      "created": "2026-11-12T06:02:00",
+      "start": "2026-11-12T06:02:00",
+      "minutes": 12
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010003",
+      "status": "F",
+      "created": "2026-11-12T06:03:00",
+      "start": "2026-11-12T06:03:00",
+      "minutes": 11
+     }
+    ]
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "MA_INTERVAL_FAILED",
+      "severity": "E",
+      "action": "EXCEPTION",
+      "stage": "JOB_OK",
+      "object_key": "PAYRUN/20261112",
+      "company_code": "",
+      "currency": "",
+      "item_count": 1,
+      "amount": "0.00",
+      "unknown_count": 1,
+      "owner": "ZT_OWNER",
+      "evidence": [
+       {
+        "name": "AKTYP/LAUFD/LAUFI",
+        "value": "ZPAY/20261112/"
+       },
+       {
+        "name": "JOBNAME/JOBCOUNT",
+        "value": "ZT_FPY1_PAY01/06000001"
+       },
+       {
+        "name": "INTERVAL",
+        "value": "2"
+       },
+       {
+        "name": "JOBNAME/JOBCOUNT",
+        "value": "ZT_FPY1_PAY01_W/06010002"
+       }
+      ],
+      "deadline": "2026-11-16T10:00:00"
+     }
+    ],
+    "evaluation": "FINDINGS",
+    "partial": false
+   }
+  },
+  {
+   "check": "FICA_MA_INTERVALS",
+   "class": "ZCL_CA_OPS_CHK_MA_INTERVAL",
+   "kind": "ma",
+   "id": "MA-03",
+   "abap_unit": "interval_overrun",
+   "scorecard": [],
+   "title": "An interval runs for 150 minutes, its limit is 120, the parent job still runs",
+   "given": {
+    "activity": {
+     "act_id": "PAYRUN",
+     "aktyp": "ZPAY",
+     "parent_program": "RFKK_MA_SCHEDULER",
+     "job_pattern": "ZT_FPY1_.*",
+     "output_kind": "PAYDOC",
+     "min_output": 0,
+     "run_limit_min": 0
+    },
+    "TBTCO": [
+     {
+      "role": "parent",
+      "name": "ZT_FPY1_PAY01",
+      "count": "06000001",
+      "status": "R",
+      "start": "2026-11-12T06:00:00"
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010001",
+      "status": "F",
+      "created": "2026-11-12T06:01:00",
+      "start": "2026-11-12T06:01:00",
+      "minutes": 10
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010002",
+      "status": "R",
+      "created": "2026-11-12T06:02:00",
+      "start": "2026-11-12T06:02:00",
+      "minutes": 150
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010003",
+      "status": "F",
+      "created": "2026-11-12T06:03:00",
+      "start": "2026-11-12T06:03:00",
+      "minutes": 11
+     }
+    ],
+    "DPAYH": [
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "PAY01",
+      "XVORL": "",
+      "BBUKR": "ZT01",
+      "WAERS": "EUR",
+      "RWBTR": "400.00",
+      "DOC1R": "000000000001",
+      "RZAWE": "T"
+     },
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "PAY01",
+      "XVORL": "",
+      "BBUKR": "ZT01",
+      "WAERS": "EUR",
+      "RWBTR": "250.00",
+      "DOC1R": "",
+      "RZAWE": "T"
+     },
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "PAY01",
+      "XVORL": "",
+      "BBUKR": "ZT01",
+      "WAERS": "EUR",
+      "RWBTR": "250.00",
+      "DOC1R": "000000000003",
+      "RZAWE": "T"
+     }
+    ]
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "MA_INTERVAL_OVERRUN",
+      "severity": "W",
+      "action": "EXCEPTION",
+      "stage": "INTERVAL",
+      "object_key": "PAYRUN/20261112",
+      "company_code": "",
+      "currency": "",
+      "item_count": 1,
+      "amount": "0.00",
+      "unknown_count": 1,
+      "owner": "ZT_OWNER",
+      "evidence": [
+       {
+        "name": "AKTYP/LAUFD/LAUFI",
+        "value": "ZPAY/20261112/"
+       },
+       {
+        "name": "JOBNAME/JOBCOUNT",
+        "value": "ZT_FPY1_PAY01/06000001"
+       },
+       {
+        "name": "LAUFD/LAUFI",
+        "value": "20261112/"
+       },
+       {
+        "name": "INTERVAL",
+        "value": "2"
+       },
+       {
+        "name": "JOBNAME/JOBCOUNT",
+        "value": "ZT_FPY1_PAY01_W/06010002"
+       }
+      ],
+      "deadline": "2026-11-16T10:00:00"
+     }
+    ],
+    "evaluation": "FINDINGS",
+    "partial": false
+   }
+  },
+  {
+   "check": "FICA_MA_INTERVALS",
+   "class": "ZCL_CA_OPS_CHK_MA_INTERVAL",
+   "kind": "ma",
+   "id": "MA-04",
+   "abap_unit": "dunning_below_minimum",
+   "scorecard": [],
+   "title": "Dunning: the run ended with 4 notices, the activity expects at least 10",
+   "given": {
+    "activity": {
+     "act_id": "DUNNING",
+     "aktyp": "ZPAY",
+     "parent_program": "RFKK_MA_SCHEDULER",
+     "job_pattern": "ZT_FPY1_.*",
+     "output_kind": "DUNNING",
+     "min_output": 10,
+     "run_limit_min": 0
+    },
+    "TBTCO": [
+     {
+      "role": "parent",
+      "name": "ZT_FPY1_PAY01",
+      "count": "06000001",
+      "status": "F",
+      "start": "2026-11-12T06:00:00",
+      "end": "2026-11-12T06:30:00"
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010001",
+      "status": "F",
+      "created": "2026-11-12T06:01:00",
+      "start": "2026-11-12T06:01:00",
+      "minutes": 10
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010002",
+      "status": "F",
+      "created": "2026-11-12T06:02:00",
+      "start": "2026-11-12T06:02:00",
+      "minutes": 12
+     },
+     {
+      "role": "interval",
+      "parent": "ZT_FPY1_PAY01/06000001",
+      "name": "ZT_FPY1_PAY01_W",
+      "count": "06010003",
+      "status": "F",
+      "created": "2026-11-12T06:03:00",
+      "start": "2026-11-12T06:03:00",
+      "minutes": 11
+     }
+    ],
+    "FKKMAKO": [
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "DUN01",
+      "GPART": "ZT_BP1",
+      "VKONT": "ZT_CA1",
+      "MAZAE": "000001",
+      "WAERS": "EUR",
+      "MSALM": "300.00"
+     },
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "DUN01",
+      "GPART": "ZT_BP2",
+      "VKONT": "ZT_CA2",
+      "MAZAE": "000001",
+      "WAERS": "EUR",
+      "MSALM": "300.00"
+     },
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "DUN01",
+      "GPART": "ZT_BP3",
+      "VKONT": "ZT_CA3",
+      "MAZAE": "000001",
+      "WAERS": "EUR",
+      "MSALM": "300.00"
+     },
+     {
+      "LAUFD": "20261112",
+      "LAUFI": "DUN01",
+      "GPART": "ZT_BP4",
+      "VKONT": "ZT_CA4",
+      "MAZAE": "000001",
+      "WAERS": "EUR",
+      "MSALM": "300.00"
+     }
+    ]
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "MA_OUTPUT_SHORT",
+      "severity": "E",
+      "action": "EXCEPTION",
+      "stage": "JOB_OK",
+      "object_key": "DUNNING/20261112",
+      "company_code": "",
+      "currency": "",
+      "item_count": 6,
+      "amount": "0.00",
+      "unknown_count": 6,
+      "owner": "ZT_OWNER",
+      "evidence": [
+       {
+        "name": "AKTYP/LAUFD/LAUFI",
+        "value": "ZPAY/20261112/"
+       },
+       {
+        "name": "JOBNAME/JOBCOUNT",
+        "value": "ZT_FPY1_PAY01/06000001"
+       }
+      ],
+      "deadline": "2026-11-16T10:00:00"
+     }
+    ],
+    "evaluation": "FINDINGS",
+    "partial": false
+   }
+  },
+  {
+   "check": "FICA_MA_INTERVALS",
+   "class": "ZCL_CA_OPS_CHK_MA_INTERVAL",
+   "kind": "ma",
+   "id": "MA-05",
+   "abap_unit": "unreadable_runs_not_evaluated",
+   "scorecard": [
+    4
+   ],
+   "title": "The runs cannot be read - not evaluated, the check partial, never green",
+   "given": {
+    "activity": {
+     "act_id": "PAYRUN",
+     "aktyp": "ZPAY",
+     "parent_program": "RFKK_MA_SCHEDULER",
+     "job_pattern": "ZT_FPY1_.*",
+     "output_kind": "PAYDOC",
+     "min_output": 0,
+     "run_limit_min": 0
+    },
+    "source_fails": true
+   },
+   "expect": {
+    "findings": [
+     {
+      "check_code": "CASH_NOT_EVALUATED",
+      "severity": "W",
+      "action": "NOTIFY",
+      "stage": "INTERVAL"
+     }
+    ],
+    "evaluation": "NOT_EVAL",
+    "partial": true
+   }
+  }
+ ]
+}

@@ -26,6 +26,7 @@ INTERFACE lif_c.
       acklevel                       TYPE string VALUE `ACKLEVEL`,
       active                         TYPE string VALUE `ACTIVE`,
       aggfunc                        TYPE string VALUE `AGGFUNC`,
+      aktyp                          TYPE string VALUE `AKTYP`,
       approvedby                     TYPE string VALUE `APPROVEDBY`,
       area                           TYPE string VALUE `AREA`,
       backup                         TYPE string VALUE `BACKUP`,
@@ -64,6 +65,7 @@ INTERFACE lif_c.
       group2pattern                  TYPE string VALUE `GROUP2PATTERN`,
       hkontfrom                      TYPE string VALUE `HKONTFROM`,
       identityfields                 TYPE string VALUE `IDENTITYFIELDS`,
+      jobpattern                     TYPE string VALUE `JOBPATTERN`,
       keyfields                      TYPE string VALUE `KEYFIELDS`,
       keypattern                     TYPE string VALUE `KEYPATTERN`,
       layerkind                      TYPE string VALUE `LAYERKIND`,
@@ -78,6 +80,7 @@ INTERFACE lif_c.
       operator                       TYPE string VALUE `OPERATOR`,
       origin                         TYPE string VALUE `ORIGIN`,
       outcome                        TYPE string VALUE `OUTCOME`,
+      outputkind                     TYPE string VALUE `OUTPUTKIND`,
       owner                          TYPE string VALUE `OWNER`,
       paramarea                      TYPE string VALUE `PARAMAREA`,
       paramname                      TYPE string VALUE `PARAMNAME`,
@@ -150,6 +153,7 @@ INTERFACE lif_c.
       linkfield                      TYPE string VALUE `LinkField`,
       linklayer                      TYPE string VALUE `LinkLayer`,
       linkobject                     TYPE string VALUE `LinkObject`,
+      massactivity                   TYPE string VALUE `MassActivity`,
       payfileadapter                 TYPE string VALUE `PayFileAdapter`,
       payfilemilestone               TYPE string VALUE `PayFileMilestone`,
       payfilestatusmap               TYPE string VALUE `PayFileStatusMap`,
@@ -211,6 +215,7 @@ INTERFACE lif_c.
       linkfield                      TYPE string VALUE `ZCA_OPS_LNKFLD`,
       linklayer                      TYPE string VALUE `ZCA_OPS_LNKLYR`,
       linkobject                     TYPE string VALUE `ZCA_OPS_LNKOBJ`,
+      massactivity                   TYPE string VALUE `ZCA_OPS_MAACT`,
       payfileadapter                 TYPE string VALUE `ZCA_OPS_PFADP`,
       payfilemilestone               TYPE string VALUE `ZCA_OPS_PFSTG`,
       payfilestatusmap               TYPE string VALUE `ZCA_OPS_PFMAP`,
@@ -263,6 +268,7 @@ INTERFACE lif_c.
       linkfield_sensitivity          TYPE string VALUE `,M,H`,
       linklayer_layerkind            TYPE string VALUE `S,I,C`,
       linkobject_sourcekind          TYPE string VALUE `T,V`,
+      massactivity_outputkind        TYPE string VALUE `PAYDOC,DUNNING,NONE`,
       payfileadapter_role            TYPE string VALUE `FILE,TRANSFER,ACK,SCHED,STMT,TICKET,CALENDAR`,
       payfileadapter_sourcetype      TYPE string VALUE `,SAP,MW,BANK`,
       payfilemilestone_basis         TYPE string VALUE `,PAYRUN,GENERATED,PICKUP,DELIVERED,RECEIPT,ACCEPTED,SETTLED`,
@@ -304,6 +310,7 @@ INTERFACE lif_c.
       linkfield_evidence_v           TYPE string VALUE `V`,
       linklayer_active_x             TYPE string VALUE `X`,
       linklayer_layer_kind_c         TYPE string VALUE `C`,
+      massactivity_active_x          TYPE string VALUE `X`,
       payfileadapter_active_x        TYPE string VALUE `X`,
       payfilemilestone_due_kind_o    TYPE string VALUE `O`,
       payfilemilestone_due_kind_t    TYPE string VALUE `T`,
@@ -461,6 +468,8 @@ CLASS lhc_opscfgall IMPLEMENTATION.
                                  THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
     result-%assoc-_PayFileAdapter = COND #( WHEN requested_authorizations-%assoc-_PayFileAdapter = if_abap_behv=>mk-on
                                  THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
+    result-%assoc-_MassActivity = COND #( WHEN requested_authorizations-%assoc-_MassActivity = if_abap_behv=>mk-on
+                                 THEN lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ) ).
   ENDMETHOD.
 
 
@@ -552,6 +561,8 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     result-%assoc-_PayFileStatusMap = COND #( WHEN requested_features-%assoc-_PayFileStatusMap = if_abap_behv=>mk-on
                                  THEN lv_create ).
     result-%assoc-_PayFileAdapter = COND #( WHEN requested_features-%assoc-_PayFileAdapter = if_abap_behv=>mk-on
+                                 THEN lv_create ).
+    result-%assoc-_MassActivity = COND #( WHEN requested_features-%assoc-_MassActivity = if_abap_behv=>mk-on
                                  THEN lv_create ).
   ENDMETHOD.
 
@@ -6066,6 +6077,146 @@ CLASS lhc_payfileadapter IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_massactivity DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR MassActivity RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR MassActivity RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR MassActivity~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR MassActivity~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_massactivity IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY MassActivity
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-massactivity.
+      IF zcl_ca_ops_cfg_checks=>area_valid( iv_area        = ls_row-Area
+                                           iv_any_allowed = abap_false ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-area_invalid v1 = ls_row-Area
+                        element = lif_c=>gc_el-area ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-OutputKind )
+                                        iv_list  = lif_c=>gc_val-massactivity_outputkind ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-OutputKind
+                        v2 = lif_c=>gc_el-outputkind v3 = lif_c=>gc_val-massactivity_outputkind
+                        element = lif_c=>gc_el-outputkind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_util=>pcre_valid( ls_row-JobPattern ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-JobPattern
+                        element = lif_c=>gc_el-jobpattern ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-massactivity_active_x ) = abap_true.
+        IF ls_row-Aktyp IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-aktyp
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-aktyp ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-JobPattern IS INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-jobpattern
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-jobpattern ) INTO TABLE lt_msg.
+        ENDIF.
+        IF zcl_ca_ops_cfg_checks=>module_licensed( lif_c=>gc_mod-cash_ops ) = abap_false.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-license_refused v1 = lif_c=>gc_mod-cash_ops
+                          element = lif_c=>gc_el-active ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-massactivity.
+        INSERT INITIAL LINE INTO TABLE reported-massactivity ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_ca_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-massactivity.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-massactivity.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-massactivity.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_ca_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -6125,7 +6276,8 @@ CLASS lsc_zr_ca_opscfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-payfiletype table = lif_c=>gc_tab-payfiletype )
             ( entity = lif_c=>gc_ent-payfilemilestone table = lif_c=>gc_tab-payfilemilestone )
             ( entity = lif_c=>gc_ent-payfilestatusmap table = lif_c=>gc_tab-payfilestatusmap )
-            ( entity = lif_c=>gc_ent-payfileadapter table = lif_c=>gc_tab-payfileadapter ) )
+            ( entity = lif_c=>gc_ent-payfileadapter table = lif_c=>gc_tab-payfileadapter )
+            ( entity = lif_c=>gc_ent-massactivity table = lif_c=>gc_tab-massactivity ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

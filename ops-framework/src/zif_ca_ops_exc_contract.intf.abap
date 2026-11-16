@@ -17,6 +17,7 @@
 *& Validation: ZCL_CA_OPS_EXC_CONTRACT. No logic.
 *& Modification log:
 *& 2026-11-15 | Initial version (build K: payment file lifecycle, first module that adopts it).
+*& 2026-11-16 | Evidence kind SCHD: the external scheduler's record (expected runs, build P).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception contract</p>
 "! Built-in types only: ZIF_CA_OPS_TYPES includes TY_CONTRACT in its finding.
@@ -96,6 +97,8 @@ INTERFACE zif_ca_ops_exc_contract
       middleware TYPE ty_evid_kind VALUE 'MW',
       bank       TYPE ty_evid_kind VALUE 'BANK',
       ops        TYPE ty_evid_kind VALUE 'OPS',
+      "! The external workload scheduler (its plan / run record; 2026-11-16, build P)
+      scheduler  TYPE ty_evid_kind VALUE 'SCHD',
     END OF gc_kind.
 
   "! Type of an evidence row

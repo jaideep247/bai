@@ -11,7 +11,7 @@ define table zca_ops_fndevi {
   // raises the finding again; written only by ZCL_CA_OPS_EVIDENCE through the runner
   key evid_key  : abap.char(40) not null;
   key seq       : abap.int4 not null;
-  // SAP, MW (middleware / transfer), BANK, OPS (the product's own record)
+  // SAP, MW (middleware / transfer), BANK, OPS (the product's own record), SCHD (the external scheduler)
   kind          : abap.char(4);
   // RUN, JOB, PAYDOC, FILE, MSG, ACK, STMT, EVENT
   ev_type       : abap.char(10);

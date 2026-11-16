@@ -3,3 +3,4 @@ CA_OPS,ONBOARDING,,Registered business processes integrated end to end,ZCL_CA_OP
 CA_OPS,LICENSE,,Licence of the vendor: missing / not valid / modules ending,ZCL_CA_OPS_CHK_LICENSE,MORNING,,X,20
 CA_OPS,COVERAGE,,Monitor coverage: checks not run / impaired / refused,ZCL_CA_OPS_CHK_COVERAGE,MORNING,,X,30
 CA_OPS,ALERT_DELIVERY,,Alert delivery confirmed separately from submission,ZCL_CA_OPS_CHK_ALERT_DLV,ALERTDLV,,X,40
+CA_OPS,EXPECTED_RUNS,,"Expected runs: never started, predecessor open, held, late",ZCL_CA_OPS_CHK_XRUN,FAST,,,50

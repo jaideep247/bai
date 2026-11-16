@@ -39,7 +39,7 @@ house check `extensions` fails when the inventory, the views and this document d
 
 <!-- generated: extension points (tools/extensions.py; never edit this block) -->
 
-Inventory `config/extension_points.json` (release 2026-11-15): 30 extension points, 9 of them CDS extension points.
+Inventory `config/extension_points.json` (release 2026-11-15): 32 extension points, 9 of them CDS extension points.
 
 | Module | Standard data source | Extension point | Mechanism | Product object | Example |
 |---|---|---|---|---|---|
@@ -64,6 +64,8 @@ Inventory `config/extension_points.json` (release 2026-11-15): 30 extension poin
 | Exceptions | Findings of the product's checks (ZCA_OPS_FINDING), which read SAP standard and approved tables | `EXC` - Exceptions list and object page | CDS extension (generated) | `ZC_CA_OpsException` | The feeder and received date of the customer's request an exception is about |
 | Job monitoring | SAP background jobs and their logs | `JOB_ENRICHER` - Business context of a failed job from the customer's tables | plug-in class | `ZIF_CA_OPS_JOB_ENRICHER` | The payment run and company code of a failed payment job |
 | Job monitoring | SAP background jobs and their logs | `JOB_RESOLVER` - Which jobs belong to one run of an application | plug-in class | `ZIF_CA_OPS_JOB_RESOLVER` | The worker jobs of a parallel processing run |
+| Job monitoring | Parent job and parallel jobs of a FI-CA mass activity run from SAP's job tables | `MA_RUN_SOURCE` - The runs of a mass activity with their intervals and their state | plug-in class | `ZIF_CA_OPS_MA_SRC` | A reader of the mass activity's own run and interval records |
+| Job monitoring | The framework's own scheduler job configuration (ZCA_OPS_JOBSCH) with a business calendar | `XRUN_SOURCE` - The external scheduler's plan of expected runs (and the calendar of a configured plan) | plug-in class | `ZIF_CA_OPS_EXPECTED_RUN_SRC` | A reader of the scheduler's daily plan export |
 | Link registry (every module) | SAP standard objects of the layers S4CORE (released views, bank statement, partner) and FICA (FI-CA tables) | `LINK_OVERLAY` - Customer layer: its tables and views, custom fields on standard tables, its links, switch-off and replacement of a standard link | link registry (customer layer) | `ZCA_OPS_LNKLYR` | Custom field ZZXX_REQ_ID on DFKKOP and the link item -> request (config/links/examples/xx_overlay.json) |
 | Operations response | Findings of every check | `RESPONSE` - Runbook links and correlation rules of the customer's checks | configuration row | `ZCA_OPS_RUNBOOK` | The customer's runbook page of a check |
 | Payment file lifecycle | Payment file register of the product (ZCA_OPS_PFFILE), fed from FI-CA payment runs and the adapters | `PAYFILE` - Payment file worklist (list report and object page) | CDS extension (generated) | `ZC_CA_OpsPayFile` | The customer's own file name or business line of a file |

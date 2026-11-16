@@ -44,6 +44,9 @@ Modification log:
 2026-11-15 | Payment file lifecycle (docs/PAYMENT_FILE_LIFECYCLE.md): file types (ACK level, calendar, time zone,
            | cut-off, expectation; module CASH_OPS), milestones (product vocabulary, clock / offset deadlines), status
            | mappings (an outcome needs a milestone) and adapters (class of ZIF_CA_OPS_PF_ADAPTER, role, source).
+2026-11-16 | Expected runs and FI-CA mass activities (docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md, build P): plan columns
+           | of the scheduler jobs (run days, planned start, late minutes, calendar, predecessor) and the mass
+           | activities of an area (parent job, output rule PAYDOC / DUNNING / NONE; module CASH_OPS).
 2026-11-16 | Link registry objects (build Q): identity fields (IDENTITY_FIELDS); the key and identity field lists are
            | checked on save against the runtime DDIC of the source (new check kind 'fields', message 083).
 """
@@ -255,6 +258,12 @@ SPEC = {
              [('area', 'area', False), ('enum', 'role', 'FILE,TRANSFER,ACK,SCHED,STMT,TICKET,CALENDAR'),
               ('class', 'class_name', 'ZIF_CA_OPS_PF_ADAPTER'), ('enum', 'source_type', ',SAP,MW,BANK'),
               ('when', 'active', 'X', [('required', 'class_name'), ('required', 'source_id')])]),
+            # Expected runs and FI-CA mass activities (2026-11-16, build P): the mass activities an area watches - parent
+            # job (program, PCRE name), output rule (PAYDOC / DUNNING / NONE), minimum output, interval run limit
+            ('zca_ops_maact', 'MassActivity', 'zca_d_maact', 'Mass activity', 'Mass activities and their output', [],
+             [('area', 'area', False), ('enum', 'output_kind', 'PAYDOC,DUNNING,NONE'), ('pcre', 'job_pattern'),
+              ('when', 'active', 'X', [('required', 'aktyp'), ('required', 'job_pattern'),
+                                       ('module', 'CASH_OPS')])]),
         ]),
 }
 
@@ -361,7 +370,15 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'day_offset': 'Business days after the business date', 'basis': 'Offset from milestone',
           'offset_min': 'Offset (minutes)', 'grace_min': 'Warning for (minutes, 0 = PF_GRACE_MIN)',
           'source_id': 'Source', 'status': 'Native status (exact)', 'outcome': 'Outcome',
-          'setting': 'Adapter setting', 'source_type': 'Source type (SAP, MW, BANK)'}
+          'setting': 'Adapter setting', 'source_type': 'Source type (SAP, MW, BANK)',
+          # Expected runs and FI-CA mass activities (2026-11-16, build P)
+          'plan_days': 'Run days (Mon-Sun, X = runs; blank = none)', 'plan_time': 'Planned start (system time)',
+          'late_min': 'Late after (minutes, 0 = XRUN_LATE_MIN)', 'pred_folder': 'Predecessor folder',
+          'pred_job': 'Predecessor job', 'act_id': 'Mass activity', 'aktyp': 'Mass activity type',
+          'parent_program': 'Program of the parent job (exact, blank = any)',
+          'job_pattern': 'Parent job names (PCRE, complete name)',
+          'output_kind': 'Output rule (PAYDOC, DUNNING, NONE)', 'min_output': 'Minimum output (0 = none)',
+          'run_limit_min': 'Interval run limit (minutes, 0 = MA_RUN_LIMIT_MIN)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

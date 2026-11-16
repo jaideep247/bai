@@ -43,6 +43,50 @@ Release constant unchanged (1.0.0). Review 2026-11-15 finding 4 and P0 "Configur
 - Seed rows of `ZCA_OPS_LNKOBJ` carry the column `IDENTITY_FIELDS` (framework and consumer seeds regenerated).
 - `ZCL_CA_OPS_CHK_AGG` counts measured and unmeasured rows in its evaluation (all unmeasured = not evaluated).
 
+## [Unreleased] - 2026-11-16 (build P: expected runs from the scheduler; FI-CA mass-activity intervals and their output)
+
+Release constant unchanged (1.0.0). Review 2026-11-15 row "SAP batch monitoring" and scorecard scenario 1;
+`docs/release/RELEASE_1_PLAN.md` row P. `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`.
+
+### Added
+- Expected runs (core, module `JOBS`): plug-in `ZIF_CA_OPS_EXPECTED_RUN_SRC` (the scheduler's plan: run ID, planned
+  start, late limit, predecessor, state planned / started / ended OK / ended not OK / held / not started, freshness,
+  holidays and unknown days), types `ZIF_CA_OPS_XRUN_TYPES`, calendar plug-in `ZIF_CA_OPS_XRUN_CALENDAR`; delivered
+  source `ZCL_CA_OPS_XRUN_SRC_JOBSCH` ("expected by configuration": plan columns `PLAN_DAYS`, `PLAN_TIME`, `LATE_MIN`,
+  `CALENDAR_ID`, `PRED_FOLDER` / `PRED_JOB` of `ZCA_OPS_JOBSCH`, regenerated in `ZUI_CA_OPS_CFG`); engine
+  `ZCL_CA_OPS_XRUN_MONITOR` against TBTCO through the job monitor's data access; check `ZCL_CA_OPS_CHK_XRUN`
+  (registry row `CA_OPS / EXPECTED_RUNS`, inactive): never started (scheduler / handover - failed before SAP / SAP
+  queue), predecessor not finished, held, started late; source stale (evaluation `STALE`), not readable (`NOT_EVAL`),
+  not usable, capped. Exception contract on every finding; evidence kind `SCHD` (the scheduler's record,
+  `ZIF_CA_OPS_EXC_CONTRACT=>GC_KIND-SCHEDULER`) next to the SAP job (`S4_BACKGROUND_JOB`, quality P) or its absence (U).
+- Worked example `examples/expected_runs` (package `ZXX_XRUN`, never seeded): a scheduler plan export table and its
+  source class, compiled against the product by the root test.
+- FI-CA mass activities (pack FI-CA Cash Operations, `src/cash`, module `CASH_OPS`): configuration `ZCA_OPS_MAACT`
+  (entity *Mass activities*; rows `PAYRUN` / `DUNNING` of area `CA_FICA` delivered inactive with placeholders), run
+  source `ZIF_CA_OPS_MA_SRC` with `ZCL_CA_OPS_MA_SRC_JOBS` (parent job by program and names, intervals = the parallel
+  jobs the job monitor's resolvers link to it), data access `ZIF_CA_OPS_MA_DAO` / `ZCL_CA_OPS_MA_DAO` (`FKKMAKO`
+  notices per run and currency), check `ZCL_CA_OPS_CHK_MA_INTERVAL` (catalogue `FICA_PAYRUN`, monitor
+  `FICA_MA_INTERVALS`): parent ended while intervals failed / did not finish (stage `JOB_OK` when it ended OK),
+  interval overrun, output short (payment documents per company code and currency, dunning notices below a minimum);
+  calendar `ZCL_CA_OPS_MA_CALENDAR` for the expected runs on the cash checks' factory calendar.
+- Fixtures `config/expected_runs/fixtures.json` (XRUN-01 ... 06, MA-01 ... 05; MA-01 = scorecard 1: job finished,
+  interval failed, 2 of 3 payment documents, 250.00 EUR, stage `JOB_OK`), reference model
+  `tools/abaptools/expected_runs.py`, root test `tools/tests/test_expected_runs.py`; ABAP Unit for every new class.
+- Parameters `XRUN_*`, `MA_*` (prefixes read in `CA_OPS`), messages 600-623, VERIFY V290-V306, extension points
+  `XRUN_SOURCE` / `MA_RUN_SOURCE`, release manifest (contracts, activation step, fixture, seed file).
+
+### Changed
+- `ZCL_CA_OPS_CHK_CASH_PAYRUN`: the sum per run is the public `SUM_BY_RUN` (pure), called by the mass activity check -
+  behaviour unchanged. `ZCL_CA_OPS_CASH_FACTORY` / `_INJECTOR`: `GET_MA_DAO` / `INJECT_MA_DAO`.
+- `ZIF_CA_OPS_JOB_TYPES=>TY_SCHED` and `ZCL_CA_OPS_JOB_DAO=>SCHEDULER_JOBS`: the plan columns.
+- Licence modules: `JOBS` names `ZCL_CA_OPS_CHK_XRUN`; `CASH_OPS` names `ZCL_CA_OPS_CHK_MA_INTERVAL` and the entity
+  `MassActivity` (module map regenerated).
+
+### Found
+- `FKKMAKO` / `FKKMAZE` of the reference system are the dunning history, not the run / interval records of the mass
+  activity framework; those records are not in the export and are not read (V298, V300). The delivered run source
+  sees parallel jobs; a source on the framework's own records plugs in through `MA_SOURCE` once confirmed.
+
 ## [Unreleased] - 2026-11-16 (build O: one evaluation state for every control; delivery and coverage you can trust)
 
 Release constant unchanged (1.0.0). Review 2026-11-15 finding 3, section 4, P1 "Reconcile monitor coverage and alert

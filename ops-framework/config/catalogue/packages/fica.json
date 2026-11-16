@@ -118,6 +118,13 @@
      "bukrs_aware": true,
      "schedule_group": "DAILY",
      "class": "ZCL_CA_OPS_CHK_CASH_PAYRUN"
+    },
+    {
+     "check": "FICA_MA_INTERVALS",
+     "description": "Mass activity runs: intervals failed, overrun, output short",
+     "bukrs_aware": true,
+     "schedule_group": "INTRADAY",
+     "class": "ZCL_CA_OPS_CHK_MA_INTERVAL"
     }
    ]
   },
@@ -1106,7 +1113,7 @@
     },
     {
      "kind": "P",
-     "name": "\u2039payment medium program\u203a",
+     "name": "‹payment medium program›",
      "description": "Payment medium creation of the run (job)",
      "verify": "V175"
     },
@@ -1117,7 +1124,7 @@
     },
     {
      "kind": "E",
-     "name": "\u2039bank acknowledgement\u203a",
+     "name": "‹bank acknowledgement›",
      "description": "Receipt and acceptance by the bank (customer adapter)",
      "verify": "V180"
     }

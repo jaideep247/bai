@@ -31,6 +31,7 @@
 *& 2026-11-15 | Prefix PF_ (payment file lifecycle) read in area CA_OPS.
 *& 2026-11-15 | Prefix CASH_ (FI-CA cash operations checks, build N) read in area CA_OPS.
 *& 2026-11-16 | Prefix EVAL_ (evaluation and coverage, delivery confirmation, build O) read in area CA_OPS.
+*& 2026-11-16 | Prefixes XRUN_ (expected runs) and MA_ (FI-CA mass activities, build P) read in area CA_OPS.
 *& 2026-11-16 | Prefix GATE_ (extension and release-gate proof, build Q) read in area CA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - parameters over ZCA_PARAM</p>
@@ -107,6 +108,8 @@ CLASS zcl_ca_ops_params IMPLEMENTATION.
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-payfile     area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-cash        area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-eval        area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-xrun        area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-mass_act    area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-gate        area = zif_ca_ops_types=>gc_param_area ) ).
   ENDMETHOD.
 

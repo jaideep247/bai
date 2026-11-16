@@ -7,7 +7,7 @@ Area `CA_OPS` (`config/param_areas.csv`); definitions `config/param_definitions.
 `ZCL_CA_OPS_PARAM_SEED` by `tools/param_definitions.py` (check `param_definitions` of `tools/checks.py`).
 Read through `ZCL_CA_OPS_FACTORY=>GET_PARAMS( )`: a name with prefix `ALERT_`, `SLA_`, `RETENTION_` or
 `PURGE_`, `CONTROL_`, `EXC_`, `CHECK_` or `JOB_` - and, for the operations response features (2026-11-11), `RUNBOOK_`,
-`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - and, for build F (2026-11-11), `BRK_` (break analysis) and `PILOT_` (pilot pack) - and, for build G (2026-11-15), `FLOW_` (account flow reconciliation) - and, for licensing (2026-11-15), `LIC_` - and, for the FI-CA cash operations checks (2026-11-15, build N), `CASH_` - and, for the payment file lifecycle (2026-11-15), `PF_` - and, for the evaluation state, alert delivery and monitor coverage (2026-11-16, build O), `EVAL_` - and, for the extension and release-gate proof (2026-11-16, build Q), `GATE_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
+`DOWNTIME_`, `ESC_`, `CORR_`, `METRIC_` or `SHIFT_` - and, for the link registry walker (2026-11-11), `LINK_` - and, for the process catalogue (2026-11-11), `CAT_` - and, for build F (2026-11-11), `BRK_` (break analysis) and `PILOT_` (pilot pack) - and, for build G (2026-11-15), `FLOW_` (account flow reconciliation) - and, for licensing (2026-11-15), `LIC_` - and, for the FI-CA cash operations checks (2026-11-15, build N), `CASH_` - and, for the payment file lifecycle (2026-11-15), `PF_` - and, for the evaluation state, alert delivery and monitor coverage (2026-11-16, build O), `EVAL_` - and, for the expected runs and the FI-CA mass activities (2026-11-16, build P), `XRUN_` and `MA_` - and, for the extension and release-gate proof (2026-11-16, build Q), `GATE_` - is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
 wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS( )`, never silent.
 
 | Name | Type | Default | Read by | Meaning |
@@ -81,6 +81,17 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 | `EVAL_DLV_LOOKBACK_H` | INT 1-168 | 48 | `ZCL_CA_OPS_ALERT_CONFIRM`, `ZCL_CA_OPS_CHK_ALERT_DLV` | Hours of submitted alerts the confirmation step and the delivery check look back |
 | `EVAL_EMAIL_READER` | CHAR (class) | - | `ZCL_CA_OPS_CHN_EMAIL=>CONFIRM` | The e-mail send status reader (`ZIF_CA_OPS_DLV_READER`, SOST); blank = the e-mail cannot confirm (V271, V272) |
 | `EVAL_DLV_UNCONFIRMABLE` | CHAR (`I\|W`) | I | `ZCL_CA_OPS_CHK_ALERT_DLV` | Severity of the notice that a channel cannot confirm delivery |
+| `XRUN_SOURCES` | LIST (classes) | `ZCL_CA_OPS_XRUN_SRC_JOBSCH` | `ZCL_CA_OPS_CHK_XRUN` (`docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`) | Expected-run sources in order (`ZIF_CA_OPS_EXPECTED_RUN_SRC`); a run of an earlier source wins over a later source's run of the same job and planned start |
+| `XRUN_CALENDAR_CLASS` | CHAR (class) | - | `ZCL_CA_OPS_XRUN_SRC_JOBSCH` | Business calendar of the configured plan (`ZIF_CA_OPS_XRUN_CALENDAR`; with the FI-CA Cash Operations pack `ZCL_CA_OPS_MA_CALENDAR`); blank = weekdays only, a row with a calendar ID then has unknown days |
+| `XRUN_LOOKBACK_DAYS` / `XRUN_LATE_MIN` | INT | 1 / 30 | expected runs | Days of plan read back (0 = today); minutes after the planned start until a run is late / not started (a row's `LATE_MIN` wins) |
+| `XRUN_EARLY_MIN` / `XRUN_MATCH_MIN` | INT | 60 / 720 | `ZCL_CA_OPS_XRUN_MONITOR` | Minutes before / after the planned start an SAP job of the run's names counts as its job |
+| `XRUN_SOURCE_STALE_MIN` | INT 1-44640 | 60 | expected runs | Minutes after which a scheduler source is stale (its own limit wins): notice and evaluation `STALE` |
+| `XRUN_MAX_JOBS` | INT 1-50000 | 5000 | expected runs | SAP jobs read per run and kind (ran / waiting); a cap reached is `XRUN_READ_CAPPED`, partial |
+| `XRUN_WAITING_STATUSES` | LIST | P,S,Y | expected runs | TBTCO statuses of a job that waits to start (V291) |
+| `MA_LOOKBACK_DAYS` / `MA_RUN_LIMIT_MIN` | INT | 2 / 120 | `ZCL_CA_OPS_CHK_MA_INTERVAL` | Days of mass activity runs read back; minutes an interval may run (a row's `RUN_LIMIT_MIN` wins) |
+| `MA_SOURCE` | CHAR (class) | `ZCL_CA_OPS_MA_SRC_JOBS` | mass activity check | Run source (`ZIF_CA_OPS_MA_SRC`; V300) |
+| `MA_RESOLVERS` | LIST (classes) | - | `ZCL_CA_OPS_MA_SRC_JOBS` | Resolvers of a run's parallel jobs (`ZIF_CA_OPS_JOB_RESOLVER`); blank = `JOB_RESOLVERS` (V301) |
+| `MA_MAX_RUNS` / `MA_MAX_INTERVALS` | INT | 200 / 500 | mass activity check | Parent jobs read per activity; intervals kept per run (more = partial) |
 | `EXC_REASON_CODES` | LIST | TIMING,INVESTIGATING | exceptions app (action *Classify*) | Reason codes an open exception may be classified with |
 | `LINK_MAX_DEPTH` | INT 1-10 | 4 | link registry walker (`docs/LINK_REGISTRY.md` §5) | Levels a walk follows from its start object; a request may ask for fewer, never more (219 when links were left) |
 | `LINK_MAX_ROWS` | INT 1-10 000 | 100 | link registry walker | Rows one read of a link returns at most (per level and chunk; 221 when reached) |

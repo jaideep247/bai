@@ -19,7 +19,7 @@
 | 100 | `PAYMODEL` | Payment model generator |  | - | contract | - | - |
 | 110 | `BREAKS` | Clearing-account break analysis and pilot pack |  | - | runtime | BreakAccount | `zcl_ca_ops_brk_analyzer.clas.abap`, `zca_ops_pilot_export.prog.abap` |
 | 120 | `FLOW` | Account flow reconciliation |  | - | runtime | AccountFlow | `zcl_ca_ops_flow_eval.clas.abap` |
-| 130 | `CASH_OPS` | FI-CA Cash Operations: cash checks and payment files |  | `CATALOGUE_FICA` | runtime | PayFileType | `zcl_ca_ops_pf_ingest.clas.abap` |
+| 130 | `CASH_OPS` | FI-CA Cash Operations: cash checks and payment files |  | `CATALOGUE_FICA` | runtime | PayFileType, MassActivity | `zcl_ca_ops_pf_ingest.clas.abap` |
 
 ## What each module is
 
@@ -49,11 +49,11 @@ No-code aggregate checks over approved tables (COUNT / AGE per company code, win
 
 ### `JOBS` - SAP job monitor
 
-Failed and late SAP jobs with their steps, job log, application log and business objects; scheduler jobs; the job failures board.
+Failed and late SAP jobs with their steps, job log, application log and business objects; scheduler jobs; the job failures board; expected runs of the external scheduler compared with SAP's jobs (never started, failed before SAP, waiting for a predecessor, held, late; build P).
 
-- Entry points: `src/zcl_ca_ops_job_monitor.clas.abap`, `src/ui/zui_ca_ops_jobs.srvd.srvdsrv`
-- Registered check classes: `ZCL_CA_OPS_CHK_JOB_FAIL`, `ZCL_CA_OPS_CHK_JOB_STATE`
-- Documents: `docs/JOB_MONITORING.md`
+- Entry points: `src/zcl_ca_ops_job_monitor.clas.abap`, `src/ui/zui_ca_ops_jobs.srvd.srvdsrv`, `src/zcl_ca_ops_xrun_monitor.clas.abap`
+- Registered check classes: `ZCL_CA_OPS_CHK_JOB_FAIL`, `ZCL_CA_OPS_CHK_JOB_STATE`, `ZCL_CA_OPS_CHK_XRUN`
+- Documents: `docs/JOB_MONITORING.md`, `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`
 
 ### `RESPONSE` - Operations response features
 
@@ -121,11 +121,11 @@ Account flows by stage and role with movement, opening, closing and unexplained,
 
 ### `CASH_OPS` - FI-CA Cash Operations: cash checks and payment files
 
-Runnable checks on SAP standard FI-CA tables for the cash cycle: payment run expected / completed and proposal-to-payment gaps, payment lot posting and clarification ageing, returns lots and reversal pending, bank statement arrival and posting, clearing reset and payment reversal after payout, reconciliation key to the G/L. Every exception carries count and amount per currency, oldest item and age, next cutoff, owner, stage and evidence keys at source grain; a rule that cannot be evaluated is reported, never green; the payment file lifecycle: payment files from the payment run to the bank - milestones per file type (SAP generation, transfer, bank receipt, bank acceptance, settlement), deadlines on a business calendar, status mappings, adapters for files, transfers, bank acknowledgements, schedulers, statements and tickets, the worklist and the check of files stopped before the bank accepted them. One licence for the FI-CA Cash Operations pack.
+Runnable checks on SAP standard FI-CA tables for the cash cycle: payment run expected / completed and proposal-to-payment gaps, payment lot posting and clarification ageing, returns lots and reversal pending, bank statement arrival and posting, clearing reset and payment reversal after payout, reconciliation key to the G/L. Every exception carries count and amount per currency, oldest item and age, next cutoff, owner, stage and evidence keys at source grain; a rule that cannot be evaluated is reported, never green; the payment file lifecycle: payment files from the payment run to the bank - milestones per file type (SAP generation, transfer, bank receipt, bank acceptance, settlement), deadlines on a business calendar, status mappings, adapters for files, transfers, bank acknowledgements, schedulers, statements and tickets, the worklist and the check of files stopped before the bank accepted them; FI-CA mass activities (build P): runs whose parent job ended while intervals failed or did not finish, intervals past their run limit, and runs whose document output (payment documents, dunning notices) is short of the expectation. One licence for the FI-CA Cash Operations pack.
 
 - Entry points: `src/cash/zcl_ca_ops_cash_ctx.clas.abap`, `src/cash/zcl_ca_ops_cash_dao.clas.abap`, `src/zca_ops_pf_run.prog.abap`, `src/ui/zui_ca_ops_payfile.srvd.srvdsrv`
-- Registered check classes: `ZCL_CA_OPS_CHK_CASH_PAYRUN`, `ZCL_CA_OPS_CHK_CASH_PAYLOT`, `ZCL_CA_OPS_CHK_CASH_RETURN`, `ZCL_CA_OPS_CHK_CASH_EBS`, `ZCL_CA_OPS_CHK_CASH_CLEAR`, `ZCL_CA_OPS_CHK_CASH_GLKEY`, `ZCL_CA_OPS_CHK_PAYFILE`
-- Documents: `docs/FICA_CASH_OPERATIONS.md`, `docs/PAYMENT_FILE_LIFECYCLE.md`, `docs/EXCEPTION_CONTRACT.md`
+- Registered check classes: `ZCL_CA_OPS_CHK_CASH_PAYRUN`, `ZCL_CA_OPS_CHK_CASH_PAYLOT`, `ZCL_CA_OPS_CHK_CASH_RETURN`, `ZCL_CA_OPS_CHK_CASH_EBS`, `ZCL_CA_OPS_CHK_CASH_CLEAR`, `ZCL_CA_OPS_CHK_CASH_GLKEY`, `ZCL_CA_OPS_CHK_PAYFILE`, `ZCL_CA_OPS_CHK_MA_INTERVAL`
+- Documents: `docs/FICA_CASH_OPERATIONS.md`, `docs/PAYMENT_FILE_LIFECYCLE.md`, `docs/EXCEPTION_CONTRACT.md`, `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`
 
 ## Configuration whose module follows from the row
 
@@ -161,6 +161,7 @@ Runnable checks on SAP standard FI-CA tables for the cash cycle: payment run exp
 | CLAS | `ZCL_CA_OPS_CHK_OUTAGE` | `ONBOARD` |  | Registered check class of module ONBOARD |
 | CLAS | `ZCL_CA_OPS_CHK_JOB_FAIL` | `JOBS` |  | Registered check class of module JOBS |
 | CLAS | `ZCL_CA_OPS_CHK_JOB_STATE` | `JOBS` |  | Registered check class of module JOBS |
+| CLAS | `ZCL_CA_OPS_CHK_XRUN` | `JOBS` |  | Registered check class of module JOBS |
 | CLAS | `ZCL_CA_OPS_CHK_LINKS` | `LINKS` |  | Registered check class of module LINKS |
 | CLAS | `ZCL_CA_OPS_CHK_BREAK` | `BREAKS` |  | Registered check class of module BREAKS |
 | CLAS | `ZCL_CA_OPS_CHK_CASH_CLEAR` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
@@ -169,6 +170,7 @@ Runnable checks on SAP standard FI-CA tables for the cash cycle: payment run exp
 | CLAS | `ZCL_CA_OPS_CHK_CASH_PAYLOT` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
 | CLAS | `ZCL_CA_OPS_CHK_CASH_PAYRUN` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
 | CLAS | `ZCL_CA_OPS_CHK_CASH_RETURN` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
+| CLAS | `ZCL_CA_OPS_CHK_MA_INTERVAL` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
 | CLAS | `ZCL_CA_OPS_CHK_PAYFILE` | `CASH_OPS` |  | Registered check class of module CASH_OPS |
 | PKG | `S4CORE` | `CORE` |  | Product baseline: S/4HANA core standard processes |
 | PKG | `FICA` | `CATALOGUE_FICA` |  | Industry package: SAP FI-CA standard processes |

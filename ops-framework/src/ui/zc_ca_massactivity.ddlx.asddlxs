@@ -1,0 +1,57 @@
+// UI annotations: Processes, checks, alerting, purge targets and controls - Mass activities and their output
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Mass activity',
+                     typeNamePlural: 'Mass activities and their output',
+                     title: { type: #STANDARD, value: 'Area' } } }
+annotate entity ZC_CA_MassActivity with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Area;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  ActId;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Description;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Aktyp;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  ParentProgram;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  JobPattern;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  OutputKind;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  MinOutput;
+
+  @UI.identification: [{ position: 90 }]
+  RunLimitMin;
+
+  @UI.identification: [{ position: 100 }]
+  Active;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

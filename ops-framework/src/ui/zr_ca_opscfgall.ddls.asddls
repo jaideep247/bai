@@ -45,6 +45,7 @@ define root view entity ZR_CA_OpsCfgAll
   composition [0..*] of ZR_CA_PayFileMilestone as _PayFileMilestone
   composition [0..*] of ZR_CA_PayFileStatusMap as _PayFileStatusMap
   composition [0..*] of ZR_CA_PayFileAdapter as _PayFileAdapter
+  composition [0..*] of ZR_CA_MassActivity as _MassActivity
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -91,7 +92,8 @@ define root view entity ZR_CA_OpsCfgAll
       _PayFileType,
       _PayFileMilestone,
       _PayFileStatusMap,
-      _PayFileAdapter
+      _PayFileAdapter,
+      _MassActivity
 }
 where
   I_Language.Language = $session.system_language

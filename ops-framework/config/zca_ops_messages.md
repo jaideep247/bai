@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-369 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 370-399 payment file lifecycle (2026-11-15; `docs/PAYMENT_FILE_LIFECYCLE.md`) · 400-449 configuration apps (RAP) · 500-549 FI-CA cash operations checks (2026-11-15, build N; `docs/FICA_CASH_OPERATIONS.md`) · 560-599 evaluation state, alert delivery confirmation, monitor coverage and catalogue milestones (2026-11-16, build O; 567 check of the daily review; `docs/EVALUATION_AND_COVERAGE.md`) · 630-659 extension and release-gate proof: identity and ambiguous matches, missing DDIC objects, configuration preview and rollback (2026-11-16, build Q; `docs/EXTENSION_AND_GATE_PROOF.md`) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-369 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 370-399 payment file lifecycle (2026-11-15; `docs/PAYMENT_FILE_LIFECYCLE.md`) · 400-449 configuration apps (RAP) · 500-549 FI-CA cash operations checks (2026-11-15, build N; `docs/FICA_CASH_OPERATIONS.md`) · 560-599 evaluation state, alert delivery confirmation, monitor coverage and catalogue milestones (2026-11-16, build O; 567 check of the daily review; `docs/EVALUATION_AND_COVERAGE.md`) · 600-629 expected runs (600-614) and FI-CA mass activities (615-629) (2026-11-16, build P; `docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`) · 630-659 extension and release-gate proof: identity and ambiguous matches, missing DDIC objects, configuration preview and rollback (2026-11-16, build Q; `docs/EXTENSION_AND_GATE_PROOF.md`) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -331,6 +331,30 @@ texts <= 73 characters).
 | 582 | Release and support package are mandatory for a validation |
 | 583 | Test mode: validation of &1 on &2 (&3) not saved |
 | 584 | Channel &1 is not configured: delivery cannot be confirmed |
+| 600 | Run &1 planned &2 never started: no SAP job &3 (scheduler: &4) |
+| 601 | Run &1 planned &2: scheduler &3, but SAP has no job &4 |
+| 602 | Run &1 planned &2: SAP job &3 waits (status &4), not started |
+| 603 | Run &1 planned &2 waits for &3: not ended successfully (&4) |
+| 604 | Run &1 planned &2 is held at the scheduler (since &3) |
+| 605 | Run &1 planned &2 started &3 minutes late (SAP job &4) |
+| 606 | Scheduler source &1 is stale: newest record &2 (limit &3 min) |
+| 607 | Scheduler source &1 could not be read: &2 |
+| 608 | Expected runs: &1 not usable: &2 |
+| 609 | SAP jobs read reached the cap &1: expected runs not all judged |
+| 610 | No business calendar: parameter &1 names no class |
+| 611 | Scheduler: &1 &2 run &3, state &4 |
+| 612 | SAP job: &1 / &2, status &3, started &4 |
+| 613 | Predecessor: &1, SAP job &2, status &3 |
+| 614 | Scheduler row &1 / &2: run days &3 not seven characters X or blank |
+| 615 | Run &1 of &2: &3 of &4 interval(s) failed or did not finish |
+| 616 | Job &1 ended OK, run &2 of &3: &4 interval(s) failed |
+| 617 | Run &1 of &2: interval &3 running &4 minutes (over the limit) |
+| 618 | Run &1 of &2: &3 of &4 expected documents output |
+| 619 | Job &1 ended OK, run &2 output &3 of &4 expected documents |
+| 620 | Mass activity &1 not usable: &2 |
+| 621 | Run &1, activity type &2, parent job &3, status &4 |
+| 622 | Interval &1: job &2, status &3, &4 minutes |
+| 623 | Output &1: expected &2, observed &3 (failed intervals &4) |
 | 630 | Link &1 is ambiguous by design: &2 of &3 not covered by its conditions |
 | 631 | Link &1: &2 candidate rows for one source row - all shown as AMBIGUOUS |
 | 632 | Identity field &2 of object &1 is not a declared field of its layer |
