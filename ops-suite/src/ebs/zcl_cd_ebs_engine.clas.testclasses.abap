@@ -30,6 +30,8 @@
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
 *& 2026-11-08 | Configuration double: get_reason (customer posting area ZRSN).
+*& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
+*&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -992,8 +994,9 @@ CLASS ltc_engine IMPLEMENTATION.
   METHOD e2e_config_only_code_routed.
     TRY.
         configure_code( '165' ).
+        DATA ls_package TYPE zif_cd_ebs_types=>ty_package.
         DATA(lt_findings) = validate( EXPORTING is_package = file_package( small_bai2( ) )
-                                      IMPORTING es_package = DATA(ls_package) ).
+                                      IMPORTING es_package = ls_package ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE string_table( FOR l IN ls_package-lines ( |{ l-btc_code }/{ l-rule_group }| ) )
           exp = VALUE string_table( ( `165/CFGONLY` ) )

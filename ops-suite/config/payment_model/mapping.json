@@ -162,7 +162,7 @@
       "BusinessPartner": {"expr": "Op.gpart", "verify": "masked to the last four by the product view (trace rule)"},
       "ClearingDocument": {"expr": "cast( Op.augbl as abap.char( 20 ) )"},
       "ClearingDate": {"expr": "Op.augdt"},
-      "ClearingReason": {"expr": "Op.augrd", "verify": "AUGRD 05 = reversal (confirmed 2026-11-07)"},
+      "ClearingReason": {"expr": "Op.augrd", "verify": "AUGRD 05 = reversal (user, seen on A4H 2026-11-15)"},
       "RequestReference": {"expr": "cast( Op.zz_fin_trans_num as abap.char( 40 ) )"}
     }
   },
@@ -239,9 +239,11 @@
       "sets (ZCD_EBS_ACCT house bank account -> ZCD_HCK_RCSET of the same company code, house bank, account ID and",
       "currency). Clearing document = FEBEP-CHECT (methods E G H I J K L: CHECT = AUGBL, confirmed; for cheques CHECT is",
       "the cheque number - V105, not resolved here). ClearingChanged = the referenced payment document was reversed",
-      "(DFKKKO-STBEL; a clearing reset needs the history, V100). The G/L clearing line (BSEG-XREF2 = AUGBL) is not joined:",
-      "BSEG has no index on XREF2 (HCK VERIFY item 14) - blank until the index or the clearing-account restriction is",
-      "confirmed (V106); the payment ledger and the batch key reach the journal instead."
+      "(DFKKKO-STORB of the referenced document names its reversal; STBEL is filled on the reversal and names the",
+      "reversed document - reference system A4H, 2026-11-16, V260; a clearing reset needs the history, V100). The G/L",
+      "clearing line (BSEG-XREF2 = AUGBL) is not joined: BSEG has no index on XREF2 (HCK VERIFY item 14) - blank until the",
+      "index or the clearing-account restriction is confirmed (V106); the payment ledger and the batch key reach the",
+      "journal instead."
     ],
     "from": "ZI_CD_HckRcBankLine as Line",
     "joins": [
@@ -273,7 +275,7 @@
       "IsPostedArea1": {"expr": "Line.IsPostedArea1"},
       "IsPostedArea2": {"expr": "Line.IsPostedArea2"},
       "ClearingDocument": {"expr": "cast( Line.BankReference as abap.char( 20 ) )", "verify": "CHECT = AUGBL for methods E G H I J K L (confirmed); cheques: V105"},
-      "ClearingChanged": {"expr": "cast( case when Clr.stbel is not null and Clr.stbel <> ' ' then 'X' else ' ' end as abap_boolean )", "verify": "reversal by DFKKKO-STBEL; clearing reset needs the history (V100)"},
+      "ClearingChanged": {"expr": "cast( case when Clr.storb is not null and Clr.storb <> ' ' then 'X' else ' ' end as abap_boolean )", "verify": "reversal by DFKKKO-STORB (V260); clearing reset needs the history (V100)"},
       "GlFiscalYear": {"expr": null, "verify": "V106 G/L clearing line by BSEG-XREF2 = AUGBL needs an index (BUKRS / XREF2) - blank until confirmed"},
       "GlDocument": {"expr": null, "verify": "V106 as GlFiscalYear"},
       "GlLineItem": {"expr": null, "verify": "V106 as GlFiscalYear"}
@@ -282,9 +284,10 @@
   "document_event": {
     "status": "active",
     "notes": [
-      "Reversals (DFKKKO-STBEL) and stopped cheques (DPAYH status STOPPED) of the payments of the payment model window",
-      "(ZI_CD_DocEvtU). Clearing reset / re-clearing / reissue link need the clearing-reset history (TRACE_SRC_HISTORY,",
-      "DFKKRAPT candidate, V100) - not mapped until confirmed; returns (DFKKRP) are not change events."
+      "Reversals (DFKKKO-STORB of the payment document, V260) and stopped cheques (DPAYH status STOPPED) of the payments",
+      "of the payment model window (ZI_CD_DocEvtU). Clearing reset / re-clearing / reissue link need the clearing-reset",
+      "history (TRACE_SRC_HISTORY, DFKKRAPT candidate, V100) - not mapped until confirmed; returns (DFKKRP) are not change",
+      "events."
     ],
     "from": "ZI_CD_DocEvtU as Evt",
     "fields": {

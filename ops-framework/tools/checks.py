@@ -15,6 +15,9 @@ Checks
                       Purpose and Modification log lines
   pcre_only           no POSIX regular expressions (regex =, FIND/REPLACE ... REGEX, CREATE_POSIX)
   no_cp_patterns      no CP / NP comparisons and no option 'CP' / 'NP'
+  no_inline_in_call   no inline declaration (DATA( / FINAL() after IMPORTING of a method call in a functional
+                      position (right side of an assignment, a condition, an operand of another call): the
+                      compiler of the reference system refuses it, abaplint accepts it
   no_inline_texts     no user text as a literal in production code: MESSAGE with a text literal, or a
                       sentence-like literal outside declarations (test data of test includes allowed)
   no_select_star      explicit field lists in every SELECT
@@ -86,6 +89,7 @@ Modification log:
 2026-11-15 | extensions (build H: inventory of extension points, extensible views, worked example of a pack).
 2026-11-15 | licensing (vendor licence: module catalogue valid, module map and document up to date).
 2026-11-15 | release_manifest (build M: versioned pack manifest and blank-slate rules).
+2026-11-16 | no_inline_in_call (shared rule: inline declaration in IMPORTING of a functional call).
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -100,7 +104,8 @@ from abaptools import checks as _shared  # noqa: E402
 from abaptools import onboarding as _onboarding  # noqa: E402
 from abaptools.checks import (files, read, strip_comments, statements, check_test_path,  # noqa: E402,F401
                               check_name_lengths, check_method_names, check_artifact_header, check_pcre_only,
-                              check_no_cp, check_no_select_star, check_final, check_test_classes)
+                              check_no_cp, check_no_inline_in_call, check_no_select_star, check_final,
+                              check_test_classes)
 
 DECLARATION = re.compile(r'^\s*(CONSTANTS|TYPES|DATA|CLASS-DATA|STATICS)\b', re.I)
 LITERAL = re.compile(r"'(?:[^'\n]|'')*'|`(?:[^`\n]|``)*`")
@@ -271,6 +276,7 @@ CHECKS = [
     ('artifact_header', check_artifact_header),
     ('pcre_only', check_pcre_only),
     ('no_cp_patterns', check_no_cp),
+    ('no_inline_in_call', check_no_inline_in_call),
     ('no_inline_texts', check_no_inline_texts),
     ('no_select_star', check_no_select_star),
     ('final_classes', check_final),

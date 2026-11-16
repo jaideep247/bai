@@ -23,6 +23,7 @@ The rows below were moved on 2026-11-11 from the framework's list `ops-framework
 | V159-V161 (closed) | Fields the suite's code reads that the reference system does not have (2026-11-15, build I; V161 closed by build L) | this document, §4 |
 | **V190-V192** | **Build L: source per purpose and typed product mapping tables - activation of the tables, app entities and views, the posting-area purposes in DV1, the migration with transport recording (2026-11-15)** | **this document, §5** |
 | V169 | Build J: licensing - the installation numbers and SIDs of DV1 / QA1 / PS4 sent to the vendor, the vendor's licence installed per system, the modules the suite uses licensed, a module outside the licence refused in QA1 under `X` while the suite's own engines run (2026-11-15) | `Licensing_Overlay.md` §4 |
+| **V260** | **Facts of the reference system A4H from the owner's test tool (2026-11-16): reversal pointer direction (`DFKKKO-STBEL` on the reversal, `STORB` on the original); notes on V86 / V67 (scheduler run IDs), V108** | **this document, §6** |
 | V130, V131 | Process catalogue customer layer: the customer process's table and programs, approval of the activation proposal and the order of the catalogue rows before `CAT_PROCESS` (2026-11-11) | `Process_Catalogue_Overlay.md` §4 |
 
 ## 2. Build B (2026-11-11) - service health, process flow, missing-volume checks, payment model mapping
@@ -35,7 +36,7 @@ The framework's payment model product layer (contract, templates, generator) is 
 | V83 | VERIFY-SE11 | `ZCD_PAYM_REQ_LOG` transaction field (the field exists - user 2026-11-11; name and values / texts): mapping `TransactionType`, dimension texts `TRANSACTION` in `ZCA_OPS_PMDIM`, volume rows grouped by it |
 | V84 | VERIFY-SE11 | Business request lifecycle status (PENDING / SCHEDULED / SRCPOSTED / source reject): table and field (control_seed.md section 2a P2) - mapping `RequestStatus` stays blank until named |
 | V85 | VERIFY-SE11 | Received date (DATS) and time (TIMS) of `ZCD_PAYM_REQ_LOG` for `B_VOL_PRQ` (inactive) and its hour bands; index for the day read (with pre-check 0.8) |
-| V86 | VERIFY (Control-M) | Payment run ID convention per day-part (LAUFI) for the day-part rows of `B_VOL_PAYRUN` |
+| V86 | VERIFY (Control-M) | Payment run ID convention per day-part (LAUFI) for the day-part rows of `B_VOL_PAYRUN`. **2026-11-16 (reference system A4H, the owner's test tool):** `RFKK_MA_SCHEDULER` has no `P_LAUFD` / `P_LAUFI` - a scheduler run takes LAUFD = the day of the job and LAUFI = the template run's ID (`P_COPYI`), or its first 3 characters and a counter when a run of that key already exists that day (FORM `new_laufi`). A day-part convention therefore lives in the template ID of each Control-M job, not in SAP, and a second run of the same key on one day changes the ID: the day-part patterns of `B_VOL_PAYRUN` must accept the 3 characters + counter form. Still open: the customer's template IDs per day-part |
 | V87 | VERIFY-SE11 | DPAYH-HKTID (house bank account ID) - mapping `HouseBankAccount` blank until confirmed; FEBKO-HBKID / HKTID for `B_VOL_STMT`. **2026-11-15:** all three fields exist on the reference system S/4HANA 2025, `ddic/a4h`; open: the element of `ZI_CD_PayLifeRun` for HKTID (then map `HouseBankAccount`) |
 | V88 | VERIFY-SE11 / PlanViz | DFKKOP secondary index on AUGBL (payment -> requests of the payment page) and the index of pre-check 0.8 on ZZ_FIN_TRANS_NUM (request -> payments); DFKKOP-BUKRS. **2026-11-15:** index HTH on AUGBL and DFKKOP-BUKRS on the reference system S/4HANA 2025, `ddic/a4h`; ZZ_FIN_TRANS_NUM is a customer field (pre-check 0.8 stays) |
 | V89 | VERIFY-SE11 / business | Feeder business reference field (claim / policy / invoice) of the request log, its sensitivity (masked by default) and the feeder URL templates (`ZCA_OPS_FEEDER`) |
@@ -96,3 +97,43 @@ the posting area stays an adapter where the target layout fits. Source per purpo
 | V190 | VERIFY-ADT | Activation of `ZCD_OPS_MAPRSN` / `_MAPPMC` / `_MAPBTM` / `_MAPBTR` (delivery class C, NUMC key `VERSION`) with their draft tables and the generated entities `MapReason`, `MapMethodClass`, `MapBtcCode`, `MapBtcRole` of `ZUI_CD_OPS_CFG`: an identical key set is refused on create (table key, draft and active), `*` refused in a key its reader cannot apply (message 427), a blank ZBTM disposition refused (413); the union of `ZI_CD_PayMethodCls` (key elements in `UNION ALL`, NUMC version against the `LPAD`ed parameter of `ZI_CD_PostAreaCfg`) |
 | V191 | VERIFY-SE11 (DV1) | The posting-area purposes on the target release S/4HANA 2023: `TFK033D` `KEY01`-`KEY08` / `FUN01`-`FUN06` CHAR 12 as on the reference system (ZRSN, ZPMC fit; `ZCL_CD_OPS_POSTAREA_LAYOUT` holds the capacity). The FQC0 precedence question of `Release_Readiness.md` (d) no longer arises for them: ZRSN and ZPMC have one generic key each, where "exact beats `*`" is the only rule; the typed purposes apply the suite's rule by definition |
 | V192 | VERIFY-ADT (DV1) | `ZCD_OPS_POSTAREA_COPY` in update mode: rows recorded on the customizing request with the relations entity / table of `ZCL_CD_OPS_POSTAREA_LAYOUT` (`ZCL_CA_OPS_CFG_TRANSPORT`), one commit through the store; then the switch of a purpose's source and version by parameter shows the same morning report (`D_POSTAREA_INVALID`, EBS run in test mode) |
+
+## 6. Facts of the reference system A4H (2026-11-16) - reversal direction
+
+Source: the owner's test tool, run on the reference system A4H (S/4HANA 2025 with FI-CA); facts and their confidence in
+`../../docs/knowledge/test_tool_facts.md` (F01, F02), the cross-check in `../../docs/knowledge/test_tool_crosscheck.md`
+(X01, X13).
+
+**Fixed (2026-11-16):** `DFKKKO-STBEL` (`STBEL_KK`) is filled on the **reversal** document and names the reversed
+original; the original names its reversal in `DFKKKO-STORB` (`STORB_KK`; both fields in `ddic/a4h/DFKKKO.fields.csv`).
+The reversed original's items get `AUGRD` 05 and `AUGBL` = the reversal. Every read that tested `STBEL` on the payment
+(original) document returned nothing for a real reversal. Now:
+
+| Read | Before | Now |
+|---|---|---|
+| `ZCL_CD_HCK_DOCCHG_DAO=>GET_REVERSED_PAYMENTS` (`A_DOC_CHANGE`) | original `STBEL` = the reversal | reversal side: reversal by `CPUDT`, `o~opbel = r~stbel` (original by key) |
+| `ZCL_CD_OPS_PAY_OUTCOME_DAO` source REVERSALS | `o~stbel = r~opbel` | `o~opbel = r~stbel` (original by key) |
+| `ZCL_CD_OPS_TRACE_ENGINE` (clearing header reversed) | `STBEL` of the clearing header | `AUGRD` 05 (primary) or `STORB` of the clearing header (`ZCL_CD_OPS_TRACE_DAO` reads it) |
+| `ZCL_CD_OPS_PAY_OUTCOME` (reversed payments not judged) | `STBEL` of the payment document | `STORB` of the payment document |
+| `ZI_CD_DocEvtU` (event REVERSAL) | `Rev.opbel = Org.stbel` | `Rev.opbel = Org.storb` (reversal by key) |
+| `ZI_CD_LedgBankLn-ClearingChanged` (mapping `recon_bank_line`) | `Clr.stbel` set | `Clr.storb` set |
+
+Tests: the doubles carry `STBEL` on the reversal and `STORB` on the original; `ltc_docchg_dao->found_by_reversal_stbel`
+and `ltc_pay_outcome_dao->reversal_by_stbel_only` prove that a reversal named only by the reversal's `STBEL` (original
+without `STORB`) is found, and that a document's own `STBEL` does not make it reversed.
+
+| ID | Kind | Item |
+|---|---|---|
+| V260 | VERIFY-SE11 / fixture | Reversal pointer direction on one real reversal: `SELECT opbel, stbel, storb, cpudt FROM dfkkko WHERE opbel IN ( <original>, <reversal> )` and the original's items (`AUGRD` 05, `AUGBL` = reversal). A4H proves `STBEL` on the reversal (BAPI `BAPI_CTRACDOCUMENT_GETDETAIL`, `REVERSED_DOC`) and `AUGRD` 05; **`STORB` filled on the original is not yet seen** (the BAPI does not return it). The reads by key of the original's header (trace engine, outcome service, `ZI_CD_DocEvtU`, `ClearingChanged`) depend on it; the searches by the reversal's entry date (`A_DOC_CHANGE`, REVERSALS) do not. Re-opens the STBEL part of V108 (`USAA_Known_Tables.md` §4) and of `Payment_Trace.md` §9; `A_DOC_CHANGE` stays inactive until V108 and V260 are closed |
+
+`AUGRD` 05 on the reversed original's items: user decision 2026-11-07, **seen on A4H 2026-11-15** (closed in
+`Payment_Trace.md` §9).
+
+Other facts of A4H for the suite (2026-11-16): the compiler refuses an inline declaration after `IMPORTING` of a
+functional call (`x = meth( IMPORTING e = DATA(y) )`), abaplint accepts it - fixed in `ZCL_CD_HCK_C_INFLIGHT` (the
+morning report check `A_INFLIGHT`, production code) and the test class of `ZCL_CD_EBS_ENGINE`; house rule
+`no_inline_in_call` of `tools/portable_checks.py`. RAP `GET PERMISSIONS` returned 02 for a refused action on A4H, not
+`auth-unauthorized` (framework V261): the suite's behaviour pool tests (`ZBP_R_CD_*CFGALL`, FMON, HCK) expect
+`auth-unauthorized` and may fail on the first A4H run - note only, tests unchanged. Scheduler run IDs: V86 (above) and
+V67 (`Release_Readiness.md`).
+

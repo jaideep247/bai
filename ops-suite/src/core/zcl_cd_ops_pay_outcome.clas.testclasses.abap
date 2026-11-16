@@ -32,6 +32,8 @@
 *&            | to the evidence interface is a configuration error, a read or runtime error is not; the chain of
 *&            | an error is its reason; an evidence class that does not exist is CLEARING_RULE_INVALID, never
 *&            | PAY_EVIDENCE_FAILED.
+*& 2026-11-16 | Reversed payment document doubled with DFKKKO-STORB (STBEL is filled on the reversal - reference
+*&            | system A4H).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -381,13 +383,14 @@ CLASS ltc_outcome IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a reversed payment document (DFKKKO-STBEL) is REVERSED and its evidence is not judged
+  " Rule: a reversed payment document (its DFKKKO-STORB names the reversal) is REVERSED and its evidence
+  " is not judged
   METHOD reversed_document.
     DATA ls_header TYPE zif_cd_ops_trace_types=>ty_doc_header.
     TRY.
         DATA(ls_scenario) = load( zcl_cd_ops_pay_fixture=>gc_scenario-two_runs ).
         ls_header-opbel = ls_scenario-augbl.
-        ls_header-stbel = gc_reversal.
+        ls_header-storb = gc_reversal.
         INSERT ls_header INTO TABLE mo_trace->mt_headers.
         DATA(ls_verdict) = verdict_of( ls_scenario-augbl ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-reversed

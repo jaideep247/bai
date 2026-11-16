@@ -27,6 +27,8 @@
 *& 2026-11-15 | G/L transfer totals from DFKKSUM (DFKKSUMC is the key status, without company code / account /
 *& 2026-11-15 | TY_CHECK-CRSTATUS removed (DFKKCR has no such field).
 *&            | currency). Constant GC_TABLE-DFKKSUM (was SUMC).
+*& 2026-11-16 | TY_DOC_HEADER-STORB (reversal document, on the original); STBEL is the reversed document,
+*&            | filled on the reversal (reference system A4H). GC_REVERSAL_AUGRD: AUGRD 05 seen on A4H (comment).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -217,8 +219,9 @@ INTERFACE zif_cd_ops_trace_types
       bank_lookback     TYPE i VALUE 5,
     END OF gc_default.
 
-  "! Clearing reason of a reversal (DFKKOP-AUGRD, VERIFY-SE11): 05 is the only reversal reason
-  "! (user decision 2026-11-07); literal '05' in ZR_CD_TrxFlow, compared by the parity check
+  "! Clearing reason of a reversal (DFKKOP-AUGRD): 05 is the only reversal reason (user decision
+  "! 2026-11-07; seen on A4H 2026-11-15: a reversal clears the original's items with AUGRD 05 and AUGBL =
+  "! the reversal); literal '05' in ZR_CD_TrxFlow, compared by the parity check
   CONSTANTS gc_reversal_augrd TYPE ty_augrd VALUE '05'.
 
   "! Keys of a source specification
@@ -382,12 +385,14 @@ INTERFACE zif_cd_ops_trace_types
     END OF ty_item.
   TYPES tt_item TYPE STANDARD TABLE OF ty_item WITH EMPTY KEY.
 
-  "! Document header (DFKKKO). VERIFY-SE11: STBEL (reversal document), CPUDT, CPUTM
+  "! Document header (DFKKKO). STBEL is filled on a reversal document and names the reversed
+  "! document; STORB on the original names its reversal (reference system A4H). CPUDT, CPUTM
   TYPES:
     BEGIN OF ty_doc_header,
       opbel TYPE ty_docno,
       fikey TYPE c LENGTH 12,
       stbel TYPE ty_docno,
+      storb TYPE ty_docno,
       budat TYPE d,
       cpudt TYPE d,
       cputm TYPE t,

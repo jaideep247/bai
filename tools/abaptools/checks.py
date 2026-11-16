@@ -14,6 +14,9 @@ Offline evidence of house-rule compliance only - not SAP activation, ATC or ABAP
                       Purpose and Modification log lines
   pcre_only           no POSIX regular expressions (name_checks)
   no_cp_patterns      no CP / NP comparisons and no option 'CP' / 'NP' (name_checks)
+  no_inline_in_call   no inline declaration (DATA( / FINAL() after IMPORTING of a method call in a functional
+                      position - right side of an assignment, a condition, an operand of another call; the
+                      reference system's compiler refuses it, abaplint accepts it (name_checks)
   no_select_star      explicit field lists in every SELECT
   final_classes       every public concrete class is FINAL (exception classes excepted: consumers
                       inherit them)
@@ -33,6 +36,8 @@ Modification log:
            | PCRE / CP / name checks of name_checks for every component; packaging check.
 2026-11-11 | customer_terms: term flags (case, prefix, text), scopes (every text file of the given folders),
            | allowlist file of single lines with their reason.
+2026-11-16 | no_inline_in_call (inline declaration in IMPORTING of a functional call, refused by the compiler of
+           | the reference system S/4HANA 2025).
 """
 import csv
 import json
@@ -141,6 +146,10 @@ def check_pcre_only(root):
 
 def check_no_cp(root):
     return name_checks.cp_pattern_failures(root)
+
+
+def check_no_inline_in_call(root):
+    return name_checks.inline_in_call_failures(root)
 
 
 def check_no_select_star(root):

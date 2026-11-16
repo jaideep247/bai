@@ -6,13 +6,18 @@
 |---|---|---|---|---|
 | BUT000-BPEXT | confirmed | - | - | - |
 | BUT000-PARTNER | confirmed | S4_BUSINESS_PARTNER | FICA_PARTNER_TO_ITEMS (from, inactive (VERIFY)) | - |
+| DFKKCR-BNKDT | confirmed | - | - | - |
 | DFKKCR-DOC1R | confirmed | FICA_CHEQUE | FICA_CHEQUE_TO_PAYMENT (from, active)<br/>FICA_PAYMENT_TO_CHEQUE (to, active)<br/>FICA_PAYMENT_TO_CHEQUE (target key)<br/>FICA_STMT_LINE_TO_CHEQUE (target key) | - |
+| DFKKCR-DOC2T | confirmed | - | - | - |
 | DFKKCR-HBKID | confirmed | - | - | - |
 | DFKKCR-HKTID | confirmed | - | - | - |
+| DFKKCR-LAUFD | confirmed | - | - | - |
+| DFKKCR-LAUFI | confirmed | - | - | - |
 | DFKKCR-ZTNUM | confirmed | FICA_CHEQUE | FICA_CHEQUE_TO_STMT_LINE (from, active)<br/>FICA_STMT_LINE_TO_CHEQUE (to, active)<br/>FICA_PAYMENT_TO_CHEQUE (target key)<br/>FICA_STMT_LINE_TO_CHEQUE (target key) | - |
 | DFKKKO-FIKEY | confirmed | - | FICA_HDR_TO_SUMMARY (from, active)<br/>FICA_SUMMARY_TO_HDRS (to, active) | - |
 | DFKKKO-OPBEL | confirmed | FICA_DOC_HEADER | FICA_CLEARING_TO_ITEMS (from, active)<br/>FICA_HDR_TO_ITEMS (from, active)<br/>FICA_ITEM_TO_CLEARING_HDR (to, active)<br/>FICA_ITEM_TO_HDR (to, active)<br/>FICA_ITEM_TO_CLEARING_HDR (target key)<br/>FICA_ITEM_TO_HDR (target key)<br/>FICA_SUMMARY_TO_HDRS (target key) | - |
 | DFKKKO-STBEL | confirmed | - | - | - |
+| DFKKKO-STORB | confirmed | - | - | - |
 | DFKKNRP-INFOF | confirmed | - | FICA_PAYMENT_TO_NOC (to, active) | - |
 | DFKKNRP-KEYN1 | confirmed | FICA_NOC_ITEM | FICA_PAYMENT_TO_NOC (target key) | - |
 | DFKKNRP-POSNA | confirmed | FICA_NOC_ITEM | FICA_PAYMENT_TO_NOC (target key) | - |

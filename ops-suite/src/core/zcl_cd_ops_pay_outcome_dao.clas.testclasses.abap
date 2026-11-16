@@ -32,6 +32,8 @@
 *&            | GL source stays on the tables).
 *& 2026-11-15 | DPAYH paying company code BBUKR and method RZAWE (DPAYH has no BUKRS / PYMET; reference system S/4HANA
 *&            | 2025).
+*& 2026-11-16 | Reversal direction (reference system A4H): the reversal carries STBEL = the reversed payment document,
+*&            | the original STORB; a reversal found by the reversal's STBEL alone is picked up.
 *&---------------------------------------------------------------------*
 CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -94,6 +96,7 @@ CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
     METHODS documents_after_watermark   FOR TESTING.
     METHODS package_size_sets_more      FOR TESTING.
     METHODS reversal_of_payment_doc     FOR TESTING.
+    METHODS reversal_by_stbel_only      FOR TESTING.
     METHODS statement_lines_after_key   FOR TESTING.
     METHODS returns_by_return_document  FOR TESTING.
     METHODS gl_clearing_of_xref2        FOR TESTING.
@@ -152,7 +155,8 @@ CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
       IMPORTING
         iv_opbel TYPE clike
         iv_time  TYPE t
-        iv_stbel TYPE clike OPTIONAL.
+        iv_stbel TYPE clike OPTIONAL
+        iv_storb TYPE clike OPTIONAL.
     METHODS given_item
       IMPORTING
         iv_augbl TYPE clike
@@ -209,6 +213,7 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
     ls_header-cpudt = gc-day.
     ls_header-cputm = iv_time.
     ls_header-stbel = iv_stbel.
+    ls_header-storb = iv_storb.
     INSERT ls_header INTO TABLE lt_headers.
     go_env->insert_test_data( lt_headers ).
   ENDMETHOD.
@@ -296,8 +301,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   " Rule: a payment document reversed after the watermark is picked up (changed clearing)
   METHOD reversal_of_payment_doc.
     TRY.
-        given_header( iv_opbel = gc-doc_old iv_time = gc-early iv_stbel = gc-reversal ).
-        given_header( iv_opbel = gc-reversal iv_time = gc-late ).
+        given_header( iv_opbel = gc-doc_old iv_time = gc-early iv_storb = gc-reversal ).
+        given_header( iv_opbel = gc-reversal iv_time = gc-late iv_stbel = gc-doc_old ).
         given_item( iv_augbl = gc-doc_old iv_fin = gc-fin ).
         DATA(ls_changes) = mo_cut->get_changes( iv_source    = zif_cd_ops_payout_types=>gc_source-reversals
                                                 is_watermark = watermark( zif_cd_ops_payout_types=>gc_source-reversals )
@@ -307,6 +312,28 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_changes-watermark-wm_key
                                             exp = CONV zif_cd_ops_payout_types=>ty_wm_key( gc-reversal )
                                             msg = 'Watermark at the reversal document' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the reversal is found by the reversal document's STBEL alone (original without STORB); a
+  " payment document whose own STBEL is set is not reported as reversed (STBEL names what it reverses)
+  METHOD reversal_by_stbel_only.
+    TRY.
+        given_header( iv_opbel = gc-doc_old iv_time = gc-early ).
+        given_header( iv_opbel = gc-reversal iv_time = gc-late iv_stbel = gc-doc_old ).
+        given_header( iv_opbel = gc-doc_new iv_time = gc-late iv_stbel = gc-doc_nofin ).
+        given_item( iv_augbl = gc-doc_old iv_fin = gc-fin ).
+        given_item( iv_augbl = gc-doc_new iv_fin = gc-fin ).
+        DATA(ls_changes) = mo_cut->get_changes( iv_source    = zif_cd_ops_payout_types=>gc_source-reversals
+                                                is_watermark = watermark( zif_cd_ops_payout_types=>gc_source-reversals )
+                                                iv_max       = 100 ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_changes-docno[ table_line = gc-doc_old ] ) )
+                                          msg = 'Reversed payment found by the reversal STBEL' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_changes-docno ) exp = 1
+                                            msg = 'The own STBEL of a document does not make it reversed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

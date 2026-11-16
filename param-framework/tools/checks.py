@@ -14,6 +14,9 @@ Checks
                       Purpose and Modification log lines
   pcre_only           no POSIX regular expressions (regex =, FIND/REPLACE ... REGEX, CREATE_POSIX)
   no_cp_patterns      no CP / NP comparisons and no option 'CP' / 'NP'
+  no_inline_in_call   no inline declaration (DATA( / FINAL() after IMPORTING of a method call in a functional
+                      position (right side of an assignment, a condition, an operand of another call): the
+                      compiler of the reference system refuses it, abaplint accepts it
   no_inline_texts     no user text as a literal: MESSAGE with a text literal, or a sentence-like
                       literal outside declarations (test classes may use literals in msg = )
   no_select_star      explicit field lists in every SELECT
@@ -34,6 +37,7 @@ Modification log:
            | metadata, customer wording and packaging checks added.
 2026-11-11 | customer_terms reads every text file of the component (docs, configuration, tools, README,
            | change log), not only src/, the text elements and the message texts; allowlist with reasons.
+2026-11-16 | no_inline_in_call (shared rule: inline declaration in IMPORTING of a functional call).
 """
 import os
 import re
@@ -44,7 +48,8 @@ sys.path.insert(0, os.path.join(ROOT, '..', 'tools'))
 from abaptools import checks as _shared  # noqa: E402
 from abaptools.checks import (files, read, strip_comments, statements,  # noqa: E402,F401
                               check_name_lengths, check_method_names, check_artifact_header, check_pcre_only,
-                              check_no_cp, check_no_select_star, check_final, check_test_classes)
+                              check_no_cp, check_no_inline_in_call, check_no_select_star, check_final,
+                              check_test_classes)
 
 DECLARATION = re.compile(r'^\s*(CONSTANTS|TYPES|DATA|CLASS-DATA|STATICS)\b', re.I)
 SENTENCE = re.compile(r"'([^'\n]*[A-Za-z]{2,}\s+[A-Za-z]{2,}[^'\n]*)'|`([^`\n]*[A-Za-z]{2,}\s+[A-Za-z]{2,}[^`\n]*)`")
@@ -111,6 +116,7 @@ CHECKS = [
     ('artifact_header', check_artifact_header),
     ('pcre_only', check_pcre_only),
     ('no_cp_patterns', check_no_cp),
+    ('no_inline_in_call', check_no_inline_in_call),
     ('no_inline_texts', check_no_inline_texts),
     ('no_select_star', check_no_select_star),
     ('final_classes', check_final),

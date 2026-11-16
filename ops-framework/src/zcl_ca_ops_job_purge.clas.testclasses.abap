@@ -7,6 +7,8 @@
 *& watermark stay. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-11 | Initial version (SAP job monitor).
+*& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
+*&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
 *&---------------------------------------------------------------------*
 CLASS ltc_job_purge DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -102,11 +104,12 @@ CLASS ltc_job_purge IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
       act = lo_cut->count_purgeable( iv_target = gc-target iv_cutoff = gc-cutoff iv_today = '20261111' )
       exp = 1 msg = 'One old job' ).
+    DATA lv_dependent TYPE i.
     DATA(lv_deleted) = lo_cut->delete_package( EXPORTING iv_target    = gc-target
                                                          iv_cutoff    = gc-cutoff
                                                          iv_today     = '20261111'
                                                          iv_max       = 100
-                                               IMPORTING ev_dependent = DATA(lv_dependent) ).
+                                               IMPORTING ev_dependent = lv_dependent ).
     cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'One job deleted' ).
     cl_abap_unit_assert=>assert_equals( act = lv_dependent exp = 4 msg = 'Step, line, log link, object' ).
     SELECT COUNT(*) FROM zca_ops_jobstep INTO @DATA(lv_steps).
