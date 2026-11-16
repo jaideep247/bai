@@ -7,8 +7,14 @@
 *& a warning LINK_REGISTRY naming the link; a declared field the runtime
 *& DDIC of its source does not know, and an unknown source, are warnings
 *& LINK_DDIC. No database. Does not prove live SAP runtime behavior.
+*& Build Q: a "to one" link whose conditions do not cover the identity of
+*& its target is a warning LINK_AMBIGUOUS and stays effective (never a
+*& silent acceptance, never a problem that removes it); objects on a
+*& source the DDIC does not know make the evaluation partial with the
+*& reason DDIC_MISSING; an identity field that is not declared is 632.
 *& Modification log:
 *& 2026-11-11 | Initial version (link registry and walker).
+*& 2026-11-16 | Ambiguous by design, missing DDIC objects in the evaluation, identity fields (build Q).
 *&---------------------------------------------------------------------*
 CLASS ltd_link_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -66,6 +72,13 @@ CLASS ltc_chk_links DEFINITION FINAL FOR TESTING
     METHODS valid_registry_summary   FOR TESTING.
     METHODS broken_rule_is_warning   FOR TESTING.
     METHODS unknown_ddic_field_found FOR TESTING.
+    METHODS ambiguous_link_reported  FOR TESTING.
+    METHODS ddic_missing_evaluation  FOR TESTING.
+    METHODS undeclared_identity_632  FOR TESTING.
+    "! A "to one" link item -> document by the document number; the document's identity adds BUKRS
+    METHODS given_item_to_doc
+      IMPORTING
+        iv_identity TYPE zif_ca_ops_link_types=>ty_key_list.
 ENDCLASS.
 
 
@@ -182,6 +195,88 @@ CLASS ltc_chk_links IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = count_code( is_result = ls_result
                                                               iv_code   = zif_ca_ops_link_types=>gc_code-problem )
                                             exp = 0 msg = 'The rows themselves are valid' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD given_item_to_doc.
+    DATA ls_link TYPE zif_ca_ops_link_types=>ty_link.
+    DATA ls_cond TYPE zif_ca_ops_link_types=>ty_cond.
+    DATA ls_field TYPE zif_ca_ops_link_types=>ty_field.
+
+    ls_field-object_id   = gc-doc.
+    ls_field-field_name  = 'BUKRS'.
+    ls_field-layer_id    = gc-layer.
+    ls_field-source_name = gc-doc_t.
+    ls_field-evidence    = zif_ca_ops_link_types=>gc_evidence-confirmed.
+    INSERT ls_field INTO TABLE mo_dao->ms_registry-fields.
+    mo_dao->ms_registry-objects[ object_id = gc-doc ]-identity_fields = iv_identity.
+    ls_link-link_id     = 'XX_ITEM_TO_DOC'.
+    ls_link-layer_id    = gc-layer.
+    ls_link-from_object = gc-item.
+    ls_link-to_object   = gc-doc.
+    ls_link-cardinality = zif_ca_ops_link_types=>gc_cardinality-many_one.
+    ls_link-quality     = zif_ca_ops_link_types=>gc_quality-confirmed.
+    ls_link-active      = abap_true.
+    INSERT ls_link INTO TABLE mo_dao->ms_registry-links.
+    ls_cond-link_id   = ls_link-link_id.
+    ls_cond-cond_no   = 1.
+    ls_cond-cond_kind = zif_ca_ops_link_types=>gc_cond_kind-eq.
+    ls_cond-from_ref  = |{ gc-item_t }-DOCNO|.
+    ls_cond-to_ref    = |{ gc-doc_t }-DOCNO|.
+    INSERT ls_cond INTO TABLE mo_dao->ms_registry-conds.
+  ENDMETHOD.
+
+
+  " Rule (build Q): ambiguous by design is reported (W) and the link stays effective
+  METHOD ambiguous_link_reported.
+    TRY.
+        given_item_to_doc( 'DOCNO,BUKRS' ).
+        DATA(ls_result) = run( ).
+        cl_abap_unit_assert=>assert_equals( act = count_code( is_result = ls_result
+                                                              iv_code   = zif_ca_ops_link_types=>gc_code-ambiguous )
+                                            exp = 1 msg = 'One link ambiguous by design' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ check_code = zif_ca_ops_link_types=>gc_code-ambiguous
+                                                                    ]-severity
+                                            exp = zif_ca_ops_types=>gc_severity-warning msg = 'A warning' ).
+        cl_abap_unit_assert=>assert_equals( act = count_code( is_result = ls_result
+                                                              iv_code   = zif_ca_ops_link_types=>gc_code-problem )
+                                            exp = 0 msg = 'Not a problem: the link stays in the walks' ).
+        DATA(ls_effective) = zcl_ca_ops_link_registry=>effective( mo_dao->ms_registry ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_effective-chains[ head = 'XX_ITEM_TO_DOC' ] ) )
+                                          msg = 'Effective' ).
+        given_item_to_doc( 'DOCNO' ).
+        cl_abap_unit_assert=>assert_equals( act = count_code( is_result = run( )
+                                                              iv_code   = zif_ca_ops_link_types=>gc_code-ambiguous )
+                                            exp = 0 msg = 'Covered identity: not ambiguous' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q): an object on a source this system lacks is not evaluated - partial, reason DDIC_MISSING
+  METHOD ddic_missing_evaluation.
+    TRY.
+        DATA(ls_result) = run( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-unevaluated exp = 1 msg = 'The item object' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-evaluated exp = 1 msg = 'The document object' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-reason_code
+                                            exp = zif_ca_ops_eval_types=>gc_reason-ddic_missing msg = 'Reason' ).
+        cl_abap_unit_assert=>assert_not_initial( act = ls_result-eval-reason msg = 'Reason text' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD undeclared_identity_632.
+    TRY.
+        mo_dao->ms_registry-objects[ object_id = gc-doc ]-identity_fields = 'DOCNO,GJAHR'.
+        DATA(lt_problems) = zcl_ca_ops_link_registry=>validate( mo_dao->ms_registry ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_problems[ msgno = '632' v2 = 'GJAHR' ] ) )
+                                          msg = 'An identity field must be declared' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

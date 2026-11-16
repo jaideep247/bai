@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Tests of the link registry engine (tools/abaptools/link_registry.py): the product layers of the framework and the
 worked example of a customer overlay (prefix XX) are valid; every validation rule refuses what it must (an active
-link on a VERIFY field, a cyclic or branching fallback chain, a "to one" link without the target's keys, a sensitive
+link on a VERIFY field, a cyclic or branching fallback chain, a "to one" link that does not cover the identity of
+its target without the reason of its ambiguity (build Q, 2026-11-16; PREFER does not make it one), a sensitive
 field as a constant, a replacement of the same layer, a wrong ID prefix, a reference to a higher layer, a transform
 without its argument, a value with a quote, an unknown field, a field the repository's DDIC metadata does not know);
 replacement and activation overrides; seed rows (pending rows left out, columns = the DDL of the registry tables);
@@ -129,9 +130,12 @@ class RulesTest(unittest.TestCase):
         self.overlay['links'].append(extra)
         self.assertIn('more than one fallback', self.problems())
 
-    def test_to_one_needs_target_keys(self):
-        self.link('XX_ITEM_TO_REQ')['conditions'].pop()  # the PREFER condition
-        self.assertIn('cardinality N1 needs the key fields of XX_PAY_REQUEST', self.problems())
+    def test_to_one_needs_target_identity(self):
+        # build Q: a "to one" link covers the identity of its target (here its keys) or says why it is ambiguous
+        del self.link('XX_ITEM_TO_REQ')['ambiguity']
+        self.assertIn('cardinality N1 does not cover the identity field(s) ATTEMPT of XX_PAY_REQUEST', self.problems())
+        self.link('XX_ITEM_TO_REQ')['conditions'].pop()  # the PREFER condition changes nothing of that
+        self.assertIn('cardinality N1 does not cover the identity field(s) ATTEMPT of XX_PAY_REQUEST', self.problems())
 
     def test_sensitive_constant_refused(self):
         self.link('XX_REQ_TO_PARTNER')['conditions'].append({'kind': 'CONST', 'to': 'BPEXT', 'value': '4711'})

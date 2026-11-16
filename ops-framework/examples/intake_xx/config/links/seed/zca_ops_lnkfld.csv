@@ -1,0 +1,29 @@
+OBJECT_ID,FIELD_NAME,LAYER_ID,SOURCE_NAME,DATA_ELEMENT,SENSITIVITY,EVIDENCE,VERIFY_REF,DESCRIPTION
+FICA_OPEN_ITEM,ZZXX_PAYREF,XX,DFKKOP,,,C,,Custom field: payment reference of the intake
+FICA_OPEN_ITEM,ZZXX_REQ_ID,XX,DFKKOP,,,C,,Custom field: request number on the item
+S4_BUSINESS_PARTNER,ZZXX_FEEDER,XX,BUT000,,,C,,Custom field: feeder that created the partner
+XX_CTL_REGISTER,AREA,XX,ZXX_CTL_REG,,,C,,Area of the control
+XX_CTL_REGISTER,AUDIT_REF,XX,ZXX_CTL_REG,,,C,,Reference of the control in the audit register
+XX_CTL_REGISTER,CONTROL_ID,XX,ZXX_CTL_REG,,,C,,Control of the operations framework
+XX_CTL_REGISTER,TESTER,XX,ZXX_CTL_REG,,M,C,,User who tests the control (masked)
+XX_INTAKE,AMOUNT,XX,ZXX_INTAKE,,,C,,Amount requested
+XX_INTAKE,BUKRS,XX,ZXX_INTAKE,,,C,,Company code of the request
+XX_INTAKE,INTAKE_ID,XX,ZXX_INTAKE,,,C,,Intake number (technical key)
+XX_INTAKE,LOGSYS,XX,ZXX_INTAKE,,,C,,Logical system of the feeder
+XX_INTAKE,PAY_REF,XX,ZXX_INTAKE,,,C,,Payment reference (unique per feeder and company)
+XX_INTAKE,RECEIVED_ON,XX,ZXX_INTAKE,,,C,,Date the request was received
+XX_INTAKE,STATUS,XX,ZXX_INTAKE,,,C,,Intake status
+XX_INTAKE,WAERS,XX,ZXX_INTAKE,,,C,,Currency of the request
+XX_PAY_REQUEST,ATTEMPT,XX,ZXX_PAY_REQ,,,C,,Attempt counter
+XX_PAY_REQUEST,FEEDER,XX,ZXX_PAY_REQ,,,C,,Feeder system
+XX_PAY_REQUEST,MEMBER_ID,XX,ZXX_PAY_REQ,,M,C,,Member number (masked)
+XX_PAY_REQUEST,REQ_ID,XX,ZXX_PAY_REQ,,,C,,Request number of the feeder
+XX_PAY_REQUEST,STATUS,XX,ZXX_PAY_REQ,,,C,,Processing status (OK = accepted attempt)
+XX_REQUEST,FEEDER,XX,ZXX_REQUEST,,,C,,Feeder system
+XX_REQUEST,MEMBER_ID,XX,ZXX_REQUEST,,M,C,,Member number (masked)
+XX_REQUEST,RECEIVED_ON,XX,ZXX_REQUEST,,,C,,Date the request was received
+XX_REQUEST,REQ_ID,XX,ZXX_REQUEST,,,C,,Request number of the feeder
+XX_STAGE_SLA,FLOW_ID,XX,ZXX_STAGE_SLA,,,C,,Account flow
+XX_STAGE_SLA,SLA_HOURS,XX,ZXX_STAGE_SLA,,,C,,Hours a posting may stay in the stage
+XX_STAGE_SLA,STAGE_ID,XX,ZXX_STAGE_SLA,,,C,,Stage of the flow
+XX_STAGE_SLA,TEAM,XX,ZXX_STAGE_SLA,,,C,,Owner team of the stage

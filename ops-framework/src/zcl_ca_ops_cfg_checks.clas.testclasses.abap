@@ -93,6 +93,8 @@ CLASS ltc_checks DEFINITION FINAL FOR TESTING
     METHODS unknown_table_rejected        FOR TESTING.
     METHODS existing_field_found          FOR TESTING.
     METHODS unknown_field_rejected        FOR TESTING.
+    METHODS first_missing_field_named     FOR TESTING.
+    METHODS field_list_of_known_fields    FOR TESTING.
     METHODS class_with_interface_accepted FOR TESTING.
     METHODS class_without_iface_rejected  FOR TESTING.
     METHODS unknown_class_rejected        FOR TESTING.
@@ -165,6 +167,38 @@ CLASS ltc_checks IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>field_exists( iv_table = gc_test-table
                                                                                        iv_field = gc_test-no_field )
                                            msg = 'An unknown field must be rejected' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q, missing DDIC objects): a key or identity field list naming a field the source does not have
+  " is refused on save with the first missing name - never a dump at run time
+  METHOD first_missing_field_named.
+    TRY.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_ca_ops_cfg_checks=>first_missing_field( iv_table  = gc_test-table
+                                                            iv_fields = |{ gc_test-field },{ gc_test-no_field }| )
+          exp = gc_test-no_field
+          msg = 'The first field T000 does not have is reported' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_ca_ops_cfg_checks=>first_missing_field( iv_table  = gc_test-no_table
+                                                            iv_fields = gc_test-field )
+          exp = gc_test-field
+          msg = 'A table that does not exist reports its first field' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD field_list_of_known_fields.
+    TRY.
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_ca_ops_cfg_checks=>first_missing_field( iv_table  = gc_test-table
+                                                            iv_fields = to_lower( gc_test-field ) )
+          msg = 'Known fields (any case) are accepted' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

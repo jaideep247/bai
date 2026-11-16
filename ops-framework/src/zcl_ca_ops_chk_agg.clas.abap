@@ -15,6 +15,9 @@
 *& 2026-11-10 | Initial version (process onboarding framework).
 *& 2026-11-11 | Explainable, versioned results: the active aggregate rows of the check are its configuration
 *&            | rows (ZIF_CA_OPS_CHECK_CONFIG, description left out); each finding names its row (CFG_RULE).
+*& 2026-11-16 | Missing DDIC objects (build Q): the evaluation counts the measured and the unmeasured rows
+*&            | (TY_RESULT-EVAL); a row on a table or field this system lacks (082 / 083) gives the reason
+*&            | DDIC_MISSING (message 636) - all rows unmeasured = not evaluated, never a dump.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - no-code aggregate check</p>
 "! Example: requests in status PENDING whose request date passed, per company code, amber 1 /
@@ -52,12 +55,26 @@ CLASS zcl_ca_ops_chk_agg IMPLEMENTATION.
                                                              iv_today = is_context-today )
                  INTO TABLE rs_result-findings.
           rs_result-item_count += lines( lt_rows ).
+          rs_result-eval-evaluated += 1.
           " a result at the row cap may be cut off: an absent company code is unknown, not resolved
           IF lines( lt_rows ) >= zif_ca_ops_chk_types=>gc_max_groups.
             rs_result-partial = abap_true.
           ENDIF.
         CATCH zcx_ca_ops_error INTO DATA(lx_error).
           rs_result-partial = abap_true.
+          " build Q: the row is not evaluated, with its reason - a missing table or field (082 / 083) is named
+          rs_result-eval-unevaluated += 1.
+          IF rs_result-eval-reason IS INITIAL.
+            rs_result-eval-reason_code = COND #(
+              WHEN lx_error->if_t100_message~t100key-msgno = zif_ca_ops_chk_types=>gc_msg-table_unknown
+                OR lx_error->if_t100_message~t100key-msgno = zif_ca_ops_chk_types=>gc_msg-field_unknown
+              THEN zif_ca_ops_eval_types=>gc_reason-ddic_missing
+              ELSE zif_ca_ops_eval_types=>gc_reason-not_evaluated ).
+            rs_result-eval-reason = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_chk_types=>gc_msg-agg_not_evaluated
+                                                           iv_v1    = <ls_agg>-agg_id
+                                                           iv_v2    = <ls_agg>-check_id
+                                                           iv_tail  = lx_error->get_text( ) ).
+          ENDIF.
           INSERT VALUE #( object_type = zif_ca_ops_chk_types=>gc_object_type-aggregate
                           object_key  = |{ <ls_agg>-check_id }/{ <ls_agg>-agg_id }|
                           rule_id     = <ls_agg>-agg_id

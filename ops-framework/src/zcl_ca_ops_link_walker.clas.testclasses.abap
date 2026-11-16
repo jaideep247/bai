@@ -14,9 +14,16 @@
 *& LINK_MAX_NODES (220), LINK_MAX_ROWS (221), a failed read skipped (222),
 *& the link filter, refusals 210 / 211 / 041. Parameters from the
 *& in-memory parameter store, authorisation from a double (injector).
+*& Build Q: a "to one" link with two candidates returns both marked
+*& AMBIGUOUS with their identity values (feeder system), layer and link
+*& quality, never one picked; one candidate is ONE; a table or a field
+*& the dictionary does not have is not followed (634 / 635, not evaluated,
+*& no read, no dump); GATE_LINK_LAYERS_OFF switches a customer layer off.
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-11 | Initial version (link registry and walker).
+*& 2026-11-16 | Ambiguous matches, missing DDIC objects, layers switched off by parameter (build Q); the
+*&            | double answers SOURCE_FIELDS from the declared fields (a source it is told to miss: none).
 *&---------------------------------------------------------------------*
 CLASS ltd_link_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -34,6 +41,9 @@ CLASS ltd_link_dao DEFINITION FINAL FOR TESTING.
     DATA mt_failing TYPE tt_source.
     "! Source of every read in order
     DATA mt_reads TYPE tt_source.
+    "! Sources the dictionary does not have, and fields (SOURCE-FIELD) it does not have (build Q)
+    DATA mt_missing TYPE tt_source.
+    DATA mt_missing_fields TYPE string_table.
     METHODS add_row
       IMPORTING
         iv_source TYPE zif_ca_ops_link_types=>ty_source
@@ -80,7 +90,16 @@ CLASS ltd_link_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_ca_ops_link_dao~source_fields.
-    CLEAR rt_fields.
+    " the runtime dictionary of the double: the declared fields of the source, less what it is told to miss
+    IF line_exists( mt_missing[ table_line = iv_source ] ).
+      RETURN.
+    ENDIF.
+    LOOP AT ms_registry-fields ASSIGNING FIELD-SYMBOL(<ls_field>) WHERE source_name = iv_source.
+      IF NOT line_exists( mt_missing_fields[ table_line = |{ iv_source }-{ <ls_field>-field_name }| ] )
+         AND NOT line_exists( rt_fields[ fieldname = <ls_field>-field_name ] ).
+        INSERT VALUE #( fieldname = <ls_field>-field_name ) INTO TABLE rt_fields.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD add_row.
@@ -137,6 +156,9 @@ CLASS ltc_link_walker DEFINITION FINAL FOR TESTING
         masked_one  TYPE zif_ca_ops_link_types=>ty_key_value VALUE '*******1234',
         success     TYPE zif_ca_ops_link_types=>ty_value VALUE 'SUCCESS',
         failed      TYPE zif_ca_ops_link_types=>ty_value VALUE 'FAIL',
+        inbox       TYPE zif_ca_ops_link_types=>ty_object_id VALUE 'XX_INBOX',
+        item_inbox  TYPE zif_ca_ops_link_types=>ty_link_id VALUE 'XX_ITEM_TO_INBOX',
+        doc_two     TYPE zif_ca_ops_link_types=>ty_key_value VALUE 'D2',
       END OF gc.
 
     DATA mo_dao TYPE REF TO ltd_link_dao.
@@ -195,6 +217,14 @@ CLASS ltc_link_walker DEFINITION FINAL FOR TESTING
         iv_object       TYPE zif_ca_ops_link_types=>ty_object_id
       RETURNING
         VALUE(rt_nodes) TYPE zif_ca_ops_link_types=>tt_node.
+    "! Build Q: the intake of customer XX (identity feeder system, company code, payment reference) and a "to one"
+    "! link item -> intake by the payment reference only (ambiguous by design); document D2 with two items
+    METHODS given_inbox.
+    METHODS walk_inbox
+      RETURNING
+        VALUE(rs_result) TYPE zif_ca_ops_link_types=>ty_result
+      RAISING
+        zcx_ca_ops_error.
 
     METHODS every_level_reached        FOR TESTING.
     METHODS preferred_attempt_kept     FOR TESTING.
@@ -211,6 +241,12 @@ CLASS ltc_link_walker DEFINITION FINAL FOR TESTING
     METHODS unknown_start_refused      FOR TESTING.
     METHODS missing_key_refused        FOR TESTING.
     METHODS no_display_auth_refused    FOR TESTING.
+    METHODS ambiguous_candidates_shown FOR TESTING.
+    METHODS single_candidate_is_one    FOR TESTING.
+    METHODS many_link_is_many          FOR TESTING.
+    METHODS missing_source_not_read    FOR TESTING.
+    METHODS missing_field_not_read     FOR TESTING.
+    METHODS layer_off_by_parameter     FOR TESTING.
 ENDCLASS.
 
 
@@ -576,6 +612,146 @@ CLASS ltc_link_walker IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '041'
                                             msg = 'Message 041' ).
         cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_reads msg = 'Nothing read' ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD given_inbox.
+    object( iv_id = gc-inbox iv_layer = gc-cust iv_source = 'ZXX_INBOX' iv_keys = 'INTAKE_ID'
+            iv_fields = `INTAKE_ID,LOGSYS,BUKRS,PAY_REF` ).
+    mo_dao->ms_registry-objects[ object_id = gc-inbox ]-identity_fields = 'LOGSYS,BUKRS,PAY_REF'.
+    INSERT VALUE #( object_id = gc-item field_name = 'ZZXX_REF' layer_id = gc-cust source_name = 'ZITEM'
+                    evidence = 'C' ) INTO TABLE mo_dao->ms_registry-fields.
+    link( iv_id = gc-item_inbox iv_layer = gc-cust iv_from = gc-item iv_to = gc-inbox ).
+    mo_dao->ms_registry-links[ link_id = gc-item_inbox ]-cardinality = zif_ca_ops_link_types=>gc_cardinality-many_one.
+    cond( iv_link = gc-item_inbox iv_no = 1 iv_from = 'ZITEM-ZZXX_REF' iv_to = 'ZXX_INBOX-PAY_REF' ).
+    mo_dao->add_row( iv_source = 'ZDOC' it_pairs = pairs( `DOCNO=D2;FIKEY=K2` ) ).
+    mo_dao->add_row( iv_source = 'ZITEM' it_pairs = pairs( `DOCNO=I3;CLEARDOC=D2;ZZXX_REF=PR1` ) ).
+    mo_dao->add_row( iv_source = 'ZITEM' it_pairs = pairs( `DOCNO=I4;CLEARDOC=D2;ZZXX_REF=PR2` ) ).
+    " PR1 was used by two feeder systems in the same company code: the item alone cannot tell them apart
+    mo_dao->add_row( iv_source = 'ZXX_INBOX' it_pairs = pairs( `INTAKE_ID=N1;LOGSYS=CLM;BUKRS=1000;PAY_REF=PR1` ) ).
+    mo_dao->add_row( iv_source = 'ZXX_INBOX' it_pairs = pairs( `INTAKE_ID=N2;LOGSYS=BIL;BUKRS=1000;PAY_REF=PR1` ) ).
+    mo_dao->add_row( iv_source = 'ZXX_INBOX' it_pairs = pairs( `INTAKE_ID=N3;LOGSYS=CLM;BUKRS=1000;PAY_REF=PR2` ) ).
+  ENDMETHOD.
+
+
+  METHOD walk_inbox.
+    given_inbox( ).
+    rs_result = mo_cut->walk( VALUE #( area      = gc-area
+                                       object_id = gc-doc
+                                       keys      = pairs( |DOCNO={ gc-doc_two }| )
+                                       links     = VALUE #( ( gc-doc_items ) ( gc-item_inbox ) ) ) ).
+  ENDMETHOD.
+
+
+  " Rule (build Q): a "to one" link that finds two rows for one source row returns both, marked AMBIGUOUS, with
+  " the evidence of each (identity values, layer, link quality) - never one picked silently
+  METHOD ambiguous_candidates_shown.
+    TRY.
+        DATA(ls_result) = walk_inbox( ).
+        DATA(lt_intakes) = nodes_of( is_result = ls_result iv_object = gc-inbox ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_intakes ) exp = 3 msg = 'Every candidate is a node' ).
+        DATA(lv_ambiguous) = REDUCE i( INIT n = 0 FOR ls_n IN lt_intakes
+                                       WHERE ( match = zif_ca_ops_link_types=>gc_match-ambiguous )
+                                       NEXT n = n + 1 ).
+        cl_abap_unit_assert=>assert_equals( act = lv_ambiguous exp = 2 msg = 'Both rows of PR1 marked AMBIGUOUS' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-ambiguities ) exp = 1 msg = 'One ambiguous match' ).
+        DATA(ls_ambiguity) = ls_result-ambiguities[ 1 ].
+        cl_abap_unit_assert=>assert_equals( act = ls_ambiguity-link_id exp = gc-item_inbox msg = 'Its link' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_ambiguity-layer_id exp = gc-cust msg = 'Layer of the link' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_ambiguity-link_quality
+                                            exp = zif_ca_ops_link_types=>gc_quality-confirmed msg = 'Link quality' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_ambiguity-candidates ) exp = 2 msg = 'Two candidates' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_ambiguity-uncovered[ table_line = 'LOGSYS' ] ) )
+                                          msg = 'The feeder system is not covered by the link' ).
+        DATA(lt_feeders) = VALUE string_table(
+          FOR ls_c IN ls_ambiguity-candidates
+          ( CONV string( zcl_ca_ops_link_query=>value_of( it_pairs = ls_c-identity iv_field = 'LOGSYS' ) ) ) ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_feeders[ table_line = `CLM` ] )
+                                                         AND line_exists( lt_feeders[ table_line = `BIL` ] ) )
+                                          msg = 'Evidence: the feeder system of each candidate' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_result-problems[ msgno = '631' ] ) )
+                                          msg = 'Message 631' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD single_candidate_is_one.
+    TRY.
+        DATA(ls_result) = walk_inbox( ).
+        LOOP AT nodes_of( is_result = ls_result iv_object = gc-inbox ) ASSIGNING FIELD-SYMBOL(<ls_node>).
+          IF zcl_ca_ops_link_query=>value_of( it_pairs = <ls_node>-keys iv_field = 'INTAKE_ID' ) = 'N3'.
+            cl_abap_unit_assert=>assert_equals( act = <ls_node>-match exp = zif_ca_ops_link_types=>gc_match-one
+                                                msg = 'PR2 has one intake: ONE' ).
+            cl_abap_unit_assert=>assert_equals( act = <ls_node>-candidates exp = 1 msg = 'One candidate' ).
+            RETURN.
+          ENDIF.
+        ENDLOOP.
+        cl_abap_unit_assert=>fail( msg = 'Intake N3 not reached' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD many_link_is_many.
+    TRY.
+        DATA(lt_items) = nodes_of( is_result = walk( ) iv_object = gc-item ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-match exp = zif_ca_ops_link_types=>gc_match-many
+                                            msg = 'Rows of a "to many" link are MANY, never AMBIGUOUS' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-candidates exp = 2 msg = 'Two items of the document' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q): a link whose table is not in the dictionary is not followed - no read, no dump; the walk is
+  " marked not evaluated with the reason; the other links go on
+  METHOD missing_source_not_read.
+    TRY.
+        mo_dao->mt_missing = VALUE #( ( 'ZBATCH' ) ).
+        DATA(ls_result) = walk( ).
+        cl_abap_unit_assert=>assert_true( act = ls_result-not_evaluated msg = 'Not evaluated beyond the link' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_result-problems[ msgno = '634' ] ) )
+                                          msg = 'Message 634 names the missing table' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( mo_dao->mt_reads[ table_line = 'ZBATCH' ] ) )
+                                           msg = 'The missing table is never read' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( nodes_of( is_result = ls_result iv_object = gc-item ) ) exp = 2
+                                            msg = 'The other links are followed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD missing_field_not_read.
+    TRY.
+        mo_dao->mt_missing_fields = VALUE #( ( `ZXX_REQ-STATUS` ) ).
+        DATA(ls_result) = walk( ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_result-problems[ msgno = '635' ] ) )
+                                          msg = 'Message 635 names the missing field' ).
+        cl_abap_unit_assert=>assert_initial( act = nodes_of( is_result = ls_result iv_object = gc-request )
+                                             msg = 'The link reading the missing field is not followed' ).
+        cl_abap_unit_assert=>assert_true( act = ls_result-not_evaluated msg = 'Not evaluated beyond the link' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q): GATE_LINK_LAYERS_OFF switches a customer layer off at run time (rollback without a transport)
+  METHOD layer_off_by_parameter.
+    TRY.
+        mo_params->set( iv_name = zif_ca_ops_link_types=>gc_param-layers_off iv_value = `XX` ).
+        DATA(ls_result) = walk( ).
+        cl_abap_unit_assert=>assert_initial( act = nodes_of( is_result = ls_result iv_object = gc-request )
+                                             msg = 'No link of the switched-off layer is followed' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-nodes ) exp = 4
+                                            msg = 'Start, two items, batch: the standard links only' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

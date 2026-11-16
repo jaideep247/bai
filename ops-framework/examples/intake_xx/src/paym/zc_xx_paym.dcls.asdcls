@@ -1,0 +1,36 @@
+// Artifact: zc_xx_paym.dcls.asdcls (generated - tools/abaptools/payment_model.py; never edit, regenerate)
+// Purpose: Read access to the payment model of the example customer XX (intake) (service ZUI_XX_PAYM): the framework's company-code
+//          rule (ops-framework/docs/auth_zca_ops.md) - authorisation object ZCA_OPS, area of the row (ZXX_OPS; the
+//          exception trend: the area of the finding) and company code, ACTVT 03. A row without company code is
+//          area-level: area authorised is enough. Counts and amounts of a card are summed after the DCL ($apply), so a
+//          user of one company code sees the totals of that company code (plus area-level rows) only.
+// Modification log: 2026-11-16 | Generated from the product template (payment model).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); IS INITIAL in an access condition.
+@EndUserText.label: 'Payment model - read access'
+@MappingRole: true
+define role ZC_XX_PAYM {
+  grant select on ZC_XX_PaymCube
+    where ( OpsArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_XX_PaymTrend
+    where ( OpsArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_XX_Payment
+    where ( OpsArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_XX_PaymReqLink
+    where ( OpsArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_XX_PaymRequest
+    where ( OpsArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+  grant select on ZC_XX_PaymExcTrend
+    where ( OpsArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( OpsArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

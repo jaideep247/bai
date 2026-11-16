@@ -11,6 +11,7 @@ define table zca_d_lnkobj {
   sourcename : abap.char(30);
   sourcekind : abap.char(1);
   keyfields : abap.char(255);
+  identityfields : abap.char(255);
   description : abap.char(60);
   active : abap_boolean;
   lastchangedby : abp_lastchange_user;

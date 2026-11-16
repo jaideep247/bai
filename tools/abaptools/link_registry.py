@@ -13,11 +13,15 @@ Layers (one JSON spec per layer, ranked; a higher rank may extend and reference 
 
 Spec (JSON) of a layer:
   layer       {id, kind S|I|C, rank, prefix, description, owner, active}
-  objects     [{id, source, kind T|V, keys [..], description, active, fields [{name, data_element, sensitivity
-              ''|M|H, evidence C|V, verify, description}]}]
+  objects     [{id, source, kind T|V, keys [..], identity [..], description, active, fields [{name, data_element,
+              sensitivity ''|M|H, evidence C|V, verify, description}]}]
+              identity (optional): the fields that make a row unique in the business sense when the keys alone do
+              not (logical system, company code, fiscal year ...); blank = the keys
   fields      [{object, name, ...}]      fields this layer adds to an object of a lower layer (custom fields)
   links       [{id, from, to, cardinality 11|1N|N1|NM, quality C|P, active, fallback_of, replaces, owner, verify,
-              description, conditions [{kind EQ|CONST|NOTINIT|PREFER, from, to, value, transform, arg}]}]
+              ambiguity, description, conditions [{kind EQ|CONST|NOTINIT|PREFER, from, to, value, transform, arg}]}]
+              ambiguity: the reason of a "to one" link whose conditions do not cover every identity field of its
+              target (ambiguous by design - the walker shows every candidate; never accepted silently)
   activation  [{kind L|K, id, active, reason, owner}]   switch a layer (L) or a link (K) of a lower layer
 Ids of a layer's objects and links start with the layer's prefix. A field or source named with a placeholder in
 angle quotes (U+2039 / U+203A) is PENDING: allowed only on inactive links, never seeded (the VERIFY item names it).
@@ -25,7 +29,8 @@ angle quotes (U+2039 / U+203A) is PENDING: allowed only on inactive links, never
 Validation (validate): ids, layer ranks and prefixes, every field a declared field of its object, fields present in
 the DDIC metadata of the repository where available (DDL of the component tables, CDS sources), conditions
 (kinds, transforms, values without quotes or statement characters), an active link uses CONFIRMED fields only,
-cardinality consistent with the object keys (a "to one" side covers the keys or prefers one row), fallback chains
+cardinality consistent with the object keys and identity (a "to one" link covers every identity field of its
+target with EQ / CONST - else it is ambiguous by design and must say why), fallback chains
 without cycles and with the same objects, replacements of a lower layer only, sensitive fields never as a constant
 or preferred value and never a hidden key.
 
@@ -38,6 +43,10 @@ registry or an out-of-date output. The payment model generator renders its joins
 
 Modification log:
 2026-11-11 | Initial version (link registry: layered objects, fields and links; seed, lineage, snippets, impact).
+2026-11-16 | Identity beyond a document number (build Q): object key identity (seed column IDENTITY_FIELDS); a "to
+           | one" link must cover every identity field of its target (EQ / CONST) or declare its ambiguity (reason)
+           | - a PREFER condition no longer makes a link "to one"; ambiguous_links / uncovered; lineage section
+           | "Ambiguous by design".
 """
 import csv
 import io
@@ -78,8 +87,8 @@ TEXT_MAX = 60
 # Registry tables: (table, CSV columns) - the DDIC fields without MANDT and the administrative fields
 TABLES = [
     ('zca_ops_lnklyr', ['LAYER_ID', 'LAYER_KIND', 'LAYER_RANK', 'ID_PREFIX', 'DESCRIPTION', 'OWNER', 'ACTIVE']),
-    ('zca_ops_lnkobj', ['OBJECT_ID', 'LAYER_ID', 'SOURCE_NAME', 'SOURCE_KIND', 'KEY_FIELDS', 'DESCRIPTION',
-                        'ACTIVE']),
+    ('zca_ops_lnkobj', ['OBJECT_ID', 'LAYER_ID', 'SOURCE_NAME', 'SOURCE_KIND', 'KEY_FIELDS', 'IDENTITY_FIELDS',
+                        'DESCRIPTION', 'ACTIVE']),
     ('zca_ops_lnkfld', ['OBJECT_ID', 'FIELD_NAME', 'LAYER_ID', 'SOURCE_NAME', 'DATA_ELEMENT', 'SENSITIVITY',
                         'EVIDENCE', 'VERIFY_REF', 'DESCRIPTION']),
     ('zca_ops_link', ['LINK_ID', 'LAYER_ID', 'FROM_OBJECT', 'TO_OBJECT', 'CARDINALITY', 'QUALITY', 'FALLBACK_OF',
@@ -221,6 +230,19 @@ class Registry:
             return 'inactive (VERIFY)' if link.get('verify') else 'inactive'
         return 'active'
 
+    def identity(self, obj_id):
+        """Identity fields of an object (upper case): its declared identity, else its keys."""
+        obj = self.objects.get(obj_id, {})
+        return [_upper(f) for f in (obj.get('identity') or obj.get('keys') or [])]
+
+    def uncovered(self, link):
+        """Identity fields of the target a "to one" link does not cover with EQ / CONST (empty: not ambiguous by
+        design, or not a "to one" link)."""
+        if link.get('cardinality') not in TO_ONE or link.get('to') not in self.objects:
+            return []
+        covered = {_upper(c.get('to', '')) for c in link.get('conditions', []) if c.get('kind') in ('EQ', 'CONST')}
+        return [f for f in self.identity(link['to']) if f not in covered]
+
     def link_fields(self, link):
         """(object id, field name, role) of every field a link uses: its conditions and the target keys."""
         out = []
@@ -231,6 +253,10 @@ class Registry:
                 out.append((link['to'], cond['to'], 'to'))
         for key in self.objects.get(link['to'], {}).get('keys', []):
             out.append((link['to'], key, 'key'))
+        keys = {_upper(k) for k in self.objects.get(link['to'], {}).get('keys', [])}
+        for name in self.objects.get(link['to'], {}).get('identity') or []:
+            if _upper(name) not in keys:
+                out.append((link['to'], name, 'identity'))
         return out
 
 
@@ -352,6 +378,21 @@ def _validate_objects(reg, ddic, p):
                 p.append(f'object {oid}: key {key} must be a field of the object\'s own layer')
             elif fld.get('sensitivity') == 'H':
                 p.append(f'object {oid}: key {key} is hidden (H) - a key is shown masked at most (M)')
+        identity = obj.get('identity') or []
+        if not isinstance(identity, list) or len(','.join(identity)) > 255:
+            p.append(f'object {oid}: identity must be a list of field names (at most 255 characters)')
+            identity = []
+        if len({_upper(f) for f in identity}) != len(identity):
+            p.append(f'object {oid}: identity names a field twice')
+        for name in identity:
+            fld = reg.field(oid, name)
+            if fld is None:
+                p.append(f'object {oid}: identity field {name} is not a field of the object')
+            elif fld['layer'] != obj['layer']:
+                p.append(f'object {oid}: identity field {name} must be a field of the object\'s own layer')
+            elif fld.get('sensitivity') == 'H':
+                p.append(f'object {oid}: identity field {name} is hidden (H) - the evidence of a candidate shows it '
+                         'masked at most (M)')
         if not _text_ok(obj.get('description')):
             p.append(f'object {oid}: description longer than {TEXT_MAX}')
 
@@ -414,18 +455,24 @@ def _validate_link(reg, link, p):
         p.append(f'{where}: at least one EQ condition (a link joins fields)')
     if len(conds) > 99:
         p.append(f'{where}: at most 99 conditions')
-    to_eq, from_eq, prefer = set(), set(), False
+    from_eq, prefer = set(), False
     for no, cond in enumerate(conds, start=1):
         _validate_cond(reg, link, no, cond, p)
-        if cond.get('kind') in ('EQ', 'CONST'):
-            to_eq.add(_upper(cond.get('to', '')))
         if cond.get('kind') == 'EQ':
             from_eq.add(_upper(cond.get('from', '')))
         prefer = prefer or cond.get('kind') == 'PREFER'
     card = link.get('cardinality')
-    if card in TO_ONE and not prefer and not {_upper(k) for k in dst.get('keys', [])} <= to_eq:
-        p.append(f'{where}: cardinality {card} needs the key fields of {dst["id"]} on the to side (EQ or '
-                 f'CONST) or a PREFER condition')
+    uncovered = reg.uncovered(link)
+    reason = link.get('ambiguity')
+    if uncovered and not reason:
+        p.append(f'{where}: cardinality {card} does not cover the identity field(s) {", ".join(uncovered)} of '
+                 f'{dst["id"]} (EQ or CONST) - ambiguous by design: cover them or declare the reason (ambiguity)'
+                 + (' - a PREFER condition narrows the candidates, it does not make them one' if prefer else ''))
+    elif reason and not uncovered:
+        p.append(f'{where}: declares an ambiguity, but its conditions cover the identity of {dst["id"]} '
+                 '(remove the ambiguity)')
+    if reason and (not _text_ok(reason) or UNSAFE.search(str(reason))):
+        p.append(f'{where}: ambiguity longer than {TEXT_MAX} or with a quote / statement character')
     if card in FROM_ONE and not {_upper(k) for k in src.get('keys', [])} <= from_eq:
         p.append(f'{where}: cardinality {card} needs the key fields of {src["id"]} on the from side')
     if _flag(link.get('active')):
@@ -554,8 +601,9 @@ def seed_rows(reg, layer_ids):
         if obj['layer'] not in layer_ids or PLACEHOLDER.search(obj['source'] + ''.join(obj.get('keys', []))):
             continue
         rows['zca_ops_lnkobj'].append([oid, obj['layer'], obj['source'].upper(), obj['kind'],
-                                       ','.join(_upper(k) for k in obj['keys']), obj.get('description', ''),
-                                       _x(obj.get('active', True))])
+                                       ','.join(_upper(k) for k in obj['keys']),
+                                       ','.join(_upper(k) for k in obj.get('identity') or []),
+                                       obj.get('description', ''), _x(obj.get('active', True))])
     for (oid, name), fld in sorted(reg.fields.items()):
         obj = reg.objects.get(oid)
         if fld['layer'] not in layer_ids or obj is None or PLACEHOLDER.search(name + obj['source']):
@@ -717,6 +765,19 @@ def lineage(reg, title, layer_ids):
                      f"{link['quality']} | {_cond_text(reg, link)} | "
                      f"{' / '.join(x for x in (link.get('fallback_of') or '', link.get('replaces') or '') if x) or '-'} | "
                      f"{reg.status(link)}{' ' + link['verify'] if link.get('verify') else ''} |")
+    ambiguous = ambiguous_links(reg, shown)
+    if ambiguous:
+        lines += ['', '## Ambiguous by design', '',
+                  '"To one" links whose conditions do not cover every identity field of their target: one source row '
+                  'can find several target rows. The walker returns every candidate marked AMBIGUOUS with its '
+                  'identity values, layer and link quality; a generated extension column stays blank with an '
+                  'ambiguity marker; the registry check reports the link (never accepted silently).', '',
+                  '| Link | Layer | From -> to | Identity of the target | Not covered | Reason | Status |',
+                  '|---|---|---|---|---|---|---|']
+        for link, uncovered in ambiguous:
+            lines.append(f"| {link['id']} | {link['layer']} | {link['from']} -> {link['to']} | "
+                         f"{', '.join(reg.identity(link['to']))} | {', '.join(uncovered)} | "
+                         f"{link.get('ambiguity', '')} | {reg.status(link)} |")
     flows = _custom_flows(reg, shown)
     if flows:
         lines += ['', '## Custom field flows', '',
@@ -724,6 +785,18 @@ def lineage(reg, title, layer_ids):
                   '', '| Field | Layer | Flows through | Into |', '|---|---|---|---|']
         lines += flows
     return '\n'.join(lines) + '\n'
+
+
+def ambiguous_links(reg, layer_ids=None):
+    """[(link, uncovered identity fields)] of the "to one" links that are ambiguous by design (sorted by ID)."""
+    out = []
+    for lid, link in sorted(reg.links.items()):
+        if layer_ids is not None and link['layer'] not in layer_ids:
+            continue
+        uncovered = reg.uncovered(link)
+        if uncovered:
+            out.append((link, uncovered))
+    return out
 
 
 def _cond_text(reg, link):
@@ -940,7 +1013,10 @@ def main(root, profile, argv):
             for line in failures:
                 print('  ' + line)
             return 1
-        print('link registry valid and up to date')
+        reg, _, _ = outputs(root, profile)
+        count = len(ambiguous_links(reg))
+        print('link registry valid and up to date' + (f' ({count} link(s) ambiguous by design, listed in the lineage)'
+                                                       if count else ''))
         return 0
     try:
         written = generate(root, profile)

@@ -36,8 +36,17 @@ extension points, never by changing a product object.
    a report; for the framework the matrix block of the document and the rendered worked example. --check fails on a
    problem or an out-of-date / superfluous file.
 
+Ambiguous links (2026-11-16, build Q): a link anchor whose "to one" link is ambiguous by design (its conditions do not
+cover every identity field of the target, link_registry.Registry.uncovered) never joins the target directly - one
+product row could find several rows and every total would break. The generator renders a candidates view
+Z<P>_XC_<extension> (the target grouped by the link's join fields, the number of candidate rows and the maximum of each
+field) and the elements as "the value when exactly one row is a candidate, else blank"; the extension names a marker
+element (ambiguity_element, label ambiguity_label) that reads AMBIGUOUS when several rows are candidates. Never one
+row picked silently.
+
 Modification log:
 2026-11-15 | Initial version (build H: one customer extension contract, extensible product views, generator).
+2026-11-16 | Ambiguous links: candidates view, blank values and the marker element (build Q).
 """
 import importlib.util
 import json
@@ -57,6 +66,9 @@ ANCHOR_KINDS = ('link', 'key')
 STATES = ('active', 'pending', 'blocked')
 UI_KINDS = ('lineItem', 'identification')
 UI_POSITION = 900
+AMBIGUOUS = 'AMBIGUOUS'
+CANDIDATES = 'Candidates'
+AMBIGUOUS_VERIFY = 'V312'
 
 PREFIX = re.compile(r'^[A-Z][A-Z0-9]{1,3}$')
 CODE = re.compile(r'^[A-Z][A-Z0-9_]{1,15}$')
@@ -401,7 +413,7 @@ def _analyse_one(pack, ext, inv, reg, prefix):
         return None, p + [f'{eid}: anchor {ext.get("anchor")!r} is not an anchor of {pt["id"]}']
     if not _text_ok(ext.get('description')):
         p.append(f'{eid}: description missing, longer than {TEXT_MAX} or with quotes / statement characters')
-    res = {'ext': ext, 'id': eid, 'point': pt, 'anchor': anchor, 'status': status, 'reasons': [],
+    res = {'ext': ext, 'id': eid, 'point': pt, 'anchor': anchor, 'status': status, 'reasons': [], 'ambiguous': None,
            'association': ext.get('association', ''), 'elements': [], 'on': [], 'target': '', 'joins': '',
            'views': [], 'verify': sorted(set(pt.get('verify', [])) | set(_verify_list(ext.get('verify'))))}
     if status in ('pending', 'blocked'):
@@ -483,7 +495,50 @@ def _analyse_link(res, ext, anchor, reg, p):
     res['target'] = _cds_source(dst)
     if PLACEHOLDER.search(res['target']):
         res['reasons'].append(f'source of {dst["id"]} not named yet')
+    uncovered = reg.uncovered(link)
+    if uncovered:
+        _analyse_ambiguous(res, ext, link, dst, uncovered, reg, mapping, p)
     return dst
+
+
+def _analyse_ambiguous(res, ext, link, dst, uncovered, reg, mapping, p):
+    """A link ambiguous by design: the association reads a candidates view grouped by the join fields; the
+    extension names its marker element."""
+    eid = res['id']
+    prefix = eid.split('_', 1)[0]
+    marker = ext.get('ambiguity_element', '')
+    if not re.match(r'^(ZZ|YY)' + re.escape(prefix) + r'_[A-Za-z0-9_]+$', marker) or len(marker) > 30:
+        p.append(f'{eid}: link {link["id"]} is ambiguous by design ({", ".join(uncovered)} of {dst["id"]} not '
+                 f'covered) - name the marker element (ambiguity_element ZZ{prefix}_...): the columns stay blank '
+                 'when a row has several candidates')
+        return
+    label = ext.get('ambiguity_label', 'Match')
+    if not _text_ok(label):
+        p.append(f'{eid}: ambiguity_label longer than {TEXT_MAX} or with quotes')
+    view = f'Z{prefix}_XC_{eid[len(prefix) + 1:]}'[:30]
+    alias = res['association']
+    keys, filters = [], []
+    res['on'] = []
+    for cond in link['conditions']:
+        field = _cds_field(reg, dst, cond['to'])
+        if cond['kind'] == 'EQ':
+            element = mapping.get(LR._upper(cond['from']))
+            if element is None:
+                continue
+            keys.append(field)
+            res['on'].append(f'{alias}.{field} = {LR._cds_operand("$projection." + element, cond)}')
+        elif cond['kind'] in ('CONST', 'PREFER'):
+            values = [v.strip() for v in str(cond['value']).split(',')]
+            filters.append(f"Cnd.{field} = '{values[0]}'" if len(values) == 1 else
+                           '( ' + ' or '.join(f"Cnd.{field} = '{v}'" for v in values) + ' )')
+        elif cond['kind'] == 'NOTINIT':
+            filters.append(f"Cnd.{field} <> ' '")
+    res['ambiguous'] = {'link': link['id'], 'uncovered': uncovered, 'view': view, 'keys': keys, 'filters': filters,
+                        'source': res['target'], 'object': dst['id'], 'marker': marker, 'label': label}
+    res['target'] = view
+    # the candidates view and the CASE on its path elements are VERIFY items of the framework (build Q)
+    res['verify'] = sorted(set(res['verify']) | {AMBIGUOUS_VERIFY})
+    res['joins'] += f' - ambiguous by design ({", ".join(uncovered)} not covered): candidates view {view}'
 
 
 def _analyse_key(res, ext, anchor, reg, pack, p):
@@ -563,8 +618,17 @@ def _analyse_fields(res, ext, inv, reg, target, prefix, p):
         masked = 'M' in (declared, registry)
         if masked:
             expr = f"concat( '****', right( {expr}, 4 ) )"
+        if res.get('ambiguous'):
+            # the value of the only candidate, else blank (several candidates: the marker says AMBIGUOUS)
+            expr = f'case when {res["association"]}.{CANDIDATES} = 1 then {expr} end'
         res['elements'].append({'name': element, 'expr': expr, 'label': fld.get('label', ''), 'field': name,
-                                'masked': masked})
+                                'masked': masked, 'cds': _cds_field(reg, target, name)})
+    if res.get('ambiguous'):
+        amb = res['ambiguous']
+        res['elements'].append({'name': amb['marker'] + suffix, 'label': amb['label'], 'field': AMBIGUOUS,
+                                'masked': False,
+                                'expr': f"cast( case when {res['association']}.{CANDIDATES} > 1 then '{AMBIGUOUS}' "
+                                        f"else ' ' end as abap.char( 10 ) )"})
 
 
 def _cds_source(obj):
@@ -665,6 +729,43 @@ def _render_query(pack, view, name, elements, ids, verify):
     return '\n'.join(lines) + '\n' + head + '\n' + '\n'.join(added) + '\n}\n'
 
 
+def render_candidates(pack, res, reg_fields):
+    """(object name, source) of the candidates view of an extension on a link ambiguous by design."""
+    amb = res['ambiguous']
+    name = amb['view']
+    lines = _header(pack, name, [f'Candidates of link {amb["link"]} for the extension {res["id"]}:',
+                                 f'one row per value of the join fields with the number of candidate rows of '
+                                 f'{amb["object"]}.',
+                                 f'The link is ambiguous by design ({", ".join(amb["uncovered"])} not covered): the '
+                                 'extension shows a value',
+                                 f'only when one row is a candidate, else blank with the marker {AMBIGUOUS} (never '
+                                 'one row picked).'], res['verify'])
+    lines += ['@AccessControl.authorizationCheck: #NOT_REQUIRED',
+              f"@EndUserText.label: '{('Candidates of ' + amb['link'])[:60]}'",
+              f'define view entity {name}',
+              f'  as select from {amb["source"]} as Cnd', '{']
+    body = [f'  key Cnd.{k} as {k}' for k in amb['keys']]
+    body.append(f'      count( * ) as {CANDIDATES}')
+    for field in reg_fields:
+        if field not in amb['keys']:
+            body.append(f'      max( Cnd.{field} ) as {field}')
+    lines += [line + (',' if i < len(body) - 1 else '') for i, line in enumerate(body)]
+    lines.append('}')
+    if amb['filters']:
+        lines.append('where ' + '\n  and '.join(amb['filters']))
+    lines.append('group by ' + ', '.join(f'Cnd.{k}' for k in amb['keys']))
+    return name, '\n'.join(lines) + '\n'
+
+
+def _candidate_fields(res):
+    """Target fields the extension reads (CDS names, in order, each once)."""
+    out = []
+    for element in res['elements']:
+        if element.get('cds') and element['cds'] not in out:
+            out.append(element['cds'])
+    return out
+
+
 def render_pack(pack, results):
     """{relative path: text} of the package and pending folder."""
     files = {}
@@ -685,6 +786,12 @@ def render_pack(pack, results):
             if len(full) > len(active):
                 name, text = render_view(pack, pt, view, full)
                 files[os.path.join(pack['pending_folder'], name.lower() + '.ddls.asddls')] = text
+        # candidates views of the extensions on links ambiguous by design (with the extension's folder)
+        for res in mine:
+            if res.get('ambiguous'):
+                name, text = render_candidates(pack, res, _candidate_fields(res))
+                folder = pack['package_folder'] if res['status'] == 'active' else pack['pending_folder']
+                files[os.path.join(folder, name.lower() + '.ddls.asddls')] = text
     if any_active:
         files[os.path.join(pack['package_folder'], 'package.devc.xml')] = PACKAGE.format(text=pack['package_text'])
     return files

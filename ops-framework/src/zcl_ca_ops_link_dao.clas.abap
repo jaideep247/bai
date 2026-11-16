@@ -12,6 +12,7 @@
 *& only; values are returned in character form.
 *& Modification log:
 *& 2026-11-11 | Initial version (link registry and walker).
+*& 2026-11-16 | Identity fields of an object (ZCA_OPS_LNKOBJ-IDENTITY_FIELDS, build Q).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - link registry data access</p>
 CLASS zcl_ca_ops_link_dao DEFINITION
@@ -50,7 +51,7 @@ CLASS zcl_ca_ops_link_dao IMPLEMENTATION.
     SELECT layer_id, layer_kind, layer_rank, id_prefix, description, owner, active
       FROM zca_ops_lnklyr
       INTO CORRESPONDING FIELDS OF TABLE @rs_registry-layers.
-    SELECT object_id, layer_id, source_name, source_kind, key_fields, description, active
+    SELECT object_id, layer_id, source_name, source_kind, key_fields, identity_fields, description, active
       FROM zca_ops_lnkobj
       INTO CORRESPONDING FIELDS OF TABLE @rs_registry-objects.
     SELECT object_id, field_name, layer_id, source_name, data_element, sensitivity, evidence, verify_ref, description

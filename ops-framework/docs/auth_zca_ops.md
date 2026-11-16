@@ -152,9 +152,20 @@ Area authorised AND ( company code blank OR ( area, company code ) authorised ).
 |---|---|---|
 | Exceptions app `ZC_CA_OpsException` / `ZC_CA_OpsExcHist` | rule above (history: path to the exception) | `MAY_ACT` with the exception's company code (02; 85 to approve a waiver) |
 | Daily control review `ZC_CA_OpsCtlReview` (slice per company code) | rule above on the slice's company code | `MAY_ACT` with the slice's company code (02) |
-| Alert e-mail | - | rule pattern `BUKRS_PATTERN` |
+| Alert e-mail | - | rule pattern `BUKRS_PATTERN`; a digest never mixes company codes - one e-mail per company code (2026-11-16) |
+| Export of a list report (spreadsheet) | the DCL of the projection it exports (same OData entity set) | - |
+| Ticket of the payment file lifecycle | - | one ticket per file with the file's company code only (`TY_TICKET-COMPANY_CODE`) |
 
 Tests: `ZCL_CA_OPS_EXC_POLICY` (`ltc_isolation`: own company code allowed, other refused, area-level with the area, other area refused, activity counts), `ZCL_CA_OPS_STORE` (`stores_company_code`, `carry_other_company_separate`), `ZCL_CA_OPS_ALERT_POLICY` (`bukrs_pattern_keeps_list`), `ZCL_CA_OPS_REVIEW_DAO` (`slices_are_separate`), `ZCL_CA_OPS_CTL_CDS_TEST` (`ltc_slice`, `ltc_day`), `ZCL_CA_OPS_DCL_TEST` (access-control double: user A of one company code). VERIFY V35-V43.
+
+**Two-user isolation across Fiori, exports, alerts and ticket links (2026-11-16, build Q, `docs/EXTENSION_AND_GATE_PROOF.md` section 7).**
+
+| Surface | Rule | Test |
+|---|---|---|
+| Fiori views of builds K, N and O | every consumption view with a `CompanyCode` element has a DCL restricting it (house check `dcl_company_code`, `tools/checks.py`: a `ZC_` view or a view a service exposes; an analytical query reads a view that has one). No view lacked one on 2026-11-16. Payment file worklist (`ZC_CA_OpsPayFile`, `_OpsPfPayment`, `_OpsPfMilestone`, `_OpsPfEvidence`, `_OpsPfCard`) rule of this section; cash findings in the exceptions list; evaluation on the area dashboard rows (`ZC_CA_OpsCheckStatus`); coverage and alert reconciliation area-level (no company code: a registry check, a run - decision D-Q2) | `ZCL_CA_OPS_PF_DCL_TEST` (files, payments, timeline, evidence: user A sees ZT01 and area-level rows), `ZCL_CA_OPS_DCL_TEST` (`ltc_coverage`, `ltc_alert_recon`: own area only) - V316 |
+| Export | the list report's spreadsheet export reads the same OData entity set, so the same DCL | V317 |
+| Alerts | `BUKRS_PATTERN` routes; the content of one e-mail never mixes company codes: `ZCL_CA_OPS_ALERT_POLICY=>BUILD_MESSAGES` splits a digest per company code (area-level findings apart), the subject ends with the company code (own intent key) | `digest_split_by_company` - V318 |
+| Ticket links | `ZCL_CA_OPS_PF_INGEST=>TICKET_OF`: one ticket per overdue file, payload `TY_TICKET` with the file's company code only, nothing of its payments | `ticket_has_file_company` - V319 |
 
 ## 3b. Checks offline
 

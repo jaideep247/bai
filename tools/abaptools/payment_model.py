@@ -54,6 +54,10 @@ Modification log:
            | LEDGER, RECON, RESULT, BANK, CHANGES; composite conditions A+B in OUTPUTS / EXPOSE).
 2026-11-11 | Joins read from the link registry: a join may name a registry link (rendered by link_registry.render_join),
            | model key links, section key join_layout. Output of a spec with text joins unchanged.
+2026-11-16 | Links ambiguous by design (build Q): a "to one" link whose conditions do not cover the identity of its
+           | target may be joined only in the n:m section payment_request (every candidate is a row of the link,
+           | marked by a comment line); in a section with one row per key the generator stops - several candidate
+           | rows would repeat a payment or a request and break every total.
 """
 import importlib.util
 import json
@@ -281,6 +285,10 @@ def registry(root, spec):
     return reg
 
 
+# Sections that are n:m links by contract: a join on a link ambiguous by design keeps every candidate as a row
+N_TO_M_SECTIONS = ('payment_request',)
+
+
 def join_lines(spec, section, reg):
     """CDS lines of a section's joins: text joins as written, registry links rendered from the registry."""
     sec = spec[section]
@@ -292,6 +300,16 @@ def join_lines(spec, section, reg):
         if reg is None:
             raise SpecError(f'{section}: join names link {join.get("link")} but no registry is loaded')
         engine = _link_engine()
+        link = reg.resolve(join['link'])
+        uncovered = reg.uncovered(link) if link is not None else []
+        if uncovered:
+            if section not in N_TO_M_SECTIONS:
+                raise SpecError(f'{section}: link {link["id"]} is ambiguous by design ({", ".join(uncovered)} of '
+                                f'{link["to"]} not covered) - several candidate rows would repeat the rows of this '
+                                f'section; join it in an n:m section ({", ".join(N_TO_M_SECTIONS)}) or cover the '
+                                'identity')
+            lines.append(f'// {link["id"]} is ambiguous by design ({", ".join(uncovered)} of {link["to"]} not '
+                         'covered): every candidate is a row of this n:m link')
         try:
             lines += engine.render_join(reg, join['link'], join['join'], join['alias'], join['from_alias'],
                                         sec.get('join_layout'))

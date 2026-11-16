@@ -1,5 +1,5 @@
 {
-  "_comment": "Worked example of a customer overlay (fictitious customer, prefix XX; docs/LINK_REGISTRY.md section 7). Validated with the product layers by tools/link_registry.py --check, never seeded. A custom table ZXX_PAY_REQ (payment requests of the customer's feeder), a custom field ZZXX_REQ_ID appended to the standard items table, the flow request -> items -> payment -> bank line, a fallback chain (partner by external number with the feeder, then without), a standard link switched off (no notification-of-change lots) and one replaced (the customer's bank returns the payment reference without leading zeros). Since 2026-11-15 also the customer tables its extensions of the product views join (config/extensions/examples/xx, docs/EXTENDING_WITH_CUSTOMER_DATA.md): requests by number, the audit register of the controls, the service levels of the flow stages, and the link clearing line -> request (inactive until V110).",
+  "_comment": "Worked example of a customer overlay (fictitious customer, prefix XX; docs/LINK_REGISTRY.md section 7). Validated with the product layers by tools/link_registry.py --check, never seeded. A custom table ZXX_PAY_REQ (payment requests of the customer's feeder), a custom field ZZXX_REQ_ID appended to the standard items table, the flow request -> items -> payment -> bank line, a fallback chain (partner by external number with the feeder, then without), a standard link switched off (no notification-of-change lots) and one replaced (the customer's bank returns the payment reference without leading zeros). Since 2026-11-15 also the customer tables its extensions of the product views join (config/extensions/examples/xx, docs/EXTENDING_WITH_CUSTOMER_DATA.md): requests by number, the audit register of the controls, the service levels of the flow stages, and the link clearing line -> request (inactive until V110). Since 2026-11-16 (build Q) also the intake flow of XX (examples/intake_xx): its intake table ZXX_INTAKE with an identity beyond the request number (feeder logical system, company code, payment reference), its payment reference ZZXX_PAYREF appended to the standard items, the links intake <-> items and clearing line -> intake; the links from the item and the clearing line are ambiguous by design (the item carries no feeder system) and say why.",
   "layer": {"id": "XX", "kind": "C", "rank": 30, "prefix": "XX_", "description": "Customer overlay of the example customer XX",
             "owner": "XX PAYMENT TEAM", "active": true},
   "objects": [
@@ -20,6 +20,19 @@
        {"name": "RECEIVED_ON", "evidence": "C", "description": "Date the request was received"},
        {"name": "MEMBER_ID", "sensitivity": "M", "evidence": "C", "description": "Member number (masked)"}
      ]},
+    {"id": "XX_INTAKE", "source": "ZXX_INTAKE", "kind": "T", "keys": ["INTAKE_ID"],
+     "identity": ["LOGSYS", "BUKRS", "PAY_REF"],
+     "description": "Intake of payment requests (one row per request)",
+     "fields": [
+       {"name": "INTAKE_ID", "evidence": "C", "description": "Intake number (technical key)"},
+       {"name": "LOGSYS", "evidence": "C", "description": "Logical system of the feeder"},
+       {"name": "BUKRS", "evidence": "C", "description": "Company code of the request"},
+       {"name": "PAY_REF", "evidence": "C", "description": "Payment reference (unique per feeder and company)"},
+       {"name": "RECEIVED_ON", "evidence": "C", "description": "Date the request was received"},
+       {"name": "STATUS", "evidence": "C", "description": "Intake status"},
+       {"name": "WAERS", "evidence": "C", "description": "Currency of the request"},
+       {"name": "AMOUNT", "evidence": "C", "description": "Amount requested"}
+     ]},
     {"id": "XX_CTL_REGISTER", "source": "ZXX_CTL_REG", "kind": "T", "keys": ["AREA", "CONTROL_ID"],
      "description": "Audit register of the customer's controls",
      "fields": [
@@ -39,7 +52,8 @@
   ],
   "fields": [
     {"object": "FICA_OPEN_ITEM", "name": "ZZXX_REQ_ID", "evidence": "C", "description": "Custom field: request number on the item"},
-    {"object": "S4_BUSINESS_PARTNER", "name": "ZZXX_FEEDER", "evidence": "C", "description": "Custom field: feeder that created the partner"}
+    {"object": "S4_BUSINESS_PARTNER", "name": "ZZXX_FEEDER", "evidence": "C", "description": "Custom field: feeder that created the partner"},
+    {"object": "FICA_OPEN_ITEM", "name": "ZZXX_PAYREF", "evidence": "C", "description": "Custom field: payment reference of the intake"}
   ],
   "links": [
     {"id": "XX_REQ_TO_ITEMS", "from": "XX_PAY_REQUEST", "to": "FICA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
@@ -47,6 +61,7 @@
      "conditions": [{"kind": "EQ", "from": "REQ_ID", "to": "ZZXX_REQ_ID"}]},
     {"id": "XX_ITEM_TO_REQ", "from": "FICA_OPEN_ITEM", "to": "XX_PAY_REQUEST", "cardinality": "N1", "quality": "C",
      "owner": "XX PAYMENT TEAM", "description": "Item -> its request (the accepted attempt)",
+     "ambiguity": "Two accepted attempts of a request stay candidates",
      "conditions": [{"kind": "EQ", "from": "ZZXX_REQ_ID", "to": "REQ_ID"},
                     {"kind": "PREFER", "to": "STATUS", "value": "OK"}]},
     {"id": "XX_REQ_TO_PARTNER_FDR", "from": "XX_PAY_REQUEST", "to": "S4_BUSINESS_PARTNER", "cardinality": "NM", "quality": "C",
@@ -64,7 +79,22 @@
     {"id": "XX_GLITEM_TO_REQUEST", "from": "S4_JOURNAL_ITEM", "to": "XX_REQUEST", "cardinality": "N1", "quality": "P",
      "active": false, "verify": "V110", "owner": "XX PAYMENT TEAM",
      "description": "Clearing line -> request in its assignment",
-     "conditions": [{"kind": "EQ", "from": "AssignmentReference", "to": "REQ_ID"}]}
+     "conditions": [{"kind": "EQ", "from": "AssignmentReference", "to": "REQ_ID"}]},
+    {"id": "XX_INTAKE_TO_ITEMS", "from": "XX_INTAKE", "to": "FICA_OPEN_ITEM", "cardinality": "NM", "quality": "C",
+     "owner": "XX PAYMENT TEAM", "description": "Intake -> items posted with its payment reference",
+     "conditions": [{"kind": "EQ", "from": "PAY_REF", "to": "ZZXX_PAYREF"},
+                    {"kind": "EQ", "from": "BUKRS", "to": "BUKRS"}]},
+    {"id": "XX_ITEM_TO_INTAKE", "from": "FICA_OPEN_ITEM", "to": "XX_INTAKE", "cardinality": "N1", "quality": "C",
+     "owner": "XX PAYMENT TEAM", "description": "Item -> intake of its payment reference",
+     "ambiguity": "Item has no feeder system: feeders may reuse a reference",
+     "conditions": [{"kind": "EQ", "from": "ZZXX_PAYREF", "to": "PAY_REF"},
+                    {"kind": "EQ", "from": "BUKRS", "to": "BUKRS"}]},
+    {"id": "XX_GLITEM_TO_INTAKE", "from": "S4_JOURNAL_ITEM", "to": "XX_INTAKE", "cardinality": "N1", "quality": "P",
+     "active": false, "verify": "V110", "owner": "XX PAYMENT TEAM",
+     "description": "Clearing line -> intake of the reference in its assignment",
+     "ambiguity": "Assignment has no feeder system: feeders may reuse it",
+     "conditions": [{"kind": "EQ", "from": "AssignmentReference", "to": "PAY_REF"},
+                    {"kind": "EQ", "from": "CompanyCode", "to": "BUKRS"}]}
   ],
   "activation": [
     {"kind": "K", "id": "FICA_PAYMENT_TO_NOC", "active": false, "reason": "No notification-of-change lots at XX", "owner": "XX PAYMENT TEAM"}

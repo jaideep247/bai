@@ -9,8 +9,13 @@
 *& request and result of a walk (nodes with key, path and evidence
 *& quality), parameters (prefix LINK_, area CA_OPS) and messages 210-239
 *& of ZCA_OPS. No logic.
+*& Since 2026-11-16 (build Q): the identity of an object (IDENTITY_FIELDS),
+*& links ambiguous by design, the match of a node (ONE / MANY / AMBIGUOUS)
+*& with its candidates and their evidence, links not followed because a
+*& table, view or field is missing, messages 630-639.
 *& Modification log:
 *& 2026-11-11 | Initial version (link registry and walker).
+*& 2026-11-16 | Identity beyond a document number, ambiguous matches shown, missing DDIC objects (build Q).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - link registry types</p>
 INTERFACE zif_ca_ops_link_types
@@ -109,6 +114,17 @@ INTERFACE zif_ca_ops_link_types
       link  TYPE ty_flag1 VALUE 'K',
     END OF gc_target_kind.
 
+  "! Match of a node reached by a link (build Q): ONE the only row a "to one" link found for its source row,
+  "! AMBIGUOUS one of several rows a "to one" link found (every candidate is returned - never one picked),
+  "! MANY a row of a "to many" link (several rows are expected)
+  TYPES ty_match TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_match,
+      one       TYPE ty_match VALUE 'ONE',
+      ambiguous TYPE ty_match VALUE 'AMBIGUOUS',
+      many      TYPE ty_match VALUE 'MANY',
+    END OF gc_match.
+
   "! Visible characters of a masked value (the end of it), the mask character and the separators
   CONSTANTS gc_mask_visible TYPE i VALUE 4.
   CONSTANTS gc_mask_char TYPE c LENGTH 1 VALUE '*'.
@@ -126,6 +142,8 @@ INTERFACE zif_ca_ops_link_types
       max_nodes  TYPE zif_ca_ops_types=>ty_param_name VALUE 'LINK_MAX_NODES',
       "! Source rows (key tuples) per database read (IN list / OR groups)
       read_chunk TYPE zif_ca_ops_types=>ty_param_name VALUE 'LINK_READ_CHUNK',
+      "! Customer layers switched off at run time (rollback of an overlay without a transport, build Q)
+      layers_off TYPE zif_ca_ops_types=>ty_param_name VALUE 'GATE_LINK_LAYERS_OFF',
     END OF gc_param.
 
   CONSTANTS:
@@ -163,6 +181,18 @@ INTERFACE zif_ca_ops_link_types
       key_invalid      TYPE zif_ca_ops_types=>ty_msgno VALUE '232',
       layer_unknown    TYPE zif_ca_ops_types=>ty_msgno VALUE '233',
       ref_mismatch     TYPE zif_ca_ops_types=>ty_msgno VALUE '234',
+      "! Build Q (630-639): a "to one" link whose conditions do not cover the identity of its target
+      ambiguous_design TYPE zif_ca_ops_types=>ty_msgno VALUE '630',
+      "! Several candidate rows of a "to one" link for one source row (all returned, marked AMBIGUOUS)
+      ambiguous_match  TYPE zif_ca_ops_types=>ty_msgno VALUE '631',
+      "! An identity field that is not a field of the object's own layer (or a hidden one)
+      identity_invalid TYPE zif_ca_ops_types=>ty_msgno VALUE '632',
+      "! Objects of the registry that name a table, view or field this system does not have (not evaluated)
+      ddic_missing     TYPE zif_ca_ops_types=>ty_msgno VALUE '633',
+      "! A link not followed: its target's table or view is not in this system's dictionary
+      source_missing   TYPE zif_ca_ops_types=>ty_msgno VALUE '634',
+      "! A link not followed: a field it reads is not in this system's dictionary
+      field_missing    TYPE zif_ca_ops_types=>ty_msgno VALUE '635',
     END OF gc_msg.
 
   "! Findings of the registry check ZCL_CA_OPS_CHK_LINKS: object type, rule ID and check codes
@@ -175,7 +205,9 @@ INTERFACE zif_ca_ops_link_types
       "! A declared field is not in the runtime DDIC of its source (or the source is unknown)
       ddic    TYPE zif_ca_ops_types=>ty_check_code VALUE 'LINK_DDIC',
       "! Summary of the registry (effective links, problems)
-      summary TYPE zif_ca_ops_types=>ty_check_code VALUE 'LINK_SUMMARY',
+      summary   TYPE zif_ca_ops_types=>ty_check_code VALUE 'LINK_SUMMARY',
+      "! A "to one" link ambiguous by design (build Q): it stays effective, its candidates are shown
+      ambiguous TYPE zif_ca_ops_types=>ty_check_code VALUE 'LINK_AMBIGUOUS',
     END OF gc_code.
 
   "! Rows of the registry tables (fields as in the DDIC, without client and administrative fields)
@@ -198,6 +230,8 @@ INTERFACE zif_ca_ops_link_types
       source_name TYPE ty_source,
       source_kind TYPE ty_flag1,
       key_fields  TYPE ty_key_list,
+      "! Fields that make a row unique in the business sense when the keys alone do not (blank = the keys)
+      identity_fields TYPE ty_key_list,
       description TYPE ty_text,
       active      TYPE abap_bool,
     END OF ty_object.
@@ -293,12 +327,14 @@ INTERFACE zif_ca_ops_link_types
   TYPES tt_chain TYPE STANDARD TABLE OF ty_chain WITH EMPTY KEY.
 
   "! The registry as the walker uses it: effective links (layer and link switched on, not replaced,
-  "! valid) as chains per from object, and the problems that took links out
+  "! valid) as chains per from object, the problems that took links out, and the notes that did not (links
+  "! ambiguous by design, message 630: effective, their candidates shown - never accepted silently)
   TYPES:
     BEGIN OF ty_effective,
       registry TYPE ty_registry,
       chains   TYPE tt_chain,
       problems TYPE tt_problem,
+      notes    TYPE tt_problem,
     END OF ty_effective.
 
   "! A field and its value (a key of a node, or a field a link reads)
@@ -356,16 +392,51 @@ INTERFACE zif_ca_ops_link_types
       quality   TYPE ty_flag1,
       "! Start object -LINK-> object ... (IDs only)
       path      TYPE string,
+      "! Build Q: ONE / AMBIGUOUS / MANY (blank for the start) and the rows the link found for the parent row
+      match        TYPE ty_match,
+      candidates   TYPE i,
+      "! Evidence: the identity fields of the row (sensitive values masked), the layer and quality of the link
+      identity     TYPE tt_pair,
+      layer_id     TYPE ty_layer_id,
+      link_quality TYPE ty_flag1,
     END OF ty_node.
   TYPES tt_node TYPE STANDARD TABLE OF ty_node WITH EMPTY KEY.
+
+  "! One candidate of an ambiguous match: its node (0 = the row was reached before on another path) and evidence
+  TYPES:
+    BEGIN OF ty_candidate,
+      node_id  TYPE i,
+      keys     TYPE tt_pair,
+      identity TYPE tt_pair,
+    END OF ty_candidate.
+  TYPES tt_candidate TYPE STANDARD TABLE OF ty_candidate WITH EMPTY KEY.
+
+  "! A "to one" link that found several rows for one source row: every candidate, the identity fields the
+  "! link does not cover (empty = ambiguous by data, not by design), the layer and quality of the link
+  TYPES:
+    BEGIN OF ty_ambiguity,
+      parent_id    TYPE i,
+      link_id      TYPE ty_link_id,
+      layer_id     TYPE ty_layer_id,
+      link_quality TYPE ty_flag1,
+      object_id    TYPE ty_object_id,
+      uncovered    TYPE tt_fieldname,
+      candidates   TYPE tt_candidate,
+    END OF ty_ambiguity.
+  TYPES tt_ambiguity TYPE STANDARD TABLE OF ty_ambiguity WITH EMPTY KEY.
 
   TYPES:
     BEGIN OF ty_result,
       nodes     TYPE tt_node,
       "! A limit stopped the walk (depth, nodes or rows of a read)
       truncated TYPE abap_bool,
-      "! Messages of the walk: limits, links skipped (invalid, not approved, read failed)
+      "! Messages of the walk: limits, links skipped (invalid, not approved, read failed, missing DDIC object)
       problems  TYPE tt_problem,
+      "! Build Q: the ambiguous matches with their candidates (never one picked silently)
+      ambiguities   TYPE tt_ambiguity,
+      "! Build Q: a link was not followed because its table, view or field is missing on this system - the walk
+      "! is incomplete (not evaluated beyond that link; the reason is in PROBLEMS, 634 / 635)
+      not_evaluated TYPE abap_bool,
     END OF ty_result.
 
 ENDINTERFACE.

@@ -132,6 +132,14 @@ flowchart LR
 | CD_REQ_TO_STATUS_UPD | CD | CD_PAYM_REQ_LOG | CD_SPE_EXCP_LOG | NM | P | ZCD_SPE_EXCP_LOG-‹request key field› = ZCD_PAYM_REQ_LOG-‹FIN number field› | - | pending (VERIFY) V121 |
 | CD_RUN_TO_FILE | CD | FICA_PAYMENT_RUN | CD_FILE_REGISTER | NM | C | ZCDT_REGUT-‹run date field› = DPAYH-LAUFD; ZCDT_REGUT-‹run ID field› = DPAYH-LAUFI; ZCDT_REGUT-‹house bank field› = DPAYH-HBKID | - | pending (VERIFY) V121 |
 
+## Ambiguous by design
+
+"To one" links whose conditions do not cover every identity field of their target: one source row can find several target rows. The walker returns every candidate marked AMBIGUOUS with its identity values, layer and link quality; a generated extension column stays blank with an ambiguity marker; the registry check reports the link (never accepted silently).
+
+| Link | Layer | From -> to | Identity of the target | Not covered | Reason | Status |
+|---|---|---|---|---|---|---|
+| CD_ITEM_TO_REQUEST | CD | FICA_OPEN_ITEM -> CD_PAYM_REQ_LOG | ‹FIN number field›, COUNTER | COUNTER | Two SUCCESS attempts of a request stay candidates | pending (VERIFY) |
+
 ## Custom field flows
 
 Fields a customer layer added (to its own or a standard object) and the links they flow through.

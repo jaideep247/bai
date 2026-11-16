@@ -8,6 +8,9 @@ declared weaker, prefixes of IDs, elements and associations, the quota, optional
 (active, pending on an inactive link / VERIFY field / placeholder / declared item, blocked); rendering (key and link
 anchors, discriminator, PREFER as a filter, masking, a replacement link, the query copy, the element suffix switch);
 and that no product file of the framework references a customer object.
+Build Q (2026-11-16): a link ambiguous by design (its conditions do not cover the identity of the target) needs a
+marker element and reads a candidates view - PREFER is a filter of the candidates, the columns are blank unless one
+row is a candidate; a covered link renders PREFER in the ON condition as before.
 
 Run:  python3 -m unittest discover -s tools/tests      (from the repository root)
 """
@@ -239,7 +242,7 @@ class PackTest(unittest.TestCase):
         ext['link'] = 'XX_GLITEM_BY_DOC'
         self.assertIn('reads ClearingJournalEntry, which anchor JOURNAL_GROUP does not provide', self.run_one(ext)[0])
 
-    def test_prefer_is_a_filter_and_an_active_link_makes_it_active(self):
+    def _payreq_link(self):
         link = dict(copy.deepcopy(self.reg.links['XX_GLITEM_TO_REQUEST']), id='XX_GLITEM_TO_PAYREQ',
                     to='XX_PAY_REQUEST', active=True, verify='')
         link['conditions'] = [{'kind': 'EQ', 'from': 'AssignmentReference', 'to': 'REQ_ID'},
@@ -247,10 +250,31 @@ class PackTest(unittest.TestCase):
         self.reg.links['XX_GLITEM_TO_PAYREQ'] = link
         ext = self.ext('XX_BRK_GROUP_REQ')
         ext['link'] = 'XX_GLITEM_TO_PAYREQ'
-        problems, res = self.run_one(ext)
+        return ext
+
+    def test_prefer_is_a_filter_and_an_active_link_makes_it_active(self):
+        # the identity of the request is its number (declared): the link covers it, PREFER filters the attempt
+        self.reg.objects['XX_PAY_REQUEST'] = dict(self.reg.objects['XX_PAY_REQUEST'], identity=['REQ_ID'])
+        problems, res = self.run_one(self._payreq_link())
         self.assertEqual(problems, '')
         self.assertEqual(res['on'], ['_ZZXXBrkReq.req_id = $projection.Assignment', "_ZZXXBrkReq.status = 'OK'"])
         self.assertEqual(res['status'], 'active')
+        self.assertIsNone(res['ambiguous'])
+
+    def test_ambiguous_link_reads_a_candidates_view(self):
+        # build Q: the identity is the keys (REQ_ID, ATTEMPT) - ATTEMPT is not covered: ambiguous by design
+        ext = self._payreq_link()
+        self.assertIn('ambiguity_element', self.run_one(ext)[0])
+        ext['ambiguity_element'] = 'ZZXX_BrkReqMatch'
+        problems, res = self.run_one(ext)
+        self.assertEqual(problems, '')
+        self.assertEqual(res['on'], ['_ZZXXBrkReq.req_id = $projection.Assignment'])
+        self.assertEqual(res['ambiguous']['filters'], ["Cnd.status = 'OK'"])
+        self.assertEqual(res['ambiguous']['uncovered'], ['ATTEMPT'])
+        self.assertEqual(res['target'], 'ZXX_XC_BRK_GROUP_REQ')
+        self.assertTrue(all(e['expr'].startswith('case when _ZZXXBrkReq.Candidates') or
+                            e['expr'].startswith('cast( case when _ZZXXBrkReq.Candidates') for e in res['elements']))
+        self.assertEqual(res['elements'][-1]['name'], 'ZZXX_BrkReqMatch')
 
     def test_replacement_link_is_rendered(self):
         self.reg.links['XX_ITEM_TO_JOURNAL'] = dict(copy.deepcopy(self.reg.links['S4_ITEM_TO_JOURNAL']),

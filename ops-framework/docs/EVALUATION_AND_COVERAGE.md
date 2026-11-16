@@ -76,6 +76,12 @@ its sources (`ZCL_CA_OPS_EVAL=>MERGE_TERM` / `ADD_SOURCE`). The runner then stil
 (B / E) never hides behind a zero, a holiday or a closed period (class `FINDINGS`); the zero or OK of a **stale
 source** is `STALE`; the zero or OK of a **closed period** is `PER_CLOSED`.
 
+**Missing DDIC objects (2026-11-16, build Q).** A check that reads a table, view or field the system does not have
+says so in `EVAL` instead of failing: the aggregate check counts its measured and unmeasured rows (`EVALUATED` /
+`UNEVALUATED`; an unmeasured row on a missing table or field gives the reason code `DDIC_MISSING`, message 636), the
+link registry check counts the objects whose source or fields are missing (633). Some missing = `P` (partial), all
+missing = `N` (not evaluated) - never `OK`, never a dump (`docs/EXTENSION_AND_GATE_PROOF.md` section 6).
+
 ### 1.3 Closed accounting period
 
 Configurable per area through the period-close calendar `ZIF_CA_OPS_EVAL_PERIOD`: the delivered

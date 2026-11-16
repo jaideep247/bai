@@ -13,8 +13,17 @@
 *& ZIF_CA_OPS_LINK_DAO (approved tables, DDIC-checked names, quoted values).
 *& Keys of the result masked by the sensitivity of their fields; the raw
 *& values stay inside the walk. Read only, nothing stored.
+*& Since 2026-11-16 (build Q): a "to one" link that finds several rows for
+*& one source row returns every candidate marked AMBIGUOUS (never one
+*& picked) with its evidence - identity values (masked), layer and quality
+*& of the link - in RS_RESULT-AMBIGUITIES; a link whose table, view or
+*& field is not in this system's dictionary is not followed (634 / 635,
+*& result not evaluated beyond it - never a dump); the customer layers of
+*& parameter GATE_LINK_LAYERS_OFF are switched off (rollback).
 *& Modification log:
 *& 2026-11-11 | Initial version (link registry and walker).
+*& 2026-11-16 | Ambiguous matches with candidates and evidence, identity fields read with the keys, missing
+*&            | DDIC objects not followed, GATE_LINK_LAYERS_OFF (build Q).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - link registry walker</p>
 "! A row reached from several source rows of one level keeps the first parent (the result is a tree).
@@ -45,6 +54,13 @@ CLASS zcl_ca_ops_link_walker DEFINITION
       END OF ty_work.
     TYPES tt_work TYPE STANDARD TABLE OF ty_work WITH EMPTY KEY.
     TYPES tt_visited TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.
+    "! Runtime DDIC of a source, read once per walk (empty = the source is not in the dictionary)
+    TYPES:
+      BEGIN OF ty_ddic,
+        source TYPE zif_ca_ops_link_types=>ty_source,
+        fields TYPE zif_ca_ops_chk_types=>tt_field,
+      END OF ty_ddic.
+    TYPES tt_ddic TYPE HASHED TABLE OF ty_ddic WITH UNIQUE KEY source.
 
     DATA mo_dao TYPE REF TO zif_ca_ops_link_dao.
     DATA ms_effective TYPE zif_ca_ops_link_types=>ty_effective.
@@ -59,6 +75,7 @@ CLASS zcl_ca_ops_link_walker DEFINITION
     DATA mv_max_nodes TYPE i.
     DATA mv_chunk TYPE i.
     DATA mv_stop TYPE abap_bool.
+    DATA mt_ddic TYPE tt_ddic.
 
     METHODS begin
       IMPORTING
@@ -99,19 +116,54 @@ CLASS zcl_ca_ops_link_walker DEFINITION
         et_rows        TYPE zif_ca_ops_link_types=>tt_row
         ev_failed      TYPE abap_bool.
 
-    "! A new node for a row of the target unless the row was reached before
+    "! A new node for a row of the target unless the row was reached before; returns its node ID (0 = none)
     METHODS add_node
       IMPORTING
-        is_parent      TYPE ty_work
-        is_link        TYPE zif_ca_ops_link_types=>ty_link
-        iv_step        TYPE i
-        is_target      TYPE zif_ca_ops_link_types=>ty_object
-        is_row         TYPE zif_ca_ops_link_types=>ty_row
-        iv_depth       TYPE i
+        is_parent         TYPE ty_work
+        is_link           TYPE zif_ca_ops_link_types=>ty_link
+        iv_step           TYPE i
+        is_target         TYPE zif_ca_ops_link_types=>ty_object
+        is_row            TYPE zif_ca_ops_link_types=>ty_row
+        iv_depth          TYPE i
+        iv_match          TYPE zif_ca_ops_link_types=>ty_match
+        iv_candidates     TYPE i
       CHANGING
-        ct_next        TYPE tt_work.
+        ct_next           TYPE tt_work
+      RETURNING
+        VALUE(rv_node_id) TYPE i.
 
-    "! Fields of an object the walk needs: its keys and the from fields of the links leaving it
+    "! The rows of a source row: one node each; several rows of a "to one" link are an ambiguity (every candidate
+    "! is kept with its evidence, never one picked)
+    METHODS add_rows
+      IMPORTING
+        is_parent TYPE ty_work
+        is_link   TYPE zif_ca_ops_link_types=>ty_link
+        iv_step   TYPE i
+        is_target TYPE zif_ca_ops_link_types=>ty_object
+        it_rows   TYPE zif_ca_ops_link_types=>tt_row
+        iv_depth  TYPE i
+      CHANGING
+        ct_next   TYPE tt_work.
+
+    "! The target's table / view and every field the link reads exist in this system's dictionary; else the link
+    "! is not followed (634 / 635) and the walk is marked not evaluated beyond it
+    METHODS ddic_ready
+      IMPORTING
+        is_link         TYPE zif_ca_ops_link_types=>ty_link
+        is_target       TYPE zif_ca_ops_link_types=>ty_object
+        it_conds        TYPE zif_ca_ops_link_types=>tt_cond
+      RETURNING
+        VALUE(rv_ready) TYPE abap_bool.
+
+    "! Values of the identity fields of a row, sensitive values masked (evidence of a candidate)
+    METHODS masked_identity
+      IMPORTING
+        is_object      TYPE zif_ca_ops_link_types=>ty_object
+        it_pairs       TYPE zif_ca_ops_link_types=>tt_pair
+      RETURNING
+        VALUE(rt_keys) TYPE zif_ca_ops_link_types=>tt_pair.
+
+    "! Fields of an object the walk needs: its keys, its identity and the from fields of the links leaving it
     METHODS needed_fields
       IMPORTING
         is_object        TYPE zif_ca_ops_link_types=>ty_object
@@ -166,8 +218,18 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
 
 
   METHOD zif_ca_ops_link_walker~registry.
+    DATA lt_off TYPE string_table.
+
     IF mv_loaded = abap_false.
-      ms_effective = zcl_ca_ops_link_registry=>effective( mo_dao->read_registry( ) ).
+      " customer layers switched off at run time (GATE_LINK_LAYERS_OFF: rollback of an overlay, no transport)
+      LOOP AT zcl_ca_ops_factory=>get_params( )->get_range( iv_name = zif_ca_ops_link_types=>gc_param-layers_off
+                                                             iv_area = zif_ca_ops_types=>gc_param_area )
+           ASSIGNING FIELD-SYMBOL(<ls_off>).
+        INSERT CONV string( <ls_off>-low ) INTO TABLE lt_off.
+      ENDLOOP.
+      ms_effective = zcl_ca_ops_link_registry=>effective(
+                       zcl_ca_ops_link_registry=>switch_off_layers( is_registry = mo_dao->read_registry( )
+                                                                    it_layers   = lt_off ) ).
       mv_loaded = abap_true.
     ENDIF.
     rs_effective = ms_effective.
@@ -206,7 +268,7 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
 
   METHOD begin.
     zif_ca_ops_link_walker~registry( ).
-    CLEAR: ms_result, mt_work, mt_visited, mt_chains, mv_stop.
+    CLEAR: ms_result, mt_work, mt_visited, mt_chains, mv_stop, mt_ddic.
     ms_request = is_request.
     " Field names as the DDIC holds them (the caller may write them in lower case)
     LOOP AT ms_request-keys ASSIGNING FIELD-SYMBOL(<ls_key>).
@@ -350,6 +412,9 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
       DATA(ls_target) = object( ls_link-to_object ).
       DATA(lt_conds) = zcl_ca_ops_link_registry=>conds_of( is_registry = ms_effective-registry
                                                           iv_link_id  = ls_link-link_id ).
+      IF ddic_ready( is_link = ls_link is_target = ls_target it_conds = lt_conds ) = abap_false.
+        RETURN.
+      ENDIF.
       read( EXPORTING is_link    = ls_link
                       is_target  = ls_target
                       it_conds   = lt_conds
@@ -379,18 +444,16 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
           INSERT <ls_source> INTO TABLE lt_still.
           CONTINUE.
         ENDIF.
-        LOOP AT zcl_ca_ops_link_query=>prefer( it_rows = lt_matched it_conds = lt_conds ) ASSIGNING <ls_row>.
-          add_node( EXPORTING is_parent = <ls_source>
-                              is_link   = ls_link
-                              iv_step   = lv_step
-                              is_target = ls_target
-                              is_row    = <ls_row>
-                              iv_depth  = iv_depth
-                    CHANGING  ct_next   = ct_next ).
-          IF mv_stop = abap_true.
-            RETURN.
-          ENDIF.
-        ENDLOOP.
+        add_rows( EXPORTING is_parent = <ls_source>
+                            is_link   = ls_link
+                            iv_step   = lv_step
+                            is_target = ls_target
+                            it_rows   = zcl_ca_ops_link_query=>prefer( it_rows = lt_matched it_conds = lt_conds )
+                            iv_depth  = iv_depth
+                  CHANGING  ct_next   = ct_next ).
+        IF mv_stop = abap_true.
+          RETURN.
+        ENDIF.
       ENDLOOP.
       lt_pending = lt_still.
     ENDLOOP.
@@ -433,6 +496,51 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD add_rows.
+    DATA(lv_count) = lines( it_rows ).
+    DATA(lv_to_one) = zcl_ca_ops_link_registry=>is_to_one( is_link ).
+    DATA(lv_match) = COND zif_ca_ops_link_types=>ty_match(
+      WHEN lv_to_one = abap_false THEN zif_ca_ops_link_types=>gc_match-many
+      WHEN lv_count > 1           THEN zif_ca_ops_link_types=>gc_match-ambiguous
+      ELSE zif_ca_ops_link_types=>gc_match-one ).
+    DATA(ls_ambiguity) = VALUE zif_ca_ops_link_types=>ty_ambiguity(
+      parent_id    = is_parent-node_id
+      link_id      = is_link-link_id
+      layer_id     = is_link-layer_id
+      link_quality = is_link-quality
+      object_id    = is_target-object_id
+      uncovered    = zcl_ca_ops_link_registry=>uncovered( is_registry = ms_effective-registry is_link = is_link ) ).
+
+    LOOP AT it_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      DATA(lv_node_id) = add_node( EXPORTING is_parent     = is_parent
+                                             is_link       = is_link
+                                             iv_step       = iv_step
+                                             is_target     = is_target
+                                             is_row        = <ls_row>
+                                             iv_depth      = iv_depth
+                                             iv_match      = lv_match
+                                             iv_candidates = lv_count
+                                   CHANGING  ct_next       = ct_next ).
+      IF lv_match = zif_ca_ops_link_types=>gc_match-ambiguous.
+        " every candidate with its evidence - also one reached before on another path (node 0)
+        INSERT VALUE #( node_id  = lv_node_id
+                        keys     = masked_keys( is_object = is_target it_pairs = <ls_row>-pairs )
+                        identity = masked_identity( is_object = is_target it_pairs = <ls_row>-pairs ) )
+               INTO TABLE ls_ambiguity-candidates.
+      ENDIF.
+      IF mv_stop = abap_true.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_match = zif_ca_ops_link_types=>gc_match-ambiguous.
+      INSERT ls_ambiguity INTO TABLE ms_result-ambiguities.
+      problem( iv_subject = is_link-link_id iv_msgno = zif_ca_ops_link_types=>gc_msg-ambiguous_match
+               iv_v1 = is_link-link_id iv_v2 = lv_count ).
+    ENDIF.
+  ENDMETHOD.
+
+
   METHOD add_node.
     DATA(lv_identity) = identity( is_object = is_target it_pairs = is_row-pairs ).
     IF line_exists( mt_visited[ table_line = lv_identity ] ).
@@ -457,20 +565,61 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
                      condense( CONV string( is_target-object_id ) ) }|
       pairs     = is_row-pairs ).
     INSERT ls_work INTO TABLE ct_next.
-    INSERT VALUE #( node_id   = ls_work-node_id
-                    parent_id = is_parent-node_id
-                    depth     = iv_depth
-                    object_id = is_target-object_id
-                    keys      = masked_keys( is_object = is_target it_pairs = is_row-pairs )
-                    link_id   = is_link-link_id
-                    step      = iv_step
-                    quality   = ls_work-quality
-                    path      = ls_work-path ) INTO TABLE ms_result-nodes.
+    INSERT VALUE #( node_id      = ls_work-node_id
+                    parent_id    = is_parent-node_id
+                    depth        = iv_depth
+                    object_id    = is_target-object_id
+                    keys         = masked_keys( is_object = is_target it_pairs = is_row-pairs )
+                    link_id      = is_link-link_id
+                    step         = iv_step
+                    quality      = ls_work-quality
+                    path         = ls_work-path
+                    match        = iv_match
+                    candidates   = iv_candidates
+                    identity     = masked_identity( is_object = is_target it_pairs = is_row-pairs )
+                    layer_id     = is_link-layer_id
+                    link_quality = is_link-quality ) INTO TABLE ms_result-nodes.
+    rv_node_id = ls_work-node_id.
+  ENDMETHOD.
+
+
+  METHOD ddic_ready.
+    DATA(lv_source) = CONV zif_ca_ops_link_types=>ty_source( to_upper( condense( is_target-source_name ) ) ).
+    READ TABLE mt_ddic ASSIGNING FIELD-SYMBOL(<ls_ddic>) WITH TABLE KEY source = lv_source.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( source = lv_source fields = mo_dao->source_fields( lv_source ) )
+             INTO TABLE mt_ddic ASSIGNING <ls_ddic>.
+    ENDIF.
+    IF <ls_ddic>-fields IS INITIAL.
+      ms_result-not_evaluated = abap_true.
+      problem( iv_subject = is_link-link_id iv_msgno = zif_ca_ops_link_types=>gc_msg-source_missing
+               iv_v1 = is_link-link_id iv_v2 = lv_source ).
+      RETURN.
+    ENDIF.
+    " the fields the read selects (keys, identity, the next links' from fields) and the link's to fields
+    DATA(lt_needed) = needed_fields( is_target ).
+    LOOP AT it_conds ASSIGNING FIELD-SYMBOL(<ls_cond>).
+      INSERT zcl_ca_ops_link_query=>split_ref( <ls_cond>-to_ref )-field INTO TABLE lt_needed.
+    ENDLOOP.
+    LOOP AT lt_needed ASSIGNING FIELD-SYMBOL(<lv_field>).
+      IF NOT line_exists( <ls_ddic>-fields[ fieldname = <lv_field> ] ).
+        ms_result-not_evaluated = abap_true.
+        problem( iv_subject = is_link-link_id iv_msgno = zif_ca_ops_link_types=>gc_msg-field_missing
+                 iv_v1 = is_link-link_id iv_v2 = |{ lv_source }-{ <lv_field> }| ).
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+    rv_ready = abap_true.
   ENDMETHOD.
 
 
   METHOD needed_fields.
     rt_fields = zcl_ca_ops_link_registry=>key_fields( is_object ).
+    LOOP AT zcl_ca_ops_link_registry=>identity_fields( is_object ) ASSIGNING FIELD-SYMBOL(<lv_identity>).
+      IF NOT line_exists( rt_fields[ table_line = <lv_identity> ] ).
+        INSERT <lv_identity> INTO TABLE rt_fields.
+      ENDIF.
+    ENDLOOP.
     LOOP AT mt_chains ASSIGNING FIELD-SYMBOL(<ls_chain>).
       LOOP AT <ls_chain>-links ASSIGNING FIELD-SYMBOL(<lv_link_id>).
         READ TABLE ms_effective-registry-links ASSIGNING FIELD-SYMBOL(<ls_link>)
@@ -500,6 +649,20 @@ CLASS zcl_ca_ops_link_walker IMPLEMENTATION.
                                                        is_registry  = ms_effective-registry
                                                        iv_object_id = is_object-object_id
                                                        iv_field     = <lv_key> ) ) ) INTO TABLE rt_keys.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD masked_identity.
+    LOOP AT zcl_ca_ops_link_registry=>identity_fields( is_object ) ASSIGNING FIELD-SYMBOL(<lv_field>).
+      INSERT VALUE #( fieldname = <lv_field>
+                      value     = zcl_ca_ops_link_query=>mask(
+                                    iv_value       = zcl_ca_ops_link_query=>value_of( it_pairs = it_pairs
+                                                                                      iv_field = <lv_field> )
+                                    iv_sensitivity = zcl_ca_ops_link_registry=>sensitivity_of(
+                                                       is_registry  = ms_effective-registry
+                                                       iv_object_id = is_object-object_id
+                                                       iv_field     = <lv_field> ) ) ) INTO TABLE rt_keys.
     ENDLOOP.
   ENDMETHOD.
 

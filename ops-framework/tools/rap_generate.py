@@ -44,6 +44,8 @@ Modification log:
 2026-11-15 | Payment file lifecycle (docs/PAYMENT_FILE_LIFECYCLE.md): file types (ACK level, calendar, time zone,
            | cut-off, expectation; module CASH_OPS), milestones (product vocabulary, clock / offset deadlines), status
            | mappings (an outcome needs a milestone) and adapters (class of ZIF_CA_OPS_PF_ADAPTER, role, source).
+2026-11-16 | Link registry objects (build Q): identity fields (IDENTITY_FIELDS); the key and identity field lists are
+           | checked on save against the runtime DDIC of the source (new check kind 'fields', message 083).
 """
 import os
 import sys
@@ -149,7 +151,8 @@ SPEC = {
              [('enum', 'layer_kind', 'S,I,C'),
               ('when', 'layer_kind', 'C', [('when', 'active', 'X', [('module', 'LINKS')])])]),
             ('zca_ops_lnkobj', 'LinkObject', 'zca_d_lnkobj', 'Object', 'Link registry business objects', [],
-             [('table', 'source_name'), ('enum', 'source_kind', 'T,V')]),
+             [('table', 'source_name'), ('enum', 'source_kind', 'T,V'), ('fields', 'key_fields', 'source_name'),
+              ('fields', 'identity_fields', 'source_name')]),
             ('zca_ops_lnkfld', 'LinkField', 'zca_d_lnkfld', 'Field', 'Link registry object fields', [],
              [('table', 'source_name'), ('field', 'field_name', 'source_name'), ('enum', 'sensitivity', ',M,H'),
               ('enum', 'evidence', 'C,V'), ('when', 'evidence', 'V', [('required', 'verify_ref')])]),
@@ -303,6 +306,7 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'layer_rank': 'Rank (higher extends lower)', 'id_prefix': 'ID prefix of objects and links',
           'object_id': 'Business object', 'source_name': 'Table or CDS view',
           'source_kind': 'Source kind (T table, V view)',
+          'identity_fields': 'Identity fields (blank = key fields)',
           'field_name': 'Field', 'data_element': 'Data element',
           'sensitivity': 'Sensitivity (M masked, H hidden)', 'evidence': 'Evidence (C confirmed, V VERIFY)',
           'verify_ref': 'VERIFY item', 'link_id': 'Link', 'from_object': 'From object', 'to_object': 'To object',

@@ -5,15 +5,20 @@
 *& (standard layer ZS with prefix ZS_, customer layer XX with prefix XX_):
 *& a valid registry has no problem and gives its chains (head and
 *& fallback); an active link on a VERIFY field (218), a cyclic fallback
-*& chain (216), a "to one" link without the target's keys (217), a
-*& sensitive field as a constant (223), a replacement of a link of the same
-*& layer (224), an ID without its layer prefix (231), a reference of
+*& chain (216), a sensitive field as a constant (223), a
+*& replacement of a link of the same layer (224), an ID without its layer prefix (231), a reference of
 *& another source (234) are problems and take the link out; activation
 *& overrides switch a link or a layer off; a replacement of a switched-on
 *& layer wins; a chain stops at its first link that is not effective.
+*& Build Q: a "to one" link whose EQ / CONST conditions do not cover the
+*& identity of its target (its keys, or its declared identity: here the
+*& feeder of a request) is a note 630 - effective, never a problem, and a
+*& PREFER condition does not make it one; GATE_LINK_LAYERS_OFF switches a
+*& customer layer off, never a product layer.
 *& No database. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-11 | Initial version (link registry and walker).
+*& 2026-11-16 | Identity and ambiguous by design replace the "to one" key rule 217; layers off (build Q).
 *&---------------------------------------------------------------------*
 CLASS ltc_link_registry DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -89,7 +94,9 @@ CLASS ltc_link_registry DEFINITION FINAL FOR TESTING
     METHODS chain_head_then_fallback   FOR TESTING.
     METHODS active_link_on_verify      FOR TESTING.
     METHODS cyclic_fallback_found      FOR TESTING.
-    METHODS to_one_needs_target_keys   FOR TESTING.
+    METHODS to_one_uncovered_is_note   FOR TESTING.
+    METHODS identity_beyond_the_key    FOR TESTING.
+    METHODS layers_off_customer_only   FOR TESTING.
     METHODS sensitive_constant_refused FOR TESTING.
     METHODS replace_same_layer_refused FOR TESTING.
     METHODS id_without_prefix_refused  FOR TESTING.
@@ -260,16 +267,67 @@ CLASS ltc_link_registry IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: N1 / 11 cover the target's key or prefer one row
-  METHOD to_one_needs_target_keys.
+  " Rule (build Q): a "to one" link that does not cover its target's identity is ambiguous by design - a note
+  " (630), never a problem: it stays effective and its candidates are shown; PREFER does not make it one
+  METHOD to_one_uncovered_is_note.
     TRY.
         DATA(lr_link) = REF #( ms_registry-links[ link_id = gc-doc_items ] ).
         lr_link->cardinality = zif_ca_ops_link_types=>gc_cardinality-many_one.
-        cl_abap_unit_assert=>assert_true( act = has_problem( iv_subject = gc-doc_items iv_msgno = '217' )
-                                          msg = 'ITEMNO of the target is not covered' ).
-        cond( iv_link = gc-doc_items iv_no = 2 iv_kind = 'PREFER' iv_to = 'ZITEM-ITEMNO' iv_value = '1' ).
+        DATA(ls_effective) = zcl_ca_ops_link_registry=>effective( ms_registry ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_effective-notes[ subject = gc-doc_items
+                                                                                           msgno   = '630' ] ) )
+                                          msg = 'ITEMNO of the target is not covered: note 630' ).
         cl_abap_unit_assert=>assert_false( act = has_problem( iv_subject = gc-doc_items iv_msgno = '217' )
-                                           msg = 'A preferred row makes it one' ).
+                                           msg = 'Not a problem' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_effective-chains[ head = gc-doc_items ] ) )
+                                          msg = 'The link stays effective' ).
+        cond( iv_link = gc-doc_items iv_no = 2 iv_kind = 'PREFER' iv_to = 'ZITEM-ITEMNO' iv_value = '1' ).
+        cl_abap_unit_assert=>assert_not_initial(
+          act = zcl_ca_ops_link_registry=>uncovered( is_registry = ms_registry is_link = lr_link->* )
+          msg = 'A preferred row narrows the candidates, it does not make them one' ).
+        DELETE ms_registry-conds WHERE link_id = gc-doc_items AND cond_no = 2.
+        cond( iv_link = gc-doc_items iv_no = 2 iv_kind = 'CONST' iv_to = 'ZITEM-ITEMNO' iv_value = '1' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_ca_ops_link_registry=>uncovered( is_registry = ms_registry is_link = lr_link->* )
+          msg = 'A constant covers the item number' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q): the identity of a request is its number per feeder system - a link by the number alone is
+  " ambiguous by design, although it covers the key
+  METHOD identity_beyond_the_key.
+    TRY.
+        field( iv_object = gc-request iv_name = 'FEEDER' iv_layer = gc-cust ).
+        cl_abap_unit_assert=>assert_initial( act = zcl_ca_ops_link_registry=>notes( ms_registry )
+                                             msg = 'Identity = key: covered' ).
+        ms_registry-objects[ object_id = gc-request ]-identity_fields = 'FEEDER,REQ_ID'.
+        DATA(lt_notes) = zcl_ca_ops_link_registry=>notes( ms_registry ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_notes[ subject = gc-item_req v2 = 'FEEDER' ] ) )
+                                          msg = 'The feeder is not covered by the item' ).
+        cl_abap_unit_assert=>assert_initial( act = zcl_ca_ops_link_registry=>validate( ms_registry )
+                                             msg = 'A declared identity is valid' ).
+        ms_registry-objects[ object_id = gc-request ]-identity_fields = 'FEEDER,GJAHR'.
+        cl_abap_unit_assert=>assert_true( act = has_problem( iv_subject = gc-request iv_msgno = '632' )
+                                          msg = 'An undeclared identity field is refused (632)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD layers_off_customer_only.
+    TRY.
+        DATA(ls_registry) = zcl_ca_ops_link_registry=>switch_off_layers( is_registry = ms_registry
+                                                                         it_layers   = VALUE #( ( `xx` ) ( `ZS` ) ) ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_link_registry=>layer_on( is_registry = ls_registry
+                                                                                     iv_layer_id = gc-cust )
+                                           msg = 'The customer layer is off' ).
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_link_registry=>layer_on( is_registry = ls_registry
+                                                                                    iv_layer_id = gc-std )
+                                          msg = 'A product layer is never switched by the parameter' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

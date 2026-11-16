@@ -14,6 +14,10 @@ define table zca_ops_lnkobj {
   source_kind   : abap.char(1);
   // Fields that identify a row for the walker (comma list, each a field row of ZCA_OPS_LNKFLD of the same layer)
   key_fields    : abap.char(255);
+  // Fields that make a row unique in the business sense when the key fields alone do not (logical system, company
+  // code, fiscal year; comma list of field rows of the same layer; blank = the key fields). A "to one" link whose
+  // conditions do not cover every one of them is ambiguous by design (docs/LINK_REGISTRY.md section 3a)
+  identity_fields : abap.char(255);
   description   : abap.char(60);
   active        : abap_boolean;
   // RAP configuration app: set by the framework, ignored by engines

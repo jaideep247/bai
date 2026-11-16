@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-369 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 370-399 payment file lifecycle (2026-11-15; `docs/PAYMENT_FILE_LIFECYCLE.md`) · 400-449 configuration apps (RAP) · 500-549 FI-CA cash operations checks (2026-11-15, build N; `docs/FICA_CASH_OPERATIONS.md`) · 560-599 evaluation state, alert delivery confirmation, monitor coverage and catalogue milestones (2026-11-16, build O; 567 check of the daily review; `docs/EVALUATION_AND_COVERAGE.md`) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-369 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 370-399 payment file lifecycle (2026-11-15; `docs/PAYMENT_FILE_LIFECYCLE.md`) · 400-449 configuration apps (RAP) · 500-549 FI-CA cash operations checks (2026-11-15, build N; `docs/FICA_CASH_OPERATIONS.md`) · 560-599 evaluation state, alert delivery confirmation, monitor coverage and catalogue milestones (2026-11-16, build O; 567 check of the daily review; `docs/EVALUATION_AND_COVERAGE.md`) · 630-659 extension and release-gate proof: identity and ambiguous matches, missing DDIC objects, configuration preview and rollback (2026-11-16, build Q; `docs/EXTENSION_AND_GATE_PROOF.md`) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -331,6 +331,22 @@ texts <= 73 characters).
 | 582 | Release and support package are mandatory for a validation |
 | 583 | Test mode: validation of &1 on &2 (&3) not saved |
 | 584 | Channel &1 is not configured: delivery cannot be confirmed |
+| 630 | Link &1 is ambiguous by design: &2 of &3 not covered by its conditions |
+| 631 | Link &1: &2 candidate rows for one source row - all shown as AMBIGUOUS |
+| 632 | Identity field &2 of object &1 is not a declared field of its layer |
+| 633 | &1 of &2 active link objects name a missing table or field (&3) |
+| 634 | Link &1 not followed: &2 is not in the dictionary of this system |
+| 635 | Link &1 not followed: field &2 is not in the dictionary of this system |
+| 636 | Aggregate row &1 of check &2 not evaluated: |
+| 640 | Preview: &1 change(s) of the effective configuration |
+| 641 | Rollback of &1 (row from &2): delete the planned row before it applies |
+| 642 | Rollback of &1 (row from &2): new row from &3, active &4, approver needed |
+| 643 | Rollback of the activation of &1 from &2 |
+| 644 | Process &1 has no activation row from &2: nothing to roll back |
+| 645 | Link drill-down from &1: &2 node(s), &3 ambiguous, &4 problem(s) |
+| 646 | Configuration version of &1 changes (&2 line change(s)) |
+| 647 | &1 -> &2 (layer &3, cardinality &4) |
+| 648 | Decided by &1 (row from &2): &3 - approver &4 |
 | 742 | Alert rule &1: pattern &2 is not valid PCRE - rule not applied |
 | 786 | Exception &1 (&2) changed by a user during the run - left for next run |
 | 787 | Exception &1 / &2 changed meanwhile - not resolved, nothing saved |

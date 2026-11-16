@@ -12,6 +12,7 @@ define view entity ZC_CA_LinkObject
       SourceName,
       SourceKind,
       KeyFields,
+      IdentityFields,
       Description,
       Active,
       LastChangedBy,

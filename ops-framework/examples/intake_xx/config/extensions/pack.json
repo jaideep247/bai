@@ -1,0 +1,11 @@
+{
+  "_comment": "Worked example of the extension and release-gate proof (build Q, docs/EXTENSION_AND_GATE_PROOF.md): the fictitious customer XX adds its intake flow by configuration only - its registry layer (config/links/examples/xx_overlay.json of the framework, objects XX_INTAKE, custom field FICA_OPEN_ITEM-ZZXX_PAYREF, links XX_ITEM_TO_INTAKE / XX_GLITEM_TO_INTAKE), these declarations and the payment model spec. The generators write into this folder only (src/ext, src/paym and the pending folders); no product object changes (tools/intake_xx.py, root test tools/tests/test_extension_proof.py).",
+  "prefix": "XX",
+  "layer": "XX",
+  "links": ["../../config/links/examples/xx_overlay.json"],
+  "since": "2026-11-16",
+  "package_folder": "src/ext",
+  "pending_folder": "config/extensions/pending",
+  "package_text": "Customer XX: intake extensions of the operations framework",
+  "report": "docs/extensions/extensions.md"
+}

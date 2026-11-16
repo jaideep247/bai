@@ -25,6 +25,8 @@
 *&            | the user saving the row (four-eyes, message 240).
 *& 2026-11-15 | MODULE_LICENSED, CAT_PROCESS_LICENSED, CLASS_LICENSED, PACKAGE_LICENSED: the licence of the
 *&            | module of an active row (ZIF_CA_OPS_LICENSE; refused only under LIC_ENFORCE = X, message 350).
+*& 2026-11-16 | FIRST_MISSING_FIELD: a comma list of fields of a table / view (key and identity fields of a
+*&            | link registry object; a missing DDIC object is caught on save, message 083) - build Q.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - config apps: field checks</p>
 CLASS zcl_ca_ops_cfg_checks DEFINITION
@@ -53,6 +55,15 @@ CLASS zcl_ca_ops_cfg_checks DEFINITION
         iv_field         TYPE zif_ca_ops_cfg_types=>ty_name
       RETURNING
         VALUE(rv_exists) TYPE abap_bool.
+
+    "! The first name of a comma list of fields that is not a field of the table / view (blank = every name
+    "! is a field). A table that does not exist reports its first name: nothing of it can be read
+    CLASS-METHODS first_missing_field
+      IMPORTING
+        iv_table          TYPE zif_ca_ops_cfg_types=>ty_name
+        iv_fields         TYPE clike
+      RETURNING
+        VALUE(rv_missing) TYPE zif_ca_ops_cfg_types=>ty_name.
 
     "! Global class exists and implements the interface (plug-in contract)
     CLASS-METHODS implements
@@ -301,6 +312,16 @@ CLASS zcl_ca_ops_cfg_checks IMPLEMENTATION.
 
   METHOD window_complete.
     rv_complete = xsdbool( xsdbool( iv_from IS INITIAL ) = xsdbool( iv_to IS INITIAL ) ).
+  ENDMETHOD.
+
+
+  METHOD first_missing_field.
+    LOOP AT zcl_ca_ops_util=>split_list( iv_fields ) ASSIGNING FIELD-SYMBOL(<lv_field>).
+      IF field_exists( iv_table = iv_table iv_field = CONV #( <lv_field> ) ) = abap_false.
+        rv_missing = to_upper( <lv_field> ).
+        RETURN.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

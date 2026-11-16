@@ -38,6 +38,10 @@
 *&            | ESCALATION_RULE (severity floor ESC_SEVERITY); RUNBOOK_FOR (CHECK_CODE before GROUP2 before
 *&            | RULE_ID); the message context carries runbook link, first action, correlated children and the
 *&            | escalation step (IS_EXTRA of BUILD_MESSAGES).
+*& 2026-11-16 | Company-code isolation of the e-mail content (build Q): a digest never mixes company codes -
+*&            | the findings of a selection with several company codes go out as one digest per company code
+*&            | (the area-level findings in their own); the subject of each part ends with its company code, so
+*&            | every part has its own intent key and log row. A single-company digest is unchanged.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert rule policy</p>
 CLASS zcl_ca_ops_alert_policy DEFINITION
@@ -200,6 +204,9 @@ CLASS zcl_ca_ops_alert_policy DEFINITION
         VALUE(rt_messages) TYPE zif_ca_ops_types=>tt_alert_message.
 
   PRIVATE SECTION.
+    "! Company codes of a digest part: the marker after its subject ([1000])
+    CONSTANTS gc_company_open TYPE string VALUE ` [`.
+    CONSTANTS gc_company_close TYPE string VALUE `]`.
     "! Between the parts of an amount list (currency totals)
     CONSTANTS gc_amount_separator TYPE string VALUE `; `.
     "! Between label and value in the text version of a finding
@@ -230,6 +237,23 @@ CLASS zcl_ca_ops_alert_policy DEFINITION
     DATA mt_facts   TYPE zif_ca_ops_types=>tt_exception_fact.
     "! Runbooks, correlation and escalation of the messages being built (BUILD_MESSAGES)
     DATA ms_extra   TYPE ty_extra.
+
+    "! One digest message of a selection (the whole selection, or the part of one company code)
+    METHODS digest
+      IMPORTING
+        is_selection      TYPE ty_selection
+        is_run            TYPE zif_ca_ops_types=>ty_run
+        iv_destination    TYPE zif_ca_ops_types=>ty_alert_dest
+        iv_max            TYPE i
+      RETURNING
+        VALUE(rs_message) TYPE zif_ca_ops_types=>ty_alert_message.
+
+    "! Company codes of the findings, each once, sorted (blank = the area-level findings)
+    METHODS company_codes
+      IMPORTING
+        it_findings     TYPE zif_ca_ops_types=>tt_finding
+      RETURNING
+        VALUE(rt_codes) TYPE string_table.
 
     METHODS pattern_hit
       IMPORTING
@@ -514,18 +538,28 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
     DATA(lv_suppressed) = nmax( val1 = lv_total - lv_max val2 = 0 ).
 
     IF is_selection-rule-digest = abap_true OR is_selection-findings IS INITIAL.
-      DATA lt_shown TYPE zif_ca_ops_types=>tt_finding.
-      LOOP AT lt_ranked ASSIGNING FIELD-SYMBOL(<ls_shown>) TO lv_max.
-        INSERT <ls_shown> INTO TABLE lt_shown.
+      " a digest never mixes company codes (build Q): one message per company code of the selection
+      DATA(lt_codes) = company_codes( is_selection-findings ).
+      IF lines( lt_codes ) <= 1.
+        INSERT digest( is_selection   = is_selection
+                       is_run         = is_run
+                       iv_destination = iv_destination
+                       iv_max         = lv_max ) INTO TABLE rt_messages.
+        RETURN.
+      ENDIF.
+      LOOP AT lt_codes ASSIGNING FIELD-SYMBOL(<lv_code>).
+        DATA(ls_part) = is_selection.
+        ls_part-findings = VALUE #( FOR ls_f IN is_selection-findings WHERE ( company_code = <lv_code> ) ( ls_f ) ).
+        DATA(ls_message) = digest( is_selection   = ls_part
+                                   is_run         = is_run
+                                   iv_destination = iv_destination
+                                   iv_max         = lv_max ).
+        IF <lv_code> IS NOT INITIAL.
+          ls_message-subject = |{ ls_message-subject }{ gc_company_open }{ <lv_code> }{ gc_company_close }|.
+          ls_message-context-header-subject = ls_message-subject.
+        ENDIF.
+        INSERT ls_message INTO TABLE rt_messages.
       ENDLOOP.
-      " subject and severity describe the complete selection, not only the shown part
-      INSERT new_message( is_selection   = is_selection
-                          is_run         = is_run
-                          iv_destination = iv_destination
-                          it_findings    = lt_shown
-                          iv_total       = lv_total
-                          iv_worst       = zcl_ca_ops_util=>worst_severity( is_selection-findings )
-                          iv_suppressed  = lv_suppressed ) INTO TABLE rt_messages.
       RETURN.
     ENDIF.
 
@@ -540,6 +574,37 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
                           iv_suppressed  = COND #( WHEN lv_last = abap_true THEN lv_suppressed ) )
              INTO TABLE rt_messages.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD digest.
+    DATA lt_shown TYPE zif_ca_ops_types=>tt_finding.
+    DATA(lv_total) = lines( is_selection-findings ).
+    LOOP AT ranked( is_selection-findings ) ASSIGNING FIELD-SYMBOL(<ls_shown>) TO iv_max.
+      INSERT <ls_shown> INTO TABLE lt_shown.
+    ENDLOOP.
+    " subject and severity describe the complete selection, not only the shown part
+    rs_message = new_message( is_selection   = is_selection
+                              is_run         = is_run
+                              iv_destination = iv_destination
+                              it_findings    = lt_shown
+                              iv_total       = lv_total
+                              iv_worst       = zcl_ca_ops_util=>worst_severity( is_selection-findings )
+                              iv_suppressed  = nmax( val1 = lv_total - iv_max val2 = 0 ) ).
+  ENDMETHOD.
+
+
+  METHOD company_codes.
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      DATA(lv_code) = CONV string( <ls_finding>-company_code ).
+      IF NOT line_exists( rt_codes[ table_line = lv_code ] ).
+        INSERT lv_code INTO TABLE rt_codes.
+      ENDIF.
+    ENDLOOP.
+    SORT rt_codes.
+    IF rt_codes IS INITIAL.
+      INSERT `` INTO TABLE rt_codes.
+    ENDIF.
   ENDMETHOD.
 
 

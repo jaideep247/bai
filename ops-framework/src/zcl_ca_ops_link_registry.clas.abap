@@ -12,8 +12,17 @@
 *& whose layer and own switch are on (activation overrides of a customer
 *& layer win), not replaced, valid, as chains of fallbacks per head.
 *& No database: ZCL_CA_OPS_LINK_DAO reads the rows.
+*& Since 2026-11-16 (build Q): the identity of an object (IDENTITY_FIELDS,
+*& blank = its keys) and the notes of the "to one" links whose EQ / CONST
+*& conditions do not cover it - ambiguous by design (630): they stay
+*& effective, the walker shows every candidate, the registry check reports
+*& them; customer layers switched off at run time (parameter
+*& GATE_LINK_LAYERS_OFF, rollback without a transport).
 *& Modification log:
 *& 2026-11-11 | Initial version (link registry and walker).
+*& 2026-11-16 | Identity, ambiguous by design (notes), identity fields validated (632), active links on
+*&            | confirmed identity fields only, a PREFER condition no longer makes a link "to one",
+*&            | SWITCH_OFF_LAYERS (build Q).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - link registry rules (pure)</p>
 "! A fallback runs only after its predecessor ran: a chain stops at its first link that is not
@@ -31,6 +40,46 @@ CLASS zcl_ca_ops_link_registry DEFINITION
         is_registry         TYPE zif_ca_ops_link_types=>ty_registry
       RETURNING
         VALUE(rs_effective) TYPE zif_ca_ops_link_types=>ty_effective.
+
+    "! "To one" links whose conditions do not cover every identity field of their target (630): notes, not
+    "! problems - the link stays effective and the walker returns every candidate marked AMBIGUOUS
+    CLASS-METHODS notes
+      IMPORTING
+        is_registry     TYPE zif_ca_ops_link_types=>ty_registry
+      RETURNING
+        VALUE(rt_notes) TYPE zif_ca_ops_link_types=>tt_problem.
+
+    "! Identity fields of the target a "to one" link does not cover with EQ / CONST (empty: covered, or not a
+    "! "to one" link)
+    CLASS-METHODS uncovered
+      IMPORTING
+        is_registry      TYPE zif_ca_ops_link_types=>ty_registry
+        is_link          TYPE zif_ca_ops_link_types=>ty_link
+      RETURNING
+        VALUE(rt_fields) TYPE zif_ca_ops_link_types=>tt_fieldname.
+
+    "! Identity fields of an object (upper case, in order): its IDENTITY_FIELDS, else its key fields
+    CLASS-METHODS identity_fields
+      IMPORTING
+        is_object        TYPE zif_ca_ops_link_types=>ty_object
+      RETURNING
+        VALUE(rt_fields) TYPE zif_ca_ops_link_types=>tt_fieldname.
+
+    "! The link is "to one" (11 / N1)
+    CLASS-METHODS is_to_one
+      IMPORTING
+        is_link          TYPE zif_ca_ops_link_types=>ty_link
+      RETURNING
+        VALUE(rv_to_one) TYPE abap_bool.
+
+    "! The registry with the given customer layers switched off (parameter GATE_LINK_LAYERS_OFF: rollback of a
+    "! customer overlay without a transport); a product layer (S / I) is never switched by the parameter
+    CLASS-METHODS switch_off_layers
+      IMPORTING
+        is_registry        TYPE zif_ca_ops_link_types=>ty_registry
+        it_layers          TYPE string_table
+      RETURNING
+        VALUE(rs_registry) TYPE zif_ca_ops_link_types=>ty_registry.
 
     "! Every problem of the registry rows (empty = valid); the subject is the link or object ID
     CLASS-METHODS validate
@@ -157,10 +206,10 @@ CLASS zcl_ca_ops_link_registry DEFINITION
       CHANGING
         ct_problems TYPE zif_ca_ops_link_types=>tt_problem.
 
-    "! A "to one" link covers the target's keys with EQ / CONST conditions or prefers one row
+    "! The cardinality is one of 11, 1N, N1, NM (whether a "to one" link covers its target's identity is a note,
+    "! NOTES, not a problem)
     CLASS-METHODS validate_cardinality
       IMPORTING
-        is_registry TYPE zif_ca_ops_link_types=>ty_registry
         is_link     TYPE zif_ca_ops_link_types=>ty_link
       CHANGING
         ct_problems TYPE zif_ca_ops_link_types=>tt_problem.
@@ -183,6 +232,7 @@ CLASS zcl_ca_ops_link_registry IMPLEMENTATION.
 
     rs_effective-registry = is_registry.
     rs_effective-problems = validate( is_registry ).
+    rs_effective-notes    = notes( is_registry ).
     LOOP AT rs_effective-problems ASSIGNING FIELD-SYMBOL(<ls_problem>).
       INSERT <ls_problem>-subject INTO TABLE lt_bad.
     ENDLOOP.
@@ -272,6 +322,18 @@ CLASS zcl_ca_ops_link_registry IMPLEMENTATION.
                CHANGING ct_problems = ct_problems ).
         ENDIF.
       ENDLOOP.
+      " The identity (build Q): declared fields of the object's own layer, never hidden (shown as evidence)
+      LOOP AT zcl_ca_ops_util=>split_list( <ls_object>-identity_fields ) ASSIGNING FIELD-SYMBOL(<lv_identity>).
+        READ TABLE is_registry-fields ASSIGNING <ls_field>
+             WITH TABLE KEY object_id  = <ls_object>-object_id
+                            field_name = CONV zif_ca_ops_link_types=>ty_fieldname( to_upper( <lv_identity> ) ).
+        IF sy-subrc <> 0 OR <ls_field>-layer_id <> <ls_object>-layer_id
+            OR <ls_field>-sensitivity = zif_ca_ops_link_types=>gc_sensitivity-hidden.
+          add( EXPORTING iv_subject = <ls_object>-object_id iv_msgno = zif_ca_ops_link_types=>gc_msg-identity_invalid
+                         iv_v1 = <ls_object>-object_id iv_v2 = to_upper( <lv_identity> )
+               CHANGING ct_problems = ct_problems ).
+        ENDIF.
+      ENDLOOP.
     ENDLOOP.
   ENDMETHOD.
 
@@ -329,7 +391,7 @@ CLASS zcl_ca_ops_link_registry IMPLEMENTATION.
                                    iv_replace = abap_true
                          CHANGING ct_problems = ct_problems ).
     ENDIF.
-    validate_cardinality( EXPORTING is_registry = is_registry is_link = is_link CHANGING ct_problems = ct_problems ).
+    validate_cardinality( EXPORTING is_link = is_link CHANGING ct_problems = ct_problems ).
   ENDMETHOD.
 
 
@@ -427,6 +489,10 @@ CLASS zcl_ca_ops_link_registry IMPLEMENTATION.
     LOOP AT key_fields( ls_target ) ASSIGNING FIELD-SYMBOL(<lv_key>).
       INSERT |{ is_link-to_object }/{ <lv_key> }| INTO TABLE lt_used.
     ENDLOOP.
+    " the identity is shown as the evidence of a candidate: confirmed fields only (build Q)
+    LOOP AT identity_fields( ls_target ) ASSIGNING FIELD-SYMBOL(<lv_identity>).
+      INSERT |{ is_link-to_object }/{ <lv_identity> }| INTO TABLE lt_used.
+    ENDLOOP.
     LOOP AT lt_used ASSIGNING FIELD-SYMBOL(<lv_used>).
       SPLIT <lv_used> AT `/` INTO DATA(lv_object) DATA(lv_field).
       READ TABLE is_registry-fields ASSIGNING FIELD-SYMBOL(<ls_field>)
@@ -466,8 +532,6 @@ CLASS zcl_ca_ops_link_registry IMPLEMENTATION.
 
 
   METHOD validate_cardinality.
-    DATA lt_covered TYPE SORTED TABLE OF zif_ca_ops_link_types=>ty_fieldname WITH UNIQUE KEY table_line.
-
     IF is_link-cardinality <> zif_ca_ops_link_types=>gc_cardinality-one_one
         AND is_link-cardinality <> zif_ca_ops_link_types=>gc_cardinality-one_many
         AND is_link-cardinality <> zif_ca_ops_link_types=>gc_cardinality-many_one
@@ -475,29 +539,7 @@ CLASS zcl_ca_ops_link_registry IMPLEMENTATION.
       add( EXPORTING iv_subject = is_link-link_id iv_msgno = zif_ca_ops_link_types=>gc_msg-cardinality
                      iv_v1 = is_link-link_id iv_v2 = is_link-cardinality iv_v3 = is_link-to_object
            CHANGING ct_problems = ct_problems ).
-      RETURN.
     ENDIF.
-    IF is_link-cardinality <> zif_ca_ops_link_types=>gc_cardinality-one_one
-        AND is_link-cardinality <> zif_ca_ops_link_types=>gc_cardinality-many_one.
-      RETURN.
-    ENDIF.
-    DATA(lt_conds) = conds_of( is_registry = is_registry iv_link_id = is_link-link_id ).
-    IF line_exists( lt_conds[ cond_kind = zif_ca_ops_link_types=>gc_cond_kind-prefer ] ).
-      RETURN.
-    ENDIF.
-    LOOP AT lt_conds ASSIGNING FIELD-SYMBOL(<ls_cond>)
-         WHERE cond_kind = zif_ca_ops_link_types=>gc_cond_kind-eq OR cond_kind = zif_ca_ops_link_types=>gc_cond_kind-const.
-      INSERT zcl_ca_ops_link_query=>split_ref( <ls_cond>-to_ref )-field INTO TABLE lt_covered.
-    ENDLOOP.
-    DATA(ls_target) = VALUE #( is_registry-objects[ object_id = is_link-to_object ] OPTIONAL ).
-    LOOP AT key_fields( ls_target ) ASSIGNING FIELD-SYMBOL(<lv_key>).
-      IF NOT line_exists( lt_covered[ table_line = <lv_key> ] ).
-        add( EXPORTING iv_subject = is_link-link_id iv_msgno = zif_ca_ops_link_types=>gc_msg-cardinality
-                       iv_v1 = is_link-link_id iv_v2 = is_link-cardinality iv_v3 = is_link-to_object
-             CHANGING ct_problems = ct_problems ).
-        RETURN.
-      ENDIF.
-    ENDLOOP.
   ENDMETHOD.
 
 
@@ -517,6 +559,74 @@ CLASS zcl_ca_ops_link_registry IMPLEMENTATION.
         ENDIF.
         lv_current = <ls_previous>-fallback_of.
       ENDDO.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD notes.
+    LOOP AT is_registry-links ASSIGNING FIELD-SYMBOL(<ls_link>).
+      DATA(lt_uncovered) = uncovered( is_registry = is_registry is_link = <ls_link> ).
+      IF lt_uncovered IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      add( EXPORTING iv_subject = <ls_link>-link_id iv_msgno = zif_ca_ops_link_types=>gc_msg-ambiguous_design
+                     iv_v1 = <ls_link>-link_id
+                     iv_v2 = concat_lines_of( table = lt_uncovered sep = zif_ca_ops_link_types=>gc_list_separator )
+                     iv_v3 = <ls_link>-to_object
+           CHANGING ct_problems = rt_notes ).
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD uncovered.
+    DATA lt_covered TYPE SORTED TABLE OF zif_ca_ops_link_types=>ty_fieldname WITH UNIQUE KEY table_line.
+
+    IF is_to_one( is_link ) = abap_false.
+      RETURN.
+    ENDIF.
+    READ TABLE is_registry-objects ASSIGNING FIELD-SYMBOL(<ls_target>) WITH TABLE KEY object_id = is_link-to_object.
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
+    LOOP AT conds_of( is_registry = is_registry iv_link_id = is_link-link_id ) ASSIGNING FIELD-SYMBOL(<ls_cond>)
+         WHERE cond_kind = zif_ca_ops_link_types=>gc_cond_kind-eq OR cond_kind = zif_ca_ops_link_types=>gc_cond_kind-const.
+      INSERT zcl_ca_ops_link_query=>split_ref( <ls_cond>-to_ref )-field INTO TABLE lt_covered.
+    ENDLOOP.
+    LOOP AT identity_fields( <ls_target> ) ASSIGNING FIELD-SYMBOL(<lv_field>).
+      IF NOT line_exists( lt_covered[ table_line = <lv_field> ] ).
+        INSERT <lv_field> INTO TABLE rt_fields.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD identity_fields.
+    LOOP AT zcl_ca_ops_util=>split_list( is_object-identity_fields ) ASSIGNING FIELD-SYMBOL(<lv_field>).
+      INSERT CONV zif_ca_ops_link_types=>ty_fieldname( to_upper( <lv_field> ) ) INTO TABLE rt_fields.
+    ENDLOOP.
+    IF rt_fields IS INITIAL.
+      rt_fields = key_fields( is_object ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD is_to_one.
+    rv_to_one = xsdbool( is_link-cardinality = zif_ca_ops_link_types=>gc_cardinality-one_one
+                         OR is_link-cardinality = zif_ca_ops_link_types=>gc_cardinality-many_one ).
+  ENDMETHOD.
+
+
+  METHOD switch_off_layers.
+    rs_registry = is_registry.
+    LOOP AT it_layers ASSIGNING FIELD-SYMBOL(<lv_layer>).
+      READ TABLE rs_registry-layers ASSIGNING FIELD-SYMBOL(<ls_layer>)
+           WITH TABLE KEY layer_id = CONV zif_ca_ops_link_types=>ty_layer_id( to_upper( condense( <lv_layer> ) ) ).
+      IF sy-subrc = 0 AND <ls_layer>-layer_kind = zif_ca_ops_link_types=>gc_layer_kind-customer.
+        <ls_layer>-active = abap_false.
+        " an override row of the layer itself would switch it on again
+        DELETE rs_registry-activations WHERE target_kind = zif_ca_ops_link_types=>gc_target_kind-layer
+                                         AND target_id   = <ls_layer>-layer_id.
+      ENDIF.
     ENDLOOP.
   ENDMETHOD.
 

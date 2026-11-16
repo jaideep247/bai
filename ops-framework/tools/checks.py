@@ -80,6 +80,13 @@ Checks
                       identical business results in every integration setup (test profiles and the worked example
                       XX); the example is wired only through ZIF_CA_OPS_PF_* interfaces and configuration rows; no
                       product object names it (tools/payfile.py; --abaplint <binary> also compiles the example)
+  intake_xx           extension proof (build Q): the worked example XX adds its intake flow and payment reference by
+                      configuration only - the generators' outputs in examples/intake_xx are current and lie in that
+                      folder, no product source names an object of it (tools/intake_xx.py; --abaplint <binary> also
+                      compiles the XX sources against the product)
+  dcl_company_code    two-user isolation (build Q): every consumption view (ZC_ or exposed by a service definition) with
+                      a CompanyCode element has an access control restricting CompanyCode; an analytical query reads a
+                      view that has one (shared rule tools/abaptools/checks.py)
 
 Modification log:
 2026-11-10 | Copied from the parameter framework's checks and extended for the framework.
@@ -95,6 +102,7 @@ Modification log:
 2026-11-15 | release_manifest (build M: versioned pack manifest and blank-slate rules).
 2026-11-16 | no_inline_in_call (shared rule: inline declaration in IMPORTING of a functional call).
 2026-11-15 | payfile (payment file lifecycle: fixtures in two setups, example XX wiring and neutrality).
+2026-11-16 | intake_xx (extension proof of the XX intake) and dcl_company_code (two-user isolation) - build Q.
 2026-11-11 | customer_terms reads every text file of the framework and the shared tools, with an allowlist
            | (customer-neutral product: customer names only in a consumer); layering takes the consumers'
            | object prefixes from config/customer_terms.txt instead of a list in this file.
@@ -110,7 +118,7 @@ from abaptools import onboarding as _onboarding  # noqa: E402
 from abaptools.checks import (files, read, strip_comments, statements, check_test_path,  # noqa: E402,F401
                               check_name_lengths, check_method_names, check_artifact_header, check_pcre_only,
                               check_no_cp, check_no_inline_in_call, check_no_select_star, check_final,
-                              check_test_classes)
+                              check_test_classes, check_dcl_company_code)
 
 DECLARATION = re.compile(r'^\s*(CONSTANTS|TYPES|DATA|CLASS-DATA|STATICS)\b', re.I)
 LITERAL = re.compile(r"'(?:[^'\n]|'')*'|`(?:[^`\n]|``)*`")
@@ -279,6 +287,12 @@ def check_payfile(root):
     return payfile.failures(root)
 
 
+def check_intake_xx(root):
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import intake_xx  # noqa: E402
+    return intake_xx.failures(root)
+
+
 CHECKS = [
     ('name_lengths', check_name_lengths),
     ('method_names', check_method_names),
@@ -306,6 +320,8 @@ CHECKS = [
     ('licensing', check_licensing),
     ('release_manifest', check_release_manifest),
     ('payfile', check_payfile),
+    ('intake_xx', check_intake_xx),
+    ('dcl_company_code', check_dcl_company_code),
 ]
 
 

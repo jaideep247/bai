@@ -29,6 +29,9 @@ Offline evidence of house-rule compliance only - not SAP activation, ATC or ABAP
                       single lines allowed by an allowlist file, each entry with its reason
   packaging           the component is self-contained: no file of it names a component folder it
                       must not depend on (Python imports, abaplint dependency paths, document links)
+  dcl_company_code    every consumption view (a ZC_ view, or a view a service definition exposes) with a
+                      CompanyCode element has an access control whose condition restricts CompanyCode; an
+                      analytical query (transient view, no DCL possible) reads a view that has one
 
 Modification log:
 2026-11-10 | Operations framework: test paths, layering, customer wording.
@@ -38,6 +41,8 @@ Modification log:
            | allowlist file of single lines with their reason.
 2026-11-16 | no_inline_in_call (inline declaration in IMPORTING of a functional call, refused by the compiler of
            | the reference system S/4HANA 2025).
+2026-11-16 | dcl_company_code (build Q: two-user company-code isolation - every consumption view with a company
+           | code is restricted by its access control).
 """
 import csv
 import json
@@ -379,6 +384,61 @@ def check_packaging(root, forbidden, exempt=('CHANGELOG.md',)):
             m = words.search(line)
             if m:
                 failures.append(f'{os.path.relpath(path, root)}:{no}: names {m.group(1)}')
+    return failures
+
+
+# ---------------------------------------------------------------------------------- company-code isolation
+CDS_DEFINE = re.compile(r'define\s+(?:root\s+)?(transient\s+)?view\s+entity\s+(\w+)', re.I)
+CDS_SOURCE = re.compile(r'\bas\s+(?:select\s+from|projection\s+on)\s+(\w+)', re.I)
+CDS_COMPANY = re.compile(r'(?<![\w$.])(?:\w+\.)?CompanyCode\b(?!\s*:)', re.I)
+DCL_GRANT = re.compile(r'grant\s+select\s+on\s+(\w+)(.*?)(?=grant\s+select|\}\s*$)', re.S | re.I)
+SRVD_EXPOSE = re.compile(r'^\s*expose\s+(\w+)', re.I | re.M)
+
+
+def _cds_elements(text):
+    """Element block of a CDS view source (comments removed): between the brace after the define statement and
+    its last closing brace."""
+    code = '\n'.join(re.sub(r'//.*$', '', line) for line in text.splitlines())
+    m = CDS_DEFINE.search(code)
+    if not m:
+        return None, None, ''
+    start = code.find('{', m.end())
+    end = code.rfind('}')
+    return m, code, code[start + 1:end] if start >= 0 and end > start else ''
+
+
+def check_dcl_company_code(root, folders=('src',)):
+    """Consumption views with a company code and no access control that restricts it (two-user isolation)."""
+    views, grants, exposed = {}, {}, set()
+    for folder in folders:
+        for path in files(os.path.join(root, folder), ('.ddls.asddls',)):
+            m, code, block = _cds_elements(read(path))
+            if m:
+                source = CDS_SOURCE.search(code[m.end():])
+                views[m.group(2).upper()] = {'path': path, 'name': m.group(2), 'transient': bool(m.group(1)),
+                                             'company': bool(CDS_COMPANY.search(block)),
+                                             'source': source.group(1).upper() if source else ''}
+        for path in files(os.path.join(root, folder), ('.dcls.asdcls',)):
+            for g in DCL_GRANT.finditer(re.sub(r"//[^\n]*", "", read(path))):
+                grants.setdefault(g.group(1).upper(), []).append(g.group(2))
+        for path in files(os.path.join(root, folder), ('.srvd.srvdsrv',)):
+            exposed |= {name.upper() for name in SRVD_EXPOSE.findall(read(path))}
+
+    def restricted(name):
+        return any(re.search(r'\bCompanyCode\b', cond) for cond in grants.get(name, []))
+
+    failures = []
+    for key, view in sorted(views.items()):
+        if not view['company'] or not (key.startswith('ZC_') or key in exposed):
+            continue
+        rel = os.path.relpath(view['path'], root)
+        if view['transient']:
+            # an analytical query has no DCL of its own: the cube it reads carries the rule
+            if not restricted(view['source']):
+                failures.append(f'{rel}: query {view["name"]} reads {view["source"] or "?"}, which has no access '
+                                'control on CompanyCode')
+        elif not restricted(key):
+            failures.append(f'{rel}: {view["name"]} has a CompanyCode element but no access control restricting it')
     return failures
 
 

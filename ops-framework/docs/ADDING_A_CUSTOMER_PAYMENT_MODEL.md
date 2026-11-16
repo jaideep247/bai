@@ -41,7 +41,11 @@ rendered text). The generator renders the ON condition of the effective link: a 
 layer wins, so a customer that replaces a standard link changes every generated join that names it by regenerating;
 a pending link (a field still a placeholder) stops the generator. The link's evidence and status are visible in the
 customer's `docs/links/lineage.md`; `docs/links/impact.md` lists the sections that read a field. A join over two
-source objects at once stays CDS text.
+source objects at once stays CDS text. **2026-11-16 (build Q):** a "to one" link that is ambiguous by design (its
+conditions do not cover the identity of its target, `docs/LINK_REGISTRY.md` §3a) is joined only in the n:m section
+`payment_request` - every candidate request is a row of the link, a comment line names it; in a section with one row
+per key the generator stops (several candidates would repeat a payment). Worked example: the intake of customer XX
+(`examples/intake_xx`, `docs/EXTENSION_AND_GATE_PROOF.md`).
 
 ## 3. Worked example - a fictitious second customer
 

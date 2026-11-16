@@ -10,7 +10,10 @@
 
 Status (2026-11-11): tables, configuration app, walker, registry check, offline engine, product layers and the
 worked example are written and checked offline (abaplint, house checks, generator and engine unit tests). **Nothing
-is activated or run in an SAP system**; the open items are V116-V120 (§10).
+is activated or run in an SAP system**; the open items are V116-V120 (§10). **2026-11-16 (build Q,
+`docs/EXTENSION_AND_GATE_PROOF.md`):** the identity of an object beyond its keys, links ambiguous by design (§3a), the
+walker's ambiguous matches with their candidates and the link drill-down `ZCA_OPS_LINK_DRILL` (§5, §5a), links not
+followed when a table or field is missing, customer layers switched off by `GATE_LINK_LAYERS_OFF` (§9); V311-V313.
 
 ## 1. What it answers
 
@@ -53,7 +56,7 @@ Rules (offline and at run time):
 | Table | Key | Fields | Meaning |
 |---|---|---|---|
 | `ZCA_OPS_LNKLYR` | `LAYER_ID` | `LAYER_KIND` (S / I / C), `LAYER_RANK`, `ID_PREFIX`, `DESCRIPTION`, `OWNER`, `ACTIVE` | the layers |
-| `ZCA_OPS_LNKOBJ` | `OBJECT_ID` | `LAYER_ID`, `SOURCE_NAME` (table or CDS view entity), `SOURCE_KIND` (T / V), `KEY_FIELDS` (comma list), `DESCRIPTION`, `ACTIVE` | business objects; the key fields identify a row for the walker (a business identity, e.g. "the items of a document" - not necessarily the full DDIC key) |
+| `ZCA_OPS_LNKOBJ` | `OBJECT_ID` | `LAYER_ID`, `SOURCE_NAME` (table or CDS view entity), `SOURCE_KIND` (T / V), `KEY_FIELDS` (comma list), `IDENTITY_FIELDS` (comma list, blank = the keys; 2026-11-16), `DESCRIPTION`, `ACTIVE` | business objects; the key fields identify a row for the walker (e.g. "the items of a document" - not necessarily the full DDIC key); the identity fields make a row unique in the business sense where the keys alone do not (§3a) |
 | `ZCA_OPS_LNKFLD` | `OBJECT_ID`, `FIELD_NAME` | `LAYER_ID`, `SOURCE_NAME`, `DATA_ELEMENT`, `SENSITIVITY` (blank / M masked / H hidden), `EVIDENCE` (C confirmed / V VERIFY), `VERIFY_REF`, `DESCRIPTION` | the fields an object exposes to links; partner and member numbers are M (the walker shows the last four characters) |
 | `ZCA_OPS_LINK` | `LINK_ID` | `LAYER_ID`, `FROM_OBJECT`, `TO_OBJECT`, `CARDINALITY` (11 / 1N / N1 / NM), `QUALITY` (C confirmed / P probable), `FALLBACK_OF`, `REPLACES`, `ACTIVE`, `OWNER`, `VERIFY_REF`, `DESCRIPTION` | directed links |
 | `ZCA_OPS_LNKCND` | `LINK_ID`, `COND_NO` | `COND_KIND`, `FROM_REF`, `TO_REF` (TABLE-FIELD), `COND_VALUE`, `TRANSFORM`, `TRANSFORM_ARG` | the conditions of a link, in order |
@@ -91,6 +94,21 @@ its target — is delivered inactive (rule of `verify-before-acting`: no guessed
 still unnamed (the SE11 check is open) is a placeholder in angle quotes in the spec: its object / link is **pending**,
 never seeded, and appears as pending in the lineage.
 
+## 3a. Identity and links ambiguous by design (2026-11-16, build Q)
+
+> **First principle:** a shared document number is not enough for a "to one" join when the number is unique only per
+> system, client, company code or fiscal year - the link says so, and the walker shows every row it found.
+> **Analogy:** two flats on one floor both have the number 4 - the key tag must name the building too, or the
+> caretaker brings both keys and says so.
+
+| Part | Rule |
+|---|---|
+| Identity (`IDENTITY_FIELDS`, spec key `identity`) | the fields that make a row unique in the business sense (e.g. the intake of customer XX: feeder logical system, company code, payment reference); blank = the key fields. Fields of the object's own layer, never hidden (632). The client is part of every read |
+| "To one" (11, N1) | the EQ / CONST conditions cover **every** identity field of the target. Otherwise the link is **ambiguous by design**: offline it must name its reason (`ambiguity`, ≤ 60) - refused without one, and a reason on a covered link is refused too; at run time it is a note 630 (`TY_EFFECTIVE-NOTES`): the link stays effective, the registry check reports it as `LINK_AMBIGUOUS` (W) |
+| PREFER | narrows the candidates (the accepted attempt); it no longer makes a link "to one" |
+| Lineage | section "Ambiguous by design": link, target, identity, the fields not covered, reason, status |
+| Consumers | the walker returns every candidate (§5); an extension column reads a candidates view and stays blank with a marker (`docs/EXTENDING_WITH_CUSTOMER_DATA.md` §4.3); the payment model joins such a link only in the n:m section `payment_request` |
+
 ## 4. Validation — three places, one rule set
 
 | Rule | On save (`ZUI_CA_OPS_CFG`) | Offline (`tools/link_registry.py --check`) | Run time (`ZCL_CA_OPS_LINK_REGISTRY`, registry check `ZCL_CA_OPS_CHK_LINKS`) |
@@ -101,7 +119,8 @@ never seeded, and appears as pending in the lineage.
 | Kind-dependent fields (EQ needs from; CONST / PREFER need a value; NOTINIT takes none); VERIFY field names its item; activation row names its reason | 235 / 236 | yes | 214 |
 | ID prefix of the layer; references only to the own or a lower layer | — | yes | 231 / 226 / 233 |
 | Active link on confirmed fields only (conditions and target keys) | — | yes | 218 |
-| "To one" (11, N1) covers the target's keys with EQ / CONST or prefers one row; 11 / 1N cover the source's keys | — | yes | 217 (to side) |
+| "To one" (11, N1) covers the target's identity (§3a) with EQ / CONST, else ambiguous by design with its reason; 11 / 1N cover the source's keys | — | yes (reason required) | 630 note, `LINK_AMBIGUOUS` (W); 217 an unknown cardinality |
+| Identity fields are declared fields of the object's own layer, never hidden; key and identity lists are fields of the source | 083 (`FIRST_MISSING_FIELD`) | yes | 632 |
 | Fallback: target exists, same objects, one successor, no cycle | — | yes | 229 / 230 / 216 |
 | Replacement only of a link of a lower layer, same objects | — | yes | 224 / 230 |
 | Sensitive field never a constant or preferred value; a key never hidden | — | yes | 223 / 232 |
@@ -145,6 +164,22 @@ DATA(ls_result) = lo_walker->walk( VALUE #( area      = 'XX_OPS'
    approved for the area (`ZCA_OPS_TABWL`, 212) and displayable (`S_TABU_NAM` 03, 087); every field name is checked
    against the runtime DDIC (213); literals are quoted (`CL_ABAP_DYN_PRG`); numeric fields take numbers only (227); a
    read error skips the link with a problem (222) and the walk goes on. Read only; nothing is stored.
+7. **Missing DDIC objects (2026-11-16):** before a link is read, its target's table or view and every field the read
+   names are looked up in the runtime DDIC once per walk; a missing one is problem 634 (table / view) or 635 (field),
+   the link is not followed, no read is attempted and `RS_RESULT-NOT_EVALUATED` is set - never a dump.
+8. **Matches (2026-11-16):** every node carries `MATCH` - `ONE` (the only row of a "to one" link), `AMBIGUOUS` (one of
+   several rows of a "to one" link: every candidate is a node, never one picked; problem 631), `MANY` (a row of a "to
+   many" link) - with `CANDIDATES`, the evidence `IDENTITY` (identity values, masked by sensitivity), `LAYER_ID` and
+   `LINK_QUALITY` of the link. `RS_RESULT-AMBIGUITIES`: per source row and link the candidates with their evidence and
+   the identity fields the link does not cover (empty = ambiguous by data, not by design).
+9. **Rollback without a transport (2026-11-16):** the customer layers named in `GATE_LINK_LAYERS_OFF` are switched off
+   for the walk (`ZCL_CA_OPS_LINK_REGISTRY=>SWITCH_OFF_LAYERS`; a product layer never).
+
+### 5a. Link drill-down `ZCA_OPS_LINK_DRILL` (2026-11-16)
+
+Area, start object and up to three key values; the walk as a list - level, object, key, match, candidates, identity,
+link, layer, link quality, path - with a candidate reached before on another path listed once more with its evidence,
+and the walk's problems as notes. Authorisation of the walker (`ZCA_OPS` 03 of the area); read only.
 
 The registry check `ZCL_CA_OPS_CHK_LINKS` (contract `ZIF_CA_OPS_CHECK`) is registered by a consumer in
 `ZCA_OPS_CHECK` of its area like any registered check; the generic runner stores its findings.
@@ -205,6 +240,11 @@ country of one object and the method of another) stays CDS text.
    stage) - and the link `XX_GLITEM_TO_REQUEST` (clearing line -> request in its assignment, N1, inactive until
    V110). The extension generator follows only "to one" links and renders their ON condition on the anchor elements
    of the product view (`docs/EXTENDING_WITH_CUSTOMER_DATA.md`).
+9. **The intake flow (2026-11-16, build Q)**: object `XX_INTAKE` (`ZXX_INTAKE`, key `INTAKE_ID`, identity `LOGSYS`,
+   `BUKRS`, `PAY_REF`), custom field `FICA_OPEN_ITEM-ZZXX_PAYREF`, links `XX_INTAKE_TO_ITEMS`, `XX_ITEM_TO_INTAKE`
+   (N1, ambiguous by design: the item carries no feeder system) and `XX_GLITEM_TO_INTAKE` (inactive, V110);
+   `XX_ITEM_TO_REQ` names its ambiguity (two accepted attempts stay candidates). Generated for XX's own folder by
+   `tools/intake_xx.py` (`examples/intake_xx`, `docs/EXTENSION_AND_GATE_PROOF.md`).
 
 ## 8. What the product layers hold (2026-11-16)
 
@@ -235,13 +275,17 @@ bank line link (`FEBEP-CHECT`) was seen on A4H.
 4. Roles (`docs/auth_zca_ops.md` §2): maintenance `ZCA_OPS` area `CA_OPS` 01 / 02 / 06 (DV1 only); the walker's users
    `ZCA_OPS` 03 of their area plus `S_TABU_NAM` 03 of the approved tables.
 5. Register `ZCL_CA_OPS_CHK_LINKS` in `ZCA_OPS_CHECK` of the consumer's area (optional; its findings show invalid rows).
-6. Parameters `LINK_MAX_DEPTH`, `LINK_MAX_ROWS`, `LINK_MAX_NODES`, `LINK_READ_CHUNK` (`docs/PARAMETERS.md`).
+6. Parameters `LINK_MAX_DEPTH`, `LINK_MAX_ROWS`, `LINK_MAX_NODES`, `LINK_READ_CHUNK`, `GATE_LINK_LAYERS_OFF`
+   (`docs/PARAMETERS.md`).
+7. Preview a layer or link switch before the transport: report `ZCA_OPS_CFG_PREVIEW`, mode *link*
+   (`docs/EXTENSION_AND_GATE_PROOF.md` §5).
 
 ## 10. What the offline checks cannot prove
 
 V116-V120 (`docs/VERIFY.md`): activation of the tables and the app (checks on save on CDS view entities), the field
 names marked V in the product layers, the walker's reads on approved tables and CDS view entities, the ABAP Unit
-tests, the registry check and the authorisation.
+tests, the registry check and the authorisation. Build Q: V311 (ambiguous by design and candidates on a system), V312
+(candidates view of an extension), V313 (missing DDIC objects), V321 (volume).
 
 ## Glossary
 
@@ -253,3 +297,6 @@ tests, the registry check and the authorisation.
 | Custom field flow | the path a customer's own field takes from its table into standard tables and onwards |
 | Fallback | the second way to find a record, used only when the first finds nothing |
 | Pending | a link waiting for a field name to be confirmed in the system; never used until then |
+| Identity | the fields that tell which row the business means (a reference per feeder and company code), beyond the walker's key |
+| Ambiguous by design | a "to one" link whose conditions do not cover that identity - it says why, and every row it finds is shown |
+| Candidate | one of several rows a "to one" link found for one row, shown with its identity values, layer and link quality |

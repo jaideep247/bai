@@ -30,10 +30,14 @@ annotate entity ZC_CA_LinkObject with
 
   @UI.lineItem: [{ position: 60 }]
   @UI.identification: [{ position: 60 }]
-  Description;
+  IdentityFields;
 
   @UI.lineItem: [{ position: 70 }]
   @UI.identification: [{ position: 70 }]
+  Description;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
   Active;
 
   @UI.hidden: true

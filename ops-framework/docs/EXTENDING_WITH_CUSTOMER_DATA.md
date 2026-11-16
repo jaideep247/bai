@@ -10,7 +10,10 @@
 
 Status (2026-11-15, build H): inventory, extensible product views, generator, the worked example and the first
 consumer's pack are written and checked offline (abaplint, house checks, generator unit tests). **Nothing is
-activated in an SAP system**; the open items are V153-V157 (section 10).
+activated in an SAP system**; the open items are V153-V157 (section 10). **2026-11-16 (build Q,
+`docs/EXTENSION_AND_GATE_PROOF.md`):** the proof that a customer adds its data by configuration only - the example XX
+adds an intake flow and its payment reference in its own folder `examples/intake_xx` (section 8a); an extension on a
+"to one" link that is ambiguous by design reads a candidates view and stays blank with a marker (section 4.3).
 
 ## 1. The rule
 
@@ -189,6 +192,7 @@ are passed on to gets only the element names (`ZZXX_AuditRef`, or `Grp.ZZXX_Audi
 | Element names unique per point; at most `maximumFields` elements per point | the view's quota |
 | An optional view (cube, query copy) only with the view it reads from | the cube needs the base element, the query the cube element |
 | A `PREFER` condition of a link renders as a filter on the preferred value | an association adds one column: the preferred row only, blank when there is none |
+| A link **ambiguous by design** (its conditions do not cover the identity of its target, `docs/LINK_REGISTRY.md` §3a) needs a marker element (`ambiguity_element`); the association reads the generated candidates view `Z<P>_XC_<extension>` (the target grouped by the link's join fields with `count( * ) as Candidates`, the maximum of each field, CONST / PREFER / NOTINIT as its WHERE); every column is the value only when one row is a candidate, else blank, and the marker reads `AMBIGUOUS` (build Q, VERIFY V312) | several rows per product row would repeat the product's rows; picking one silently would show a wrong value |
 
 ### 4.4 Status of an extension
 
@@ -283,6 +287,7 @@ date - regenerate it.
 | `also` | optional views of the point (cube, query copy) |
 | `fields` | `field` (registry field of the target), `element` (`ZZ<P>_...`), `label`, `sensitivity` (blank, M) |
 | `status`, `reason`, `verify` | `pending` / `blocked` with the reason; open VERIFY items of the customer that keep it pending |
+| `ambiguity_element`, `ambiguity_label` | a link anchor on a link ambiguous by design: the marker element (`ZZ<P>_...`, reads `AMBIGUOUS` when several rows are candidates) and its label (default "Match") - build Q |
 
 `pack.json`: `prefix`, `layer` (the customer registry layer), `links` (its layer specs), `since` (date written into
 the generated files), `package_folder`, `pending_folder`, `package_text`, `report`.
@@ -302,6 +307,17 @@ changed for it** (test `test_example_needs_no_framework_change`).
 | `XX_BRK_GROUP_REQ` | `BRK_GROUP` / `JOURNAL_GROUP`, cube and query copy | feeder of the request in the assignment | pending: its link waits for the element names of the released journal view (V110) |
 | `XX_BRK_LINE_CASE` | `BRK_LINE` / `JOURNAL_ITEM` | the investigation case of a line | blocked: the case table is keyed by group |
 
+## 8a. Worked example - the intake flow of customer XX (build Q, 2026-11-16)
+
+`examples/intake_xx` is a complete customer folder of XX: its intake table `ZXX_INTAKE` and payment register
+`ZXX_PAYMENT`, the declarations `config/extensions/intake.json` (`XX_EXC_INTAKE` on the exceptions list, active;
+`XX_BRK_GROUP_INTAKE` on the break groups through the ambiguous link `XX_GLITEM_TO_INTAKE`, pending V110), its payment
+model spec (payment -> intake through registry link `XX_ITEM_TO_INTAKE`) and its registry layer (the framework's
+example overlay). `python3 tools/intake_xx.py` (framework folder) generates XX's package `src/ext`, `src/paym`, its
+seed rows, lineage and reports into that folder only; `--check --abaplint <binary>` proves them current and compiled
+against the product, and that no product source names them (house check `intake_xx`, root test
+`tools/tests/test_extension_proof.py`). Details: `docs/EXTENSION_AND_GATE_PROOF.md` section 2.
+
 ## 9. A consumer's pack
 
 The first consumer keeps its pack in its own folder (`config/extensions`, its overlay document and its own VERIFY
@@ -316,6 +332,8 @@ items); the framework's check list never reads it. Its check set runs the same e
 | V155 | VERIFY-ADT | Extension of an analytical query (transient view entity) on 7.58 - if allowed, the query views switch from copy to extension; until then the copies `ZC_<P>_BrkQry` / `ZC_<P>_FlowQry` over the extended cube in *Multidimensional Reports*; `concat( '****', right( x, 4 ) )` on the type of a masked field |
 | V156 | VERIFY-ADT / abapGit | The DDLS source type abapGit writes for an `extend view entity` (the serializer writes `E`, constant `EXTEND_SOURCE_TYPE`) and its description; activation order of a customer package with extensions after the product |
 | V157 | VERIFY-ADT / security | The access control of an association target is not evaluated for the path elements of an extension (the product view's DCL governs); masked fields masked in the UI, the export and the query; `quota.maximumBytes` against the field lengths of a pack (offline only the number of fields is checked) |
+| V312 | VERIFY-ADT | The candidates view of an extension on a link ambiguous by design and the CASE over its path elements in `extend view entity` (build Q) |
+| V320 | Sandbox | The XX intake package activates after the product; the append `ZZXX_PAYREF` on DFKKOP; the intake columns on the exceptions list (build Q) |
 
 ## 11. Decisions for the user
 
@@ -327,6 +345,7 @@ items); the framework's check list never reads it. Its check set runs the same e
 | D-H5 | The views of a RAP business object (exceptions, control review) are extended at the projection; the root views stay untouched |
 | D-H6 | An extension column is visible to every user of the product row; the registry's sensitivity is the floor, hidden fields never become columns |
 | D-H7 | Element suffix `ZOP`, quota 50 fields and 2,000 bytes per view; IDs and names with the customer prefix |
+| D-Q1 | A "to one" link that does not cover the identity of its target is allowed with a reason and rendered through a candidates view with a marker, rather than refused (`docs/EXTENSION_AND_GATE_PROOF.md` section 10) |
 
 (D-H3 is the first consumer's decision, kept in its own overlay document.)
 

@@ -1895,6 +1895,102 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>630</MSGNR>
+     <TEXT>Link &amp;1 is ambiguous by design: &amp;2 of &amp;3 not covered by its conditions</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>631</MSGNR>
+     <TEXT>Link &amp;1: &amp;2 candidate rows for one source row - all shown as AMBIGUOUS</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>632</MSGNR>
+     <TEXT>Identity field &amp;2 of object &amp;1 is not a declared field of its layer</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>633</MSGNR>
+     <TEXT>&amp;1 of &amp;2 active link objects name a missing table or field (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>634</MSGNR>
+     <TEXT>Link &amp;1 not followed: &amp;2 is not in the dictionary of this system</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>635</MSGNR>
+     <TEXT>Link &amp;1 not followed: field &amp;2 is not in the dictionary of this system</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>636</MSGNR>
+     <TEXT>Aggregate row &amp;1 of check &amp;2 not evaluated:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>640</MSGNR>
+     <TEXT>Preview: &amp;1 change(s) of the effective configuration</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>641</MSGNR>
+     <TEXT>Rollback of &amp;1 (row from &amp;2): delete the planned row before it applies</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>642</MSGNR>
+     <TEXT>Rollback of &amp;1 (row from &amp;2): new row from &amp;3, active &amp;4, approver needed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>643</MSGNR>
+     <TEXT>Rollback of the activation of &amp;1 from &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>644</MSGNR>
+     <TEXT>Process &amp;1 has no activation row from &amp;2: nothing to roll back</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>645</MSGNR>
+     <TEXT>Link drill-down from &amp;1: &amp;2 node(s), &amp;3 ambiguous, &amp;4 problem(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>646</MSGNR>
+     <TEXT>Configuration version of &amp;1 changes (&amp;2 line change(s))</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>647</MSGNR>
+     <TEXT>&amp;1 -&gt; &amp;2 (layer &amp;3, cardinality &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>648</MSGNR>
+     <TEXT>Decided by &amp;1 (row from &amp;2): &amp;3 - approver &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>742</MSGNR>
      <TEXT>Alert rule &amp;1: pattern &amp;2 is not valid PCRE - rule not applied</TEXT>
     </T100>

@@ -533,6 +533,19 @@ def abap_check(t, chk, root, when=None):
                 f"      INSERT VALUE #( number = {msg}field_invalid v1 = ls_row-{e} v2 = ls_row-{tab}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
+    if kind == 'fields':
+        # a comma list of field names (chk[1]) of the table / view named by another element (chk[2]): the first
+        # name the runtime DDIC does not know is reported (missing DDIC object caught on save, never at run time)
+        e, tab = fmap[chk[1]], fmap[chk[2]]
+        return [f"    IF ls_row-{e} IS NOT INITIAL AND ls_row-{tab} IS NOT INITIAL.",
+                f"      DATA(lv_missing_{e.lower()}) = zcl_ca_ops_cfg_checks=>first_missing_field(",
+                f"                                       iv_table  = CONV #( ls_row-{tab} )",
+                f"                                       iv_fields = ls_row-{e} ).",
+                f"      IF lv_missing_{e.lower()} IS NOT INITIAL.",
+                f"        INSERT VALUE #( number = {msg}field_invalid v1 = lv_missing_{e.lower()}",
+                f"                        v2 = ls_row-{tab} element = {el(e)} ) INTO TABLE lt_msg.",
+                '      ENDIF.',
+                '    ENDIF.']
     if kind == 'approved':
         e, tab = fmap[chk[1]], fmap[chk[2]]
         return [f"    IF ls_row-{e} IS NOT INITIAL AND ls_row-{tab} IS NOT INITIAL",

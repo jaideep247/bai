@@ -16,6 +16,8 @@ define view entity ZR_CA_LinkObject
       source_kind as SourceKind,
       @EndUserText.label: 'Key fields (finding fields, comma list)'
       key_fields as KeyFields,
+      @EndUserText.label: 'Identity fields (blank = key fields)'
+      identity_fields as IdentityFields,
       @EndUserText.label: 'Description'
       description as Description,
       @EndUserText.label: 'Active'

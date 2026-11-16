@@ -1,0 +1,20 @@
+{
+  "_comment": "The intake reference of XX on product views. XX_EXC_INTAKE: the exceptions list shows the payment reference, feeder system and received date of the intake an exception is about (key anchor OBJECT: XX's intake check writes object type XXINTK and the intake number as object key). XX_BRK_GROUP_INTAKE: the clearing-account break group shows the feeder of the intake whose payment reference is in the assignment - the link is ambiguous by design (the assignment carries no feeder system), so the generator renders a candidates view: the value only when exactly one intake is a candidate, else blank with the marker AMBIGUOUS; pending until V110 names the released journal view's elements.",
+  "extensions": [
+    {"id": "XX_EXC_INTAKE", "point": "EXC", "anchor": "OBJECT",
+     "description": "Intake of the exception: reference, feeder, received",
+     "object": "XX_INTAKE", "keys": {"INTAKE_ID": "ObjectKey"}, "discriminator": "XXINTK",
+     "association": "_ZZXXIntake",
+     "fields": [
+       {"field": "PAY_REF", "element": "ZZXX_IntakePayRef", "label": "Payment reference of the intake"},
+       {"field": "LOGSYS", "element": "ZZXX_IntakeFeeder", "label": "Feeder system of the intake"},
+       {"field": "RECEIVED_ON", "element": "ZZXX_IntakeReceived", "label": "Intake received on"}]},
+    {"id": "XX_BRK_GROUP_INTAKE", "point": "BRK_GROUP", "anchor": "JOURNAL_GROUP",
+     "description": "Intake of the reference in the assignment of a break group",
+     "link": "XX_GLITEM_TO_INTAKE", "association": "_ZZXXGrpIntake",
+     "ambiguity_element": "ZZXX_GrpIntakeMatch", "ambiguity_label": "Intake match",
+     "fields": [
+       {"field": "LOGSYS", "element": "ZZXX_GrpIntakeFeeder", "label": "Feeder system of the intake"},
+       {"field": "RECEIVED_ON", "element": "ZZXX_GrpIntakeReceived", "label": "Intake received on"}]}
+  ]
+}

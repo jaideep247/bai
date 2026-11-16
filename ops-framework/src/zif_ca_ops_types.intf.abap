@@ -55,6 +55,7 @@
 *& 2026-11-15 | Name prefix CASH_ read in area CA_OPS (FI-CA cash operations checks, build N).
 *& 2026-11-16 | Name prefix EVAL_ read in area CA_OPS (evaluation and coverage, build O); TY_ALERT_LOG-DLV_*
 *&            | (delivery confirmation of an alert, separate from its submission).
+*& 2026-11-16 | Name prefix GATE_ read in area CA_OPS (extension and release-gate proof, build Q).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -183,6 +184,8 @@ INTERFACE zif_ca_ops_types
       payfile     TYPE ty_param_name VALUE 'PF_',
       "! FI-CA cash operations checks (ZIF_CA_OPS_CASH_TYPES=>GC_PARAM, 2026-11-15, build N)
       cash        TYPE ty_param_name VALUE 'CASH_',
+      "! Extension and release-gate proof (ZIF_CA_OPS_LINK_TYPES=>GC_PARAM-LAYERS_OFF, 2026-11-16, build Q)
+      gate        TYPE ty_param_name VALUE 'GATE_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters

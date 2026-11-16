@@ -26,6 +26,8 @@
 *& 2026-11-15 | Initial version (build K: payment file lifecycle).
 *& 2026-11-16 | Merge with the release packs: data access through ZCL_CA_OPS_PF_FACTORY; licence module CASH_OPS
 *&            | (one FI-CA Cash Operations licence with the cash checks).
+*& 2026-11-16 | TICKET_OF: the ticket of an overdue file carries the file's own company code only (build Q,
+*&            | company-code isolation of ticket links).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - payment file ingestion and evaluation</p>
 CLASS zcl_ca_ops_pf_ingest DEFINITION
@@ -55,6 +57,16 @@ CLASS zcl_ca_ops_pf_ingest DEFINITION
         is_event      TYPE zif_ca_ops_pf_types=>ty_event
       RETURNING
         VALUE(rv_key) TYPE zif_ca_ops_pf_types=>ty_event_key.
+
+    "! The ticket of an overdue file: area, file type, file, native key, the milestone it waits for, minutes
+    "! overdue and the file's own company code - nothing of its payments (company-code isolation, build Q)
+    CLASS-METHODS ticket_of
+      IMPORTING
+        iv_area          TYPE zif_ca_ops_types=>ty_area
+        iv_file_type     TYPE zif_ca_ops_pf_types=>ty_file_type
+        is_file          TYPE zif_ca_ops_pf_types=>ty_file
+      RETURNING
+        VALUE(rs_ticket) TYPE zif_ca_ops_pf_types=>ty_ticket.
 
     "! The source role whose events evidence a milestone when no mapping row says otherwise
     CLASS-METHODS default_role
@@ -789,12 +801,7 @@ CLASS zcl_ca_ops_pf_ingest IMPLEMENTATION.
       IF ls_ticket-instance IS BOUND AND <ls_file>-overdue_min > 0 AND <ls_file>-ticket_ref IS INITIAL
          AND <ls_file>-state <> zif_ca_ops_pf_types=>gc_state-replaced.
         DATA(ls_answer) = CAST zif_ca_ops_pf_ticket_sink( ls_ticket-instance )->raise_ticket(
-                            VALUE #( area       = mv_area
-                                     file_type  = ms_type-file_type
-                                     file_id    = <ls_file>-file_id
-                                     native_key = <ls_file>-native_key
-                                     milestone  = <ls_file>-next_ms
-                                     overdue    = <ls_file>-overdue_min ) ).
+                            ticket_of( iv_area = mv_area iv_file_type = ms_type-file_type is_file = <ls_file> ) ).
         IF ls_answer-status <> zif_ca_ops_pf_types=>gc_ticket-failed.
           <ls_file>-ticket_ref = ls_answer-ref.
           ms_result-tickets += 1.
@@ -959,6 +966,17 @@ CLASS zcl_ca_ops_pf_ingest IMPLEMENTATION.
     rv_key = zcl_ca_ops_cfg_version=>of_lines( VALUE #(
                ( |{ iv_area }\|{ is_event-source_id }\|{ is_event-source_event_id }\|{ is_event-event_version }\||
               && |{ is_event-native_key }\|{ is_event-pay_key }\|{ is_event-milestone }| ) ) ).
+  ENDMETHOD.
+
+
+  METHOD ticket_of.
+    rs_ticket = VALUE #( area         = iv_area
+                         file_type    = iv_file_type
+                         file_id      = is_file-file_id
+                         native_key   = is_file-native_key
+                         milestone    = is_file-next_ms
+                         overdue      = is_file-overdue_min
+                         company_code = is_file-bukrs ).
   ENDMETHOD.
 
 

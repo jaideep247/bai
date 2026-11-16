@@ -63,6 +63,7 @@ INTERFACE lif_c.
       group1pattern                  TYPE string VALUE `GROUP1PATTERN`,
       group2pattern                  TYPE string VALUE `GROUP2PATTERN`,
       hkontfrom                      TYPE string VALUE `HKONTFROM`,
+      identityfields                 TYPE string VALUE `IDENTITYFIELDS`,
       keyfields                      TYPE string VALUE `KEYFIELDS`,
       keypattern                     TYPE string VALUE `KEYPATTERN`,
       layerkind                      TYPE string VALUE `LAYERKIND`,
@@ -2710,6 +2711,24 @@ CLASS lhc_linkobject IMPLEMENTATION.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-SourceKind
                         v2 = lif_c=>gc_el-sourcekind v3 = lif_c=>gc_val-linkobject_sourcekind
                         element = lif_c=>gc_el-sourcekind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-KeyFields IS NOT INITIAL AND ls_row-SourceName IS NOT INITIAL.
+        DATA(lv_missing_keyfields) = zcl_ca_ops_cfg_checks=>first_missing_field(
+                                         iv_table  = CONV #( ls_row-SourceName )
+                                         iv_fields = ls_row-KeyFields ).
+        IF lv_missing_keyfields IS NOT INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-field_invalid v1 = lv_missing_keyfields
+                          v2 = ls_row-SourceName element = lif_c=>gc_el-keyfields ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF ls_row-IdentityFields IS NOT INITIAL AND ls_row-SourceName IS NOT INITIAL.
+        DATA(lv_missing_identityfields) = zcl_ca_ops_cfg_checks=>first_missing_field(
+                                         iv_table  = CONV #( ls_row-SourceName )
+                                         iv_fields = ls_row-IdentityFields ).
+        IF lv_missing_identityfields IS NOT INITIAL.
+          INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-field_invalid v1 = lv_missing_identityfields
+                          v2 = ls_row-SourceName element = lif_c=>gc_el-identityfields ) INTO TABLE lt_msg.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

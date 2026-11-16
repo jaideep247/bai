@@ -12,8 +12,13 @@
 *& the roles under test and the user's authorisations as an ABAP Unit
 *& authorisation set (CL_AUNIT_AUTHORITY_CHECK=>CREATE_AUTH_OBJECT_SET). If
 *& the signature differs, correct this include only (nothing else uses it).
+*& Build Q (two-user isolation of the new views): monitor coverage and
+*& alert reconciliation of build O (no company code: a check of the
+*& registry, a run) return the rows of A's area only. The payment file
+*& worklist (pack FICA_CASH) is tested in ZCL_CA_OPS_PF_DCL_TEST.
 *& Modification log:
 *& 2026-11-10 | Initial version (company-code isolation of findings, history and control review).
+*& 2026-11-16 | Monitor coverage, alert reconciliation (build Q).
 *&---------------------------------------------------------------------*
 "! Test data builder: the simulated user A and the keys of the test rows
 CLASS ltd_user DEFINITION FINAL FOR TESTING.
@@ -29,6 +34,7 @@ CLASS ltd_user DEFINITION FINAL FOR TESTING.
         run        TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000D1',
         day        TYPE d VALUE '20261110',
         control    TYPE zif_ca_ops_ctl_types=>ty_control_id VALUE 'ZT_PAYFILES',
+        other_run  TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000D2',
       END OF gc.
     CONSTANTS:
       BEGIN OF gc_field,
@@ -169,6 +175,100 @@ CLASS ltc_review IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = ls_sum-controls exp = 2 msg = 'Area-level and ZT01 slice' ).
     cl_abap_unit_assert=>assert_equals( act = ls_sum-actions exp = 0 msg = 'No action required of ZT02' ).
     cl_abap_unit_assert=>assert_equals( act = ls_sum-open exp = 0 msg = 'No open exception of ZT02' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+"! ZC_CA_OPSCOVERAGE (monitor coverage, build O: area-level)
+CLASS ltc_coverage DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS user_a_sees_own_rows FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_coverage IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZC_CA_OPSCOVERAGE' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_rows TYPE STANDARD TABLE OF zr_ca_opscoverage WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    " 1 area of A, 2 another area
+    lt_rows = VALUE #( ( area = ltd_user=>gc-area checkid = 'C1' )
+                       ( area = ltd_user=>gc-other_area checkid = 'C2' ) ).
+    go_env->insert_test_data( lt_rows ).
+    go_env->enable_access_control( ltd_user=>user_a( VALUE #( ( `ZC_CA_OPSCOVERAGE` ) ) ) ).
+  ENDMETHOD.
+
+
+  " Rule: no company code - the area authorisation decides (03)
+  METHOD user_a_sees_own_rows.
+    SELECT checkid FROM zc_ca_opscoverage INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'Own area only' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-checkid exp = 'C1' msg = 'Row of area ZT_OPS_A' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+"! ZC_CA_OPSALERTRECON (alert reconciliation, build O: area-level)
+CLASS ltc_alert_recon DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS user_a_sees_own_rows FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_alert_recon IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZC_CA_OPSALERTRECON' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_rows TYPE STANDARD TABLE OF zr_ca_opsalertrecon WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    " 1 area of A, 2 another area
+    lt_rows = VALUE #( ( area = ltd_user=>gc-area runid = ltd_user=>gc-run )
+                       ( area = ltd_user=>gc-other_area runid = ltd_user=>gc-other_run ) ).
+    go_env->insert_test_data( lt_rows ).
+    go_env->enable_access_control( ltd_user=>user_a( VALUE #( ( `ZC_CA_OPSALERTRECON` ) ) ) ).
+  ENDMETHOD.
+
+
+  " Rule: no company code - the area authorisation decides (03)
+  METHOD user_a_sees_own_rows.
+    SELECT runid FROM zc_ca_opsalertrecon INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'Own area only' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-runid exp = ltd_user=>gc-run msg = 'Row of area ZT_OPS_A' ).
   ENDMETHOD.
 
 ENDCLASS.

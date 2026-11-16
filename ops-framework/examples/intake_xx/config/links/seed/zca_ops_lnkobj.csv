@@ -1,0 +1,6 @@
+OBJECT_ID,LAYER_ID,SOURCE_NAME,SOURCE_KIND,KEY_FIELDS,IDENTITY_FIELDS,DESCRIPTION,ACTIVE
+XX_CTL_REGISTER,XX,ZXX_CTL_REG,T,"AREA,CONTROL_ID",,Audit register of the customer's controls,X
+XX_INTAKE,XX,ZXX_INTAKE,T,INTAKE_ID,"LOGSYS,BUKRS,PAY_REF",Intake of payment requests (one row per request),X
+XX_PAY_REQUEST,XX,ZXX_PAY_REQ,T,"REQ_ID,ATTEMPT",,Payment requests of the feeder (one row per attempt),X
+XX_REQUEST,XX,ZXX_REQUEST,T,REQ_ID,,Payment requests of the feeder (accepted attempt),X
+XX_STAGE_SLA,XX,ZXX_STAGE_SLA,T,"FLOW_ID,STAGE_ID",,Service levels of the stages of the account flows,X

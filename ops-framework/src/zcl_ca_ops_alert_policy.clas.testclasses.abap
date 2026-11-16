@@ -98,6 +98,7 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
     METHODS throttle_expires             FOR TESTING.
     METHODS escalates_after_n_runs       FOR TESTING.
     METHODS digest_is_one_message        FOR TESTING.
+    METHODS digest_split_by_company      FOR TESTING.
     METHODS mail_names_system_and_job    FOR TESTING.
     METHODS section_owns_its_findings    FOR TESTING.
     METHODS per_finding_caps_at_max      FOR TESTING.
@@ -424,6 +425,44 @@ CLASS ltc_alert_policy IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-severity
                                             exp = zif_ca_ops_types=>gc_severity-block
                                             msg = 'Digest severity is the worst finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q): a digest never mixes company codes - one message per company code, each with its own subject
+  " (own intent key); the area-level findings in a message of their own
+  METHOD digest_split_by_company.
+    CONSTANTS lc_own TYPE bukrs VALUE 'ZT01'.
+    CONSTANTS lc_other TYPE bukrs VALUE 'ZT02'.
+    DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
+    TRY.
+        DATA(ls_own) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_own-company_code = lc_own.
+        DATA(ls_other) = finding( iv_severity = zif_ca_ops_types=>gc_severity-error iv_object_key = gc_test-other_key ).
+        ls_other-company_code = lc_other.
+        DATA(ls_area) = finding( iv_severity = zif_ca_ops_types=>gc_severity-warning iv_object_key = 'AREA/1' ).
+        ms_rule-digest = abap_true.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( ls_own ) ( ls_other ) ( ls_area ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_messages ) exp = 3
+                                            msg = 'One digest per company code and one area-level digest' ).
+        LOOP AT lt_messages ASSIGNING FIELD-SYMBOL(<ls_message>).
+          cl_abap_unit_assert=>assert_equals( act = <ls_message>-item_count exp = 1 msg = 'One finding each' ).
+          cl_abap_unit_assert=>assert_false(
+            act = xsdbool( <ls_message>-text CS lc_own AND <ls_message>-text CS lc_other )
+            msg = 'The content of one e-mail never names two company codes' ).
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_true( act = xsdbool( lt_messages[ 1 ]-subject <> lt_messages[ 2 ]-subject
+                                                         AND lt_messages[ 2 ]-subject <> lt_messages[ 3 ]-subject
+                                                         AND lt_messages[ 1 ]-subject <> lt_messages[ 3 ]-subject )
+                                          msg = 'Each part has its own subject (own intent key)' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( lt_messages[ 2 ]-subject CS lc_own )
+                                          msg = 'The subject names its company code' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

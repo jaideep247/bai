@@ -109,6 +109,7 @@
      "conditions": [{"kind": "EQ", "from": "‹FIN number field›", "to": "ZZ_FIN_TRANS_NUM"}]},
     {"id": "CD_ITEM_TO_REQUEST", "from": "FICA_OPEN_ITEM", "to": "CD_PAYM_REQ_LOG", "cardinality": "N1", "quality": "C",
      "active": false, "verify": "V82", "owner": "PE RTB", "description": "Item -> request (row SUCCESS, never highest COUNTER)",
+     "ambiguity": "Two SUCCESS attempts of a request stay candidates",
      "conditions": [{"kind": "EQ", "from": "ZZ_FIN_TRANS_NUM", "to": "‹FIN number field›"},
                     {"kind": "PREFER", "to": "ZZ_STATUS", "value": "SUCCESS"}]},
     {"id": "CD_REQ_TO_PARTNER_SRC", "from": "CD_PAYM_REQ_LOG", "to": "S4_BUSINESS_PARTNER", "cardinality": "NM", "quality": "C",

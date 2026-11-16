@@ -7,8 +7,12 @@
 *& cannot be measured is AGG_CONFIG_INVALID and makes the check partial while
 *& the other rows are measured, and a check without rows raises 092. No
 *& database; does not prove live SAP runtime behavior.
+*& Build Q: a row on a table or field this system lacks (082 / 083) is not
+*& evaluated with the reason DDIC_MISSING - never a dump; when every row is
+*& such a row the evaluation is "not evaluated", not partial.
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
+*& 2026-11-16 | Missing DDIC objects (build Q): evaluated / not evaluated rows and the reason.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -17,6 +21,8 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_rows TYPE zif_ca_ops_chk_types=>tt_agg_row.
     "! Aggregate ID whose read fails (configuration error)
     DATA mv_broken TYPE zif_ca_ops_chk_types=>ty_agg_id.
+    "! Aggregate ID whose table does not exist on the system (082)
+    DATA mv_missing TYPE zif_ca_ops_chk_types=>ty_agg_id.
     DATA mv_bukrs_aware TYPE abap_bool.
 ENDCLASS.
 
@@ -28,6 +34,9 @@ CLASS ltd_dao IMPLEMENTATION.
     mv_bukrs_aware = iv_bukrs_aware.
     IF is_agg-agg_id = mv_broken.
       RAISE EXCEPTION TYPE zcx_ca_ops_error MESSAGE e086(zca_ops) WITH is_agg-tabname is_agg-area.
+    ENDIF.
+    IF is_agg-agg_id = mv_missing.
+      RAISE EXCEPTION TYPE zcx_ca_ops_error MESSAGE e082(zca_ops) WITH is_agg-tabname.
     ENDIF.
     rt_rows = mt_rows.
   ENDMETHOD.
@@ -66,6 +75,8 @@ CLASS ltc_chk_agg DEFINITION FINAL FOR TESTING
     METHODS rows_become_findings        FOR TESTING.
     METHODS broken_row_makes_partial    FOR TESTING.
     METHODS no_rows_raises_092          FOR TESTING.
+    METHODS missing_table_not_evaluated FOR TESTING.
+    METHODS missing_table_beside_good   FOR TESTING.
 ENDCLASS.
 
 
@@ -150,6 +161,44 @@ CLASS ltc_chk_agg IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = 'A check without rows must raise' ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '092' msg = 'Message 092' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q): every row on a table this system lacks - the check is not evaluated, with the reason
+  " DDIC_MISSING and the missing table named; no dump
+  METHOD missing_table_not_evaluated.
+    TRY.
+        given_agg( gc-first ).
+        mo_dao->mv_missing = gc-first.
+        DATA(ls_result) = run( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-unevaluated exp = 1 msg = 'One row not evaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-evaluated exp = 0 msg = 'None evaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-reason_code
+                                            exp = zif_ca_ops_eval_types=>gc_reason-ddic_missing
+                                            msg = 'Reason: missing DDIC object' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( contains( val = CONV string( ls_result-eval-reason )
+                                                                   sub = CONV string( gc-table ) ) )
+                                          msg = 'The missing table is named in the reason' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (build Q): a row on a missing table beside a good one - partial: one evaluated, one not
+  METHOD missing_table_beside_good.
+    TRY.
+        given_agg( gc-first ).
+        given_agg( gc-second ).
+        mo_dao->mv_missing = gc-second.
+        INSERT VALUE #( company_code = gc-company row_count = 2 ) INTO TABLE mo_dao->mt_rows.
+        DATA(ls_result) = run( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-evaluated exp = 1 msg = 'One row evaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-eval-unevaluated exp = 1 msg = 'One row not evaluated' ).
+        cl_abap_unit_assert=>assert_true( act = ls_result-partial msg = 'Partial' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

@@ -3,6 +3,14 @@
 Changes of the ops suite (`ops-suite/`) from 2026-11-15 on; earlier changes are in the modification logs of the
 objects, `docs/Class_Purpose_and_Modification_Log.md`, `docs/Implementation_Order.md` and `docs/history/`.
 
+## 2026-11-16 - link overlay kept valid under the framework's identity rule (build Q)
+
+The framework's link registry now requires a "to one" link that does not cover the identity of its target to name
+its ambiguity (`../ops-framework/docs/LINK_REGISTRY.md` section 3a; a PREFER condition no longer makes a link "to
+one"). `config/links/overlay.json`: `CD_ITEM_TO_REQUEST` (item -> request log, PREFER SUCCESS; inactive, V82) names
+it - two SUCCESS attempts of a request stay candidates. Regenerated: `config/links/seed/zca_ops_lnkobj.csv` (new column
+`IDENTITY_FIELDS`, blank) and `docs/links/lineage.md` (section "Ambiguous by design"). No object of the suite changed.
+
 ## 2026-11-16 - facts of the reference system A4H (reversal direction, inline declarations)
 
 Facts seen by the owner's test tool on the reference system A4H (S/4HANA 2025 with FI-CA); cross-check

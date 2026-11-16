@@ -104,6 +104,8 @@ INTERFACE zif_ca_ops_eval_types
       period_closed    TYPE ty_reason_code VALUE 'PERIOD_CLOSED',
       license_refused  TYPE ty_reason_code VALUE 'LICENSE_REFUSED',
       process_inactive TYPE ty_reason_code VALUE 'PROCESS_INACTIVE',
+      "! Build Q: a table, view or field the configuration names is not in this system's dictionary
+      ddic_missing     TYPE ty_reason_code VALUE 'DDIC_MISSING',
     END OF gc_reason.
 
   "! Licence state of a check in a run (ZCA_OPS_EVAL-LIC_STATE, read through ZIF_CA_OPS_LICENSE by the runner)

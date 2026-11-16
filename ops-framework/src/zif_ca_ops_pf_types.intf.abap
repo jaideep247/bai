@@ -12,6 +12,7 @@
 *& PFMST / PFSRC / PFDAY), check codes, parameters and messages. No logic.
 *& Modification log:
 *& 2026-11-15 | Initial version (build K: payment file lifecycle).
+*& 2026-11-16 | TY_TICKET-COMPANY_CODE: a ticket carries its file's company code only (build Q).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - payment file lifecycle types</p>
 INTERFACE zif_ca_ops_pf_types
@@ -678,16 +679,18 @@ INTERFACE zif_ca_ops_pf_types
       late_min     TYPE i,
     END OF ty_eval.
 
-  "! A ticket for the ticket sink
+  "! A ticket for the ticket sink. Build Q (company-code isolation): one ticket per file, carrying the file's own
+  "! company code only - never a payment, a payee or another company code's data
   TYPES:
     BEGIN OF ty_ticket,
-      area       TYPE zif_ca_ops_types=>ty_area,
-      file_type  TYPE ty_file_type,
-      file_id    TYPE ty_file_id,
-      native_key TYPE ty_native_key,
-      milestone  TYPE ty_milestone,
-      overdue    TYPE i,
-      text       TYPE zif_ca_ops_types=>ty_message,
+      area         TYPE zif_ca_ops_types=>ty_area,
+      file_type    TYPE ty_file_type,
+      file_id      TYPE ty_file_id,
+      native_key   TYPE ty_native_key,
+      milestone    TYPE ty_milestone,
+      overdue      TYPE i,
+      text         TYPE zif_ca_ops_types=>ty_message,
+      company_code TYPE bukrs,
     END OF ty_ticket.
   TYPES:
     BEGIN OF ty_ticket_result,

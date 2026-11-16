@@ -1,0 +1,9 @@
+{
+  "starting_folder": "/src/",
+  "master_language": "E",
+  "packages": {
+    "": ["ZXX_IN", "Example customer XX: intake of payment requests"]
+  },
+  "ddic_package_folder": "",
+  "abapgit_xml": ".abapgit.xml"
+}

@@ -70,6 +70,7 @@ CA_OPS,FLOW_BREAK_MAX_AGE_DAYS,P,INT,0,31,2,,,,,Days a break snapshot may lie be
 CA_OPS,FLOW_KEY_DATE_LAG,P,INT,0,31,0,,,,,Flow evaluation without key date: today minus these days,OPS FRAMEWORK
 CA_OPS,FLOW_LEDGER,P,CHAR,,,0L,"[A-Z0-9]{2}",,,,Ledger of the journal lines of the account flows,OPS FRAMEWORK
 CA_OPS,FLOW_RETENTION_DAYS,P,INT,0,3660,400,,,,,Days account flow evaluations are kept (0 = never removed),OPS FRAMEWORK
+CA_OPS,GATE_LINK_LAYERS_OFF,P,LIST,,,,,,,,Customer link layers switched off at run time (rollback),OPS FRAMEWORK
 CA_OPS,JOB_CHILD_MSG_IDS,P,LIST,,,,,,,,Job log messages naming a released job (MSGID/MSGNO list),OPS FRAMEWORK
 CA_OPS,JOB_CHILD_MSG_PCRE,P,CHAR,,,,,,,,"PCRE of such a line: group 1 job name, group 2 job count",OPS FRAMEWORK
 CA_OPS,JOB_CLAIMS,P,LIST,,,,,,,,Claim classes of other monitors (ZIF_CA_OPS_JOB_CLAIM),OPS FRAMEWORK

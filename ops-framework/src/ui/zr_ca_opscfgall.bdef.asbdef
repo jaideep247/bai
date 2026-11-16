@@ -754,6 +754,7 @@ etag master LocalLastChangedAt
     SourceName = source_name;
     SourceKind = source_kind;
     KeyFields = key_fields;
+    IdentityFields = identity_fields;
     Description = description;
     Active = active;
     LastChangedBy = last_changed_by;

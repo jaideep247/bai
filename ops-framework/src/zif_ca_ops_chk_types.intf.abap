@@ -123,7 +123,11 @@ INTERFACE zif_ca_ops_chk_types
   "! Messages of the check registry, the aggregate check and the onboarding check (message class ZCA_OPS)
   CONSTANTS:
     BEGIN OF gc_msg,
+      "! Build Q: a table / view the configuration names is not in this system's dictionary
+      table_unknown   TYPE zif_ca_ops_types=>ty_msgno VALUE '082',
       field_unknown   TYPE zif_ca_ops_types=>ty_msgno VALUE '083',
+      "! Build Q: an aggregate row not evaluated (reason of the evaluation record)
+      agg_not_evaluated TYPE zif_ca_ops_types=>ty_msgno VALUE '636',
       check_failed    TYPE zif_ca_ops_types=>ty_msgno VALUE '084',
       no_checks       TYPE zif_ca_ops_types=>ty_msgno VALUE '085',
       agg_count       TYPE zif_ca_ops_types=>ty_msgno VALUE '094',
