@@ -3,6 +3,17 @@
 Changes of the ops suite (`ops-suite/`) from 2026-11-15 on; earlier changes are in the modification logs of the
 objects, `docs/Class_Purpose_and_Modification_Log.md`, `docs/Implementation_Order.md` and `docs/history/`.
 
+## 2026-11-16 - build P: expected runs of the scheduler (configuration overlay only)
+
+The framework compares the external scheduler's plan with SAP's jobs and checks FI-CA mass-activity intervals and
+their output (`ops-framework/docs/EXPECTED_RUNS_AND_MASS_ACTIVITIES.md`). The suite adds no code.
+
+### Changed
+- `config/scheduler_jobs.csv`: the plan columns of `ZCA_OPS_JOBSCH` (`PLAN_DAYS`, `PLAN_TIME`, `LATE_MIN`,
+  `CALENDAR_ID`, `PRED_FOLDER`, `PRED_JOB`); the `DISB_DAY` rows carry placeholders from the Control-M naming, the other
+  rows none (no expected run). Every row stays inactive until the Control-M export (V69, V307).
+- `docs/VERIFY_Suite.md` section 8 (V307); generated catalogue document (new framework monitor `FICA_MA_INTERVALS`).
+
 ## 2026-11-16 - facts of the reference system A4H (reversal direction, inline declarations)
 
 Facts seen by the owner's test tool on the reference system A4H (S/4HANA 2025 with FI-CA); cross-check

@@ -211,7 +211,7 @@
     {
       "name": "ddic_fields",
       "passed": true,
-      "detail": "Field references compared with the table exports ddic/a4h, ddic/landscape_2026-11-15 (tools/abaptools/ddic_export.py compare): 73 customer field, 2814 exists; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.",
+      "detail": "Field references compared with the table exports ddic/a4h, ddic/landscape_2026-11-15 (tools/abaptools/ddic_export.py compare): 73 customer field, 2850 exists; a missing field is listed in ddic/open_fields.csv with its VERIFY item, or fails.",
       "failures": []
     },
     {

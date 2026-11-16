@@ -17,7 +17,7 @@ State as of 2026-11-11 (the activation rule of `ZCL_CA_OPS_CATALOG`: package off
 |---|---|---|---|---|---|---|---|
 | S4_BATCH_JOBS | Background job processing | BC | PLATFORM | yes | default | C  | S4_JOB_FAILURES, S4_JOB_STATES |
 | S4_BANK_STMT | Electronic bank statement import and posting | FI-BL | BANK | yes | activation row | V V129 | S4_EBS_UNPOSTED |
-| FICA_PAYRUN | Payment run (disbursements and collections) | FI-CA | PAYMENTS | yes | activation row | V V127 V129 | FICA_PAYRUN_NOPAY, FICA_CASH_PAYRUN |
+| FICA_PAYRUN | Payment run (disbursements and collections) | FI-CA | PAYMENTS | yes | activation row | V V127 V129 | FICA_PAYRUN_NOPAY, FICA_CASH_PAYRUN, FICA_MA_INTERVALS |
 | FICA_PAYFILE_ACK | Payment file lifecycle and bank acknowledgement | FI-CA | PAYMENTS | no | default | V V175 V180 | FICA_PAYFILE_ACK |
 | FICA_PAY_LOTS | Incoming payment lots and cash journal | FI-CA | RECEIVABLES | no | default | V V127 V128 | FICA_LOT_OPEN, FICA_LOT_CLARIF, FICA_CASH_PAYLOT |
 | FICA_RETURNS | Returns lots (returned payments) | FI-CA | RECEIVABLES | yes | activation row | V V128 | FICA_RET_OPEN, FICA_CASH_RETURNS |
@@ -111,6 +111,7 @@ Depends on: FICA_GL_TRANSFER (soft: Payment documents reach the G/L with their k
 |---|---|---|---|
 | FICA_PAYRUN_NOPAY | Payments of past runs without a payment document | R1: COUNT `DPAYH`, date LAUFD (>= 1 d), DOC1R EQ , XVORL EQ , per BBUKR, amber 1 / red ‹red count› | V V129 |
 | FICA_CASH_PAYRUN | Cash: payment run expected / completed, documents, gap | `ZCL_CA_OPS_CHK_CASH_PAYRUN` | C |
+| FICA_MA_INTERVALS | Mass activity runs: intervals failed, overrun, output short | `ZCL_CA_OPS_CHK_MA_INTERVAL` | C |
 
 Monitored outside the runner: Morning report A_INFLIGHT, A_PRQ_NOT_PAID, B_VOL_PAYRUN, C_CHQ_STATUS; payment trace; FMON payment files
 
