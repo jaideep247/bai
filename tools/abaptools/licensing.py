@@ -15,10 +15,10 @@ Module catalogue (config/licensing/modules.json of the framework):
 Catalogue packages / processes name their module in their own spec (license_module, product packages only).
 
 Validation: codes (A-Z, 0-9, _; <= 20), unique, exactly the module CORE always included; names <= 60; requires known;
-every path exists; every check class of the product (src/zcl_<p>_chk_*.clas.abap) in exactly one module; a gate file
-names the module's constant (gc_module-<code>); a configuration entity of a module (and every derived entity) has the
-licence validation in the generated behaviour pool (license_refused in its handler); every product catalogue package
-names a known module, a process override too.
+every path exists; every check class of the product (zcl_<p>_chk_*.clas.abap in src/ or a sub-package) in exactly one
+module; a gate file names the module's constant (gc_module-<code>); a configuration entity of a module (and every
+derived entity) has the licence validation in the generated behaviour pool (license_refused in its handler); every
+product catalogue package names a known module, a process override too.
 
 Outputs (generate / check): the generated class of the module map (rows of kind MOD / CLAS / PKG / PRC, constants
 only) and the module document. --check fails on an invalid catalogue or an out-of-date output.
@@ -35,6 +35,7 @@ each module may run under the enforcement W (warn) or X (refuse).
 
 Modification log:
 2026-11-15 | Initial version (licensing: module catalogue, module map, licence payload and decision twin).
+2026-11-15 | Check class sources found in the sub-packages of src/ too (build N: package ZCA_OPS_CASH in src/cash).
 """
 import datetime
 import json
@@ -96,8 +97,17 @@ def _behaviour_handlers(root, pool):
     return blocks
 
 
+def _class_sources(root):
+    """File names of the ABAP class sources under src/ and its sub-packages (folder logic PREFIX)."""
+    names = set()
+    for _, _, files in os.walk(os.path.join(root, 'src')):
+        names.update(f for f in files if f.endswith('.clas.abap'))
+    return names
+
+
 def validate(spec, root, profile):
     """Problems of the module catalogue against the product (empty = valid)."""
+    sources = _class_sources(root)
     problems = []
     modules = spec.get('modules', [])
     codes = [m.get('code', '') for m in modules]
@@ -136,7 +146,7 @@ def validate(spec, root, profile):
                 problems.append(f'check class {cls}: in modules {owner[cls]} and {code}')
             else:
                 owner[cls] = code
-            if not os.path.exists(os.path.join(root, 'src', cls.lower() + '.clas.abap')):
+            if cls.lower() + '.clas.abap' not in sources:
                 problems.append(f'module {code}: check class {cls} has no source in src/')
         constant = f'gc_module-{code.lower()}'
         for path in mod.get('gates', []):
@@ -154,7 +164,7 @@ def validate(spec, root, profile):
             problems.append(f'derived configuration entity {item.get("entity")}: no licence validation '
                             f'(license_refused) in {profile["behaviour_pool"]}')
     pattern = re.compile(r'^' + re.escape(prefix.lower()) + r'chk_\w+\.clas\.abap$')
-    for name in sorted(os.listdir(os.path.join(root, 'src'))):
+    for name in sorted(sources):
         if pattern.match(name):
             cls = name[:-len('.clas.abap')].upper()
             if cls not in owner:

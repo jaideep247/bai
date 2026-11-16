@@ -6,27 +6,27 @@ FICA_CORRESP,020,M,‹correspondence mass activity type›,Mass activity type of
 FICA_DEFERRAL,010,T,‹deferral transaction›,Defer the due date of items,V,V127
 FICA_DUNNING,010,T,FPVA,Dunning proposal (mass activity),C,
 FICA_DUNNING,020,T,FPVB,Dunning activity run (mass activity),C,
-FICA_DUNNING,030,M,‹dunning mass activity types›,Mass activity types of proposal and activity run,V,V127
-FICA_EBS_LOTS,010,P,‹transfer of bank statement items to FI-CA›,Bank statement items into payment lots,V,V127
+FICA_DUNNING,030,T,FPVA,Dunning proposal run (activity run FPVB),C,
+FICA_EBS_LOTS,010,P,RFKKKA00,Bank statement items into payment lots (documented),V,V127
 FICA_EBS_LOTS,020,T,FEBAN,Post-process items the transfer could not clear,C,
-FICA_GL_TRANSFER,010,T,‹close reconciliation keys›,Close the reconciliation keys of the day,V,V127
+FICA_GL_TRANSFER,010,P,RFKKFIKEYCLOSE,Close the reconciliation keys of the day,C,
 FICA_GL_TRANSFER,020,T,FPG1,Transfer the summary records to the general ledger,C,
-FICA_GL_TRANSFER,030,P,‹G/L transfer program›,G/L transfer program (job),V,V127
+FICA_GL_TRANSFER,030,P,RFKKGL00,"G/L transfer program of FPG1 (job, documented)",V,V127
 FICA_INSTALMENT,010,T,FPR1,Create an instalment plan,C,
 FICA_INSTALMENT,020,T,‹instalment plan breach run›,Deactivate instalment plans in breach,V,V127
-FICA_INTEREST,010,T,‹interest calculation mass run›,Interest calculation run (mass activity),V,V127
+FICA_INTEREST,010,T,FPINTM1,Interest calculation run (mass activity),V,V127
 FICA_INVOICING,010,T,‹invoicing mass run transaction›,Invoicing run (mass activity),V,V127
 FICA_INVOICING,020,M,‹invoicing mass activity type›,Mass activity type of the invoicing run,V,V127
 FICA_PAYRUN,010,T,FPY1,Schedule the payment run (mass activity),C,
 FICA_PAYRUN,020,P,RFKK_MA_SCHEDULER,Mass activity scheduler of the run (job),C,
-FICA_PAYRUN,030,M,‹payment run mass activity type›,Mass activity type of the payment run,V,V127
+FICA_PAYRUN,030,M,PAYP,Mass activity type of the payment run (test value),V,V127
 FICA_PAY_LOTS,010,T,FP05,"Create, post and close a payment lot",C,
 FICA_PAY_LOTS,020,T,FPCJ,Cash journal (counter payments),C,
 FICA_PAY_LOTS,030,M,‹payment lot mass posting›,Mass posting of payment lots,V,V127
 FICA_RETURNS,010,T,FP09,"Create, post and close a returns lot",C,
 FICA_REVERSAL,010,T,FP08,Reverse a document,C,
 FICA_WRITEOFF,010,T,FP04,Write off items,C,
-FICA_WRITEOFF,020,T,‹mass write-off transaction›,Mass write-off (mass activity),V,V127
+FICA_WRITEOFF,020,T,FP04M,Mass write-off (mass activity),C,
 FSCD_BROKER,010,T,‹broker report processing›,"Create, check and post a broker report",V,V127
 FSCD_CLAIMS,010,P,‹claims interface posting›,Claim payments into contract accounts,V,V127
 FSCD_CLAIMS,020,T,FPY1,Payment run (disbursement of the claims),C,

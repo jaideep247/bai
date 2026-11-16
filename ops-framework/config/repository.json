@@ -4,7 +4,8 @@
   "packages": {
     "": ["ZCA_OPS", "Cross-application operations framework"],
     "ui": ["ZCA_OPS_UI", "Operations framework: apps (RAP)"],
-    "demo": ["ZCA_OPS_DEMO", "Operations framework: demo consumer (optional)"]
+    "demo": ["ZCA_OPS_DEMO", "Operations framework: demo consumer (optional)"],
+    "cash": ["ZCA_OPS_CASH", "Operations framework: FI-CA cash operations checks"]
   },
   "ddic_package_folder": "",
   "draft_package_folder": "ui",

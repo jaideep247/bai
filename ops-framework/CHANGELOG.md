@@ -2,6 +2,35 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-15 (build N: FI-CA cash coverage)
+
+Release 1 build N (`docs/release/RELEASE_1_PLAN.md`): runnable checks of the FI-CA Cash Operations pack on SAP
+standard tables, with expected / observed / unknown apart and the exception content of the pack on every finding.
+
+### Added
+- Sub-package `ZCA_OPS_CASH` (`src/cash`, `config/repository.json`): six check classes `ZCL_CA_OPS_CHK_CASH_PAYRUN`,
+  `_PAYLOT`, `_RETURN`, `_EBS`, `_CLEAR`, `_GLKEY` (payment run expected / completed and proposal gap, payment lot
+  posting and clarification, returns lot and reversal pending, bank statement arrival / stale source / posting /
+  transfer to FI-CA, clearing reset and payment reversal after payout, reconciliation key open / error / not in the
+  G/L); data access `ZIF_CA_OPS_CASH_DAO` / `ZCL_CA_OPS_CASH_DAO` (every count, sum and oldest date on the database,
+  capped, a read error = message 521); the G/L header view `ZI_CA_OpsCashJrnl` on `I_JournalEntry`; the exception
+  builder `ZCL_CA_OPS_CASH_EXC` (typed exception, one mapping into the finding); the run context
+  `ZCL_CA_OPS_CASH_CTX` (business calendar window, owner from the control register, next cutoff in
+  `CONTROL_TIME_ZONE`, "not evaluated", cap); factory / injector; types `ZIF_CA_OPS_CASH_TYPES`.
+- Catalogue monitors `FICA_CASH_*` with their class in `config/catalogue/packages/fica.json` (registry and control
+  coverage rows regenerated, inactive); licence module `CASH_OPS` (module map regenerated); messages 500-539;
+  parameters `CASH_*` (prefix registered in `ZCL_CA_OPS_PARAMS`); VERIFY V220-V237.
+- Offline fixture spec `config/cash/fixtures.json` (30 scenarios incl. the failure injection "job finished, output
+  incomplete") validated by the root test `tools/tests/test_cash_fixtures.py`; ABAP Unit tests per class.
+- `docs/FICA_CASH_OPERATIONS.md`.
+
+### Changed
+- Exceptions app list (`ZC_CA_OpsException` metadata extension, annotations only): columns Currency and Business date.
+- `tools/abaptools/licensing.py`: check class sources are found in sub-packages of `src/` too.
+- Catalogue `FICA` / `FSCD` (facts of the user's test tool, reference system A4H): `FICA_PAYRUN_NOPAY` counts
+  payments only (`XVORL` blank, still V129); step names `FPVA`, `FP04M` (evidence C), `RFKKFIKEYCLOSE`
+  (user), `RFKKGL00`, `RFKKKA00`, `FPINTM1`, mass activity type `PAYP` (still V127).
+
 ## [Unreleased] - 2026-11-15 (build I: field references checked against a reference system)
 
 Evidence: the dictionary of 46 SAP standard tables of a reference system (S/4HANA 2025 with FI-CA; the product
