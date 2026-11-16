@@ -12,6 +12,7 @@
 *& 2026-11-10 | Initial version (process onboarding framework).
 *& 2026-11-11 | Process catalogue: CAT_PROCESS of the business processes; aggregate rows with MAX_AGE_DAYS and
 *&            | TIME_FIELD; AGGREGATE measures a row in a date / time window (outage check).
+*& 2026-11-16 | GET_REGISTRY: every registered check, active or not (monitor coverage, build O).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check registry data access</p>
 CLASS zcl_ca_ops_check_dao DEFINITION
@@ -43,6 +44,14 @@ CLASS zcl_ca_ops_check_dao IMPLEMENTATION.
     SELECT area, check_id, process_id, description, class_name, sched_group, bukrs_aware, active, seq
       FROM zca_ops_check
       WHERE active = @abap_true
+      ORDER BY area, check_id
+      INTO CORRESPONDING FIELDS OF TABLE @rt_checks.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_check_dao~get_registry.
+    SELECT area, check_id, process_id, description, class_name, sched_group, bukrs_aware, active, seq
+      FROM zca_ops_check
       ORDER BY area, check_id
       INTO CORRESPONDING FIELDS OF TABLE @rt_checks.
   ENDMETHOD.

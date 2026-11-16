@@ -30,6 +30,12 @@
 *&            | (ZIF_CA_OPS_EVIDENCE; never in test mode).
 *& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
 *&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
+*& 2026-11-16 | Evaluation state (build O, docs/EVALUATION_AND_COVERAGE.md): one evaluation record per registered
+*&            | check and run (ZCL_CA_OPS_EVAL=>DERIVE: expected scope, source freshness, watermark, completeness,
+*&            | result class, reason, licence state; the period-close calendar ZIF_CA_OPS_EVAL_PERIOD), also for a
+*&            | check not run (licence refused, process not in effect), saved with the findings in the run's unit
+*&            | of work (ZIF_CA_OPS_EVAL_DAO; never in test mode). A check that reports nothing new gets the
+*&            | defaults of its result: raised = not evaluated, PARTIAL = partial, no exception = OK.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - generic check runner</p>
 "! Report ZCA_OPS_CHECK_RUN (one job per area and schedule group). No check, no business table
@@ -113,6 +119,22 @@ CLASS zcl_ca_ops_check_runner DEFINITION
       CHANGING
         ct_findings TYPE zif_ca_ops_types=>tt_finding.
 
+    "! The evaluation record of a check that ran (the check's own part, else the defaults of its result)
+    METHODS evaluation
+      IMPORTING
+        is_input       TYPE zif_ca_ops_eval_types=>ty_derive_input
+        is_result      TYPE zif_ca_ops_chk_types=>ty_result
+      RETURNING
+        VALUE(rs_eval) TYPE zif_ca_ops_eval_types=>ty_eval.
+
+    "! What the runner knows of a check run besides its result
+    METHODS eval_input
+      IMPORTING
+        is_check        TYPE zif_ca_ops_chk_types=>ty_check
+        is_context      TYPE zif_ca_ops_chk_types=>ty_context
+      RETURNING
+        VALUE(rs_input) TYPE zif_ca_ops_eval_types=>ty_derive_input.
+
     "! Counts, status, RAG and runtime of the finished run
     METHODS close
       IMPORTING
@@ -170,6 +192,8 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
     DATA lv_items TYPE i.
     DATA lt_uncovered TYPE zif_ca_ops_lic_types=>tt_module.
     DATA lt_evidence TYPE zif_ca_ops_exc_contract=>tt_evidence.
+    DATA lt_eval TYPE zif_ca_ops_eval_types=>tt_eval.
+    DATA lv_warned TYPE zif_ca_ops_lic_types=>ty_module.
 
     DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     rs_result-run = lo_store->start_run( iv_area      = iv_area
@@ -206,18 +230,35 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
         " Licence (verified once for the run): the modules each check needs
         DATA(lo_license) = zcl_ca_ops_factory=>get_license( ).
         LOOP AT lt_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+          DATA(ls_input) = eval_input( is_check = <ls_check> is_context = ls_context ).
           IF <ls_check>-process_id IS NOT INITIAL AND line_exists( lt_off[ table_line = <ls_check>-process_id ] ).
             " not run, not reconciled: its earlier exceptions stay open
             INSERT skipped( <ls_check> ) INTO TABLE rs_result-findings.
+            INSERT zcl_ca_ops_eval=>not_run(
+                     is_input       = ls_input
+                     iv_reason_code = zif_ca_ops_eval_types=>gc_reason-process_inactive
+                     iv_reason      = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_eval_types=>gc_msg-process_inactive
+                                                             iv_v1    = <ls_check>-check_id
+                                                             iv_v2    = <ls_check>-process_id ) ) INTO TABLE lt_eval.
             CONTINUE.
           ENDIF.
           DATA(lv_refused) = abap_false.
+          CLEAR lv_warned.
           DATA(lt_modules) = lo_license->modules_of_check( <ls_check> ).
           LOOP AT lt_modules ASSIGNING FIELD-SYMBOL(<lv_module>).
             DATA(ls_decision) = lo_license->decide( <lv_module> ).
             IF ls_decision-allowed = abap_false.
               " not run, not reconciled (LIC_ENFORCE = X): its earlier exceptions stay open
               INSERT refused( is_check = <ls_check> is_decision = ls_decision ) INTO TABLE rs_result-findings.
+              ls_input-lic_state  = zif_ca_ops_eval_types=>gc_lic_state-refused.
+              ls_input-lic_module = ls_decision-module.
+              INSERT zcl_ca_ops_eval=>not_run(
+                       is_input       = ls_input
+                       iv_reason_code = zif_ca_ops_eval_types=>gc_reason-license_refused
+                       iv_reason      = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_eval_types=>gc_msg-license_refused
+                                                               iv_v1    = <ls_check>-check_id
+                                                               iv_v2    = ls_decision-module
+                                                               iv_v3    = ls_decision-state ) ) INTO TABLE lt_eval.
               lv_refused = abap_true.
               EXIT.
             ENDIF.
@@ -226,6 +267,7 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
                AND ( ls_decision-state = zif_ca_ops_lic_types=>gc_state-unlicensed
                   OR ls_decision-state = zif_ca_ops_lic_types=>gc_state-expired ).
               INSERT <lv_module> INTO TABLE lt_uncovered.
+              lv_warned = <lv_module>.
             ENDIF.
           ENDLOOP.
           IF lv_refused = abap_true.
@@ -233,6 +275,11 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
           ENDIF.
           DATA(ls_one) = run_check( is_check   = <ls_check>
                                     is_context = ls_context ).
+          IF lv_warned IS NOT INITIAL.
+            ls_input-lic_state  = zif_ca_ops_eval_types=>gc_lic_state-warned.
+            ls_input-lic_module = lv_warned.
+          ENDIF.
+          INSERT evaluation( is_input = ls_input is_result = ls_one ) INTO TABLE lt_eval.
           INSERT LINES OF ls_one-findings INTO TABLE rs_result-findings.
           INSERT LINES OF ls_one-evidence INTO TABLE lt_evidence.
           lv_items += ls_one-item_count.
@@ -255,6 +302,13 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
           zcl_ca_ops_factory=>get_evidence( )->save( iv_area     = iv_area
                                                      iv_run_id   = rs_result-run-run_id
                                                      it_evidence = lt_evidence ).
+        ENDIF.
+        " evaluation state: one record per check of the run, in the same unit of work
+        IF lt_eval IS NOT INITIAL AND iv_test_mode = abap_false.
+          LOOP AT lt_eval ASSIGNING FIELD-SYMBOL(<ls_eval>).
+            <ls_eval>-run_id = rs_result-run-run_id.
+          ENDLOOP.
+          zcl_ca_ops_factory=>get_eval_dao( )->save( lt_eval ).
         ENDIF.
         IF lt_groups IS NOT INITIAL.
           lo_store->reconcile( is_run    = rs_result-run
@@ -394,6 +448,45 @@ CLASS zcl_ca_ops_check_runner IMPLEMENTATION.
                                       ELSE zif_ca_ops_types=>gc_action-exception ).
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD eval_input.
+    rs_input = VALUE #( run_id      = is_context-run_id
+                        area        = is_check-area
+                        check_id    = is_check-check_id
+                        process_id  = is_check-process_id
+                        sched_group = is_check-sched_group
+                        today       = is_context-today
+                        now         = is_context-now ).
+  ENDMETHOD.
+
+
+  METHOD evaluation.
+    DATA(ls_input) = is_input.
+    " the check raised: the runner's own CHECK_FAILED finding (run_check) - not evaluated, whatever was returned
+    LOOP AT is_result-findings ASSIGNING FIELD-SYMBOL(<ls_failed>)
+         WHERE rule_id    = zif_ca_ops_chk_types=>gc_rule_id-runner
+           AND check_code = zif_ca_ops_chk_types=>gc_code-check_failed.
+      ls_input-raised     = abap_true.
+      ls_input-error_text = <ls_failed>-message.
+      EXIT.
+    ENDLOOP.
+    " expected scope: the period of the business date (or the check's own) closed for the area?
+    zcl_ca_ops_eval=>scope( EXPORTING is_eval     = is_result-eval
+                                      iv_today    = is_input-today
+                            IMPORTING ev_period   = DATA(lv_period) ).
+    ls_input-period_closed = zcl_ca_ops_factory=>get_eval_period( )->is_closed(
+                               iv_area       = is_input-area
+                               iv_period     = lv_period
+                               iv_bukrs_list = is_result-eval-bukrs_list ).
+    IF is_result-eval-sources IS NOT INITIAL.
+      ls_input-source_stale_min = zcl_ca_ops_util=>param_int(
+                                    io_params  = zcl_ca_ops_factory=>get_params( )
+                                    iv_name    = zif_ca_ops_eval_types=>gc_param-source_stale_min
+                                    iv_default = zif_ca_ops_eval_types=>gc_param_default-source_stale_min ).
+    ENDIF.
+    rs_eval = zcl_ca_ops_eval=>derive( is_input = ls_input is_result = is_result ).
   ENDMETHOD.
 
 

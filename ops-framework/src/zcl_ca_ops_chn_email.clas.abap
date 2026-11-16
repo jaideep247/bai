@@ -17,6 +17,9 @@
 *& 2026-11-07 | Recipients are SO23 shared distribution lists (user decision); CHECK_DESTINATION, test seam DLI_READ.
 *& 2026-11-10 | COMMIT WORK AND WAIT; a failed commit raises 806, so the router logs FAILED, never SENT.
 *& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
+*& 2026-11-16 | Delivery confirmation (build O): CONFIRM asks the send status reader of parameter
+*&            | EVAL_EMAIL_READER (ZIF_CA_OPS_DLV_READER; SOST / BCS status read after V271 / V272); without a
+*&            | reader, or when it fails, the e-mail cannot confirm (N) - BCS acceptance is never delivery.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert channel e-mail (BCS)</p>
 CLASS zcl_ca_ops_chn_email DEFINITION
@@ -137,6 +140,32 @@ CLASS zcl_ca_ops_chn_email IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_ca_ops_error
         MESSAGE e806(zca_ops) WITH is_message-rule_id lv_commit_subrc.
     ENDIF.
+  ENDMETHOD.
+
+
+
+  METHOD zif_ca_ops_alert_channel~confirm.
+    DATA lo_reader TYPE REF TO zif_ca_ops_dlv_reader.
+    DATA(lv_class) = CONV zif_ca_ops_types=>ty_class_name( to_upper( condense(
+                       zcl_ca_ops_factory=>get_params( )->get_param( zif_ca_ops_eval_types=>gc_param-email_reader ) ) ) ).
+    IF lv_class IS INITIAL.
+      " the SAPconnect status read is not verified (V271): cannot confirm, never delivered
+      rs_delivery = VALUE #( state = zif_ca_ops_eval_types=>gc_dlv-cannot_confirm
+                             info  = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_eval_types=>gc_msg-no_reader
+                                                            iv_v1    = zif_ca_ops_eval_types=>gc_param-email_reader ) ).
+      RETURN.
+    ENDIF.
+    TRY.
+        lo_reader = CAST zif_ca_ops_dlv_reader( zcl_ca_ops_factory=>get_plugin(
+                      iv_class_name = lv_class
+                      iv_interface  = zif_ca_ops_eval_types=>gc_plugin_intf-dlv_reader ) ).
+        rs_delivery = lo_reader->read( is_log ).
+      CATCH zcx_ca_ops_error cx_sy_move_cast_error INTO DATA(lx_reader).
+        rs_delivery = VALUE #( state = zif_ca_ops_eval_types=>gc_dlv-cannot_confirm
+                               info  = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_eval_types=>gc_msg-confirm_failed
+                                                              iv_v1    = is_log-channel
+                                                              iv_tail  = lx_reader->get_text( ) ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

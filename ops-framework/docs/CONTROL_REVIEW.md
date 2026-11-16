@@ -60,6 +60,17 @@ like any finding - they are real - but the slice shows how many of the date's li
 `DowntimeCount` for a consumer's cards. The reviewer decides whether the finding was expected and says so in the
 observation.
 
+## 6b. Evaluation of the covered checks (2026-11-16, build O)
+
+No finding is not health when the checks did not look. Per control and business date the review shows the covered
+checks (`GROUP2` rows of active checks in effect), of them those whose latest evaluation of the date is not evaluated,
+stale or partial or that have none (`ZI_CA_OpsCtlEval`: *Checks not evaluated, stale or partial*, *Checks without
+evaluation on the date*) and the state *Evaluation* `OK` / `PARTIAL` / `NOT_EVAL` (texts of domain
+`ZCA_OPS_EVAL_STATE`, criticality; variant *Checks not evaluated*; counter `UnknownCount`). **A control with unknown
+covered checks is never signed off as healthy without an observation** (`ZCL_CA_OPS_REVIEW_POLICY=>CAN_REVIEW`,
+message 567): the observation is the reviewer's reason. Rows that select findings by `RULE_ID` / `CHECK_CODE` name no
+check and are not counted. `docs/EVALUATION_AND_COVERAGE.md` section 3; VERIFY V279, V280.
+
 ## 7. VERIFY
 
 V26-V33 of `VERIFY.md`; company-code slices V35, V37, V38, V40, V41.

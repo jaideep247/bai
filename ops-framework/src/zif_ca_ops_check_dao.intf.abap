@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-10 | Initial version (process onboarding framework).
 *& 2026-11-11 | AGGREGATE: optional date / time window (outage check of the process catalogue).
+*& 2026-11-16 | GET_REGISTRY (every registered check, active or not; monitor coverage, build O; DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check registry data access</p>
 INTERFACE zif_ca_ops_check_dao
@@ -89,5 +90,10 @@ INTERFACE zif_ca_ops_check_dao
       iv_area          TYPE zif_ca_ops_types=>ty_area
     RETURNING
       VALUE(rv_active) TYPE abap_bool.
+
+  "! Every registered check of every area, active or not (monitor coverage: a switched-off check is shown)
+  METHODS get_registry DEFAULT IGNORE
+    RETURNING
+      VALUE(rt_checks) TYPE zif_ca_ops_chk_types=>tt_check.
 
 ENDINTERFACE.

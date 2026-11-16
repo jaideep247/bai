@@ -40,6 +40,10 @@
 *&            | and first action of its check (ZCA_OPS_RUNBOOK); ESCALATE: escalation until acknowledged
 *&            | (time-based, per exception and step, ESC_STEP / FINDING_NO on the log row, one intent per
 *&            | step); the run-based escalation series and the throttle ignore D / K / escalation rows.
+*& 2026-11-16 | Delivery confirmation (build O, docs/EVALUATION_AND_COVERAGE.md): a submitted alert keeps the
+*&            | channel's reference (DELIVERY_REF) and its first delivery state (CONFIRM: application log D on
+*&            | write, e-mail P or N, a channel without CONFIRM N) - submission is never recorded as delivery;
+*&            | the confirmation step ZCL_CA_OPS_ALERT_CONFIRM decides the rest.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configurable alert router</p>
 CLASS zcl_ca_ops_alert_router DEFINITION
@@ -146,6 +150,13 @@ CLASS zcl_ca_ops_alert_router DEFINITION
         is_message    TYPE zif_ca_ops_types=>ty_alert_message
       RETURNING
         VALUE(rv_key) TYPE zif_ca_ops_types=>ty_intent_key.
+
+    "! First delivery state of a submitted alert: the channel's reference and its CONFIRM (initial = cannot confirm)
+    METHODS first_delivery
+      IMPORTING
+        io_channel TYPE REF TO zif_ca_ops_alert_channel
+      CHANGING
+        cs_log     TYPE zif_ca_ops_types=>ty_alert_log.
 
     METHODS add_log
       IMPORTING
@@ -320,14 +331,18 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
       render( CHANGING cs_message = ls_message ).
     ENDIF.
     TRY.
-        CAST zif_ca_ops_alert_channel(
+        DATA(lo_direct) = CAST zif_ca_ops_alert_channel(
           zcl_ca_ops_factory=>get_plugin( iv_class_name = ls_channel-class_name
-                                          iv_interface  = zif_ca_ops_types=>gc_plugin_intf-alert_channel )
-        )->deliver( ls_message ).
+                                          iv_interface  = zif_ca_ops_types=>gc_plugin_intf-alert_channel ) ).
+        lo_direct->deliver( ls_message ).
         add_log( iv_rule_id = CONV #( iv_route ) iv_channel = ls_message-channel is_run = ls_run
                  iv_status = zif_ca_ops_types=>gc_alert_status-sent
                  iv_destination = ls_message-destination iv_subject = ls_message-subject
                  iv_alert_id = ls_message-alert_id is_render = ls_message ).
+        " submitted is not delivered: the channel's reference and its first delivery state
+        ASSIGN mt_log[ lines( mt_log ) ] TO FIELD-SYMBOL(<ls_submitted>).
+        first_delivery( EXPORTING io_channel = lo_direct
+                        CHANGING  cs_log     = <ls_submitted> ).
         lo_dao->insert_log( mt_log ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
         add_log( iv_rule_id = CONV #( iv_route ) iv_channel = ls_message-channel is_run = ls_run
@@ -517,6 +532,12 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
           ls_final-error  = zcl_ca_ops_util=>exception_trace( lx_delivery ).
       ENDTRY.
       ls_final-sent_at = zcl_ca_ops_factory=>get_clock( )->now( ).
+      IF ls_final-status = zif_ca_ops_types=>gc_alert_status-sent
+         OR ls_final-status = zif_ca_ops_types=>gc_alert_status-partial.
+        " submitted is not delivered: the channel's reference and its first delivery state
+        first_delivery( EXPORTING io_channel = lo_channel
+                        CHANGING  cs_log     = ls_final ).
+      ENDIF.
       io_dao->complete( ls_final ).
       lo_store->commit( ).
     ENDLOOP.
@@ -851,6 +872,26 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
         CLEAR lv_hash.
     ENDTRY.
     rv_key = lv_hash.
+  ENDMETHOD.
+
+
+  METHOD first_delivery.
+    DATA ls_delivery TYPE zif_ca_ops_eval_types=>ty_delivery.
+    TRY.
+        cs_log-dlv_ref = io_channel->delivery_ref( ).
+        ls_delivery = io_channel->confirm( cs_log ).
+      CATCH cx_root INTO DATA(lx_confirm).
+        " a channel's confirmation never fails the delivery: undecided, the confirmation step asks again
+        ls_delivery = VALUE #( state = zif_ca_ops_eval_types=>gc_dlv-pending info = lx_confirm->get_text( ) ).
+    ENDTRY.
+    cs_log-dlv_checked_at = zcl_ca_ops_factory=>get_clock( )->now( ).
+    cs_log-dlv_state = COND #( WHEN ls_delivery-state IS INITIAL THEN zif_ca_ops_eval_types=>gc_dlv-cannot_confirm
+                               ELSE ls_delivery-state ).
+    cs_log-dlv_info  = ls_delivery-info.
+    IF cs_log-dlv_state = zif_ca_ops_eval_types=>gc_dlv-delivered.
+      cs_log-dlv_at = COND #( WHEN ls_delivery-delivered_at IS INITIAL THEN cs_log-dlv_checked_at
+                              ELSE ls_delivery-delivered_at ).
+    ENDIF.
   ENDMETHOD.
 
 

@@ -29,11 +29,22 @@ define table zca_ops_allog {
   // RUN_ID / FINDING_NO = the exception row escalated (one row per attempt, intent per exception and step)
   esc_step      : abap.int4;
   finding_no    : abap.int4;
+  // Delivery confirmation (2026-11-16, build O, docs/EVALUATION_AND_COVERAGE.md): submission (STATUS S) is not
+  // delivery. P pending, D delivered (confirmed by the channel), F failed after submission, N the channel cannot
+  // confirm; blank = not asked yet. The channel's reference of the delivery (e-mail send request, SLG1 external ID),
+  // the last confirmation attempt, the confirmed delivery time and the channel's note
+  dlv_state     : zca_ops_dlv_state;
+  dlv_ref       : abap.char(70);
+  dlv_checked_at : timestampl;
+  dlv_at        : timestampl;
+  dlv_info      : abap.char(255);
 }
 // Secondary index RUL: throttling / escalation
 // @index RUL: MANDT, RULE_ID, SENT_AT
 // Secondary index INT (UNIQUE): one dispatcher per alert intent and attempt (audit A17)
 // @index INT UNIQUE: MANDT, INTENT_KEY, ATTEMPT
+// Secondary index DLV: submitted alerts awaiting their delivery confirmation (ZCL_CA_OPS_ALERT_CONFIRM, 2026-11-16)
+// @index DLV: MANDT, STATUS, DLV_STATE, SENT_AT
 // Status: S submitted (channel accepted; e-mail delivery is in SOST), F failed, T throttled, Q quiet hours, C claimed (in delivery), R repeat
 //   (carried-forward exception, not re-alerted), P partially delivered, D planned downtime (findings in an
 //   approved window, not alerted), K correlated children (alerted with their parent only) - 2026-11-11

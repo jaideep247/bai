@@ -19,6 +19,7 @@
 *& 2026-11-15 | INJECT_FLOW_DAO (account flow reconciliation).
 *& 2026-11-15 | INJECT_LICENSE (licensing).
 *& 2026-11-15 | INJECT_EVIDENCE, INJECT_OWNER (exception contract).
+*& 2026-11-16 | INJECT_EVAL_DAO, INJECT_EVAL_PERIOD (evaluation and coverage, build O).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - test injector for the factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -105,6 +106,14 @@ CLASS zcl_ca_ops_injector DEFINITION
     CLASS-METHODS inject_owner
       IMPORTING
         io_owner TYPE REF TO zif_ca_ops_owner.
+
+    CLASS-METHODS inject_eval_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_ca_ops_eval_dao.
+
+    CLASS-METHODS inject_eval_period
+      IMPORTING
+        io_period TYPE REF TO zif_ca_ops_eval_period.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -219,6 +228,16 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_eval_dao.
+    zcl_ca_ops_factory=>go_eval_dao_double = io_dao.
+  ENDMETHOD.
+
+
+  METHOD inject_eval_period.
+    zcl_ca_ops_factory=>go_eval_period_double = io_period.
+  ENDMETHOD.
+
+
   METHOD inject_plugin.
     DATA(lv_name) = CONV zif_ca_ops_types=>ty_class_name( to_upper( condense( CONV string( iv_class_name ) ) ) ).
     DELETE zcl_ca_ops_factory=>gt_plugin_double
@@ -254,6 +273,8 @@ CLASS zcl_ca_ops_injector IMPLEMENTATION.
            zcl_ca_ops_factory=>go_license_double,
            zcl_ca_ops_factory=>go_evidence_double,
            zcl_ca_ops_factory=>go_owner_double,
+           zcl_ca_ops_factory=>go_eval_dao_double,
+           zcl_ca_ops_factory=>go_eval_period_double,
            zcl_ca_ops_factory=>gt_plugin_double,
            zcl_ca_ops_factory=>gv_param_version_double,
            zcl_ca_ops_factory=>gv_version_ok,

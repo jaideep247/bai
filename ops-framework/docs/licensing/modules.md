@@ -25,11 +25,11 @@
 
 ### `CORE` - Runs, findings, exceptions, alerts, check runner, extensions
 
-The store of runs and findings, the exceptions app, the alert router and its channels, run lock and abort, the configuration apps and their gate, the generic check runner with the check registry and the business process register, parameters, retention purge, the process catalogue model with its product baseline S4CORE, explainable results, the customer extension contract and the licence itself. Always included - never refused, so a customer whose licence lapsed still sees and works its existing exceptions.
+The store of runs and findings, the exceptions app, the alert router and its channels, run lock and abort, the configuration apps and their gate, the generic check runner with the check registry and the business process register, parameters, retention purge, the process catalogue model with its product baseline S4CORE, explainable results, the customer extension contract, the evaluation state of every check run with the monitor coverage and the alert delivery confirmation (build O) and the licence itself. Always included - never refused, so a customer whose licence lapsed still sees and works its existing exceptions.
 
-- Entry points: `src/zcl_ca_ops_store.clas.abap`, `src/zcl_ca_ops_alert_router.clas.abap`, `src/zcl_ca_ops_check_runner.clas.abap`, `src/zca_ops_check_run.prog.abap`, `src/zca_ops_retention.prog.abap`, `src/zcl_ca_ops_catalog.clas.abap`, `src/ui/zui_ca_ops_exc.srvd.srvdsrv`, `src/ui/zui_ca_ops_cfg.srvd.srvdsrv`, `src/ui/zui_ca_ops_dash.srvd.srvdsrv`, `src/zca_ops_license_install.prog.abap`, `src/ui/zui_ca_ops_lic.srvd.srvdsrv`, `config/extension_points.json`, `tools/extensions.py`
-- Registered check classes: `ZCL_CA_OPS_CHK_LICENSE`
-- Documents: `README.md`, `docs/EXPLAINABLE_RESULTS.md`, `docs/EXTENDING_WITH_CUSTOMER_DATA.md`, `docs/LICENSING.md`
+- Entry points: `src/zcl_ca_ops_store.clas.abap`, `src/zcl_ca_ops_alert_router.clas.abap`, `src/zcl_ca_ops_check_runner.clas.abap`, `src/zca_ops_check_run.prog.abap`, `src/zca_ops_retention.prog.abap`, `src/zcl_ca_ops_catalog.clas.abap`, `src/ui/zui_ca_ops_exc.srvd.srvdsrv`, `src/ui/zui_ca_ops_cfg.srvd.srvdsrv`, `src/ui/zui_ca_ops_dash.srvd.srvdsrv`, `src/zca_ops_license_install.prog.abap`, `src/ui/zui_ca_ops_lic.srvd.srvdsrv`, `config/extension_points.json`, `tools/extensions.py`, `src/zcl_ca_ops_eval.clas.abap`, `src/zca_ops_alert_confirm.prog.abap`, `src/zca_ops_cat_validate.prog.abap`
+- Registered check classes: `ZCL_CA_OPS_CHK_LICENSE`, `ZCL_CA_OPS_CHK_COVERAGE`, `ZCL_CA_OPS_CHK_ALERT_DLV`
+- Documents: `README.md`, `docs/EXPLAINABLE_RESULTS.md`, `docs/EXTENDING_WITH_CUSTOMER_DATA.md`, `docs/LICENSING.md`, `docs/EVALUATION_AND_COVERAGE.md`
 
 ### `CONTROL` - Control register and daily control review
 
@@ -153,6 +153,8 @@ Runnable checks on SAP standard FI-CA tables for the cash cycle: payment run exp
 | MOD | `BREAKS` | `BREAKS` |  | Clearing-account break analysis and pilot pack |
 | MOD | `FLOW` | `FLOW` |  | Account flow reconciliation |
 | MOD | `CASH_OPS` | `CASH_OPS` |  | FI-CA Cash Operations: cash checks and payment files |
+| CLAS | `ZCL_CA_OPS_CHK_ALERT_DLV` | `CORE` |  | Registered check class of module CORE |
+| CLAS | `ZCL_CA_OPS_CHK_COVERAGE` | `CORE` |  | Registered check class of module CORE |
 | CLAS | `ZCL_CA_OPS_CHK_LICENSE` | `CORE` |  | Registered check class of module CORE |
 | CLAS | `ZCL_CA_OPS_CHK_AGG` | `ONBOARD` |  | Registered check class of module ONBOARD |
 | CLAS | `ZCL_CA_OPS_CHK_ONBOARD` | `ONBOARD` |  | Registered check class of module ONBOARD |

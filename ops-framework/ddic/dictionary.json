@@ -1,5 +1,5 @@
 {
-  "_comment": "Domains and data elements of the operations framework. The area of a run, finding, alert rule, lock and purge target is ZCA_PARAM_AREA_ID of the parameter framework (one area register); the other fields use built-in types and SAP data elements, except the status of a control (2026-11-10: fixed values with translatable texts, shown by the review app and the consumers' cards) and the status of a planned downtime window (2026-11-11, downtime app ZUI_CA_OPS_DTW) and the reason a control sign-off was reopened (2026-11-11, explainable, versioned results) and the control tag, evaluation status, reserved rows and account roles of the account flow dashboard (2026-11-15, docs/ACCOUNT_FLOW.md). tools/abapgit_serialize.py writes src/<name>.doma.xml / .dtel.xml for every entry added here. Labels: short <= 10, medium <= 20, long <= 40, heading <= 55, text <= 60 characters.",
+  "_comment": "Domains and data elements of the operations framework. The area of a run, finding, alert rule, lock and purge target is ZCA_PARAM_AREA_ID of the parameter framework (one area register); the other fields use built-in types and SAP data elements, except the status of a control (2026-11-10: fixed values with translatable texts, shown by the review app and the consumers' cards) and the status of a planned downtime window (2026-11-11, downtime app ZUI_CA_OPS_DTW) and the reason a control sign-off was reopened (2026-11-11, explainable, versioned results) and the control tag, evaluation status, reserved rows and account roles of the account flow dashboard (2026-11-15, docs/ACCOUNT_FLOW.md). Evaluation and coverage (2026-11-16, build O, docs/EVALUATION_AND_COVERAGE.md): the evaluation state of a check run and its completeness, the monitor coverage state of a registered check and the delivery state of an alert. tools/abapgit_serialize.py writes src/<name>.doma.xml / .dtel.xml for every entry added here. Labels: short <= 10, medium <= 20, long <= 40, heading <= 55, text <= 60 characters.",
   "domains": [
     {"name": "ZCA_OPS_CTL_STATUS", "type": "CHAR", "length": 1, "lowercase": false,
      "text": "Status of a control on a business date",
@@ -27,7 +27,24 @@
      "text": "Role of an account in an account flow",
      "values": [["RECEIVABLE", "Receivable"], ["PAYABLE", "Payable"], ["OUTSIDE", "Outside the control chain"],
                 ["SETTLEMENT", "Settlement"], ["CLEARING", "Clearing"], ["CASH", "Cash (house bank)"],
-                ["CLARIFICATION", "Clarification"]]}
+                ["CLARIFICATION", "Clarification"]]},
+    {"name": "ZCA_OPS_EVAL_STATE", "type": "CHAR", "length": 10, "lowercase": false,
+     "text": "Evaluation state of a check run",
+     "values": [["OK", "OK"], ["ZERO_OK", "Valid zero volume"], ["HOLIDAY", "Not expected (calendar)"],
+                ["PER_CLOSED", "Period closed"], ["STALE", "Source stale"], ["NOT_EVAL", "Not evaluated"],
+                ["FINDINGS", "Findings raised"], ["PARTIAL", "Partly evaluated"]]},
+    {"name": "ZCA_OPS_EVAL_CMPL", "type": "CHAR", "length": 1, "lowercase": false,
+     "text": "Completeness of an evaluation",
+     "values": [["C", "Complete"], ["P", "Partial"], ["N", "Not evaluated"]]},
+    {"name": "ZCA_OPS_COV_STATE", "type": "CHAR", "length": 10, "lowercase": false,
+     "text": "Monitor coverage state of a registered check",
+     "values": [["RAN", "Ran in its window"], ["WARNED", "Ran under licence warning"],
+                ["IMPAIRED", "Ran, not fully evaluated"], ["NOT_RUN", "Not run in its window"],
+                ["REFUSED", "Refused by the licence"], ["DISABLED", "Disabled by configuration"]]},
+    {"name": "ZCA_OPS_DLV_STATE", "type": "CHAR", "length": 1, "lowercase": false,
+     "text": "Delivery state of an alert",
+     "values": [["P", "Pending confirmation"], ["D", "Delivered"], ["F", "Delivery failed"],
+                ["N", "Channel cannot confirm"]]}
   ],
   "data_elements": [
     {"name": "ZCA_OPS_CTL_STATUS", "domain": "ZCA_OPS_CTL_STATUS", "text": "Status of a control on a business date",
@@ -45,6 +62,14 @@
     {"name": "ZCA_OPS_FLOW_ROW", "domain": "ZCA_OPS_FLOW_ROW", "text": "Reserved row of the account flow dashboard",
      "short": "Row", "medium": "Dashboard row", "long": "Reserved row of the dashboard", "heading": "Row"},
     {"name": "ZCA_OPS_FLOW_ROLE", "domain": "ZCA_OPS_FLOW_ROLE", "text": "Role of an account in an account flow",
-     "short": "Role", "medium": "Account role", "long": "Role of the account in the flow", "heading": "Role"}
+     "short": "Role", "medium": "Account role", "long": "Role of the account in the flow", "heading": "Role"},
+    {"name": "ZCA_OPS_EVAL_STATE", "domain": "ZCA_OPS_EVAL_STATE", "text": "Evaluation state of a check run",
+     "short": "Evaluation", "medium": "Evaluation state", "long": "Evaluation state of the check", "heading": "Evaluation"},
+    {"name": "ZCA_OPS_EVAL_CMPL", "domain": "ZCA_OPS_EVAL_CMPL", "text": "Completeness of an evaluation",
+     "short": "Complete", "medium": "Completeness", "long": "Completeness of the evaluation", "heading": "Completeness"},
+    {"name": "ZCA_OPS_COV_STATE", "domain": "ZCA_OPS_COV_STATE", "text": "Monitor coverage state of a registered check",
+     "short": "Coverage", "medium": "Coverage state", "long": "Monitor coverage state", "heading": "Coverage"},
+    {"name": "ZCA_OPS_DLV_STATE", "domain": "ZCA_OPS_DLV_STATE", "text": "Delivery state of an alert",
+     "short": "Delivery", "medium": "Delivery state", "long": "Delivery state of the alert", "heading": "Delivery"}
   ]
 }

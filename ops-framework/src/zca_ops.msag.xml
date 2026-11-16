@@ -1751,6 +1751,150 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>560</MSGNR>
+     <TEXT>Check &amp;1 of area &amp;2 not evaluated: the check raised</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>561</MSGNR>
+     <TEXT>Check &amp;1 of area &amp;2 partly evaluated: earlier exceptions stay open</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>562</MSGNR>
+     <TEXT>Source &amp;1 of check &amp;2 last observed &amp;3 (limit &amp;4 minutes)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>563</MSGNR>
+     <TEXT>Period &amp;1 closed for area &amp;2 &amp;3: no activity expected</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>564</MSGNR>
+     <TEXT>Check &amp;1 not run: licence refuses module &amp;2 (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>565</MSGNR>
+     <TEXT>Check &amp;1 not run: business process &amp;2 not in effect</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>566</MSGNR>
+     <TEXT>Check &amp;1 of area &amp;2 not evaluated: nothing could be read</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>567</MSGNR>
+     <TEXT>Sign-off as healthy needs an observation: &amp;1 covered check(s) unknown</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>568</MSGNR>
+     <TEXT>Monitor gap: check &amp;1 of area &amp;2 not run in its window (last &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>569</MSGNR>
+     <TEXT>Monitor impaired: check &amp;1 of area &amp;2 evaluation &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>570</MSGNR>
+     <TEXT>Monitor gap: check &amp;1 of area &amp;2 refused by the licence (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>571</MSGNR>
+     <TEXT>Check &amp;1 of area &amp;2 runs under a licence warning (module &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>572</MSGNR>
+     <TEXT>Alert &amp;1 (rule &amp;2, &amp;3) submitted &amp;4, not confirmed delivered</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>573</MSGNR>
+     <TEXT>Alert &amp;1 (rule &amp;2, &amp;3) delivery failed: &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>574</MSGNR>
+     <TEXT>&amp;1 alert(s) of channel &amp;2: the channel cannot confirm delivery</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>575</MSGNR>
+     <TEXT>Delivery confirmation: &amp;1 asked, &amp;2 delivered, &amp;3 pending, &amp;4 unknown</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>576</MSGNR>
+     <TEXT>Delivery of channel &amp;1 could not be confirmed:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>577</MSGNR>
+     <TEXT>E-mail send status not read: no reader in parameter &amp;1 (V271)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>579</MSGNR>
+     <TEXT>Application log &amp;1 written (alert status &amp;2): delivered on write</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>580</MSGNR>
+     <TEXT>Platform validation of &amp;1 on &amp;2 (&amp;3) recorded</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>581</MSGNR>
+     <TEXT>Catalogue process &amp;1 is not in the catalogue</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>582</MSGNR>
+     <TEXT>Release and support package are mandatory for a validation</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>583</MSGNR>
+     <TEXT>Test mode: validation of &amp;1 on &amp;2 (&amp;3) not saved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>584</MSGNR>
+     <TEXT>Channel &amp;1 is not configured: delivery cannot be confirmed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>742</MSGNR>
      <TEXT>Alert rule &amp;1: pattern &amp;2 is not valid PCRE - rule not applied</TEXT>
     </T100>

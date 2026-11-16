@@ -13,6 +13,8 @@
 *& 2026-11-10 | TY_REVIEW-BUKRS: company code of the reviewed slice (company-code isolation).
 *& 2026-11-11 | Reopened sign-off (explainable, versioned results): reasons (domain ZCA_OPS_REOPEN), the
 *&            | comparison of a finding with the row it replaced (TY_REOPEN_FINDING), TY_AWAIT_STATE-REOPEN_REASON.
+*& 2026-11-16 | Evaluation state (build O): TY_REVIEW_INPUT-UNKNOWN_CHECKS - covered checks whose evaluation of the
+*&            | date is not evaluated, stale, partial or missing; a healthy sign-off then needs an observation.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - control review types</p>
 INTERFACE zif_ca_ops_ctl_types
@@ -108,6 +110,9 @@ INTERFACE zif_ca_ops_ctl_types
       review_result  TYPE ty_status,
       observation    TYPE ty_text,
       next_action    TYPE ty_text,
+      "! Covered checks (GROUP2 rows) whose latest evaluation of the date is unknown - not evaluated, stale, partial -
+      "! or that have none (ZI_CA_OpsCtlEval, 2026-11-16): healthy is then no verdict without a reason
+      unknown_checks TYPE i,
     END OF ty_review_input.
 
   "! The state "awaiting review" is decided on (the CDS views apply the same rule)

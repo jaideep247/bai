@@ -22,6 +22,7 @@
 *& 2026-11-11 | ended_window_is_deleted (target DOWNTIME, planned downtime windows; ZCA_OPS_DTWIN doubled).
 *& 2026-11-16 | Inline declaration after IMPORTING of a functional call replaced by a declaration before the
 *&            | call (refused by the reference system's compiler; house rule no_inline_in_call).
+*& 2026-11-16 | ZCA_OPS_EVAL / ZCA_OPS_EVALSRC doubled (deleted with their run, build O).
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -89,7 +90,8 @@ CLASS ltc_purge_dao IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCA_OPS_RUN' ) ( 'ZCA_OPS_FINDING' ) ( 'ZCA_OPS_ALLOG' )
                                    ( 'ZCA_OPS_EXC_HIST' ) ( 'ZCA_OPS_PURGE' )
-                                   ( 'ZCA_OPS_REVIEW' ) ( 'ZCA_OPS_DTWIN' ) ) ).
+                                   ( 'ZCA_OPS_REVIEW' ) ( 'ZCA_OPS_DTWIN' )
+                                   ( 'ZCA_OPS_EVAL' ) ( 'ZCA_OPS_EVALSRC' ) ) ).
   ENDMETHOD.
 
 

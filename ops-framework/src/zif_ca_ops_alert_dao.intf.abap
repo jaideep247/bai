@@ -13,6 +13,8 @@
 *& 2026-11-11 | Operations response features (DEFAULT IGNORE, existing doubles unchanged): GET_MARKS (planned
 *&            | downtime and correlation of the stored findings of a run), GET_CHILD_COUNTS, GET_RUNBOOKS,
 *&            | GET_ESCALATION_CANDIDATES (open, unassigned exceptions), GET_INTENT_LOG (escalation steps).
+*& 2026-11-16 | Delivery confirmation (build O, DEFAULT IGNORE): GET_SUBMITTED (alerts of the look-back with their
+*&            | delivery state), SET_DELIVERY (the delivery columns only); INSERT_LOG / COMPLETE write them.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert configuration and log</p>
 INTERFACE zif_ca_ops_alert_dao
@@ -115,5 +117,23 @@ INTERFACE zif_ca_ops_alert_dao
       it_intent_keys TYPE zif_ca_ops_resp_types=>tt_intent_key
     RETURNING
       VALUE(rt_log)  TYPE zif_ca_ops_types=>tt_alert_log.
+
+  "! Alerts submitted (S, P) or failed (F) at or after iv_since with their delivery columns, oldest first;
+  "! iv_open_only = X: only those whose delivery is not decided yet (DLV_STATE blank or P; index DLV)
+  METHODS get_submitted DEFAULT IGNORE
+    IMPORTING
+      iv_since      TYPE timestampl
+      iv_open_only  TYPE abap_bool DEFAULT abap_false
+    RETURNING
+      VALUE(rt_log) TYPE zif_ca_ops_types=>tt_alert_log.
+
+  "! Write the delivery columns (DLV_STATE, DLV_REF, DLV_CHECKED_AT, DLV_AT, DLV_INFO) of these alerts - nothing
+  "! else of the row; the caller commits
+  "! @raising zcx_ca_ops_error | 081 a row is no longer there
+  METHODS set_delivery DEFAULT IGNORE
+    IMPORTING
+      it_log TYPE zif_ca_ops_types=>tt_alert_log
+    RAISING
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

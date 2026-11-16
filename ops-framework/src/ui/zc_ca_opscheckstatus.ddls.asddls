@@ -8,6 +8,8 @@
 //                   2026-11-10 | Overview card counters (CheckCount, StaleCount, IsAttention), summed by default.
 //                   2026-11-11 | Planned downtime mark of the area (operations response features).
 //                   2026-11-11 | Process catalogue: catalogue process and dashboard card of the check's process.
+//                   2026-11-16 | Evaluation state of the check (build O): state with text, completeness, result,
+//                              | reason, scope, freshness, watermark, last valid result; counters for unknown.
 // Extension point CHECK_STATUS (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
 //          passes the elements of the base view on; a customer adds its own elements with extend view entity from its package,
 //          never by changing this view.
@@ -54,6 +56,31 @@ define root view entity ZC_CA_OpsCheckStatus
       StaleCriticality,
       PlannedDowntimeWindows,
       IsPlannedDowntime,
+      @ObjectModel.text.element: [ 'EvaluationStateText' ]
+      EvaluationState,
+      _EvalText.EvaluationStateText                         as EvaluationStateText : localized,
+      EvaluationCriticality,
+      EvaluationCompleteness,
+      EvaluationResult,
+      EvaluationReason,
+      EvaluatedAt,
+      ScopeDate,
+      ScopePeriod,
+      ScopeCompanyCodes,
+      ExpectedCount,
+      ObservedCount,
+      SourceFreshAt,
+      FreshSource,
+      Watermark,
+      LastValidAt,
+      LastValidResult,
+      IsEvaluationUnknown,
+      @Aggregation.default: #SUM
+      UnknownCount,
+      @Aggregation.default: #SUM
+      NotEvaluatedCount,
+      @Aggregation.default: #SUM
+      PartialCount,
       @Aggregation.default: #SUM
       SliceCount,
       @Aggregation.default: #SUM

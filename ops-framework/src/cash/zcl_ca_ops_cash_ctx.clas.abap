@@ -17,6 +17,9 @@
 *& 2026-11-16 | Exception contract (build K merge): FINDING sets the evidence key of the finding (area, check ID,
 *&            | object key, company code) and collects its typed evidence rows (EVIDENCE, returned by every cash
 *&            | check in TY_RESULT-EVIDENCE); the cutoff names its business calendar.
+*& 2026-11-16 | Evaluation state (build O): FINDING folds the evaluation of every exception into the check's
+*&            | result part (ZCL_CA_OPS_EVAL=>MERGE_TERM: OBSERVED with an exception = FINDINGS, ZERO_VOLUME =
+*&            | ZERO_OK, NOT_EXPECTED = HOLIDAY, STALE, NOT_EVALUATED = not evaluated); EVAL returns it.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FI-CA cash operations - run context of a check</p>
 CLASS zcl_ca_ops_cash_ctx DEFINITION
@@ -96,6 +99,11 @@ CLASS zcl_ca_ops_cash_ctx DEFINITION
       RETURNING
         VALUE(rt_evidence) TYPE zif_ca_ops_exc_contract=>tt_evidence.
 
+    "! The evaluation of the run so far (evaluation state, build O; the check returns it in TY_RESULT-EVAL)
+    METHODS eval
+      RETURNING
+        VALUE(rs_eval) TYPE zif_ca_ops_eval_types=>ty_check_eval.
+
     "! A rule that could not be evaluated: warning CASH_NOT_EVALUATED, the check partial (never green)
     "! @parameter iv_reason | Reason text (a message of 520 - 523 or the text of a caught exception)
     METHODS not_evaluated
@@ -149,6 +157,7 @@ CLASS zcl_ca_ops_cash_ctx DEFINITION
     DATA mo_dao TYPE REF TO zif_ca_ops_cash_dao.
     DATA mo_params TYPE REF TO zif_ca_ops_params.
     DATA mv_partial TYPE abap_bool.
+    DATA ms_eval TYPE zif_ca_ops_eval_types=>ty_check_eval.
     DATA mv_owner_read TYPE abap_bool.
     DATA ms_owner TYPE zif_ca_ops_cash_types=>ty_owner.
     DATA mv_cutoff_read TYPE abap_bool.
@@ -295,6 +304,10 @@ CLASS zcl_ca_ops_cash_ctx IMPLEMENTATION.
       ls_exc-evaluation = zif_ca_ops_cash_types=>gc_evaluation-observed.
     ENDIF.
     rs_finding = zcl_ca_ops_cash_exc=>to_finding( ls_exc ).
+    " evaluation state: build N's evaluation of the exception, in the framework's one vocabulary
+    zcl_ca_ops_eval=>merge_term( EXPORTING iv_term      = ls_exc-evaluation
+                                           iv_exception = zcl_ca_ops_eval=>is_exception( ls_exc-severity )
+                                 CHANGING  cs_eval      = ms_eval ).
     " exception contract: the evidence key of the exception's identity and its typed evidence rows
     rs_finding-evid_key = zcl_ca_ops_exc_contract=>evidence_key( iv_area       = ms_check-area
                                                                  iv_check_id   = ms_check-check_id
@@ -308,6 +321,11 @@ CLASS zcl_ca_ops_cash_ctx IMPLEMENTATION.
 
   METHOD evidence.
     rt_evidence = mt_evidence.
+  ENDMETHOD.
+
+
+  METHOD eval.
+    rs_eval = ms_eval.
   ENDMETHOD.
 
 

@@ -3,6 +3,8 @@
 // a business date to review another day. Flagged = Watch + Action required.
 // 2026-11-11: reopened sign-off (a covered finding new, changed in severity or amount, or of another configuration
 //             version since the sign-off; or a worse status) with its reason - column, filter and variant Reopened.
+// 2026-11-16: evaluation of the covered checks (build O) - column with criticality, variant "Checks not evaluated":
+//             a control without findings whose checks did not run is not healthy, and says so.
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Control review', typeNamePlural: 'Daily control review',
                   title: { type: #STANDARD, value: 'ControlName' },
@@ -13,7 +15,9 @@
                              visualizations: [ { type: #AS_LINEITEM } ] } ]
 @UI.selectionVariant: [ { qualifier: 'Flagged', text: 'Flagged (watch and action required)', filter: 'IsFlagged EQ X' },
                         { qualifier: 'Awaiting', text: 'Awaiting review', filter: 'IsAwaitingReview EQ X' },
-                        { qualifier: 'Reopened', text: 'Sign-off reopened', filter: 'IsReopened EQ X' } ]
+                        { qualifier: 'Reopened', text: 'Sign-off reopened', filter: 'IsReopened EQ X' },
+                        { qualifier: 'Unknown', text: 'Checks not evaluated, stale or partial',
+                          filter: 'IsEvaluationUnknown EQ X' } ]
 annotate entity ZC_CA_OpsCtlReview with
 {
   @UI.facet: [ { id: 'Control', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Control', position: 10 },
@@ -186,4 +190,27 @@ annotate entity ZC_CA_OpsCtlReview with
   @UI.lineItem: [ { position: 75, importance: #HIGH } ]
   @UI.selectionField: [ { position: 60 } ]
   IsReviewOverdue;
+  // Evaluation of the covered checks (2026-11-16, build O)
+  @EndUserText.label: 'Covered checks'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 80 } ]
+  CoveredChecks;
+  @EndUserText.label: 'Checks not evaluated, stale or partial'
+  @UI.lineItem: [ { position: 36, importance: #HIGH, criticality: 'EvaluationCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 81, criticality: 'EvaluationCriticality' } ]
+  UnknownChecks;
+  @EndUserText.label: 'Checks without evaluation on the date'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 82 } ]
+  NotRunChecks;
+  @EndUserText.label: 'Evaluation'
+  @UI.lineItem: [ { position: 35, importance: #HIGH, criticality: 'EvaluationCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 79, criticality: 'EvaluationCriticality' } ]
+  @UI.selectionField: [ { position: 36 } ]
+  EvaluationState;
+  @UI.hidden: true
+  EvaluationStateText;
+  @UI.hidden: true
+  EvaluationCriticality;
+  @EndUserText.label: 'Evaluation unknown'
+  @UI.hidden: true
+  IsEvaluationUnknown;
 }

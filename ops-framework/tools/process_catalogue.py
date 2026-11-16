@@ -12,6 +12,7 @@ Usage: python3 tools/process_catalogue.py [--check]
 
 Modification log:
 2026-11-11 | Initial version (process catalogue with activation).
+2026-11-16 | Catalogue milestones document (build O): entry, runnable, platform-validated (blank), activated.
 """
 import os
 import sys
@@ -34,6 +35,8 @@ PROFILE = {
     'docs_folder': 'docs/catalogue',
     'title': 'Process catalogue of the product (S4CORE, FICA, FSCD)',
     'day': '20261111',
+    # Catalogue milestones (2026-11-16, build O): docs/catalogue/milestones.md
+    'milestones': True,
 }
 
 if __name__ == '__main__':

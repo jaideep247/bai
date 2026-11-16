@@ -8,6 +8,7 @@
 //                   2026-11-10 | Company code of the slice (company-code isolation; DCL with BUKRS).
 //                   2026-11-11 | Planned downtime mark of the slice (operations response features).
 //                   2026-11-11 | Reopened sign-off and its reason (explainable, versioned results).
+//                   2026-11-16 | Evaluation of the covered checks with its text (build O).
 // Extension point CTL_REVIEW (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
 //          base view; a customer adds its own elements with extend view entity from its package,
 //          never by changing this view. Anchors COMPANY, CONTROL: their elements stay stable.
@@ -79,5 +80,13 @@ define root view entity ZC_CA_OpsCtlReview
       ReopenConfigCount,
       IsAwaitingReview,
       IsFlagged,
-      IsReviewOverdue
+      IsReviewOverdue,
+      CoveredChecks,
+      UnknownChecks,
+      NotRunChecks,
+      @ObjectModel.text.element: [ 'EvaluationStateText' ]
+      EvaluationState,
+      _EvalText.EvaluationStateText                         as EvaluationStateText : localized,
+      EvaluationCriticality,
+      IsEvaluationUnknown
 }

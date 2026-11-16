@@ -28,6 +28,9 @@
 *& 2026-11-15 | Initial version (build K: payment file lifecycle).
 *& 2026-11-16 | Merge with the release packs: data access through ZCL_CA_OPS_PF_FACTORY; licence module CASH_OPS
 *&            | (one FI-CA Cash Operations licence with the cash checks).
+*& 2026-11-16 | Evaluation state (build O): every day result (OK, ZERO_OK, HOLIDAY, STALE, NOT_EVAL, MISSING,
+*&            | PARTIAL, PENDING) and every failed source folded into TY_RESULT-EVAL (ZCL_CA_OPS_EVAL=>
+*&            | MERGE_TERM), with the newest watermark of the days; expected / observed files of the days.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check: payment file lifecycle</p>
 "! A job failure is one finding (PF_JOB_FAILED, reference = the job monitor's object key of the job, name / count;
@@ -559,6 +562,14 @@ CLASS zcl_ca_ops_chk_payfile IMPLEMENTATION.
                               iv_from      = CONV d( zcl_ca_ops_factory=>get_clock( )->today( ) - ms_limits-open_days ) )
          ASSIGNING FIELD-SYMBOL(<ls_day>).
       DATA(lv_key) = |{ is_type-file_type }{ zif_ca_ops_pf_types=>gc_key_separator }{ <ls_day>-bus_date }|.
+      " evaluation state: build K's day result in the framework's one vocabulary (PENDING adds nothing)
+      zcl_ca_ops_eval=>merge_term( EXPORTING iv_term = <ls_day>-result
+                                   CHANGING  cs_eval = cs_result-eval ).
+      cs_result-eval-expected += <ls_day>-expected.
+      cs_result-eval-observed += <ls_day>-observed.
+      IF <ls_day>-watermark > cs_result-eval-watermark.
+        cs_result-eval-watermark = <ls_day>-watermark.
+      ENDIF.
       CASE <ls_day>-result.
         WHEN zif_ca_ops_pf_types=>gc_day-missing OR zif_ca_ops_pf_types=>gc_day-partial.
           DATA(ls_owner) = zcl_ca_ops_factory=>get_owner( )->resolve( iv_area       = ms_check-area
@@ -602,6 +613,8 @@ CLASS zcl_ca_ops_chk_payfile IMPLEMENTATION.
       DATA(ls_source) = mo_dao->get_source( iv_area = is_type-area iv_source_id = <ls_adp>-source_id ).
       IF ls_source-status = zif_ca_ops_pf_types=>gc_src_status-failed.
         cs_result-partial = abap_true.
+        zcl_ca_ops_eval=>merge_term( EXPORTING iv_term = zif_ca_ops_eval_types=>gc_state-not_evaluated
+                                     CHANGING  cs_eval = cs_result-eval ).
         INSERT VALUE #( object_type = zif_ca_ops_pf_types=>gc_object_type-source
                         object_key  = |{ is_type-file_type }{ zif_ca_ops_pf_types=>gc_key_separator }{ <ls_adp>-source_id }|
                         rule_id     = zif_ca_ops_pf_types=>gc_rule_id

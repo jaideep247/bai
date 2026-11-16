@@ -58,6 +58,13 @@ CA_OPS,DOWNTIME_PAST_TOL_MIN,P,INT,0,,15,,,,,Minutes a downtime window may start
 CA_OPS,DOWNTIME_RETENTION_DAYS,P,INT,,,400,,,,,Retention of ended downtime windows (days; >= 30),OPS FRAMEWORK
 CA_OPS,DOWNTIME_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone in which downtime windows are entered (TTZZ),OPS FRAMEWORK
 CA_OPS,ESC_MAX_DEFAULT,P,INT,1,20,3,,,,,Escalations of one exception when the rule names none,OPS FRAMEWORK
+CA_OPS,EVAL_DLV_CONFIRM_MIN,P,INT,1,1440,30,,,,,Minutes after submission until an alert must be delivered,OPS FRAMEWORK
+CA_OPS,EVAL_DLV_LOOKBACK_H,P,INT,1,168,48,,,,,Hours of submitted alerts the confirmation looks back,OPS FRAMEWORK
+CA_OPS,EVAL_DLV_UNCONFIRMABLE,P,CHAR,,,I,I|W,,,,Severity when a channel cannot confirm delivery (I or W),OPS FRAMEWORK
+CA_OPS,EVAL_EMAIL_READER,P,CHAR,,,,"[A-Z0-9_/]{0,30}",,,X,E-mail status reader (ZIF_CA_OPS_DLV_READER; blank = none),OPS FRAMEWORK
+CA_OPS,EVAL_PERIOD_CLOSED,P,LIST,,,,,,,,Closed periods AREA:YYYYMM or AREA:BUKRS:YYYYMM (* any),OPS FRAMEWORK
+CA_OPS,EVAL_PERIOD_SOURCE,P,CHAR,,,,"[A-Z0-9_/]{0,30}",,,X,Period-close class (ZIF_CA_OPS_EVAL_PERIOD; blank = list),OPS FRAMEWORK
+CA_OPS,EVAL_SOURCE_STALE_MIN,P,INT,1,44640,1500,,,,,Minutes after which a source a check names is stale,OPS FRAMEWORK
 CA_OPS,EXC_REASON_CODES,P,LIST,,,"TIMING,INVESTIGATING,NOT_AN_ISSUE",,,X,,Reason codes of an open exception (classification),OPS FRAMEWORK
 CA_OPS,FLOW_BREAK_MAX_AGE_DAYS,P,INT,0,31,2,,,,,Days a break snapshot may lie before the flow key date,OPS FRAMEWORK
 CA_OPS,FLOW_KEY_DATE_LAG,P,INT,0,31,0,,,,,Flow evaluation without key date: today minus these days,OPS FRAMEWORK

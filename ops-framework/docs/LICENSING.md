@@ -186,3 +186,13 @@ and the system's identity, and writes only `ZCA_OPS_LIC` / `_LICM` / `_LICMOD` a
 DCLs, service `ZUI_CA_OPS_LIC`; messages 350-366; parameters `LIC_*`; offline `config/licensing/modules.json`,
 `tools/licensing.py` (house check `licensing`), `../tools/abaptools/licensing.py`, vendor tools
 `../tools/licensing/issue_license.py` / `verify_license.py`, tests `../tools/tests/test_licensing.py`. VERIFY V162-V168.
+
+## Monitor coverage of a licensed module (2026-11-16, build O)
+
+A customer sees what the licence means for its monitors: the coverage view `ZC_CA_OpsCoverage` (per area and licence
+module) and the coverage check `ZCL_CA_OPS_CHK_COVERAGE` (module `CORE`, never refused) show every registered check as
+`REFUSED` (`LIC_ENFORCE` = X and its module not licensed - a monitor gap, error `MONITOR_REFUSED`), `WARNED` (W and its
+module not covered - `MONITOR_LIC_WARNED`), `NOT_RUN`, `IMPAIRED`, `DISABLED` or `RAN`. The licence is read through the
+existing licence service (`ZIF_CA_OPS_LICENSE=>MODULES_OF_CHECK` / `DECIDE`) - no other verification; the runner
+records the decision of every check run (`ZCA_OPS_EVAL-LIC_STATE`), which the view shows.
+`docs/EVALUATION_AND_COVERAGE.md` section 5; VERIFY V282.

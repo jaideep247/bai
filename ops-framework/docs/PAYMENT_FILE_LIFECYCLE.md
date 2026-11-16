@@ -196,6 +196,13 @@ late answer for the original, duplicate acknowledgement, accepted then rejected,
 cancelled job, not transferred within the grace minutes, one acknowledgement for two files, the amount limit of a
 currency and company code; days: holiday, valid zero volume, stale, not evaluated, missing, OK, pending.
 
+## 10a. Evaluation state (2026-11-16, build O)
+
+`ZCL_CA_OPS_CHK_PAYFILE` folds every day result of `ZCA_OPS_PFDAY` (`OK`, `ZERO_OK`, `HOLIDAY`, `STALE`, `NOT_EVAL`,
+`MISSING` / `PARTIAL` = findings, `PENDING` = no verdict yet) and every failed source into the framework's evaluation
+record, with the newest watermark and the expected / observed files of the days
+(`docs/EVALUATION_AND_COVERAGE.md` section 1.1).
+
 ## 11. Limits
 
 - Nothing activated; SAP field names confirmed on the reference system only for `DPAYH`, `TBTCO` (V171-V175: semantics).

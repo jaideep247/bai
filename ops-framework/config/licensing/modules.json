@@ -14,12 +14,12 @@
    "name": "Runs, findings, exceptions, alerts, check runner, extensions",
    "always": true,
    "seq": 10,
-   "description": "The store of runs and findings, the exceptions app, the alert router and its channels, run lock and abort, the configuration apps and their gate, the generic check runner with the check registry and the business process register, parameters, retention purge, the process catalogue model with its product baseline S4CORE, explainable results, the customer extension contract and the licence itself. Always included - never refused, so a customer whose licence lapsed still sees and works its existing exceptions.",
-   "entry_points": ["src/zcl_ca_ops_store.clas.abap", "src/zcl_ca_ops_alert_router.clas.abap", "src/zcl_ca_ops_check_runner.clas.abap", "src/zca_ops_check_run.prog.abap", "src/zca_ops_retention.prog.abap", "src/zcl_ca_ops_catalog.clas.abap", "src/ui/zui_ca_ops_exc.srvd.srvdsrv", "src/ui/zui_ca_ops_cfg.srvd.srvdsrv", "src/ui/zui_ca_ops_dash.srvd.srvdsrv", "src/zca_ops_license_install.prog.abap", "src/ui/zui_ca_ops_lic.srvd.srvdsrv", "config/extension_points.json", "tools/extensions.py"],
-   "check_classes": ["ZCL_CA_OPS_CHK_LICENSE"],
+   "description": "The store of runs and findings, the exceptions app, the alert router and its channels, run lock and abort, the configuration apps and their gate, the generic check runner with the check registry and the business process register, parameters, retention purge, the process catalogue model with its product baseline S4CORE, explainable results, the customer extension contract, the evaluation state of every check run with the monitor coverage and the alert delivery confirmation (build O) and the licence itself. Always included - never refused, so a customer whose licence lapsed still sees and works its existing exceptions.",
+   "entry_points": ["src/zcl_ca_ops_store.clas.abap", "src/zcl_ca_ops_alert_router.clas.abap", "src/zcl_ca_ops_check_runner.clas.abap", "src/zca_ops_check_run.prog.abap", "src/zca_ops_retention.prog.abap", "src/zcl_ca_ops_catalog.clas.abap", "src/ui/zui_ca_ops_exc.srvd.srvdsrv", "src/ui/zui_ca_ops_cfg.srvd.srvdsrv", "src/ui/zui_ca_ops_dash.srvd.srvdsrv", "src/zca_ops_license_install.prog.abap", "src/ui/zui_ca_ops_lic.srvd.srvdsrv", "config/extension_points.json", "tools/extensions.py", "src/zcl_ca_ops_eval.clas.abap", "src/zca_ops_alert_confirm.prog.abap", "src/zca_ops_cat_validate.prog.abap"],
+   "check_classes": ["ZCL_CA_OPS_CHK_LICENSE", "ZCL_CA_OPS_CHK_COVERAGE", "ZCL_CA_OPS_CHK_ALERT_DLV"],
    "config": [],
    "gates": [],
-   "docs": ["README.md", "docs/EXPLAINABLE_RESULTS.md", "docs/EXTENDING_WITH_CUSTOMER_DATA.md", "docs/LICENSING.md"]
+   "docs": ["README.md", "docs/EXPLAINABLE_RESULTS.md", "docs/EXTENDING_WITH_CUSTOMER_DATA.md", "docs/LICENSING.md", "docs/EVALUATION_AND_COVERAGE.md"]
   },
   {
    "code": "CONTROL",

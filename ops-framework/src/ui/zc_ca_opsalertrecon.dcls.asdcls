@@ -1,0 +1,12 @@
+// Artifact: zc_ca_opsalertrecon.dcls.asdcls
+// Purpose: Read access to the alert reconciliation (service ZUI_CA_OPS_DASH): authorization object ZCA_OPS with
+//          ZCA_PARAR = the area of the run and ACTVT 03. A row counts alerts and findings of one run (no company
+//          code of its own: the counts are those of the run's area).
+// Modification log: 2026-11-16 | Initial version (build O: alert delivery reconciliation).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58).
+@EndUserText.label: 'Alert reconciliation - read access'
+@MappingRole: true
+define role ZC_CA_OpsAlertRecon {
+  grant select on ZC_CA_OpsAlertRecon
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+}

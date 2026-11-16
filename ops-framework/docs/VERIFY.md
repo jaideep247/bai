@@ -280,3 +280,27 @@ a functional position (`x = meth( IMPORTING e = DATA(y) )`, also in a condition)
 `ZCL_CA_OPS_CHECK_RUNNER` (condition), `ZCL_CA_OPS_PURGE` and the test classes of `ZCL_CA_OPS_PURGE_DAO`,
 `ZCL_CA_OPS_JOB_PURGE`, `ZCL_CA_OPS_BRK_PURGE` (variable declared before the call, same behaviour); house rule
 `no_inline_in_call` (`tools/checks.py`, shared rule `../tools/abaptools/name_checks.py`) keeps it out.
+
+### 2026-11-16 - evaluation state, alert delivery and monitor coverage (`docs/EVALUATION_AND_COVERAGE.md`)
+
+Build O. V270-V289 are reserved for it; V286-V289 are free.
+
+| ID | Kind | Item |
+|---|---|---|
+| V270 | Activation / ABAP Unit | Activation of the build O objects (domains, tables `ZCA_OPS_EVAL` / `ZCA_OPS_EVALSRC` / `ZCA_OPS_CATVAL`, the new columns of `ZCA_OPS_ALLOG`, classes, reports, CDS, service `ZUI_CA_OPS_DASH` with `Coverage` / `AlertReconciliation`) and ABAP Unit of `ZCL_CA_OPS_EVAL`, `ZCL_CA_OPS_EVAL_PERIOD`, `ZCL_CA_OPS_EVAL_DAO`, `ZCL_CA_OPS_COVERAGE`, `ZCL_CA_OPS_CHK_COVERAGE`, `ZCL_CA_OPS_ALERT_CONFIRM`, `ZCL_CA_OPS_CHK_ALERT_DLV`, `ZCL_CA_OPS_CHECK_RUNNER`, `ZCL_CA_OPS_REVIEW_POLICY`, `ZCL_CA_OPS_CHN_EMAIL`, `ZCL_CA_OPS_CHN_APPLOG` on A4H, then DV1 (optional component `TY_RESULT-EVAL`: every existing check class and the consumers' check classes activate unchanged). |
+| V271 | VERIFY-ADT / SE24 | E-mail send status: which reference of the BCS send request identifies it in SAPconnect (the send request object ID of `CL_BCS`, method and type) and the released API or table that returns its status per recipient (what SOST shows); a site reader `ZIF_CA_OPS_DLV_READER` is built on it and named in `EVAL_EMAIL_READER`. Until then the e-mail channel answers "cannot confirm" - no SAP API is guessed in the product. |
+| V272 | Business / Basis | Which SAPconnect status counts as delivered for an alert e-mail (transmitted to the mail server, delivery receipt, read receipt) and which as failed; the reader maps them to `D` / `P` / `F` (decision D-O2). |
+| V273 | PlanViz / volume | One `ZCA_OPS_EVAL` row per registered check and run (secondary index LST `AREA, CHECK_ID, EVALUATED_AT` - the serializer writes no secondary index: create it in SE11); `ZI_CA_OpsEvalLast` / `ZI_CA_OpsEvalNow` read the maximum per check on HANA; volume with the pilot's schedule. Index DLV of `ZCA_OPS_ALLOG` (`STATUS, DLV_STATE, SENT_AT`) the same way. |
+| V274 | VERIFY-ADT | `ZI_CA_OpsEvalNow` (cross join with left outer joins, `tstmp_seconds_between` on the TIMESTAMPL cast) and the new elements of `ZR_CA_OpsCheckStatus` / `ZC_CA_OpsCheckStatus` (association `_EvalText`, `: localized`) on 7.58; the extension point `CHECK_STATUS` keeps its anchors. |
+| V275 | VERIFY-SE11 / business | Closed accounting period: the delivered calendar is the parameter `EVAL_PERIOD_CLOSED`; a site that wants SAP's posting periods (OB52) plugs `ZIF_CA_OPS_EVAL_PERIOD` (`EVAL_PERIOD_SOURCE`) after its table, fields and period variant are confirmed. The product reads no period table. |
+| V276 | VERIFY-ADT | `ZI_CA_OpsEvalLast`: `MAX` on a RAW 16 element and on CHAR elements in one aggregation (7.58). |
+| V277 | VERIFY-ADT | `ZR_CA_OpsCoverage`: nested `coalesce` over two left outer joins of `ZCA_OPS_LICMOD` with literals in the ON condition; the module of a check as the module map shows it. |
+| V278 | VERIFY-ADT / Fiori | `ZR_CA_OpsAlertRecon`: comparison of TIMESTAMPL with the cast of `tstmp_add_seconds` (as `ZI_CA_OpsCtlRunDay`); list and variant *Not delivered*. |
+| V279 | VERIFY-ADT | `ZI_CA_OpsCtlEval`: cross join with `ZI_CA_OpsBusDay`, left outer join on the grouped `ZI_CA_OpsEvalDay`, comparison of `MATCH_VALUE` (CHAR 35) with `CHECK_ID` (CHAR 20). |
+| V280 | Fiori / RAP | Daily review: the new read-only elements of `ZR_CA_OpsCtlReview` (BDEF `strict ( 2 )`, ETag unchanged) and the refusal 567 of a healthy sign-off with unknown covered checks without an observation; with an observation it is saved. |
+| V281 | Runtime (QA1) | Delivery confirmation end to end: an application-log alert is `D` at submission; an e-mail alert without a reader is `N` (one `ALERT_DLV_UNCONFIRMABLE` notice per run of `ZCA_OPS_ALERT_CONFIRM`); with a reader, `P` then `D`; a stopped confirmation job makes `ALERT_DELIVERY` stale. |
+| V282 | Runtime | Coverage check with the real licence service: `LIC_ENFORCE` W and a module not licensed = `MONITOR_LIC_WARNED`; X = `MONITOR_REFUSED`; a check not scheduled = `MONITOR_NOT_RUN` after its window; the card counts of `ZC_CA_OpsCoverage` agree. |
+| V283 | Install harness | `tools/qualify` records the platform validation of the processes it proved with report `ZCA_OPS_CAT_VALIDATE` (source H, release text from the qualification evidence); the catalogue list shows date, system and release. |
+| V284 | Translation | Texts of the domains `ZCA_OPS_EVAL_STATE`, `ZCA_OPS_EVAL_CMPL`, `ZCA_OPS_COV_STATE`, `ZCA_OPS_DLV_STATE` (DD07T) and messages 560-584 in the customer's languages (SE63). |
+| V285 | Runtime (fixture replay) | `config/evaluation/fixtures.json` on a system: the payment file check (day results), a cash check (zero volume, not expected, not evaluated) and a legacy check give the expected evaluation records; the retention purge deletes the records with their run. |
+

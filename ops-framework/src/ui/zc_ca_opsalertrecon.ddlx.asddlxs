@@ -1,0 +1,81 @@
+// UI annotations: Alert reconciliation (service ZUI_CA_OPS_DASH, 2026-11-16, build O)
+// Per run of the last 7 days: findings that should have alerted, alerts submitted, alerts delivered - submission is
+// never shown as delivery. Variant "Not delivered" for the runs whose alerts failed, are pending or cannot be
+// confirmed. VERIFY-ADT: list rendering (V278).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Run', typeNamePlural: 'Alert reconciliation',
+                  title: { type: #STANDARD, value: 'Area' },
+                  description: { type: #STANDARD, value: 'StartedAt' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StartedAt', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'NotDelivered', text: 'Not delivered (failed, pending, cannot confirm, not routed)',
+                          filter: 'ReconCriticality LE 2' } ]
+annotate entity ZC_CA_OpsAlertRecon with
+{
+  @UI.facet: [ { id: 'Run', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Run', position: 10 },
+               { id: 'Alerts', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Alerts',
+                 label: 'Should have alerted, submitted, delivered', position: 20 } ]
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Schedule group'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 20 } ]
+  Variant;
+  @EndUserText.label: 'Run started (UTC)'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  StartedAt;
+  @EndUserText.label: 'Run RAG'
+  @UI.identification: [ { position: 40 } ]
+  RunRag;
+  @EndUserText.label: 'Exceptions (should alert)'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 10 } ]
+  ExceptionCount;
+  @EndUserText.label: 'Of them blocking (B, E)'
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 20 } ]
+  BlockingCount;
+  @EndUserText.label: 'Routing decisions'
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 30 } ]
+  DecisionCount;
+  @EndUserText.label: 'Submitted'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 40 } ]
+  SubmittedCount;
+  @EndUserText.label: 'Delivered (confirmed)'
+  @UI.lineItem: [ { position: 60, importance: #HIGH, criticality: 'ReconCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 50 } ]
+  DeliveredCount;
+  @EndUserText.label: 'Pending confirmation'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 60 } ]
+  PendingCount;
+  @EndUserText.label: 'Channel cannot confirm'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 70 } ]
+  CannotConfirmCount;
+  @EndUserText.label: 'Failed after submission'
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 80 } ]
+  DeliveryFailedCount;
+  @EndUserText.label: 'Failed at submission'
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 90 } ]
+  SubmitFailedCount;
+  @EndUserText.label: 'Held back (throttle, quiet, repeat, downtime, correlated)'
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 100 } ]
+  SuppressedCount;
+  @EndUserText.label: 'Claimed, not finished'
+  @UI.fieldGroup: [ { qualifier: 'Alerts', position: 110 } ]
+  ClaimedCount;
+  @EndUserText.label: 'Reconciliation'
+  @UI.lineItem: [ { position: 90, importance: #HIGH, criticality: 'ReconCriticality' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 50, criticality: 'ReconCriticality' } ]
+  ReconState;
+  @UI.hidden: true
+  ReconCriticality;
+}

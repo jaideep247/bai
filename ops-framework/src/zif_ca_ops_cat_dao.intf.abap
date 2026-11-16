@@ -4,9 +4,11 @@
 *& Data access of the process catalogue: packages, processes, steps,
 *& tables, dependencies and activation rows (small customizing tables, read
 *& whole) and the business processes of ZCA_OPS_PROC with their catalogue
-*& process (active or not). Read only.
+*& process (active or not). Read only, apart from the platform validation
+*& of a catalogue process (ZCA_OPS_CATVAL, report ZCA_OPS_CAT_VALIDATE).
 *& Modification log:
 *& 2026-11-11 | Initial version (process catalogue with activation).
+*& 2026-11-16 | SAVE_VALIDATION (platform validation of a catalogue process, build O; DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - process catalogue data access</p>
 INTERFACE zif_ca_ops_cat_dao
@@ -42,5 +44,14 @@ INTERFACE zif_ca_ops_cat_dao
       iv_area             TYPE zif_ca_ops_types=>ty_area OPTIONAL
     RETURNING
       VALUE(rt_onboarded) TYPE zif_ca_ops_cat_types=>tt_onboarded.
+
+  "! Record the platform validation of a catalogue process on this system (ZCA_OPS_CATVAL, replaces the row of
+  "! the same process and system); the caller commits
+  "! @raising zcx_ca_ops_error | 010 the row was refused by the database
+  METHODS save_validation DEFAULT IGNORE
+    IMPORTING
+      is_validation TYPE zif_ca_ops_eval_types=>ty_validation
+    RAISING
+      zcx_ca_ops_error.
 
 ENDINTERFACE.

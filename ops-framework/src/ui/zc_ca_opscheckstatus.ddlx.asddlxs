@@ -4,6 +4,9 @@
 // list "Process checks - attention" (selection variant Attention, presentation variant Attention: worst status
 // first, then stale, then most open exceptions). VERIFY-ADT: card rendering (OVP V4).
 // 2026-11-11: planned downtime of the area now (column, filter, run group).
+// 2026-11-16: evaluation state (build O): column with text and criticality (not evaluated / stale red, partial and
+// findings amber - never green when unknown), facet "Evaluation", variant "Not evaluated, stale or partial", data
+// point ChecksUnknown for the KPI card.
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Check', typeNamePlural: 'Checks by area',
                   title: { type: #STANDARD, value: 'CheckName' },
@@ -18,12 +21,15 @@
                              maxItems: 10,
                              visualizations: [ { type: #AS_LINEITEM, qualifier: 'Attention' } ] } ]
 @UI.selectionVariant: [ { qualifier: 'Attention', text: 'Needs attention (open exceptions or stale)', filter: 'IsAttention EQ X' },
-                        { qualifier: 'Stale', text: 'Stale checks (no recent run)', filter: 'IsStale EQ X' } ]
+                        { qualifier: 'Stale', text: 'Stale checks (no recent run)', filter: 'IsStale EQ X' },
+                        { qualifier: 'Unknown', text: 'Not evaluated, stale or partial', filter: 'IsEvaluationUnknown EQ X' } ]
 annotate entity ZC_CA_OpsCheckStatus with
 {
   @UI.facet: [ { id: 'Check', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Check', position: 10 },
                { id: 'Run', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Run',
-                 label: 'Latest run and freshness', position: 20 } ]
+                 label: 'Latest run and freshness', position: 20 },
+               { id: 'Evaluation', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Evaluation',
+                 label: 'Evaluation: expected, observed, unknown', position: 30 } ]
   @EndUserText.label: 'Area'
   @UI.lineItem: [ { position: 10, importance: #HIGH } ]
   @UI.selectionField: [ { position: 10 } ]
@@ -135,4 +141,68 @@ annotate entity ZC_CA_OpsCheckStatus with
   @EndUserText.label: 'Needs attention'
   @UI.hidden: true
   IsAttention;
+  // Evaluation state (2026-11-16, build O): unknown is shown, never green
+  @EndUserText.label: 'Evaluation'
+  @UI.lineItem: [ { position: 47, importance: #HIGH, criticality: 'EvaluationCriticality' },
+                  { qualifier: 'Attention', position: 45, importance: #HIGH, criticality: 'EvaluationCriticality' } ]
+  @UI.selectionField: [ { position: 55 } ]
+  @UI.identification: [ { position: 75, criticality: 'EvaluationCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 10, criticality: 'EvaluationCriticality' } ]
+  EvaluationState;
+  @UI.hidden: true
+  EvaluationStateText;
+  @UI.hidden: true
+  EvaluationCriticality;
+  @EndUserText.label: 'Completeness (C, P, N)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 20 } ]
+  EvaluationCompleteness;
+  @EndUserText.label: 'Result class'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 30 } ]
+  EvaluationResult;
+  @EndUserText.label: 'Reason (when not complete)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 40 } ]
+  EvaluationReason;
+  @EndUserText.label: 'Evaluated at (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 50 } ]
+  EvaluatedAt;
+  @EndUserText.label: 'Expected scope: business date'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 60 } ]
+  ScopeDate;
+  @EndUserText.label: 'Expected scope: period'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 70 } ]
+  ScopePeriod;
+  @EndUserText.label: 'Expected scope: company codes'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 80 } ]
+  ScopeCompanyCodes;
+  @EndUserText.label: 'Expected'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 90 } ]
+  ExpectedCount;
+  @EndUserText.label: 'Observed'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 100 } ]
+  ObservedCount;
+  @EndUserText.label: 'Source freshness (oldest newest observation, UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 110 } ]
+  SourceFreshAt;
+  @EndUserText.label: 'Stalest source'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 120 } ]
+  FreshSource;
+  @EndUserText.label: 'Watermark (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 130 } ]
+  Watermark;
+  @EndUserText.label: 'Last valid result at (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 140 } ]
+  LastValidAt;
+  @EndUserText.label: 'Last valid result'
+  @UI.fieldGroup: [ { qualifier: 'Evaluation', position: 150 } ]
+  LastValidResult;
+  @EndUserText.label: 'Evaluation unknown'
+  @UI.hidden: true
+  IsEvaluationUnknown;
+  @EndUserText.label: 'Checks not evaluated, stale or partial'
+  @UI.dataPoint: { qualifier: 'ChecksUnknown', title: 'Unknown (not evaluated, stale, partial)' }
+  UnknownCount;
+  @EndUserText.label: 'Checks not evaluated'
+  NotEvaluatedCount;
+  @EndUserText.label: 'Checks partly evaluated'
+  PartialCount;
 }

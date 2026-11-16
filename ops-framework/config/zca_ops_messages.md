@@ -6,7 +6,7 @@ numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
 control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
 process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 110-139 SAP job
-monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-369 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 370-399 payment file lifecycle (2026-11-15; `docs/PAYMENT_FILE_LIFECYCLE.md`) · 400-449 configuration apps (RAP) · 500-549 FI-CA cash operations checks (2026-11-15, build N; `docs/FICA_CASH_OPERATIONS.md`) · 700-849 alert patterns,
+monitor (2026-11-11) · 140-179 operations response features (2026-11-11: planned downtime, correlation, escalation until acknowledged; 153 / 154 checks of the configuration app; `docs/OPERATIONS_FEATURES.md`) · 210-239 link registry and walker (2026-11-11; 225, 235, 236 checks of the configuration app; `docs/LINK_REGISTRY.md`) · 240-279 process catalogue: activation, runner note, onboarding gaps, rule check, outage check (2026-11-11; 240 check of the configuration app; `docs/PROCESS_CATALOGUE.md`) · 320-349 account flow reconciliation (2026-11-15; 340 check of the configuration app; `docs/ACCOUNT_FLOW.md`) · 350-369 licensing (2026-11-15; 350 check of the configuration app; `docs/LICENSING.md`) · 370-399 payment file lifecycle (2026-11-15; `docs/PAYMENT_FILE_LIFECYCLE.md`) · 400-449 configuration apps (RAP) · 500-549 FI-CA cash operations checks (2026-11-15, build N; `docs/FICA_CASH_OPERATIONS.md`) · 560-599 evaluation state, alert delivery confirmation, monitor coverage and catalogue milestones (2026-11-16, build O; 567 check of the daily review; `docs/EVALUATION_AND_COVERAGE.md`) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -307,6 +307,30 @@ texts <= 73 characters).
 | 537 | Job &1 (&2): status &3, ended &4 |
 | 538 | Owner: not assigned (no active control or process owner for &1) |
 | 539 | Next cutoff: unknown (&1 / &2 cutoff time not maintained) |
+| 560 | Check &1 of area &2 not evaluated: the check raised |
+| 561 | Check &1 of area &2 partly evaluated: earlier exceptions stay open |
+| 562 | Source &1 of check &2 last observed &3 (limit &4 minutes) |
+| 563 | Period &1 closed for area &2 &3: no activity expected |
+| 564 | Check &1 not run: licence refuses module &2 (&3) |
+| 565 | Check &1 not run: business process &2 not in effect |
+| 566 | Check &1 of area &2 not evaluated: nothing could be read |
+| 567 | Sign-off as healthy needs an observation: &1 covered check(s) unknown |
+| 568 | Monitor gap: check &1 of area &2 not run in its window (last &3) |
+| 569 | Monitor impaired: check &1 of area &2 evaluation &3 |
+| 570 | Monitor gap: check &1 of area &2 refused by the licence (&3) |
+| 571 | Check &1 of area &2 runs under a licence warning (module &3) |
+| 572 | Alert &1 (rule &2, &3) submitted &4, not confirmed delivered |
+| 573 | Alert &1 (rule &2, &3) delivery failed: &4 |
+| 574 | &1 alert(s) of channel &2: the channel cannot confirm delivery |
+| 575 | Delivery confirmation: &1 asked, &2 delivered, &3 pending, &4 unknown |
+| 576 | Delivery of channel &1 could not be confirmed: |
+| 577 | E-mail send status not read: no reader in parameter &1 (V271) |
+| 579 | Application log &1 written (alert status &2): delivered on write |
+| 580 | Platform validation of &1 on &2 (&3) recorded |
+| 581 | Catalogue process &1 is not in the catalogue |
+| 582 | Release and support package are mandatory for a validation |
+| 583 | Test mode: validation of &1 on &2 (&3) not saved |
+| 584 | Channel &1 is not configured: delivery cannot be confirmed |
 | 742 | Alert rule &1: pattern &2 is not valid PCRE - rule not applied |
 | 786 | Exception &1 (&2) changed by a user during the run - left for next run |
 | 787 | Exception &1 / &2 changed meanwhile - not resolved, nothing saved |

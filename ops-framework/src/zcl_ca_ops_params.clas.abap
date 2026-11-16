@@ -30,6 +30,7 @@
 *& 2026-11-15 | Prefix LIC_ (licensing) read in area CA_OPS.
 *& 2026-11-15 | Prefix PF_ (payment file lifecycle) read in area CA_OPS.
 *& 2026-11-15 | Prefix CASH_ (FI-CA cash operations checks, build N) read in area CA_OPS.
+*& 2026-11-16 | Prefix EVAL_ (evaluation and coverage, delivery confirmation, build O) read in area CA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CA_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
@@ -103,7 +104,8 @@ CLASS zcl_ca_ops_params IMPLEMENTATION.
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-flow        area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-license     area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-payfile     area = zif_ca_ops_types=>gc_param_area )
-      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-cash        area = zif_ca_ops_types=>gc_param_area ) ).
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-cash        area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-eval        area = zif_ca_ops_types=>gc_param_area ) ).
   ENDMETHOD.
 
 

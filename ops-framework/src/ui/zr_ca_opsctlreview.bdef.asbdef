@@ -10,6 +10,8 @@ strict ( 2 );
 // signed off on its own with ZCA_OPS 02 for the area and, for a company code, that BUKRS.
 // VERIFY-ADT: managed BO without persistent table (with unmanaged save, lock master unmanaged) over a
 // root view entity with joins (7.58).
+// Evaluation state (2026-11-16, build O): the evaluation of the covered checks is read-only like the status; a
+// healthy sign-off with unknown covered checks needs an observation (ZCL_CA_OPS_REVIEW_POLICY, message 567).
 define behavior for ZR_CA_OpsCtlReview alias Review
 with unmanaged save
 lock master unmanaged
@@ -25,7 +27,8 @@ etag master LastChangedAt
                      IsFlagged, IsReviewOverdue, ControlCount, ReviewedCount, AwaitingCount, OverdueCount,
                      ActionRequiredCount, WatchCount, FlaggedCount, DowntimeFindings, IsPlannedDowntime,
                      DowntimeCount, IsReopened, ReopenReason, ReopenFindings, ReopenNewCount, ReopenStatusCount,
-                     ReopenAmountCount, ReopenConfigCount, ReopenedCount;
+                     ReopenAmountCount, ReopenConfigCount, ReopenedCount, CoveredChecks, UnknownChecks, NotRunChecks,
+                     EvaluationState, EvaluationCriticality, IsEvaluationUnknown, UnknownCount;
 
   action markReviewed parameter ZA_CA_CtlReview result [1] $self;
 }

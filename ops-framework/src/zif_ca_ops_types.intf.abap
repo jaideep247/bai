@@ -53,6 +53,8 @@
 *& 2026-11-15 | Exception contract (ZIF_CA_OPS_EXC_CONTRACT=>TY_CONTRACT included in TY_FINDING); name prefix PF_
 *&            | read in area CA_OPS (payment file lifecycle).
 *& 2026-11-15 | Name prefix CASH_ read in area CA_OPS (FI-CA cash operations checks, build N).
+*& 2026-11-16 | Name prefix EVAL_ read in area CA_OPS (evaluation and coverage, build O); TY_ALERT_LOG-DLV_*
+*&            | (delivery confirmation of an alert, separate from its submission).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -175,6 +177,8 @@ INTERFACE zif_ca_ops_types
       flow        TYPE ty_param_name VALUE 'FLOW_',
       "! Licence of the vendor (ZIF_CA_OPS_LIC_TYPES=>GC_PARAM, 2026-11-15)
       license     TYPE ty_param_name VALUE 'LIC_',
+      "! Evaluation and coverage, delivery confirmation (ZIF_CA_OPS_EVAL_TYPES=>GC_PARAM, 2026-11-16)
+      eval        TYPE ty_param_name VALUE 'EVAL_',
       "! Payment file lifecycle (ZIF_CA_OPS_PF_TYPES=>GC_PARAM, 2026-11-15)
       payfile     TYPE ty_param_name VALUE 'PF_',
       "! FI-CA cash operations checks (ZIF_CA_OPS_CASH_TYPES=>GC_PARAM, 2026-11-15, build N)
@@ -696,6 +700,13 @@ INTERFACE zif_ca_ops_types
       "! number (with RUN_ID; 2026-11-11)
       esc_step    TYPE i,
       finding_no  TYPE i,
+      "! Delivery confirmation (2026-11-16, build O): state (ZIF_CA_OPS_EVAL_TYPES=>GC_DLV; blank = not asked yet),
+      "! the channel's reference, the last confirmation attempt, the confirmed delivery time and the channel's note
+      dlv_state      TYPE c LENGTH 1,
+      dlv_ref        TYPE c LENGTH 70,
+      dlv_checked_at TYPE timestampl,
+      dlv_at         TYPE timestampl,
+      dlv_info       TYPE ty_message,
     END OF ty_alert_log.
   TYPES tt_alert_log TYPE STANDARD TABLE OF ty_alert_log WITH EMPTY KEY.
 

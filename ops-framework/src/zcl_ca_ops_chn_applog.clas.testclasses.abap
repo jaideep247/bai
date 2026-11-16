@@ -9,6 +9,8 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-10 | Create and save failures: own messages 800 / 801 with the return code.
 *& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
+*& 2026-11-16 | Delivery confirmation (build O, ltc_chn_applog_confirm): delivered on write (D at the submission
+*&            | time) for a submitted alert, failed (F) for a partly written log.
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_applog DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -176,6 +178,38 @@ CLASS ltc_chn_applog IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltc_chn_applog_confirm DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    METHODS delivered_on_write FOR TESTING.
+    METHODS partial_log_failed FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_chn_applog_confirm IMPLEMENTATION.
+
+  METHOD delivered_on_write.
+    DATA(ls_delivery) = CAST zif_ca_ops_alert_channel( NEW zcl_ca_ops_chn_applog( ) )->confirm(
+                          VALUE #( channel = 'APPLOG' status = 'S' sent_at = '20261116080000.0000000' ) ).
+    cl_abap_unit_assert=>assert_equals( act = ls_delivery-state exp = zif_ca_ops_eval_types=>gc_dlv-delivered
+                                        msg = 'Delivered on write' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_delivery-delivered_at exp = '20261116080000.0000000'
+                                        msg = 'At the submission' ).
+  ENDMETHOD.
+
+
+  METHOD partial_log_failed.
+    DATA(ls_delivery) = CAST zif_ca_ops_alert_channel( NEW zcl_ca_ops_chn_applog( ) )->confirm(
+                          VALUE #( channel = 'APPLOG' status = 'P' ) ).
+    cl_abap_unit_assert=>assert_equals( act = ls_delivery-state exp = zif_ca_ops_eval_types=>gc_dlv-failed
+                                        msg = 'Partly written' ).
   ENDMETHOD.
 
 ENDCLASS.

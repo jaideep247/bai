@@ -4,10 +4,11 @@
 *& Data access of the process catalogue (all SQL of the catalogue): the six
 *& catalogue tables ZCA_OPS_CATPKG / _CATPRC / _CATSTP / _CATTAB / _CATDEP /
 *& _CATACT, read whole (small customizing tables), and the business
-*& processes of ZCA_OPS_PROC with their catalogue process. Read only:
-*& writes nothing.
+*& processes of ZCA_OPS_PROC with their catalogue process. Read only,
+*& apart from the platform validation row of ZCA_OPS_CATVAL (no commit).
 *& Modification log:
 *& 2026-11-11 | Initial version (process catalogue with activation).
+*& 2026-11-16 | SAVE_VALIDATION: platform validation of a catalogue process (ZCA_OPS_CATVAL, build O).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - process catalogue data access</p>
 CLASS zcl_ca_ops_cat_dao DEFINITION
@@ -85,6 +86,22 @@ CLASS zcl_ca_ops_cat_dao IMPLEMENTATION.
         WHERE area = @iv_area
         ORDER BY area, process_id
         INTO CORRESPONDING FIELDS OF TABLE @rt_onboarded.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_cat_dao~save_validation.
+    DATA(ls_db) = VALUE zca_ops_catval( process_id   = is_validation-process_id
+                                        sys_id       = is_validation-sys_id
+                                        release_txt  = is_validation-release_txt
+                                        validated_on = is_validation-validated_on
+                                        validated_by = is_validation-validated_by
+                                        source       = is_validation-source
+                                        evidence     = is_validation-evidence ).
+    MODIFY zca_ops_catval FROM @ls_db.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_ca_ops_error
+        MESSAGE e010(zca_ops) WITH 'ZCA_OPS_CATVAL'.
     ENDIF.
   ENDMETHOD.
 

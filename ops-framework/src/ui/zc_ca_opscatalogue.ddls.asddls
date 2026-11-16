@@ -4,6 +4,7 @@
 //          monitored). Read access: DCL ZC_CA_OPSCATALOGUE (ZCA_OPS 03 for the framework area CA_OPS - the
 //          catalogue is product configuration, no business data). Read-only.
 // Modification log: 2026-11-11 | Initial version (process catalogue with activation).
+//                   2026-11-16 | Catalogue milestones: entry, runnable check, platform-validated, customer-activated.
 // Extension point CATALOGUE (2026-11-15, build H; config/extension_points.json, docs/EXTENDING_WITH_CUSTOMER_DATA.md):
 //          passes the elements of the base view on; a customer adds its own elements with extend view entity from its package,
 //          never by changing this view.
@@ -42,5 +43,16 @@ define root view entity ZC_CA_OpsCatalogue
       ActivationReason,
       ApprovedBy,
       MonitoringChecks,
-      Seq
+      Seq,
+      HasCatalogueEntry,
+      RunnableChecks,
+      HasRunnableCheck,
+      IsPlatformValidated,
+      ValidatedOn,
+      ValidatedSystem,
+      ValidatedRelease,
+      ValidatedSystems,
+      IsCustomerActivated,
+      MilestonesReached,
+      MilestoneCriticality
 }

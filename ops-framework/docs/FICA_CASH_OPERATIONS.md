@@ -199,6 +199,13 @@ process owner `P`, none `N`); `FINDING` sets `EVID_KEY` and collects one typed e
   and company-code slice) read the same `ZCA_OPS_FINDING` rows. Amounts are never summed across currencies: each
   finding has one currency and the card counts exceptions, not money.
 
+## 7a. Evaluation state (2026-11-16, build O)
+
+`ZCL_CA_OPS_CASH_CTX=>FINDING` folds the evaluation of every exception (`OBSERVED` with an exception = findings,
+`ZERO_VOLUME` = `ZERO_OK`, `NOT_EXPECTED` = `HOLIDAY`, `STALE`, `NOT_EVALUATED` = not evaluated) into the check's
+`TY_RESULT-EVAL` (`EVAL( )`, returned by each of the six checks); the runner stores the framework's evaluation record
+(`docs/EVALUATION_AND_COVERAGE.md` section 1.1). The detail line 530 stays.
+
 ## 8. Configuration (parameters, area CA_OPS)
 
 See `docs/PARAMETERS.md` (prefix `CASH_`). Minimum to evaluate: `CASH_CALENDAR`, the process controls with owner,

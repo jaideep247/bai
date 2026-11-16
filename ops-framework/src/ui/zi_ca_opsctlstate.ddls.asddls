@@ -12,6 +12,9 @@
 //                   2026-11-11 | Explainable, versioned results: a sign-off is REOPENED with a reason (ReopenReason,
 //                                IsReopened); a finding raised again unchanged after the sign-off no longer makes the
 //                                control await review (it was "any finding after the sign-off").
+//                   2026-11-16 | Evaluation of the covered checks (build O): EvaluationState OK (every covered check
+//                                evaluated), PARTIAL (some unknown) or NOT_EVAL (all unknown), blank without covered
+//                                checks; IsEvaluationUnknown - shown apart from the status, never healthy unseen.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Control review: derived state'
 @Metadata.ignorePropagatedAnnotations: true
@@ -79,5 +82,13 @@ define view entity ZI_CA_OpsCtlState
                    or D.ReopenConfigCount > 0 then 'X'
                  when D.StatusRank > D.ReviewRank then 'X'
                  else ' ' end as abap_boolean )             as IsAwaitingReview,
-      cast( case when D.StatusRank > 0 then 'X' else ' ' end as abap_boolean ) as IsFlagged
+      cast( case when D.StatusRank > 0 then 'X' else ' ' end as abap_boolean ) as IsFlagged,
+      D.CoveredChecks,
+      D.UnknownChecks,
+      D.NotRunChecks,
+      cast( case when D.CoveredChecks = 0 then ' '
+                 when D.UnknownChecks = 0 then 'OK'
+                 when D.UnknownChecks >= D.CoveredChecks then 'NOT_EVAL'
+                 else 'PARTIAL' end as zca_ops_eval_state ) as EvaluationState,
+      cast( case when D.UnknownChecks > 0 then 'X' else ' ' end as abap_boolean ) as IsEvaluationUnknown
 }

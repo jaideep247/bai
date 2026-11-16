@@ -15,6 +15,8 @@
 *&            | MAY_ACT); lock and save per slice.
 *& 2026-11-15 | Licensing: the sign-off is work of the module CONTROL - refused under LIC_ENFORCE = X while the
 *&            | licence does not cover it (message 352); reading the review is never refused.
+*& 2026-11-16 | Evaluation state (build O): the covered checks not evaluated, stale, partial or not run on the
+*&            | date go to the review policy - a healthy sign-off then needs an observation (567).
 *&---------------------------------------------------------------------*
 CLASS lhc_review DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -95,7 +97,8 @@ CLASS lhc_review IMPLEMENTATION.
       DATA(ls_input) = VALUE zif_ca_ops_ctl_types=>ty_review_input( derived_status = ls_review-ControlStatus
                                                                      review_result  = ls_key-%param-ReviewResult
                                                                      observation    = ls_key-%param-Observation
-                                                                     next_action    = ls_key-%param-NextAction ).
+                                                                     next_action    = ls_key-%param-NextAction
+                                                                     unknown_checks = ls_review-UnknownChecks ).
       DATA(ls_decision) = zcl_ca_ops_review_policy=>can_review( ls_input ).
       IF ls_decision-allowed = abap_false.
         INSERT VALUE #( %tky = ls_review-%tky ) INTO TABLE failed-review.

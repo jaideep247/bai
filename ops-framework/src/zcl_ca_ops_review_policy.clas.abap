@@ -17,6 +17,9 @@
 *&            | the sign-off or changed in severity, amount or configuration version (REOPEN_REASON per finding,
 *&            | the reason of the slice = the first that applies; a worse status reopens with WORSE); a finding
 *&            | raised again unchanged no longer reopens it (IS_AWAITING, REOPEN_REASON_OF_SLICE).
+*& 2026-11-16 | Evaluation state (build O): a control whose covered checks were not evaluated (not evaluated,
+*&            | stale, partial or without evaluation on the date) is never signed off as healthy without an
+*&            | observation (message 567) - unknown is not green.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - daily control review rules</p>
 CLASS zcl_ca_ops_review_policy DEFINITION
@@ -39,7 +42,8 @@ CLASS zcl_ca_ops_review_policy DEFINITION
       RETURNING
         VALUE(rv_rank) TYPE i.
 
-    "! May the sign-off be saved? Result blank = the derived status confirmed
+    "! May the sign-off be saved? Result blank = the derived status confirmed; healthy with unknown covered checks
+    "! needs an observation (567)
     CLASS-METHODS can_review
       IMPORTING
         is_input           TYPE zif_ca_ops_ctl_types=>ty_review_input
@@ -149,6 +153,10 @@ CLASS zcl_ca_ops_review_policy IMPLEMENTATION.
       rs_decision = refuse( zif_ca_ops_ctl_types=>gc_msg-action_text_missing ).
     ELSEIF lv_result <> lv_derived AND is_input-observation IS INITIAL.
       rs_decision = refuse( iv_msgno = zif_ca_ops_ctl_types=>gc_msg-result_differs iv_v1 = lv_result ).
+    ELSEIF lv_result = zif_ca_ops_ctl_types=>gc_status-healthy AND is_input-unknown_checks > 0
+       AND is_input-observation IS INITIAL.
+      " no finding is not health when the checks were not evaluated: the reviewer says why it is healthy
+      rs_decision = refuse( iv_msgno = zif_ca_ops_eval_types=>gc_msg-signoff_unknown iv_v1 = |{ is_input-unknown_checks }| ).
     ELSE.
       rs_decision-allowed = abap_true.
     ENDIF.

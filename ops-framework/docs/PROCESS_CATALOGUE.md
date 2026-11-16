@@ -259,3 +259,14 @@ objects of the tables), `docs/OPERATIONS_FEATURES.md` (planned downtime), `docs/
 ## Related: customer data on top (2026-11-15)
 
 A customer adds columns from its own tables to the catalogue `ZR_CA_OpsCatalogue` (passed on to `ZC_CA_OpsCatalogue`); anchor: the process ID as the key of a customer object - extension point `CATALOGUE` of `config/extension_points.json`. It declares them in its folder (`config/extensions/*.json`); `tools/extensions.py` checks them against the inventory and the link registry and generates the `extend view entity` sources into the customer package. No product object changes. `docs/EXTENDING_WITH_CUSTOMER_DATA.md`; VERIFY V153-V157.
+
+## Catalogue milestones (2026-11-16, build O)
+
+Four milestones per catalogue process, tracked apart and never collapsed into "active": **catalogue entry** (the
+process row), **runnable check** (a registered check with a class of a business process that monitors it -
+`ZI_CA_OpsCatRun`), **platform-validated** (evidence that its check ran on a supported release: date, system and
+release in `ZCA_OPS_CATVAL`, recorded by the install harness or an operator with `ZCA_OPS_CAT_VALIDATE` - never
+seeded) and **customer-activated** (the effective activation). The catalogue list `ZC_CA_OpsCatalogue` shows them
+(facet *Milestones*, columns, *Milestones reached* 0-4, variant *Activated, not platform-validated*); the generated
+`docs/catalogue/milestones.md` derives entry and runnable from the package specs and leaves platform-validated blank.
+`docs/EVALUATION_AND_COVERAGE.md` section 6; VERIFY V283.

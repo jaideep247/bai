@@ -20,6 +20,7 @@
 *& Modification log:
 *& 2026-11-15 | Initial version (build N: FI-CA cash coverage).
 *& 2026-11-16 | Exception contract (build K merge): returns the evidence rows of its findings.
+*& 2026-11-16 | Evaluation state (build O): the run's evaluation (ZCL_CA_OPS_CASH_CTX=>EVAL) in TY_RESULT-EVAL.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FI-CA cash check - payment run expected / completed</p>
 "! VERIFY V221: DPAYH-XVORL set = proposal row; a payment run that follows a proposal carries the proposal's run date
@@ -117,6 +118,7 @@ CLASS zcl_ca_ops_chk_cash_payrun IMPLEMENTATION.
                                     ix_error  = lx_runs ) INTO TABLE rs_result-findings.
         rs_result-partial = abap_true.
         rs_result-evidence = mo_ctx->evidence( ).
+        rs_result-eval = mo_ctx->eval( ).
         RETURN.
     ENDTRY.
     DATA(lv_pattern) = mo_ctx->param_text( zif_ca_ops_cash_types=>gc_param-payrun_jobname ).
@@ -141,6 +143,7 @@ CLASS zcl_ca_ops_chk_cash_payrun IMPLEMENTATION.
     rs_result-partial = mo_ctx->partial( ).
     " exception contract: the typed evidence rows of the findings (stored by the runner)
     rs_result-evidence = mo_ctx->evidence( ).
+    rs_result-eval = mo_ctx->eval( ).
   ENDMETHOD.
 
 

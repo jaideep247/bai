@@ -12,6 +12,9 @@
 *& 2026-11-06 | Test seams around the four BAL calls; return codes kept in locals (coverage gap closure).
 *& 2026-11-10 | Own messages for create (800) and save (801) failures, each with the return code.
 *& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS.
+*& 2026-11-16 | Delivery confirmation (build O): the application log is delivered on write - CONFIRM answers D for
+*&            | a submitted alert (BAL_DB_SAVE succeeded), F for a partly written one; DELIVERY_REF = the SLG1
+*&            | external ID of the last log written.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert channel application log</p>
 CLASS zcl_ca_ops_chn_applog DEFINITION
@@ -24,6 +27,10 @@ CLASS zcl_ca_ops_chn_applog DEFINITION
 
     CONSTANTS gc_default_object TYPE balobj_d VALUE 'ZCA_OPS'.
     CONSTANTS gc_default_subobject TYPE balsubobj VALUE 'ALERT'.
+
+  PRIVATE SECTION.
+    "! SLG1 external ID of the last log written by DELIVER
+    DATA mv_extnumber TYPE balnrext.
 
 ENDCLASS.
 
@@ -123,11 +130,31 @@ CLASS zcl_ca_ops_chn_applog IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_ca_ops_error
         MESSAGE e801(zca_ops) WITH ls_log-object ls_log-subobject lv_save_subrc.
     ENDIF.
+    mv_extnumber = ls_log-extnumber.
     " A45: a log that stopped adding lines is saved but reported as partial, never as sent
     IF lv_added < lines( lt_text ).
       RAISE EXCEPTION TYPE zcx_ca_ops_error
         MESSAGE e025(zca_ops) WITH ls_log-object ls_log-subobject lv_added lines( lt_text ).
     ENDIF.
+  ENDMETHOD.
+
+
+
+  METHOD zif_ca_ops_alert_channel~delivery_ref.
+    rv_ref = mv_extnumber.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_channel~confirm.
+    " delivered on write: BAL_DB_SAVE succeeded when the router recorded the alert as submitted
+    rs_delivery = VALUE #( state        = COND #( WHEN is_log-status = zif_ca_ops_types=>gc_alert_status-sent
+                                                  THEN zif_ca_ops_eval_types=>gc_dlv-delivered
+                                                  ELSE zif_ca_ops_eval_types=>gc_dlv-failed )
+                           delivered_at = COND #( WHEN is_log-status = zif_ca_ops_types=>gc_alert_status-sent
+                                                  THEN is_log-sent_at )
+                           info         = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_eval_types=>gc_msg-applog_written
+                                                                 iv_v1    = is_log-dlv_ref
+                                                                 iv_v2    = is_log-status ) ).
   ENDMETHOD.
 
 ENDCLASS.

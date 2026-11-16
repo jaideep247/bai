@@ -21,6 +21,8 @@
 *& 2026-11-11 | Operations response features: escalation fields of rules (ESC_*), log fields ESC_STEP /
 *&            | FINDING_NO (claim, decisions, reads); GET_MARKS, GET_CHILD_COUNTS (index CRI), GET_RUNBOOKS,
 *&            | GET_ESCALATION_CANDIDATES (index OPN), GET_INTENT_LOG (index INT).
+*& 2026-11-16 | Delivery confirmation (build O): INSERT_LOG / COMPLETE write the delivery columns DLV_*;
+*&            | GET_SUBMITTED (index DLV), SET_DELIVERY (delivery columns only).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert repository</p>
 CLASS zcl_ca_ops_alert_dao DEFINITION
@@ -101,6 +103,11 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
       ls_db-render_info = <ls_log>-render_info.
       ls_db-esc_step    = <ls_log>-esc_step.
       ls_db-finding_no  = <ls_log>-finding_no.
+      ls_db-dlv_state      = <ls_log>-dlv_state.
+      ls_db-dlv_ref        = <ls_log>-dlv_ref.
+      ls_db-dlv_checked_at = <ls_log>-dlv_checked_at.
+      ls_db-dlv_at         = <ls_log>-dlv_at.
+      ls_db-dlv_info       = <ls_log>-dlv_info.
       ls_db-created_by  = sy-uname.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
@@ -158,7 +165,12 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
           subject     = @is_log-subject,
           template_id = @is_log-template_id,
           renderer    = @is_log-renderer,
-          render_info = @is_log-render_info
+          render_info = @is_log-render_info,
+          dlv_state      = @is_log-dlv_state,
+          dlv_ref        = @is_log-dlv_ref,
+          dlv_checked_at = @is_log-dlv_checked_at,
+          dlv_at         = @is_log-dlv_at,
+          dlv_info       = @is_log-dlv_info
       WHERE alert_id = @is_log-alert_id.
     IF sy-subrc <> 0.
       " the claim row is gone (purged): keep the evidence as a new row
@@ -288,6 +300,43 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
       FOR ALL ENTRIES IN @it_intent_keys
       WHERE intent_key = @it_intent_keys-table_line
       INTO CORRESPONDING FIELDS OF TABLE @rt_log.
+  ENDMETHOD.
+
+  METHOD zif_ca_ops_alert_dao~get_submitted.
+    DATA lt_dlv TYPE RANGE OF zca_ops_allog-dlv_state.
+    IF iv_open_only = abap_true.
+      lt_dlv = VALUE #( sign = 'I' option = 'EQ'
+                        ( low = zif_ca_ops_eval_types=>gc_dlv-not_asked )
+                        ( low = zif_ca_ops_eval_types=>gc_dlv-pending ) ).
+    ENDIF.
+    SELECT alert_id, rule_id, channel, run_id, area, sent_at, status, destination, subject, error,
+           intent_key, attempt, template_id, renderer, render_info, esc_step, finding_no,
+           dlv_state, dlv_ref, dlv_checked_at, dlv_at, dlv_info
+      FROM zca_ops_allog
+      WHERE ( status = @zif_ca_ops_types=>gc_alert_status-sent
+           OR status = @zif_ca_ops_types=>gc_alert_status-partial
+           OR status = @zif_ca_ops_types=>gc_alert_status-failed )
+        AND dlv_state IN @lt_dlv
+        AND sent_at  >= @iv_since
+      ORDER BY sent_at, alert_id
+      INTO CORRESPONDING FIELDS OF TABLE @rt_log.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_alert_dao~set_delivery.
+    LOOP AT it_log ASSIGNING FIELD-SYMBOL(<ls_log>).
+      UPDATE zca_ops_allog
+        SET dlv_state      = @<ls_log>-dlv_state,
+            dlv_ref        = @<ls_log>-dlv_ref,
+            dlv_checked_at = @<ls_log>-dlv_checked_at,
+            dlv_at         = @<ls_log>-dlv_at,
+            dlv_info       = @<ls_log>-dlv_info
+        WHERE alert_id = @<ls_log>-alert_id.
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_ca_ops_error
+          MESSAGE e081(zca_ops) WITH '1' |{ lines( it_log ) }|.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 ENDCLASS.

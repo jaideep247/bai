@@ -12,6 +12,8 @@
 *& 2026-11-07 | Recipients are SO23 shared lists: seam DLI_READ, 027 and CHECK_DESTINATION tests.
 *& 2026-11-10 | commit_failure_raises_806: a failed COMMIT WORK AND WAIT is a failed delivery.
 *& 2026-11-10 | Moved from the first consumer to the reusable framework ZCA_OPS (test include).
+*& 2026-11-16 | Delivery confirmation (build O, ltc_chn_email_confirm): without a send status reader the e-mail
+*&            | cannot confirm (N, never delivered); with a reader (EVAL_EMAIL_READER, a double) its answer.
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -190,6 +192,69 @@ CLASS ltc_chn_email IMPLEMENTATION.
       act = mo_cut->check_destination( CONV #( |{ gc_recipients },{ gc_unknown_list },{ gc_long_list }| ) )
       exp = |{ gc_unknown_list },{ gc_long_list }|
       msg = 'Unknown and over-long list names reported' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltd_reader DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_dlv_reader.
+ENDCLASS.
+
+CLASS ltd_reader IMPLEMENTATION.
+  METHOD zif_ca_ops_dlv_reader~read.
+    rs_delivery = VALUE #( state = zif_ca_ops_eval_types=>gc_dlv-delivered delivered_at = is_log-sent_at ).
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltc_chn_email_confirm DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_reader TYPE zif_ca_ops_types=>ty_class_name VALUE 'ZCL_ZT_READER'.
+    DATA mo_seed TYPE REF TO zcl_ca_ops_param_seed.
+
+    METHODS setup.
+    METHODS teardown.
+    METHODS no_reader_cannot_confirm FOR TESTING.
+    METHODS reader_answers           FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_chn_email_confirm IMPLEMENTATION.
+
+  METHOD setup.
+    mo_seed = NEW #( ).
+    zcl_ca_ops_injector=>inject_params( mo_seed->params( ) ).
+    zcl_ca_ops_injector=>inject_plugin( iv_class_name = gc_reader io_instance = NEW ltd_reader( ) ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_ca_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  " Rule: BCS acceptance is not delivery - without a verified status reader the e-mail cannot confirm
+  METHOD no_reader_cannot_confirm.
+    DATA(ls_delivery) = CAST zif_ca_ops_alert_channel( NEW zcl_ca_ops_chn_email( ) )->confirm(
+                          VALUE #( channel = 'EMAIL' status = 'S' ) ).
+    cl_abap_unit_assert=>assert_equals( act = ls_delivery-state exp = zif_ca_ops_eval_types=>gc_dlv-cannot_confirm
+                                        msg = 'Cannot confirm' ).
+    cl_abap_unit_assert=>assert_not_initial( act = ls_delivery-info msg = 'Says why (V271)' ).
+  ENDMETHOD.
+
+
+  " Rule: a site's reader decides (here: delivered at the submission time)
+  METHOD reader_answers.
+    mo_seed->set( iv_name = zif_ca_ops_eval_types=>gc_param-email_reader iv_value = gc_reader ).
+    DATA(ls_delivery) = CAST zif_ca_ops_alert_channel( NEW zcl_ca_ops_chn_email( ) )->confirm(
+                          VALUE #( channel = 'EMAIL' status = 'S' sent_at = '20261116080000.0000000' ) ).
+    cl_abap_unit_assert=>assert_equals( act = ls_delivery-state exp = zif_ca_ops_eval_types=>gc_dlv-delivered
+                                        msg = 'Delivered by the reader' ).
   ENDMETHOD.
 
 ENDCLASS.

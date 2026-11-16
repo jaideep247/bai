@@ -74,6 +74,13 @@ not evaluated, a result capped, a non-working day, zero volume) needs no deadlin
 `ZCL_CA_OPS_CASH_CTX` assert `MISSING( )` empty in ABAP Unit; `tools/tests/test_cash_fixtures.py` asserts it for every
 expected finding of `config/cash/fixtures.json`.
 
+## 3a. The evaluation of the check (2026-11-16, build O)
+
+The contract says what a finding is about; the **evaluation record** of the check run says whether the check looked at
+all of it - expected scope, source freshness, watermark, completeness, result class, reason and last valid result -
+for every check, also one that raised nothing (`docs/EVALUATION_AND_COVERAGE.md`). A module that adopts the contract
+folds its own vocabulary into the optional `TY_RESULT-EVAL` (the payment file days, the cash evaluations).
+
 ## 4. Limits
 
 - The owner is the configuration at finding time; a reassignment in the exceptions app is the separate `OWNER`.

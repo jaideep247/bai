@@ -11,6 +11,8 @@
 *& 2026-11-11 | Explainable, versioned results: reopen reasons of a finding (new, severity, amount,
 *&            | configuration version; unchanged repeat none), reason of a slice (order, worse status), a
 *&            | finding raised again unchanged no longer reopens a sign-off.
+*& 2026-11-16 | Evaluation state (build O): a healthy sign-off with unknown covered checks needs an observation
+*&            | (567); with an observation, or with every covered check evaluated, it is allowed.
 *&---------------------------------------------------------------------*
 CLASS ltc_review_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -45,6 +47,7 @@ CLASS ltc_review_policy DEFINITION FINAL FOR TESTING
     METHODS inactive_never_awaits       FOR TESTING.
     METHODS overdue_after_cutoff        FOR TESTING.
     METHODS past_date_overdue           FOR TESTING.
+    METHODS unknown_blocks_healthy      FOR TESTING.
 ENDCLASS.
 
 
@@ -283,6 +286,25 @@ CLASS ltc_review_policy IMPLEMENTATION.
                                                                                    iv_now_time      = gc_test-after_cut
                                                                                    iv_cutoff        = gc_test-cutoff )
                                        msg = 'Signed off: never overdue' ).
+  ENDMETHOD.
+
+
+
+  " Rule: unknown is not green - covered checks not evaluated, stale, partial or not run block a healthy sign-off
+  " without an observation; the observation is the reviewer's reason
+  METHOD unknown_blocks_healthy.
+    DATA(ls_decision) = zcl_ca_ops_review_policy=>can_review(
+                          VALUE #( derived_status = zif_ca_ops_ctl_types=>gc_status-healthy unknown_checks = 2 ) ).
+    cl_abap_unit_assert=>assert_false( act = ls_decision-allowed msg = 'Healthy refused while checks are unknown' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_decision-msgno exp = zif_ca_ops_eval_types=>gc_msg-signoff_unknown
+                                        msg = '567' ).
+    ls_decision = zcl_ca_ops_review_policy=>can_review(
+                    VALUE #( derived_status = zif_ca_ops_ctl_types=>gc_status-healthy unknown_checks = 2
+                             observation    = gc_test-observation ) ).
+    cl_abap_unit_assert=>assert_true( act = ls_decision-allowed msg = 'Allowed with the reviewer''s reason' ).
+    ls_decision = zcl_ca_ops_review_policy=>can_review(
+                    VALUE #( derived_status = zif_ca_ops_ctl_types=>gc_status-healthy ) ).
+    cl_abap_unit_assert=>assert_true( act = ls_decision-allowed msg = 'Every covered check evaluated' ).
   ENDMETHOD.
 
 ENDCLASS.

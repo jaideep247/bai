@@ -15,6 +15,9 @@
 *&            | row window MAX_AGE_DAYS and time field TIME_FIELD; operator NI (none of a list); a date / time
 *&            | window of an aggregate (outage check).
 *& 2026-11-15 | Exception contract: TY_RESULT-EVIDENCE (typed evidence rows of the findings).
+*& 2026-11-16 | Evaluation and coverage (build O): optional TY_RESULT-EVAL (expected scope, source freshness,
+*&            | watermark, completeness, result class, reason); a check that fills nothing keeps compiling and
+*&            | gets the runner's defaults (docs/EVALUATION_AND_COVERAGE.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - check registry types</p>
 INTERFACE zif_ca_ops_chk_types
@@ -266,6 +269,10 @@ INTERFACE zif_ca_ops_chk_types
       "! Exception contract (2026-11-15): typed evidence rows of the findings (key = the finding's EVID_KEY), stored
       "! by the runner through ZIF_CA_OPS_EVIDENCE (replacing the rows of the same key; nothing in test mode)
       evidence   TYPE zif_ca_ops_exc_contract=>tt_evidence,
+      "! Evaluation and coverage (2026-11-16, optional): what the check knows of its own evaluation - expected scope,
+      "! sources and their freshness, watermark, completeness, result class and reason. Blank = the runner derives
+      "! it from the fields above (ZCL_CA_OPS_EVAL=>DERIVE) and stores the record (ZCA_OPS_EVAL)
+      eval       TYPE zif_ca_ops_eval_types=>ty_check_eval,
     END OF ty_result.
 
   "! Result of one run of the runner (report, tests)

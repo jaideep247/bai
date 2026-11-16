@@ -15,6 +15,9 @@
 //                                the counter DowntimeCount (operations response features).
 //                   2026-11-11 | Reopened sign-off with its reason (text of domain ZCA_OPS_REOPEN) and the findings that
 //                                changed since the sign-off; counter ReopenedCount (explainable, versioned results).
+//                   2026-11-16 | Evaluation of the covered checks (build O): covered / unknown / not run checks, the
+//                                evaluation state with its text and criticality (never green when unknown) and the
+//                                counter UnknownCount; a healthy sign-off with unknown checks needs an observation.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Daily control review'
 @Metadata.ignorePropagatedAnnotations: true
@@ -24,6 +27,7 @@ define root view entity ZR_CA_OpsCtlReview
   association [0..*] to ZI_CA_OpsCtlStatusT as _StatusText on $projection.ControlStatus = _StatusText.ControlStatus
   association [0..*] to ZI_CA_OpsCtlStatusT as _ResultText on $projection.ReviewResult = _ResultText.ControlStatus
   association [0..*] to ZI_CA_OpsReopenT    as _ReopenText on $projection.ReopenReason = _ReopenText.ReopenReason
+  association [0..*] to ZI_CA_OpsEvalStateT as _EvalText   on $projection.EvaluationState = _EvalText.EvaluationState
 {
   key S.Area,
   key S.ControlId,
@@ -76,6 +80,16 @@ define root view entity ZR_CA_OpsCtlReview
       S.ReopenConfigCount,
       S.IsAwaitingReview,
       S.IsFlagged,
+      S.CoveredChecks,
+      S.UnknownChecks,
+      S.NotRunChecks,
+      @ObjectModel.text.association: '_EvalText'
+      S.EvaluationState,
+      cast( case S.EvaluationState when 'NOT_EVAL' then 1
+                                   when 'PARTIAL' then 2
+                                   when 'OK' then 3
+                                   else 0 end as abap.int1 ) as EvaluationCriticality,
+      S.IsEvaluationUnknown,
       cast( case when S.IsAwaitingReview = 'X'
                   and (    S.BusinessDate < S.Today
                         or ( S.BusinessDate = S.Today and S.CutoffTime <> '000000' and S.NowTime > S.CutoffTime ) )
@@ -92,7 +106,9 @@ define root view entity ZR_CA_OpsCtlReview
       cast( case when S.StatusRank > 0 then 1 else 0 end as abap.int4 ) as FlaggedCount,
       cast( case S.IsPlannedDowntime when 'X' then 1 else 0 end as abap.int4 ) as DowntimeCount,
       cast( case S.IsReopened when 'X' then 1 else 0 end as abap.int4 )      as ReopenedCount,
+      cast( case S.IsEvaluationUnknown when 'X' then 1 else 0 end as abap.int4 ) as UnknownCount,
       _StatusText,
       _ResultText,
-      _ReopenText
+      _ReopenText,
+      _EvalText
 }

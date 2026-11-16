@@ -9,4 +9,8 @@ define service ZUI_CA_OPS_DASH {
   // today's activation
   expose ZC_CA_OpsProcStatus  as ProcessStatus;
   expose ZC_CA_OpsCatalogue   as Catalogue;
+  // Evaluation and coverage (2026-11-16, build O): monitor coverage per area and licence module, and the alert
+  // reconciliation (should have alerted, submitted, delivered)
+  expose ZC_CA_OpsCoverage    as Coverage;
+  expose ZC_CA_OpsAlertRecon  as AlertReconciliation;
 }

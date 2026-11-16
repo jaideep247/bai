@@ -19,6 +19,8 @@
 *& 2026-11-10 | Target REVIEW (ZCA_OPS_REVIEW by REVIEWED_AT, daily control review).
 *& 2026-11-10 | Target REVIEW: key field BUKRS read (company-code slices of the review).
 *& 2026-11-11 | Target DOWNTIME (ZCA_OPS_DTWIN by TO_UTC, planned downtime windows).
+*& 2026-11-16 | RUN: the evaluation records of the purged runs (ZCA_OPS_EVAL / ZCA_OPS_EVALSRC, build O) are
+*&            | deleted with them and counted as dependent rows.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge SQL</p>
 CLASS zcl_ca_ops_purge_dao DEFINITION
@@ -84,6 +86,11 @@ CLASS zcl_ca_ops_purge_dao IMPLEMENTATION.
         ev_history = sy-dbcnt.
         DELETE FROM zca_ops_finding WHERE run_id IN @lt_runs.
         ev_dependent = sy-dbcnt.
+        " the evaluation records belong to their run (build O)
+        DELETE FROM zca_ops_evalsrc WHERE run_id IN @lt_runs.
+        ev_dependent += sy-dbcnt.
+        DELETE FROM zca_ops_eval WHERE run_id IN @lt_runs.
+        ev_dependent += sy-dbcnt.
         DELETE FROM zca_ops_run WHERE run_id IN @lt_runs.
         rv_count = sy-dbcnt.
 

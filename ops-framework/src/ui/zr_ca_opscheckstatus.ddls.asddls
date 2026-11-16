@@ -16,6 +16,11 @@
 //                              | IsPlannedDowntime and the active windows (operations response features).
 //                   2026-11-11 | Process catalogue: rows of checks in effect only (ZI_CA_OpsChkSlice); the
 //                              | catalogue process of the business process and its dashboard card.
+//                   2026-11-16 | Evaluation state (build O, docs/EVALUATION_AND_COVERAGE.md): the latest evaluation of
+//                              | the check (ZI_CA_OpsEvalNow, area-level slice only) - state with its text (NOT_EVAL,
+//                              | STALE, PARTIAL shown apart from OK, never green), completeness, result class, reason,
+//                              | expected scope, source freshness, watermark, last valid result; IsAttention also for
+//                              | an unknown evaluation; card counters UnknownCount, NotEvaluatedCount, PartialCount.
 // VERIFY-ADT: cross join with left outer joins, a literal in the ON condition of a left outer join, the
 //             TIMESTAMPL -> TIMESTAMP cast and tstmp_seconds_between (as the consumers' "as of" views), coalesce
 //             over a LEFT OUTER JOIN column (7.58).
@@ -54,6 +59,10 @@ define root view entity ZR_CA_OpsCheckStatus
     left outer join ZI_CA_OpsChkStaleA as StA  on  StA.Area = Sl.Area
     left outer join ZI_CA_OpsDtwActive as Dtw  on  Dtw.Area       = Sl.Area
                                                and Sl.CompanyCode = ' '
+    left outer join ZI_CA_OpsEvalNow   as En   on  En.Area        = Sl.Area
+                                               and En.CheckId     = Sl.CheckId
+                                               and Sl.CompanyCode = ' '
+  association [0..*] to ZI_CA_OpsEvalStateT as _EvalText on $projection.EvaluationState = _EvalText.EvaluationState
 {
   key Sl.Area                                               as Area,
   key Sl.CheckId                                            as CheckId,
@@ -106,6 +115,29 @@ define root view entity ZR_CA_OpsCheckStatus
       // Planned downtime of the area now (area-level slice only: a window has no company code)
       cast( coalesce( Dtw.ActiveWindows, 0 ) as abap.int4 ) as PlannedDowntimeWindows,
       cast( case when Dtw.ActiveWindows is null then ' ' else 'X' end as abap_boolean ) as IsPlannedDowntime,
+      // Evaluation state (2026-11-16): the latest evaluation of the check (area-level slice only: an evaluation is of
+      // the check's run, its company codes are its scope)
+      @ObjectModel.text.association: '_EvalText'
+      En.EvaluationState                                    as EvaluationState,
+      cast( coalesce( En.EvaluationCriticality, 0 ) as abap.int1 ) as EvaluationCriticality,
+      En.Completeness                                       as EvaluationCompleteness,
+      En.ResultClass                                        as EvaluationResult,
+      En.Reason                                             as EvaluationReason,
+      En.EvaluatedAt                                        as EvaluatedAt,
+      En.BusinessDate                                       as ScopeDate,
+      En.Period                                             as ScopePeriod,
+      En.CompanyCodes                                       as ScopeCompanyCodes,
+      En.ExpectedCount                                      as ExpectedCount,
+      En.ObservedCount                                      as ObservedCount,
+      En.SourceFreshAt                                      as SourceFreshAt,
+      En.FreshSource                                        as FreshSource,
+      En.Watermark                                          as Watermark,
+      En.LastValidAt                                        as LastValidAt,
+      En.LastValidResult                                    as LastValidResult,
+      cast( coalesce( En.IsUnknown, ' ' ) as abap_boolean ) as IsEvaluationUnknown,
+      cast( case En.IsUnknown when 'X' then 1 else 0 end as abap.int4 ) as UnknownCount,
+      cast( case En.EvaluationState when 'NOT_EVAL' then 1 else 0 end as abap.int4 ) as NotEvaluatedCount,
+      cast( case En.EvaluationState when 'PARTIAL' then 1 else 0 end as abap.int4 ) as PartialCount,
       cast( 1 as abap.int4 )                                as SliceCount,
       cast( case when coalesce( Op.WorstRank, 0 ) > 0 then 1 else 0 end as abap.int4 ) as FlaggedCount,
       // One per registered check (area-level slice only), so a company-code slice never counts a check twice
@@ -118,9 +150,11 @@ define root view entity ZR_CA_OpsCheckStatus
                                           tstmp_current_utctimestamp( ), 'NULL' )
                    > coalesce( StA.StaleAfterMinutes, StD.StaleAfterMinutes ) * 60 then 1
               else 0 end as abap.int4 )                     as StaleCount,
-      // Needs attention: an open exception on the slice, or the area-level slice is stale
+      // Needs attention: an open exception on the slice, or the area-level slice is stale or its evaluation unknown
       case
         when coalesce( Op.WorstRank, 0 ) > 0
+          then cast( 'X' as abap_boolean )
+        when En.IsUnknown = 'X'
           then cast( 'X' as abap_boolean )
         when Sl.CompanyCode <> ' '
           then cast( ' ' as abap_boolean )
@@ -130,7 +164,8 @@ define root view entity ZR_CA_OpsCheckStatus
                                     tstmp_current_utctimestamp( ), 'NULL' )
              > coalesce( StA.StaleAfterMinutes, StD.StaleAfterMinutes ) * 60
           then cast( 'X' as abap_boolean )
-        else cast( ' ' as abap_boolean ) end                as IsAttention
+        else cast( ' ' as abap_boolean ) end                as IsAttention,
+      _EvalText
 }
 where
   Chk.active = 'X'

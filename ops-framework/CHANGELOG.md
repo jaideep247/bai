@@ -2,6 +2,51 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-16 (build O: one evaluation state for every control; delivery and coverage you can trust)
+
+Release constant unchanged (1.0.0). Review 2026-11-15 finding 3, section 4, P1 "Reconcile monitor coverage and alert
+delivery", distribution and catalogue rows; `docs/release/RELEASE_1_PLAN.md` row O. `docs/EVALUATION_AND_COVERAGE.md`.
+
+### Added
+- Evaluation record per registered check and run (`ZCA_OPS_EVAL`, `ZCA_OPS_EVALSRC`; `ZIF_CA_OPS_EVAL_TYPES`,
+  `ZCL_CA_OPS_EVAL`, `ZIF_CA_OPS_EVAL_DAO` / `ZCL_CA_OPS_EVAL_DAO`): expected scope (business date, period, company
+  codes), source freshness per source, watermark, completeness C / P / N, result class OK / ZERO_OK / HOLIDAY /
+  PER_CLOSED / STALE / NOT_EVAL / FINDINGS, display state, reason, licence state of the run, last valid result. Saved by
+  `ZCL_CA_OPS_CHECK_RUNNER` in the run's unit of work (never in test mode), also for a check not run (licence refused,
+  process not in effect). One vocabulary: build K's day results and build N's evaluations map onto it.
+- Optional `ZIF_CA_OPS_CHK_TYPES=>TY_RESULT-EVAL`: existing checks compile unchanged and default from their result
+  (raised = not evaluated, PARTIAL = partial, no exception = OK, else FINDINGS); a stale source turns a zero into STALE,
+  a closed period (`ZIF_CA_OPS_EVAL_PERIOD`, delivered `ZCL_CA_OPS_EVAL_PERIOD` on `EVAL_PERIOD_CLOSED`) into PER_CLOSED.
+- Never green when unknown: evaluation state with text and criticality on the area dashboard (`ZI_CA_OpsEvalNow`,
+  facet *Evaluation*, counters `UnknownCount`, `NotEvaluatedCount`, `PartialCount`) and in the daily review
+  (`ZI_CA_OpsCtlEval`: covered / unknown / not run checks); a healthy sign-off with unknown covered checks needs an
+  observation (message 567).
+- Alert delivery confirmed separately from submission: `ZCA_OPS_ALLOG-DLV_STATE` / `DLV_REF` / `DLV_CHECKED_AT` /
+  `DLV_AT` / `DLV_INFO`; optional channel methods `ZIF_CA_OPS_ALERT_CHANNEL=>DELIVERY_REF` / `CONFIRM` (DEFAULT
+  IGNORE); application log delivered on write; e-mail through a send status reader `ZIF_CA_OPS_DLV_READER`
+  (`EVAL_EMAIL_READER`, none delivered: cannot confirm until V271 / V272); step `ZCL_CA_OPS_ALERT_CONFIRM` with report
+  `ZCA_OPS_ALERT_CONFIRM`; check `ZCL_CA_OPS_CHK_ALERT_DLV` (registry `CA_OPS / ALERT_DELIVERY`, group `ALERTDLV`);
+  reconciliation `ZR_CA_OpsAlertRecon` / `ZC_CA_OpsAlertRecon` (should have alerted / submitted / delivered).
+- Monitor coverage: `ZR_CA_OpsCoverage` / `ZC_CA_OpsCoverage` per area and licence module (DISABLED, REFUSED,
+  NOT_RUN, IMPAIRED, WARNED, RAN), rule `ZCL_CA_OPS_COVERAGE`, check `ZCL_CA_OPS_CHK_COVERAGE` (registry
+  `CA_OPS / COVERAGE`, licence read live through `ZIF_CA_OPS_LICENSE`).
+- Catalogue milestones: catalogue entry, runnable check (`ZI_CA_OpsCatRun`), platform-validated (`ZCA_OPS_CATVAL`,
+  report `ZCA_OPS_CAT_VALIDATE`, never seeded), customer-activated - in `ZR_CA_OpsCatalogue` and the generated
+  `docs/catalogue/milestones.md` (`tools/process_catalogue.py`, profile key `milestones`).
+- Domains `ZCA_OPS_EVAL_STATE`, `ZCA_OPS_EVAL_CMPL`, `ZCA_OPS_COV_STATE`, `ZCA_OPS_DLV_STATE` (texts DD07L / DD07T:
+  `ZI_CA_OpsEvalStateT`, `ZI_CA_OpsCovStateT`); parameters `EVAL_*`; messages 560-584; VERIFY V270-V285.
+- Fixture spec `config/evaluation/fixtures.json`, reference model `tools/abaptools/evaluation.py`, root test
+  `tools/tests/test_evaluation.py`; ABAP Unit with doubles for every new class and the runner, review policy, e-mail and
+  application-log channels.
+
+### Changed
+- The payment file check and the six cash checks fold their own vocabulary into `TY_RESULT-EVAL`
+  (`ZCL_CA_OPS_CHK_PAYFILE`, `ZCL_CA_OPS_CASH_CTX=>EVAL`); their findings are unchanged.
+- Alert router: a submitted alert keeps the channel's reference and its first delivery state; `ZCL_CA_OPS_ALERT_DAO`
+  writes the delivery columns (`GET_SUBMITTED`, `SET_DELIVERY`). Retention: target `RUN` deletes the evaluation
+  records with their run. `ZIF_CA_OPS_CHECK_DAO=>GET_REGISTRY`, `ZIF_CA_OPS_CAT_DAO=>SAVE_VALIDATION` (DEFAULT IGNORE).
+- Licence module `CORE` names the two new check classes and entry points (generated `ZCL_CA_OPS_LIC_MAP`).
+
 ## [Unreleased] - 2026-11-16 (merge: payment file lifecycle with FI-CA cash checks and release packs)
 
 Release constant unchanged (1.0.0). Build K (payment file lifecycle, exception contract) merged with builds L/M/N.

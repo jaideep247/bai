@@ -18,6 +18,10 @@
 *&            | row and the check's own rows), another version when a row changes, a version set by the check kept.
 *& 2026-11-15 | Licensing: a check of a module the licence refuses (X) is not run - LICENSE_REFUSED, not reconciled;
 *&            | under W it runs and the run warns once (LICENSE_UNLICENSED); the licence is a local double.
+*& 2026-11-16 | Evaluation state (build O): one record per check and run, saved with the run (doubles of the
+*&            | evaluation repository and the period-close calendar) - the defaults of a legacy check (exception =
+*&            | FINDINGS, raised = not evaluated with its reason), a closed period (PER_CLOSED, not OK), a check not
+*&            | run (licence refused, process not in effect) recorded as not evaluated with its reason.
 *&---------------------------------------------------------------------*
 CLASS ltd_check DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -96,6 +100,34 @@ CLASS ltd_license IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_ca_ops_license~status.
     rs_status-license_id = 'ZT-LIC-0001'.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_eval_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_eval_dao PARTIALLY IMPLEMENTED.
+    DATA mt_saved TYPE zif_ca_ops_eval_types=>tt_eval.
+ENDCLASS.
+
+CLASS ltd_eval_dao IMPLEMENTATION.
+  METHOD zif_ca_ops_eval_dao~save.
+    INSERT LINES OF it_eval INTO TABLE mt_saved.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_period DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_eval_period.
+    DATA mv_closed TYPE abap_bool.
+    DATA mv_period TYPE zif_ca_ops_eval_types=>ty_period.
+ENDCLASS.
+
+CLASS ltd_period IMPLEMENTATION.
+  METHOD zif_ca_ops_eval_period~is_closed.
+    mv_period = iv_period.
+    rv_closed = mv_closed.
   ENDMETHOD.
 ENDCLASS.
 
@@ -256,6 +288,8 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
     DATA mo_lock TYPE REF TO ltd_lock.
     DATA mo_catalog TYPE REF TO ltd_catalog.
     DATA mo_license TYPE REF TO ltd_license.
+    DATA mo_eval TYPE REF TO ltd_eval_dao.
+    DATA mo_period TYPE REF TO ltd_period.
 
     METHODS setup.
     METHODS teardown.
@@ -283,6 +317,9 @@ CLASS ltc_runner DEFINITION FINAL FOR TESTING
     METHODS own_version_kept             FOR TESTING.
     METHODS unlicensed_check_refused     FOR TESTING.
     METHODS unlicensed_check_warns_w     FOR TESTING.
+    METHODS evaluation_per_check         FOR TESTING.
+    METHODS closed_period_not_ok         FOR TESTING.
+    METHODS not_run_is_not_evaluated     FOR TESTING.
 ENDCLASS.
 
 
@@ -299,7 +336,11 @@ CLASS ltc_runner IMPLEMENTATION.
     mo_lock  = NEW #( ).
     mo_catalog = NEW #( ).
     mo_license = NEW #( ).
+    mo_eval    = NEW #( ).
+    mo_period  = NEW #( ).
     zcl_ca_ops_injector=>inject_license( mo_license ).
+    zcl_ca_ops_injector=>inject_eval_dao( mo_eval ).
+    zcl_ca_ops_injector=>inject_eval_period( mo_period ).
     zcl_ca_ops_injector=>inject_check_dao( mo_dao ).
     zcl_ca_ops_injector=>inject_catalog( mo_catalog ).
     zcl_ca_ops_injector=>inject_store( mo_store ).
@@ -609,6 +650,74 @@ CLASS ltc_runner IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_ca_ops_lic_types=>gc_code-unlicensed ] ) )
           msg = 'No warning per run while no licence is installed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+
+  " Rule: every check of the run has one evaluation record, saved with the run; a legacy check with an exception
+  " is FINDINGS and complete, a check that raised is not evaluated with its reason
+  METHOD evaluation_per_check.
+    TRY.
+        configure_scenario( VALUE #( bad_check = abap_true ) ).
+        DATA(ls_result) = run( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_eval->mt_saved ) exp = 2 msg = 'One record per check' ).
+        DATA(ls_ok) = mo_eval->mt_saved[ check_id = gc-check_ok ].
+        cl_abap_unit_assert=>assert_equals( act = ls_ok-eval_state exp = zif_ca_ops_eval_types=>gc_state-findings
+                                            msg = 'Exception = FINDINGS' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_ok-completeness exp = zif_ca_ops_eval_types=>gc_cmpl-complete
+                                            msg = 'Complete' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_ok-run_id exp = ls_result-run-run_id msg = 'Of the run' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_period->mv_period exp = '202611' msg = 'Period of the run date' ).
+        DATA(ls_bad) = mo_eval->mt_saved[ check_id = gc-check_bad ].
+        cl_abap_unit_assert=>assert_equals( act = ls_bad-eval_state exp = zif_ca_ops_eval_types=>gc_state-not_evaluated
+                                            msg = 'Raised = not evaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_bad-reason_code exp = zif_ca_ops_eval_types=>gc_reason-check_raised
+                                            msg = 'With its reason' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a check without exceptions in a closed period is PER_CLOSED, never OK
+  METHOD closed_period_not_ok.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        CLEAR mo_ok->mt_findings.
+        mo_period->mv_closed = abap_true.
+        run( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_eval->mt_saved[ check_id = gc-check_ok ]-eval_state
+                                            exp = zif_ca_ops_eval_types=>gc_state-period_closed msg = 'Period closed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a check not run is recorded - not evaluated, with the reason (process not in effect, licence refused)
+  METHOD not_run_is_not_evaluated.
+    TRY.
+        configure_scenario( VALUE #( process_off = abap_true ) ).
+        run( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_eval->mt_saved[ check_id = gc-check_ok ]-reason_code
+                                            exp = zif_ca_ops_eval_types=>gc_reason-process_inactive msg = 'Process off' ).
+        zcl_ca_ops_injector=>inject_catalog( NEW ltd_catalog( ) ).
+        CLEAR mo_eval->mt_saved.
+        mo_license->mt_modules = VALUE #( ( zif_ca_ops_lic_types=>gc_module-jobs ) ).
+        mo_license->ms_decision = VALUE #( state     = zif_ca_ops_lic_types=>gc_state-expired
+                                           lic_state = zif_ca_ops_lic_types=>gc_lic_state-valid
+                                           allowed   = abap_false ).
+        run( ).
+        DATA(ls_refused) = mo_eval->mt_saved[ check_id = gc-check_ok ].
+        cl_abap_unit_assert=>assert_equals( act = ls_refused-reason_code
+                                            exp = zif_ca_ops_eval_types=>gc_reason-license_refused msg = 'Refused' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_refused-lic_state exp = zif_ca_ops_eval_types=>gc_lic_state-refused
+                                            msg = 'Licence state R' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_refused-eval_state exp = zif_ca_ops_eval_types=>gc_state-not_evaluated
+                                            msg = 'Not evaluated' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

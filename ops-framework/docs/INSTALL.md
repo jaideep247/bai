@@ -324,6 +324,27 @@ registry rows are switched on.
 6. Optional: a ticket sink class of the site (the delivered one logs only), launchpad target mappings for the semantic
    objects `ZCaOpsException`, `ZCaOpsJob`, `ZCaOpsPaymentTrace`.
 
+## 6k. Evaluation state, alert delivery and monitor coverage (2026-11-16, build O, `docs/EVALUATION_AND_COVERAGE.md`)
+
+Core (module `CORE`, never refused). Nothing to configure for the evaluation state itself: the runner writes one record
+per registered check and run as soon as the objects are active.
+
+1. Pull: domains `ZCA_OPS_EVAL_STATE`, `ZCA_OPS_EVAL_CMPL`, `ZCA_OPS_COV_STATE`, `ZCA_OPS_DLV_STATE`; tables
+   `ZCA_OPS_EVAL`, `ZCA_OPS_EVALSRC`, `ZCA_OPS_CATVAL` and the new columns `DLV_*` of `ZCA_OPS_ALLOG` (secondary
+   indexes LST of `ZCA_OPS_EVAL` and DLV of `ZCA_OPS_ALLOG` by hand in SE11, V273). Republish `ZUI_CA_OPS_DASH_O4`
+   (new entity sets `Coverage`, `AlertReconciliation`; evaluation columns of `CheckStatus`, milestones of `Catalogue`)
+   and `ZUI_CA_OPS_REV_O4` (evaluation of the covered checks).
+2. Parameters (`docs/PARAMETERS.md`, prefix `EVAL_`): defaults are safe. `EVAL_PERIOD_CLOSED` only for areas whose
+   checks evaluate a closed accounting period; `EVAL_EMAIL_READER` only after V271 / V272 (until then the e-mail
+   channel answers "cannot confirm", one information notice per run).
+3. Registry rows of area `CA_OPS` (`config/check_registry.csv`, delivered active): `COVERAGE` (group `MORNING`, with
+   the `LICENSE` check) and `ALERT_DELIVERY` (group `ALERTDLV`).
+4. Schedule `ZCA_OPS_ALERT_CONFIRM` every 15 minutes (test mode off, group `ALERTDLV`; job user `ZCA_OPS` 16 for
+   `CA_OPS`) - it confirms the delivery of the submitted alerts and runs the delivery check.
+5. Platform validation of the catalogue processes proved on this system: `ZCA_OPS_CAT_VALIDATE` (operator, source O)
+   or the install harness (source H, V283); `ZCA_OPS` 02 for `CA_OPS`. Never transported as seed.
+6. Roles: the new lists read with `ZCA_OPS` 03 for the area (DCLs `ZC_CA_OPSCOVERAGE`, `ZC_CA_OPSALERTRECON`).
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run
