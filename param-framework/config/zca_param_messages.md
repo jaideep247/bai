@@ -37,16 +37,3 @@ Placeholders: `&1` area, `&2` parameter name, `&3` value / row / field,
 | 023 | min_above_max | Minimum &3 is greater than maximum &4 (parameter &1 / &2) |
 | 024 | intf_unknown | Interface &3 of parameter &1 / &2 does not exist |
 | 025 | list_needs_single | Value type LIST needs kind P (parameter &1 / &2) |
-
-## Maintenance app (040-059)
-
-| No | Constant | Text |
-|---|---|---|
-| 040 | request_missing | Enter an open customizing request for the changes to area &1 |
-| 041 | request_unknown | Request &1 does not exist |
-| 042 | request_not_cust | Request &1 is not a customizing request or task |
-| 043 | request_released | Request &1 is not modifiable (released or locked) |
-| 044 | config_not_allowed | Area &1: areas and definitions are maintained only by transport |
-| 045 | value_not_editable | Values of parameter &1 / &2 cannot be changed in this client |
-| 047 | record_failed | Changes could not be recorded on request &1 |
-| 048 | client_unchecked | Area &1: client check failed, customizing not editable: &2 |

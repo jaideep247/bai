@@ -12,6 +12,7 @@
 *&     )->row( '25' )->build( ).
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-24 | AREA: parameter IV_PROD_EDITABLE removed with the field.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - test data builder</p>
 CLASS zcl_ca_param_builder DEFINITION
@@ -22,14 +23,13 @@ CLASS zcl_ca_param_builder DEFINITION
   PUBLIC SECTION.
     METHODS constructor.
 
-    "! Start an area (active; values not editable in production unless iv_prod_editable)
+    "! Start an area (active unless iv_active is blank)
     METHODS area
       IMPORTING
         iv_area          TYPE zif_ca_param_types=>ty_area
-        iv_prod_editable TYPE abap_bool DEFAULT abap_false
-        iv_active        TYPE abap_bool DEFAULT abap_true
+        iv_active      TYPE abap_bool DEFAULT abap_true
       RETURNING
-        VALUE(ro_self)   TYPE REF TO zcl_ca_param_builder.
+        VALUE(ro_self) TYPE REF TO zcl_ca_param_builder.
 
     "! Define a parameter of the current area
     METHODS param
@@ -85,10 +85,9 @@ CLASS zcl_ca_param_builder IMPLEMENTATION.
   METHOD area.
     DATA ls_area TYPE zif_ca_param_types=>ty_area_row.
 
-    ls_area-area          = iv_area.
-    ls_area-description   = iv_area.
-    ls_area-prod_editable = iv_prod_editable.
-    ls_area-active        = iv_active.
+    ls_area-area        = iv_area.
+    ls_area-description = iv_area.
+    ls_area-active      = iv_active.
     mo_dao->add_area( ls_area ).
     mv_area = iv_area.
     CLEAR mv_name.

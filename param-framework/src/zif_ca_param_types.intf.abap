@@ -3,13 +3,15 @@
 *& Purpose:
 *& Named types and constants of the parameter framework: keys, values,
 *& definitions, value rows, area snapshot, messages, kinds, value types,
-*& range signs / options, PCRE patterns of the validator, authorization
-*& object and the client / request settings of the maintenance app.
+*& range signs / options, PCRE patterns of the validator and the
+*& authorization object.
 *& No logic. The message numbers here and the rows in
 *& config/zca_param_messages.md are compared by tools/checks.py.
 *& Modification log:
 *& 2026-11-07 | Initial version.
 *& 2026-11-10 | GC_VERSION: release of the framework, read by consumers that need a minimum release.
+*& 2026-11-24 | 2.0.0: RAP app removed (maintenance in SM30 / SPRO). PROD_EDITABLE, DEVELOPER_OWNED,
+*&            | OWNER, the client / request types and constants and messages 040-048 removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - types and constants</p>
 INTERFACE zif_ca_param_types
@@ -17,7 +19,7 @@ INTERFACE zif_ca_param_types
 
   "! Release of the parameter framework (CHANGELOG.md); consumers compare it with the release
   "! they need (e.g. the operations framework ZCA_OPS at startup)
-  CONSTANTS gc_version TYPE string VALUE `1.1.0`.
+  CONSTANTS gc_version TYPE string VALUE `2.0.0`.
 
   TYPES ty_area        TYPE zca_param_area_id.
   TYPES ty_name        TYPE zca_param_name.
@@ -30,14 +32,8 @@ INTERFACE zif_ca_param_types
   TYPES ty_description TYPE zca_param_descr.
   TYPES ty_owner       TYPE zca_param_owner.
   TYPES ty_interface   TYPE seoclsname.
-  TYPES ty_request     TYPE trkorr.
   TYPES ty_decimal     TYPE decfloat34.
   TYPES ty_actvt       TYPE c LENGTH 2.
-  TYPES ty_mode        TYPE c LENGTH 1.
-  TYPES ty_role        TYPE c LENGTH 1.
-  TYPES ty_change_opt  TYPE c LENGTH 1.
-  TYPES ty_req_status  TYPE c LENGTH 1.
-  TYPES ty_req_func    TYPE c LENGTH 1.
   TYPES ty_field       TYPE c LENGTH 30.
 
   "! Elements of a list parameter (get_list)
@@ -52,7 +48,6 @@ INTERFACE zif_ca_param_types
       area          TYPE ty_area,
       description   TYPE ty_description,
       owner_team    TYPE ty_owner,
-      prod_editable TYPE abap_bool,
       active        TYPE abap_bool,
     END OF ty_area_row.
   TYPES tt_area_row TYPE HASHED TABLE OF ty_area_row WITH UNIQUE KEY area.
@@ -70,9 +65,7 @@ INTERFACE zif_ca_param_types
       allowed_pcre    TYPE ty_value,
       interface_name  TYPE ty_interface,
       mandatory       TYPE abap_bool,
-      developer_owned TYPE abap_bool,
       description     TYPE ty_description,
-      owner           TYPE ty_owner,
     END OF ty_definition.
   TYPES tt_definition TYPE SORTED TABLE OF ty_definition WITH UNIQUE KEY area name.
 
@@ -98,7 +91,7 @@ INTERFACE zif_ca_param_types
       values      TYPE tt_value_row,
     END OF ty_area_data.
 
-  "! A message of class ZCA_PARAM (msgno initial = no message); field = UI element
+  "! A message of class ZCA_PARAM (msgno initial = no message); field = the field it refers to
   TYPES:
     BEGIN OF ty_message,
       msgid TYPE symsgid,
@@ -110,32 +103,6 @@ INTERFACE zif_ca_param_types
       field TYPE ty_field,
     END OF ty_message.
   TYPES tt_message TYPE STANDARD TABLE OF ty_message WITH EMPTY KEY.
-
-  "! Client settings (T000 / SCC4) and customizing changeability
-  TYPES:
-    BEGIN OF ty_client,
-      role          TYPE ty_role,
-      change_option TYPE ty_change_opt,
-      cust_editable TYPE abap_bool,
-      "! Why the business configuration API could not answer (customizing then not editable)
-      cust_reason   TYPE string,
-    END OF ty_client.
-
-  "! State of a transport request (E070)
-  TYPES:
-    BEGIN OF ty_request_info,
-      exists   TYPE abap_bool,
-      status   TYPE ty_req_status,
-      function TYPE ty_req_func,
-    END OF ty_request_info.
-
-  "! RAP entity (alias) and its persistent table, for transport recording
-  TYPES:
-    BEGIN OF ty_relation,
-      entity TYPE ty_field,
-      table  TYPE ty_field,
-    END OF ty_relation.
-  TYPES tt_relation TYPE STANDARD TABLE OF ty_relation WITH EMPTY KEY.
 
   CONSTANTS gc_msgid TYPE symsgid VALUE 'ZCA_PARAM'.
 
@@ -167,14 +134,6 @@ INTERFACE zif_ca_param_types
       min_above_max      TYPE symsgno VALUE '023',
       intf_unknown       TYPE symsgno VALUE '024',
       list_needs_single  TYPE symsgno VALUE '025',
-      request_missing    TYPE symsgno VALUE '040',
-      request_unknown    TYPE symsgno VALUE '041',
-      request_not_cust   TYPE symsgno VALUE '042',
-      request_released   TYPE symsgno VALUE '043',
-      config_not_allowed TYPE symsgno VALUE '044',
-      value_not_editable TYPE symsgno VALUE '045',
-      record_failed      TYPE symsgno VALUE '047',
-      client_unchecked   TYPE symsgno VALUE '048',
     END OF gc_msg.
 
   "! Parameter kinds (domain ZCA_PARAM_KIND)
@@ -246,7 +205,7 @@ INTERFACE zif_ca_param_types
   CONSTANTS gc_int_min TYPE ty_decimal VALUE '-2147483648'.
   CONSTANTS gc_int_max TYPE ty_decimal VALUE '2147483647'.
 
-  "! Element names of the maintenance app (CDS element names, upper case)
+  "! Field a validation message refers to (upper case, no underscore)
   CONSTANTS:
     BEGIN OF gc_field,
       area           TYPE ty_field VALUE 'AREA',
@@ -262,24 +221,9 @@ INTERFACE zif_ca_param_types
       opti           TYPE ty_field VALUE 'OPTI',
       low            TYPE ty_field VALUE 'LOW',
       high           TYPE ty_field VALUE 'HIGH',
-      request        TYPE ty_field VALUE 'TRANSPORTREQUEST',
     END OF gc_field.
 
-  "! Persistent tables and RAP entity aliases of the maintenance app (transport recording)
-  CONSTANTS:
-    BEGIN OF gc_table,
-      area       TYPE ty_field VALUE 'ZCA_PARAM_AREA',
-      definition TYPE ty_field VALUE 'ZCA_PARAM_DEF',
-      value      TYPE ty_field VALUE 'ZCA_PARAM_VAL',
-    END OF gc_table.
-  CONSTANTS:
-    BEGIN OF gc_entity,
-      area       TYPE ty_field VALUE 'Area',
-      definition TYPE ty_field VALUE 'Definition',
-      value      TYPE ty_field VALUE 'Value',
-    END OF gc_entity.
-
-  "! Authorization object ZCA_PARAM (maintenance only; runtime reads are not checked)
+  "! Authorization object ZCA_PARAM (optional, for a maintenance check per area; runtime reads are not checked)
   CONSTANTS:
     BEGIN OF gc_auth,
       object TYPE c LENGTH 10 VALUE 'ZCA_PARAM',
@@ -293,31 +237,5 @@ INTERFACE zif_ca_param_types
       display TYPE ty_actvt VALUE '03',
       delete  TYPE ty_actvt VALUE '06',
     END OF gc_actvt.
-
-  "! Maintenance mode of a client: T = transport (customizing client), L = local
-  CONSTANTS:
-    BEGIN OF gc_mode,
-      transport TYPE ty_mode VALUE 'T',
-      local     TYPE ty_mode VALUE 'L',
-    END OF gc_mode.
-
-  "! T000-CCCATEGORY production; T000-CCCORACTIV (VERIFY-SE11: fixed values of CCCORACTIV)
-  CONSTANTS gc_role_production TYPE ty_role VALUE 'P'.
-  CONSTANTS:
-    BEGIN OF gc_change_option,
-      no_recording  TYPE ty_change_opt VALUE ' ',
-      auto_record   TYPE ty_change_opt VALUE '1',
-      no_changes    TYPE ty_change_opt VALUE '2',
-      no_transports TYPE ty_change_opt VALUE '3',
-    END OF gc_change_option.
-
-  "! E070: TRSTATUS modifiable (D) / modifiable, protected (L); TRFUNCTION customizing request (W) / task (Q)
-  CONSTANTS:
-    BEGIN OF gc_request,
-      modifiable          TYPE ty_req_status VALUE 'D',
-      protected           TYPE ty_req_status VALUE 'L',
-      customizing_request TYPE ty_req_func VALUE 'W',
-      customizing_task    TYPE ty_req_func VALUE 'Q',
-    END OF gc_request.
 
 ENDINTERFACE.

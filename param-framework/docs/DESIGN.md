@@ -7,29 +7,28 @@
 > and a log of who flipped it; a missing fuse never silently becomes "on".
 
 Scope: S/4HANA 2023, SAP_BASIS 7.58, classic ABAP (not ABAP Cloud). Prefix `ZCA_`,
-packages `ZCA_PARAM` (runtime, DDIC, messages, authorization) and `ZCA_PARAM_UI`
-(maintenance app). Decisions of 2026-11-07; deviations from the initial brief are in
-section 12.
+package `ZCA_PARAM` (runtime, DDIC, messages, authorization). Maintenance in SM30 / SPRO
+(table maintenance generator and view cluster, built in the system, `docs/OPERATIONS.md`).
+Decisions of 2026-11-07, revised 2026-11-24 (RAP maintenance app removed); deviations from
+the initial brief are in section 12.
 
 ## 1. Object list
 
 | Layer | Object | Role |
 |---|---|---|
-| DDIC | `ZCA_PARAM_AREA` | area master: description, owner team, `PROD_EDITABLE`, `ACTIVE`, last customizing request, admin fields |
-| DDIC | `ZCA_PARAM_DEF` | definition per area + name: kind, value type, min / max, default, allowed PCRE, interface, mandatory, developer-owned, description, owner; FK `AREA` -> `ZCA_PARAM_AREA` |
+| DDIC | `ZCA_PARAM_AREA` | area master: description, owner team, `ACTIVE` |
+| DDIC | `ZCA_PARAM_DEF` | definition per area + name: kind, value type, min / max, default, allowed PCRE, interface, mandatory, description; FK `AREA` -> `ZCA_PARAM_AREA` |
 | DDIC | `ZCA_PARAM_VAL` | value rows per area + name + `NUMB`: sign, option, low, high; FK (`AREA`, `NAME`) -> `ZCA_PARAM_DEF` |
 | DDIC | domains / data elements `ZCA_PARAM_*` | fixed values for kind, value type, sign, option; flags on domain `XFELD` |
-| DDIC | `ZCA_D_PARAREA`, `ZCA_D_PARDEF`, `ZCA_D_PARVAL` | draft tables of the app |
-| Messages | `ZCA_PARAM` | 001-025 runtime and validation, 040-048 maintenance (`config/zca_param_messages.md`; authorization failures are reported by the RAP framework) |
-| Authorization | `ZCA_PARAM` (class `ZCA`), field `ZCA_PARAR` | maintenance only |
+| Messages | `ZCA_PARAM` | 001-025 runtime and validation (`config/zca_param_messages.md`) |
+| Authorization | `ZCA_PARAM` (class `ZCA`), field `ZCA_PARAR` | optional check per area; standard maintenance uses `S_TABU_DIS` |
 | API | `ZIF_CA_PARAM`, `ZIF_CA_PARAM_TYPES`, `ZCX_CA_PARAM` | read API, types / constants, checked exception (T100) |
 | Logic | `ZCL_CA_PARAM` | resolution, typed getters, validation on every read, per-area buffer |
-| Rules | `ZCL_CA_PARAM_VALIDATOR` | pure validation rules, shared by runtime and app |
+| Rules | `ZCL_CA_PARAM_VALIDATOR` | pure validation rules, shared by runtime and the SM30 save events |
 | Data access | `ZIF_CA_PARAM_DAO`, `ZCL_CA_PARAM_DAO`, `ZCL_CA_PARAM_DAO_MEM` | one read per area; in-memory variant for tests |
 | Tests support | `ZCL_CA_PARAM_BUILDER`, `ZCL_CA_PARAM_INJECTOR` | fluent test data; factory seam (`FOR TESTING`) |
 | Entry | `ZCL_CA_PARAM_FACTORY` | `get( )`: session instance |
-| App | `ZR_CA_ParamArea` / `ZR_CA_ParamDef` / `ZR_CA_ParamVal`, `ZC_*`, `ZI_CA_Param*VH`, BDEF `ZR_CA_PARAMAREA` / `ZC_CA_PARAMAREA`, DCLs `ZC_*`, SRVD `ZUI_CA_PARAM` | RAP managed BO with draft |
-| App logic | `ZBP_R_CA_PARAMAREA`, `ZCL_CA_PARAM_MAINT`, `ZCL_CA_PARAM_MAINT_POLICY`, `ZIF_CA_PARAM_SYSTEM`, `ZCL_CA_PARAM_SYSTEM` | thin handlers, gate, pure policy, SAP API boundary |
+| Maintenance | function group `ZCA_PARAM_MAINT` (generated), event include `sm30/lzca_param_maintf01.abap`, view cluster `ZCA_PARAM_VC`, transaction `ZCA_PARAM` | SM30 / SM34 / SPRO; save events call the validator |
 
 ## 2. Data model
 
@@ -44,11 +43,11 @@ ZCA_PARAM_VAL  (CLIENT, AREA, NAME, NUMB)          n   SIGN, OPTI, LOW, HIGH
 - **One identity:** `AREA` (CHAR 16) + `NAME` (CHAR 30), upper case, `^[A-Z][A-Z0-9_]*$`.
   There is no second key, number or alias.
 - All three tables: client-dependent, delivery class **C**, table logging **on**,
-  fully buffered, data maintenance *restricted* (no SM30 view; the RAP app is the only
-  maintenance path), enhancement category *cannot be enhanced*.
+  fully buffered, data maintenance *allowed* (SM30 / SM34 view cluster `ZCA_PARAM_VC`),
+  enhancement category *cannot be enhanced*.
 - Foreign keys document the hierarchy and give SE11 / SE16 checks; the database does
-  not enforce them. Enforcement is structural (the app is a composition: a definition
-  can only be created under an existing area, a value under an existing definition) and
+  not enforce them. Enforcement is by the maintenance dialog (foreign key screen check:
+  a definition needs an existing area, a value an existing definition) and
   semantic (the runtime raises 001 / 003 for a row without master).
 - Value rows reuse no TVARVC data element; own domains restrict `SIGN` to I / E and
   `OPTI` to EQ NE GT GE LT LE BT NB - pattern options (CP / NP) are excluded, patterns
@@ -94,8 +93,8 @@ first or define the parameter `MANDATORY`.
 
 ## 4. Validation
 
-`ZCL_CA_PARAM_VALIDATOR` holds every rule; the runtime calls it on every read, the app
-on every save. It returns messages, never raises, never reads tables. A blank value is
+`ZCL_CA_PARAM_VALIDATOR` holds every rule; the runtime calls it on every read, the SM30
+save events on every save. It returns messages, never raises, never reads tables. A blank value is
 valid at value level; whether blank is acceptable is decided by `MANDATORY` and the
 typed getters (section 3).
 
@@ -134,7 +133,7 @@ typed getters (section 3).
   SORTED tables). Later reads of the same area use the buffer. Unknown areas are not
   buffered (an area created later is seen at once); inactive areas are.
 - `refresh( iv_area )` drops one area, `refresh( )` all. Long-running jobs call it at the
-  start of each run, dialog and RAP requests start with a fresh session anyway.
+  start of each run, dialog and OData requests start with a fresh session anyway.
 - The tables are also fully buffered by the kernel: a change made on another application
   server becomes visible after table buffer synchronization (profile parameter
   `rdisp/bufreftime`, typically 1-2 minutes).
@@ -146,52 +145,30 @@ typed getters (section 3).
 One checked exception `ZCX_CA_PARAM` (`CX_STATIC_CHECK`, `IF_T100_MESSAGE`, message class
 `ZCA_PARAM`, variables &1 area, &2 name, &3 value / row / field, &4 type / limit /
 interface). `ZCX_CA_PARAM=>CREATE( is_message )` builds it from the message structure the
-validator and the app share; `get_message( )` returns it. Message texts:
+validator and the save events share; `get_message( )` returns it. Message texts:
 `config/zca_param_messages.md` (troubleshooting per number: `docs/OPERATIONS.md`).
 Because the exception is checked, every caller must decide what a configuration error
 means for its process.
 
 ## 7. Authorization
 
-| Activity on `ZCA_PARAM` (`ZCA_PARAR` = area) | Where checked | Grants |
-|---|---|---|
-| 01 create | global authorization of the app (any area, `DUMMY`) | create an area |
-| 02 change | instance authorization per area (update, Edit) | change area, definitions, values |
-| 03 display | DCL roles `ZC_CA_PARAMAREA` / `ZC_CA_PARAMDEF` / `ZC_CA_PARAMVAL` (`pfcg_auth`) | see the area in the app |
-| 06 delete | instance feature control of definitions and values | delete definitions / value rows |
+SM30 / SM34 check `S_TABU_DIS` (authorization group of the table maintenance) or
+`S_TABU_NAM`, plus `S_TCODE`. The object `ZCA_PARAM` (`ZCA_PARAR` = area, `ACTVT`)
+stays available for a check per area in a maintenance event; it is not used by default.
 
 Runtime reads (`ZIF_CA_PARAM`) check no authorization: batch users of every team read
-parameters; parameters must therefore never hold secrets. Suggested roles: team
-maintainer (01/02/03/06 for its areas, customizing client), production key user
-(02/03 for production-editable areas), display (03, any area).
+parameters; parameters must therefore never hold secrets.
 
 ## 8. Transport and client rules
 
-The app decides a **mode** per client (`ZCL_CA_PARAM_MAINT_POLICY`):
+Standard customizing rules apply (delivery class C, SCC4):
 
-- **TRANSPORT** - role (T000-CCCATEGORY) not production **and** change option
-  (T000-CCCORACTIV) "automatic recording of changes" **and** the business configuration
-  API reports the customizing table editable
-  (`CL_BCFG_CD_REUSE_API_FACTORY=>GET_CUST_OBJ_SERVICE_INSTANCE( )->IS_EDITABLE( )`).
-- **LOCAL** - every other client (QA, production, sandboxes without recording).
-
-| Change | TRANSPORT | LOCAL |
-|---|---|---|
-| Create area, change area fields | yes (01 / 02) | no |
-| Create / change / delete definitions (developer-owned configuration) | yes | no (044) |
-| Create value rows, delete value rows | yes (06 for delete) | no |
-| Change existing value rows | yes | only if area `PROD_EDITABLE` = X and definition `DEVELOPER_OWNED` blank (045 otherwise) |
-| Customizing request | mandatory on the area (`TransportRequest`), checked on save (040-043), every saved row recorded with `MBC_CP_API` | none; change audited by table logging |
-
-New definitions start `DEVELOPER_OWNED` = X; a team releases a parameter for production
-maintenance by clearing the flag (by transport). A BOOL that production may switch needs
-a delivered value row (a row cannot be created in LOCAL mode).
-
-Feature control hides what is not allowed; the validations on save repeat the decisive
-rules (044, 045, 005, request) so that EML callers cannot bypass them. The saver records
-the rows of a save on the request of the area; a recording failure aborts the save
-(`RAISE SHORTDUMP`, rollback) - the request was validated before, so this indicates a
-system problem.
+- Development customizing client with automatic recording: areas, definitions and values
+  are maintained in SM30 / SM34; every change is recorded on a customizing request.
+- QA and production: no changes (client setting); values come by transport.
+- Save events (event 01 of each table) apply `ZCL_CA_PARAM_VALIDATOR`; a definition
+  change re-checks its stored value rows; a single value (kind P) keeps at most one row.
+- Audit: table logging (SCU3) and the customizing requests.
 
 ## 9. Testing
 
@@ -201,14 +178,10 @@ system problem.
 | Logic | `ZCL_CA_PARAM` `ltc_param` (36 tests, over `ZCL_CA_PARAM_BUILDER`) | default, mandatory, BOOL on / off / default, P with two rows, S list and range in NUMB order, conversions with min / max, invalid values, type and kind mismatch, unknown / inactive area, unknown name, case, `is_set`, definition, one read per area, refresh |
 | SQL | `ZCL_CA_PARAM_DAO` `ltc_dao` (5 tests, `cl_osql_test_environment` doubling all three tables) | found flag, area filter, key order of definitions and values |
 | Seam | `ZCL_CA_PARAM_FACTORY` `ltc_factory` (4 tests) | singleton, injected reader, injected DAO with real logic, reset |
-| App policy | `ZCL_CA_PARAM_MAINT_POLICY` `ltc_policy` (10 tests) | mode per client, configuration by transport, local value rules, request rules |
-| App gate | `ZCL_CA_PARAM_MAINT` `ltc_maint` (9 tests, local double `ltd_system`) | client read once, request read / recording only in TRANSPORT, failure propagated, 044 / 045, authorization |
 
 All test classes: `RISK LEVEL HARMLESS DURATION SHORT`, a message on every assertion.
-Not unit-tested, by design: `ZCL_CA_PARAM_SYSTEM` (one-line wrappers of T000 / E070 /
-AUTHORITY-CHECK / business configuration API / `MBC_CP_API`; its callers are tested with
-a double) and the behaviour pool (thin; covered by the gate and policy tests and the
-manual app test in `docs/VERIFY.md`). Consumers test with the real logic over
+Not unit-tested, by design: the SM30 save events (generated function group; manual test in
+`docs/VERIFY.md`). Consumers test with the real logic over
 `ZCL_CA_PARAM_DAO_MEM` - there is no second implementation of the semantics.
 
 ## 10. Quality gates
@@ -227,35 +200,30 @@ class), `tools/abapgit_serialize.py --check`, tool tests; CI in
 | 1 | Two identities (code + name) -> duplicates | One key AREA + NAME; no code field; unique primary keys; names validated as identifiers |
 | 2 | Non-deterministic reads (`SELECT *`, no ORDER BY, STANDARD table, `INDEX 1`) | Explicit field lists, `ORDER BY` full key, SORTED / HASHED tables; kind P with two rows is error 005, never "row 1"; checks `no_select_star` |
 | 3 | Failures swallowed into defaults or dumps on conversion | Checked `ZCX_CA_PARAM` for every failure (001-025); values validated by PCRE before any conversion; typed getters on blank raise 018 |
-| 4 | No audit trail (no table logging, delivery class A) | Delivery class C, table logging on (SCU3), customizing requests recorded with `MBC_CP_API`, admin fields, request on the area |
-| 5 | Area master not enforced | Foreign keys; composition Area -> Definition -> Value in the app; runtime 001 / 002 / 003 |
+| 4 | No audit trail (no table logging, delivery class A) | Delivery class C, table logging on (SCU3), customizing requests (SM30 / SM34) |
+| 5 | Area master not enforced | Foreign keys with screen check in the view cluster Area -> Definition -> Value; runtime 001 / 002 / 003 |
 | 6 | No API for value-by-name / typed / range | `ZIF_CA_PARAM`: `get_value`, `get_int`, `get_dec`, `get_bool`, `get_date`, `get_time`, `get_list`, `get_range`, `is_set`, `get_definition`, `refresh` |
 | 7 | Untyped values, no validation | Value type, min / max, allowed PCRE, interface per definition; validated on save and on every read |
 | 8 | Static buffer without refresh | Per-area instance buffer with `refresh( [area] )`; injector `reset( )` for tests |
 | 9 | DDIC / class names used unvalidated in dynamic SQL | Value types DDIC / CLASS: name pattern + RTTI existence (+ interface); anything else is 006 / 011 / 012 / 013 |
 | 10 | Test double duplicating production logic | `ZCL_CA_PARAM_DAO_MEM` holds data only; tests run `ZCL_CA_PARAM` itself (builder / `inject_dao`) |
 | 11 | Docs not matching code | Semantics in one class, documented in section 3 with a test per row; message texts generated from one source and checked against the constants (`tools/checks.py messages`) |
-| 12 | No maintenance authorization model | Object `ZCA_PARAM` per area and activity; DCL for display; client mode rules (section 8) |
+| 12 | No maintenance authorization model | `S_TABU_DIS` / `S_TABU_NAM` per authorization group; customizing client rules (section 8) |
 | - | Blank meant "default", flags could not be switched off | BOOL: row with blank LOW = false; only a missing row means default |
 
 ## 12. Deviations from the initial brief (and why)
 
-- **`TRANSPORT_REQUEST` on `ZCA_PARAM_AREA`** (persisted): a managed RAP BO cannot keep a
-  transient root field; the request must be on the root for the validations and the
-  saver. It also documents the request of the last maintenance session.
-- **No delete of areas in the app:** the request of a deleted root cannot be read in the
-  save. Areas are retired with `ACTIVE` = blank (runtime 002).
+- **Maintenance in SM30 / SPRO instead of a RAP app (2026-11-24):** the tables are
+  customizing maintained by a few developers in the development client; the RAP BO
+  (draft, projections, DCLs, service, behaviour pool, client / request policy) added about
+  25 objects and its own activation issues for no gain over the standard dialog. Removed
+  with it: `TRANSPORT_REQUEST`, the admin fields (history is in SCU3 and the requests),
+  `PROD_EDITABLE`, `DEVELOPER_OWNED` and `OWNER` (only the app enforced them), messages
+  040-048. `GC_VERSION` 2.0.0.
 - **Range options without CP / NP:** patterns are PCRE only (house rule); a select-option
   can still be used in SQL `IN`.
 - **Flags on standard domain `XFELD`** instead of own domains.
 - **`get_time`** added (value type TIME exists).
 - **`MANDATORY`** also rejects a blank single value row (except BOOL), not only a missing
   row without default.
-- **One app, three levels** (Area -> Definition -> Value) instead of separate apps: one
-  draft, one lock, one request per area.
-- **Types in `ZIF_CA_PARAM_TYPES`** (also the app's constants), the system boundary
-  (`ZIF_CA_PARAM_SYSTEM`) in `ZCA_PARAM_UI`.
-- **Client field named `CLIENT`** in the customizing tables (draft tables: `MANDT`).
-- **Client mode** uses T000 (role, change option) and the business configuration API
-  together: T000 alone would allow a client the API refuses, the API alone does not tell a
-  production client.
+- **Client field named `CLIENT`** in the customizing tables.

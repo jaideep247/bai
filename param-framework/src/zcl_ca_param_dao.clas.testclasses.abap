@@ -8,6 +8,7 @@
 *& order). Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-24 | Area row: OWNER_TEAM asserted instead of the removed PROD_EDITABLE.
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -68,11 +69,10 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA lt_rows TYPE STANDARD TABLE OF zca_param_area WITH EMPTY KEY.
     DATA ls_row  TYPE zca_param_area.
 
-    ls_row-area          = iv_area.
-    ls_row-description   = iv_area.
-    ls_row-owner_team    = iv_area.
-    ls_row-prod_editable = abap_true.
-    ls_row-active        = abap_true.
+    ls_row-area        = iv_area.
+    ls_row-description = iv_area.
+    ls_row-owner_team  = iv_area.
+    ls_row-active      = abap_true.
     INSERT ls_row INTO TABLE lt_rows.
     go_environment->insert_test_data( lt_rows ).
   ENDMETHOD.
@@ -126,9 +126,9 @@ CLASS ltc_dao IMPLEMENTATION.
         DATA(ls_data) = mo_cut->read_area( gc_area ).
         cl_abap_unit_assert=>assert_true( act = ls_data-found
                                           msg = `The area is found` ).
-        cl_abap_unit_assert=>assert_equals( act = ls_data-area-prod_editable
-                                            exp = abap_true
-                                            msg = `PROD_EDITABLE is read` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_data-area-owner_team
+                                            exp = CONV zif_ca_param_types=>ty_owner( gc_area )
+                                            msg = `OWNER_TEAM is read` ).
         cl_abap_unit_assert=>assert_equals( act = ls_data-area-active
                                             exp = abap_true
                                             msg = `ACTIVE is read` ).

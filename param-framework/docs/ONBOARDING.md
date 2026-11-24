@@ -1,30 +1,29 @@
 # Onboarding - using ZCA_PARAM in your team
 
-> **First principle:** the developer who reads a parameter defines it; operations only
-> changes values that development explicitly released.
-> **Analogy:** a thermostat - the installer fixes the allowed range and wiring, the
-> occupant turns the dial within it.
+> **First principle:** the developer who reads a parameter defines it; every value moves
+> through the landscape on a customizing request.
+> **Analogy:** a thermostat - the installer fixes the allowed range and wiring and sets
+> the dial; any later turn of the dial is logged.
 
 Five steps. Steps 1-3 happen in the customizing client of the development system (the
 client that records customizing changes); everything travels by customizing request.
 
 ## 1. Register an area
 
-Open the app *Parameter areas* (service binding `ZUI_CA_PARAM_O4`), choose *Create*:
+Transaction `ZCA_PARAM` (view cluster `ZCA_PARAM_VC`, also in SPRO), level *Areas*,
+*New entries*; save asks for a customizing request:
 
 | Field | Rule |
 |---|---|
 | Area | upper case, `A-Z 0-9 _`, starts with a letter, at most 16 characters, e.g. `XX_BANK`, `MM_INBOUND` |
 | Description, Owner team | mandatory in practice: who answers questions about this area |
-| Editable in production | X only if operations may change released values in QA / production without a transport |
 | Active | X (blank = every read raises 002) |
-| Customizing request | an open customizing request or task (checked on save) |
 
-You need authorization object `ZCA_PARAM` with activity 01 (and 02 for your area).
+You need `S_TABU_DIS` activity 02 for the authorization group of the maintenance.
 
-## 2. Define parameters (by transport)
+## 2. Define parameters
 
-In the area, section *Parameters*, create one definition per parameter:
+Select the area, level *Definitions*, one entry per parameter:
 
 | Field | Meaning |
 |---|---|
@@ -36,22 +35,19 @@ In the area, section *Parameters*, create one definition per parameter:
 | Allowed PCRE | optional; must match the **whole** value, case ignored (LIST: each element) |
 | Interface | CLASS only: the class must implement it |
 | Mandatory | a value or a default must exist (a blank single value is rejected, except BOOL) |
-| Developer-owned | X (default for new definitions) = values change only by transport; clear it to let production change existing values of a production-editable area |
 
-The app refuses inconsistent definitions with the same rules the runtime applies
-(messages 006-025).
+The save refuses inconsistent definitions with the same rules the runtime applies
+(messages 006-025), and re-checks the stored values of a changed definition.
 
 ## 3. Maintain values
 
-Under a parameter, section *Values*. Row numbers are assigned automatically.
+Select the parameter, level *Values*. Enter `NUMB` 1, 2, ... (rows are read in this order).
 
-- Kind P: at most **one** row (005 otherwise); sign / option are I / EQ.
+- Kind P: at most **one** row (005 on save otherwise); sign / option are I / EQ.
 - Kind S: any number of rows with sign I / E and option EQ NE GT GE LT LE BT NB (BT / NB
   need *High*). No CP / NP: use value type PCRE for patterns.
-- BOOL: `X` = on, **blank row = off**, no row = default. If production should be able to
-  switch the flag, deliver a row (rows cannot be created in production).
-- In QA / production only existing values of production-editable, non developer-owned
-  parameters can be changed (no request; table logging audits the change).
+- BOOL: `X` = on, **blank row = off**, no row = default.
+- QA / production: no maintenance; values come by transport. Every change is in SCU3.
 
 ## 4. Read in code
 
@@ -153,22 +149,21 @@ callers and adds one adapter class:
 
 The framework itself delivers no data; a consumer delivers its areas and definitions as
 seed files next to its code (e.g. `config/param_areas.csv`, `config/param_definitions.csv`,
-`config/param_values.csv` of the consumer's component) and enters them in the app in the customizing
-client on a customizing request (no SM30, no direct table load). Format - UTF-8 CSV, header
+`config/param_values.csv` of the consumer's component) and enters them in transaction `ZCA_PARAM` in the customizing
+client on a customizing request (no direct table load). Format - UTF-8 CSV, header
 row exactly as below, one row per table row, flags `X` or blank, a field with a comma in
 double quotes:
 
 | File | Columns (= fields of the table) |
 |---|---|
-| `param_areas.csv` (`ZCA_PARAM_AREA`) | `AREA,DESCRIPTION,OWNER_TEAM,PROD_EDITABLE,ACTIVE` |
-| `param_definitions.csv` (`ZCA_PARAM_DEF`) | `AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DEVELOPER_OWNED,DESCRIPTION,OWNER` |
+| `param_areas.csv` (`ZCA_PARAM_AREA`) | `AREA,DESCRIPTION,OWNER_TEAM,ACTIVE` |
+| `param_definitions.csv` (`ZCA_PARAM_DEF`) | `AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DESCRIPTION` |
 | `param_values.csv` (`ZCA_PARAM_VAL`, optional) | `AREA,NAME,NUMB,SIGN,OPTI,LOW,HIGH` |
 
-Rules a consumer's check should apply before a row is entered (the app applies them again
-on save): area and name are identifiers (16 / 30 characters), description at most 60, owner
-at most 30 characters; the section 2 rules per value type; rows sorted by area and name;
+Rules a consumer's check should apply before a row is entered (the save events apply them again): area and name are identifiers (16 / 30 characters), description at most 60, owner
+team at most 30 characters; the section 2 rules per value type; rows sorted by area and name;
 value rows only for defined names, kind P with one row `NUMB` 1, `I` / `EQ`. Values in
 `param_values.csv` are examples to confirm per landscape - production values are maintained
-in the app, never transported from a seed. A consumer can generate its in-memory test
+in the development client and transported, never loaded from a seed. A consumer can generate its in-memory test
 data (for example a seed class `ZCL_XX_PARAM_SEED`) from these files and check them against
 its code (as the shared `param_definitions.py` tools of the components do).

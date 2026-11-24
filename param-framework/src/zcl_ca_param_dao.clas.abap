@@ -9,6 +9,7 @@
 *& no defaults, no validation (ZCL_CA_PARAM).
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-24 | PROD_EDITABLE, DEVELOPER_OWNED and OWNER removed from the field lists.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - database access</p>
 CLASS zcl_ca_param_dao DEFINITION
@@ -26,7 +27,7 @@ ENDCLASS.
 CLASS zcl_ca_param_dao IMPLEMENTATION.
 
   METHOD zif_ca_param_dao~read_area.
-    SELECT SINGLE area, description, owner_team, prod_editable, active
+    SELECT SINGLE area, description, owner_team, active
       FROM zca_param_area
       WHERE area = @iv_area
       INTO CORRESPONDING FIELDS OF @rs_data-area.
@@ -36,7 +37,7 @@ CLASS zcl_ca_param_dao IMPLEMENTATION.
     rs_data-found = abap_true.
 
     SELECT area, name, kind, value_type, min_value, max_value, default_value, allowed_pcre,
-           interface_name, mandatory, developer_owned, description, owner
+           interface_name, mandatory, description
       FROM zca_param_def
       WHERE area = @iv_area
       ORDER BY area, name
