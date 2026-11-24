@@ -17,10 +17,10 @@ the initial brief are in section 12.
 | Layer | Object | Role |
 |---|---|---|
 | DDIC | `ZCA_PARAM_AREA` | area master: description, owner team, `ACTIVE` |
-| DDIC | `ZCA_PARAM_DEF` | definition per area + name: kind, value type, min / max, default, allowed PCRE, interface, mandatory, description; FK `AREA` -> `ZCA_PARAM_AREA` |
-| DDIC | `ZCA_PARAM_VAL` | value rows per area + name + `NUMB`: sign, option, low, high; FK (`AREA`, `NAME`) -> `ZCA_PARAM_DEF` |
+| DDIC | `ZCA_PARAM_DEF` | definition per area + name: kind, value type, min / max, default, allowed PCRE, interface, mandatory, context dimensions `DIM1`-`DIM4`, description; FK `AREA` -> `ZCA_PARAM_AREA` |
+| DDIC | `ZCA_PARAM_VAL` | value rows per area + name + context `CTX1`-`CTX4` (blank = any) + `NUMB`: sign, option, low, high; FK (`AREA`, `NAME`) -> `ZCA_PARAM_DEF` |
 | DDIC | domains / data elements `ZCA_PARAM_*` | fixed values for kind, value type, sign, option; flags on domain `XFELD` |
-| Messages | `ZCA_PARAM` | 001-025 runtime and validation (`config/zca_param_messages.md`) |
+| Messages | `ZCA_PARAM` | 001-029 runtime and validation (`config/zca_param_messages.md`) |
 | Authorization | `ZCA_PARAM` (class `ZCA`), field `ZCA_PARAR` | optional check per area; standard maintenance uses `S_TABU_DIS` |
 | API | `ZIF_CA_PARAM`, `ZIF_CA_PARAM_TYPES`, `ZCX_CA_PARAM` | read API, types / constants, checked exception (T100) |
 | Logic | `ZCL_CA_PARAM` | resolution, typed getters, validation on every read, per-area buffer |
@@ -37,7 +37,8 @@ ZCA_PARAM_AREA (CLIENT, AREA)                      1
    |  FK [0..*,1]                                  |
 ZCA_PARAM_DEF  (CLIENT, AREA, NAME)                n   kind P | S, value type, rules
    |  FK [0..*,1] on (CLIENT, AREA, NAME)          |
-ZCA_PARAM_VAL  (CLIENT, AREA, NAME, NUMB)          n   SIGN, OPTI, LOW, HIGH
+ZCA_PARAM_VAL  (CLIENT, AREA, NAME,                n   SIGN, OPTI, LOW, HIGH
+                CTX1, CTX2, CTX3, CTX4, NUMB)          CTXn = value of DIMn of the definition, blank = any
 ```
 
 - **One identity:** `AREA` (CHAR 16) + `NAME` (CHAR 30), upper case, `^[A-Z][A-Z0-9_]*$`.
@@ -90,6 +91,53 @@ of the old framework, where blank meant "use the default", cannot occur.
 **Empty range:** an empty `get_range` result means "nothing maintained". `WHERE f IN
 @lt_range` with an empty range selects everything - consumers must test `IS INITIAL`
 first or define the parameter `MANDATORY`.
+
+## 3a. Context: values per source, type, company code, ...
+
+> **First principle:** a value that differs by a business fact (source, transaction type,
+> company code, payment method) is still one parameter; the fact selects the row, the
+> code does not.
+> **Analogy:** an access sequence in SAP pricing - the most specific condition record
+> that exists wins (customer + material before material alone), and the search stops
+> at the first hit.
+
+**Definition.** `DIM1`-`DIM4` name up to four context dimensions of a parameter, e.g.
+`DIM1 = SOURCE`, `DIM2 = TRANS_TYPE`. `DIM1` is the most significant. Dimensions are
+identifiers (at most 20 characters), declared from `DIM1` on without gap or repeat
+(028 / 029). A parameter without dimensions behaves exactly as in section 3.
+
+**Value rows.** `CTX1`-`CTX4` hold the value of the dimension in the same position;
+blank = any. A context value needs its dimension on the definition (026) and is upper
+case (027). Kind P has at most one row **per context** (005).
+
+**Read.** Every getter, `is_set` and `get_effective_context` take an optional
+`it_context`: the caller's facts by dimension name (`dim = 'SOURCE' value = 'SRC_A'`).
+A caller passes every fact it knows; each definition uses only its own dimensions and
+ignores the rest. So a dimension can be added to a definition later by configuration
+alone - the callers already pass the fact. Names and values are compared in upper case.
+
+**Access sequence.** With n dimensions the read tries 2**n contexts, most specific
+first, `DIM1` deciding before `DIM2`. Example for SOURCE / TRANS_TYPE, read SRC_A / CANC:
+
+| Try | CTX1 (SOURCE) | CTX2 (TRANS_TYPE) |
+|---|---|---|
+| 1 | SRC_A | CANC |
+| 2 | SRC_A | any |
+| 3 | any | CANC |
+| 4 | any | any (general rows) |
+| - | default of the definition (section 3) | |
+
+A context that needs a fact the read did not pass is skipped. The **first context with
+value rows wins, and all rows come from that one context** - a range or list is never a
+mix of a specific and a general context (as with an exclusive access in SAP pricing).
+
+**Validation.** Every row of every context is validated on every read (section 4), so
+a wrong row for one source fails the reads of every source of that parameter - a
+configuration error is found by the first read, not by the source it belongs to.
+
+**Explain.** `get_effective_context( area, name, context )` returns the context a read
+uses and its number of rows (0 = default) - the support answer to "which row drives
+SRC_A?" without running the process.
 
 ## 4. Validation
 
@@ -223,7 +271,35 @@ class), `tools/abapgit_serialize.py --check`, tool tests; CI in
 - **Range options without CP / NP:** patterns are PCRE only (house rule); a select-option
   can still be used in SQL `IN`.
 - **Flags on standard domain `XFELD`** instead of own domains.
+- **Context dimensions (2026-11-24):** the brief had one value per area + name. Values that
+  differ by source, type or company code would have needed a parameter per combination or
+  a table per process; four ranked dimensions with an exclusive access sequence cover
+  them in the same three tables (section 3a and section 13).
 - **`get_time`** added (value type TIME exists).
 - **`MANDATORY`** also rejects a blank single value row (except BOOL), not only a missing
   row without default.
 - **Client field named `CLIENT`** in the customizing tables.
+
+## 13. Configuration instead of code: what belongs where
+
+> **First principle:** a value goes into a parameter when it can change on its own; a set
+> of values that only makes sense together, or that switches code paths, is a rule.
+> **Analogy:** thermostat settings per room are parameters; the wiring diagram that says
+> which switch drives which circuit is a rule.
+
+| Configuration | Example | Where |
+|---|---|---|
+| A switch, limit, threshold, list or pattern | log level, retention days, allowed states | parameter |
+| The same, different per source / type / company code | log level per source; void states per payment method | parameter with context dimensions (section 3a) |
+| A value that selects a class | handler class of a source | parameter, value type `CLASS` with `INTERFACE_NAME` (the class is checked to exist and implement it) |
+| A mapping of independent rows | response status per profile and outcome | parameter with context (profile, outcome) |
+| A row whose fields must change together, or whose existence enables a process | flow of a source: status field + response profile + notification switches | rule table of the process (its own customizing table), or BRF+ for decision logic |
+| More than four key dimensions, or keys that need their own check tables | rules by source x type x payment method x company code x currency | rule table of the process |
+
+Effect on change and test: adding a source, a company code or a new value to an existing
+parameter is a customizing change (SM30 / SPRO, customizing request, SCU3) with no
+transport of code; the read logic is the one unit-tested class `ZCL_CA_PARAM`, so the test
+of such a change is the business test of the new configuration, not a regression test of
+code. A new parameter is a definition row plus the one line of code that reads it; a new
+dimension on an existing parameter needs no code when the callers already pass the fact.
+

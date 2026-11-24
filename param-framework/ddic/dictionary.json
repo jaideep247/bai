@@ -17,6 +17,20 @@
    "text": "Parameter name"
   },
   {
+   "name": "ZCA_PARAM_DIM",
+   "type": "CHAR",
+   "length": 20,
+   "lowercase": false,
+   "text": "Context dimension of a parameter"
+  },
+  {
+   "name": "ZCA_PARAM_CTX",
+   "type": "CHAR",
+   "length": 20,
+   "lowercase": false,
+   "text": "Context value (blank = any)"
+  },
+  {
    "name": "ZCA_PARAM_VALUE",
    "type": "CHAR",
    "length": 255,
@@ -187,6 +201,78 @@
    "medium": "Parameter name",
    "long": "Parameter name",
    "heading": "Parameter"
+  },
+  {
+   "name": "ZCA_PARAM_DIM1",
+   "domain": "ZCA_PARAM_DIM",
+   "text": "Context dimension 1 (1 = most significant)",
+   "short": "Context 1",
+   "medium": "Context 1",
+   "long": "Context dimension 1",
+   "heading": "Context 1"
+  },
+  {
+   "name": "ZCA_PARAM_DIM2",
+   "domain": "ZCA_PARAM_DIM",
+   "text": "Context dimension 2 (1 = most significant)",
+   "short": "Context 2",
+   "medium": "Context 2",
+   "long": "Context dimension 2",
+   "heading": "Context 2"
+  },
+  {
+   "name": "ZCA_PARAM_DIM3",
+   "domain": "ZCA_PARAM_DIM",
+   "text": "Context dimension 3 (1 = most significant)",
+   "short": "Context 3",
+   "medium": "Context 3",
+   "long": "Context dimension 3",
+   "heading": "Context 3"
+  },
+  {
+   "name": "ZCA_PARAM_DIM4",
+   "domain": "ZCA_PARAM_DIM",
+   "text": "Context dimension 4 (1 = most significant)",
+   "short": "Context 4",
+   "medium": "Context 4",
+   "long": "Context dimension 4",
+   "heading": "Context 4"
+  },
+  {
+   "name": "ZCA_PARAM_CTX1",
+   "domain": "ZCA_PARAM_CTX",
+   "text": "Value of context dimension 1 (blank = any)",
+   "short": "Value 1",
+   "medium": "Context value 1",
+   "long": "Context value 1 (blank = any)",
+   "heading": "Context value 1"
+  },
+  {
+   "name": "ZCA_PARAM_CTX2",
+   "domain": "ZCA_PARAM_CTX",
+   "text": "Value of context dimension 2 (blank = any)",
+   "short": "Value 2",
+   "medium": "Context value 2",
+   "long": "Context value 2 (blank = any)",
+   "heading": "Context value 2"
+  },
+  {
+   "name": "ZCA_PARAM_CTX3",
+   "domain": "ZCA_PARAM_CTX",
+   "text": "Value of context dimension 3 (blank = any)",
+   "short": "Value 3",
+   "medium": "Context value 3",
+   "long": "Context value 3 (blank = any)",
+   "heading": "Context value 3"
+  },
+  {
+   "name": "ZCA_PARAM_CTX4",
+   "domain": "ZCA_PARAM_CTX",
+   "text": "Value of context dimension 4 (blank = any)",
+   "short": "Value 4",
+   "medium": "Context value 4",
+   "long": "Context value 4 (blank = any)",
+   "heading": "Context value 4"
   },
   {
    "name": "ZCA_PARAM_VALUE",

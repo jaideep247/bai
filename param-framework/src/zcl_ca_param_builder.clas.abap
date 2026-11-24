@@ -10,9 +10,12 @@
 *&   DATA(lo_param) = NEW zcl_ca_param_builder( )->area( 'ZPE_OPS'
 *&     )->param( iv_name = 'MAX_ITEMS' iv_value_type = 'INT' iv_default = '10'
 *&     )->row( '25' )->build( ).
+*&   Per context: ->param( iv_name = 'LOG_LEVEL' iv_dim1 = 'SOURCE'
+*&     )->row( 'E' )->context( 'SRC_A' )->row( 'S' )->build( ).
 *& Modification log:
 *& 2026-11-07 | Initial version.
 *& 2026-11-24 | AREA: parameter IV_PROD_EDITABLE removed with the field.
+*& 2026-11-24 | Context: PARAM declares IV_DIM1-4; CONTEXT sets the context of the next rows.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - test data builder</p>
 CLASS zcl_ca_param_builder DEFINITION
@@ -26,7 +29,7 @@ CLASS zcl_ca_param_builder DEFINITION
     "! Start an area (active unless iv_active is blank)
     METHODS area
       IMPORTING
-        iv_area          TYPE zif_ca_param_types=>ty_area
+        iv_area        TYPE zif_ca_param_types=>ty_area
         iv_active      TYPE abap_bool DEFAULT abap_true
       RETURNING
         VALUE(ro_self) TYPE REF TO zcl_ca_param_builder.
@@ -43,10 +46,25 @@ CLASS zcl_ca_param_builder DEFINITION
         iv_allowed_pcre TYPE zif_ca_param_types=>ty_value OPTIONAL
         iv_interface    TYPE zif_ca_param_types=>ty_interface OPTIONAL
         iv_mandatory    TYPE abap_bool DEFAULT abap_false
+        iv_dim1         TYPE zif_ca_param_types=>ty_dimension OPTIONAL
+        iv_dim2         TYPE zif_ca_param_types=>ty_dimension OPTIONAL
+        iv_dim3         TYPE zif_ca_param_types=>ty_dimension OPTIONAL
+        iv_dim4         TYPE zif_ca_param_types=>ty_dimension OPTIONAL
       RETURNING
         VALUE(ro_self)  TYPE REF TO zcl_ca_param_builder.
 
-    "! Add a value row to the current parameter (next NUMB)
+    "! Context of the next value rows of the current parameter (values of DIM1-4; blank = any).
+    "! PARAM resets it to the general rows.
+    METHODS context
+      IMPORTING
+        iv_ctx1        TYPE zif_ca_param_types=>ty_ctx_value OPTIONAL
+        iv_ctx2        TYPE zif_ca_param_types=>ty_ctx_value OPTIONAL
+        iv_ctx3        TYPE zif_ca_param_types=>ty_ctx_value OPTIONAL
+        iv_ctx4        TYPE zif_ca_param_types=>ty_ctx_value OPTIONAL
+      RETURNING
+        VALUE(ro_self) TYPE REF TO zcl_ca_param_builder.
+
+    "! Add a value row to the current parameter and context (next NUMB)
     METHODS row
       IMPORTING
         iv_low         TYPE zif_ca_param_types=>ty_value
@@ -70,6 +88,7 @@ CLASS zcl_ca_param_builder DEFINITION
     DATA mo_dao  TYPE REF TO zcl_ca_param_dao_mem.
     DATA mv_area TYPE zif_ca_param_types=>ty_area.
     DATA mv_name TYPE zif_ca_param_types=>ty_name.
+    DATA ms_ctx  TYPE zif_ca_param_types=>ty_ctx.
 
 ENDCLASS.
 
@@ -90,7 +109,7 @@ CLASS zcl_ca_param_builder IMPLEMENTATION.
     ls_area-active      = iv_active.
     mo_dao->add_area( ls_area ).
     mv_area = iv_area.
-    CLEAR mv_name.
+    CLEAR: mv_name, ms_ctx.
     ro_self = me.
   ENDMETHOD.
 
@@ -108,8 +127,22 @@ CLASS zcl_ca_param_builder IMPLEMENTATION.
     ls_definition-allowed_pcre   = iv_allowed_pcre.
     ls_definition-interface_name = iv_interface.
     ls_definition-mandatory      = iv_mandatory.
+    ls_definition-dim1           = iv_dim1.
+    ls_definition-dim2           = iv_dim2.
+    ls_definition-dim3           = iv_dim3.
+    ls_definition-dim4           = iv_dim4.
     mo_dao->add_definition( ls_definition ).
     mv_name = iv_name.
+    CLEAR ms_ctx.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD context.
+    ms_ctx = VALUE #( ctx1 = iv_ctx1
+                      ctx2 = iv_ctx2
+                      ctx3 = iv_ctx3
+                      ctx4 = iv_ctx4 ).
     ro_self = me.
   ENDMETHOD.
 
@@ -117,10 +150,12 @@ CLASS zcl_ca_param_builder IMPLEMENTATION.
   METHOD row.
     DATA ls_value TYPE zif_ca_param_types=>ty_value_row.
 
+    ls_value      = CORRESPONDING #( ms_ctx ).
     ls_value-area = mv_area.
     ls_value-name = mv_name.
-    ls_value-numb = mo_dao->count_values( iv_area = mv_area
-                                          iv_name = mv_name ) + 1.
+    ls_value-numb = mo_dao->count_values( iv_area    = mv_area
+                                          iv_name    = mv_name
+                                          is_context = ms_ctx ) + 1.
     ls_value-sign = iv_sign.
     ls_value-opti = iv_option.
     ls_value-low  = iv_low.

@@ -90,8 +90,13 @@ tokens); use SSF / secure store for those.
 | 016 | select-option row not I EQ read as list | NE / BT / E row in a list parameter | use `get_range` or only I EQ rows |
 | 017 | invalid sign / option / high in a row | BT without high, high on EQ, sign other than I / E | correct the row |
 | 018 | typed read without value and default | not maintained, no default | maintain a value or a default |
+| 026 | context value for a dimension the definition does not declare | row maintained for a context the definition does not have (or the dimension was removed) | declare the dimension on the definition or clear the context value |
+| 027 | context value not in upper case | row loaded outside SM30 | correct the context value (upper case) |
+| 028-029 | context dimension invalid, gap or repeat | definition maintained outside SM30 | declare dimensions from Context 1 on, each once |
 | 019-025 | definition rules (name, kind, type, field not allowed, min > max, interface, LIST with S) | save in SM30 / SM34 | correct the definition |
 
-Checking a value: SE16 display of `ZCA_PARAM_VAL` (area, name) and
+Which row drives a context: `get_effective_context( iv_area iv_name it_context )` returns the
+context a read uses and its number of rows (0 = default) - e.g. from a test report or the
+debugger, without running the process. Checking a value: SE16 display of `ZCA_PARAM_VAL` (area, name) and
 `ZCA_PARAM_DEF`; the effective value includes the default and the rules of
 `docs/DESIGN.md` section 3.

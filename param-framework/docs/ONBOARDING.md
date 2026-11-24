@@ -35,6 +35,7 @@ Select the area, level *Definitions*, one entry per parameter:
 | Allowed PCRE | optional; must match the **whole** value, case ignored (LIST: each element) |
 | Interface | CLASS only: the class must implement it |
 | Mandatory | a value or a default must exist (a blank single value is rejected, except BOOL) |
+| Context 1-4 | optional: the business facts the value may depend on, most significant first, e.g. `SOURCE`, then `TRANS_TYPE`; identifiers, from Context 1 on |
 
 The save refuses inconsistent definitions with the same rules the runtime applies
 (messages 006-025), and re-checks the stored values of a changed definition.
@@ -47,6 +48,11 @@ Select the parameter, level *Values*. Enter `NUMB` 1, 2, ... (rows are read in t
 - Kind S: any number of rows with sign I / E and option EQ NE GT GE LT LE BT NB (BT / NB
   need *High*). No CP / NP: use value type PCRE for patterns.
 - BOOL: `X` = on, **blank row = off**, no row = default.
+- **Values per context:** fill *Context value 1-4* (the values of the definition's
+  dimensions; blank = any). Maintain the general row (all blank) for the usual value and
+  one row for each exception, e.g. `SLG1_LEVEL`: general `E`, `CTX1 = SRC_A` -> `S`. The
+  most specific matching context wins, and a range takes all its rows from that one
+  context (`docs/DESIGN.md` section 3a).
 - QA / production: no maintenance; values come by transport. Every change is in SCU3.
 
 ## 4. Read in code
@@ -93,6 +99,21 @@ ENDTRY.
 
 Rules of thumb: never catch `ZCX_CA_PARAM` to substitute a hard-coded value (define a
 default instead); never pass a DDIC / CLASS value anywhere but as a name.
+
+**Read with context.** Pass every fact you know, once, to every read; each definition
+uses only the dimensions it declares, so a dimension added later needs no code change:
+
+```abap
+DATA(lt_context) = VALUE zif_ca_param_types=>tt_context( ( dim = 'SOURCE'     value = lv_source )
+                                                         ( dim = 'TRANS_TYPE' value = lv_trans_type )
+                                                         ( dim = 'BUKRS'      value = lv_bukrs ) ).
+DATA(lv_level) = lo_param->get_value( iv_area    = gc_area
+                                      iv_name    = gc_log_level
+                                      it_context = lt_context ).
+```
+
+Keep the dimension names as constants of your types interface, like area and names.
+
 
 ## 5. Test with the in-memory DAO
 
@@ -157,12 +178,13 @@ double quotes:
 | File | Columns (= fields of the table) |
 |---|---|
 | `param_areas.csv` (`ZCA_PARAM_AREA`) | `AREA,DESCRIPTION,OWNER_TEAM,ACTIVE` |
-| `param_definitions.csv` (`ZCA_PARAM_DEF`) | `AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DESCRIPTION` |
-| `param_values.csv` (`ZCA_PARAM_VAL`, optional) | `AREA,NAME,NUMB,SIGN,OPTI,LOW,HIGH` |
+| `param_definitions.csv` (`ZCA_PARAM_DEF`) | `AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DIM1,DIM2,DIM3,DIM4,DESCRIPTION` |
+| `param_values.csv` (`ZCA_PARAM_VAL`, optional) | `AREA,NAME,CTX1,CTX2,CTX3,CTX4,NUMB,SIGN,OPTI,LOW,HIGH` |
 
 Rules a consumer's check should apply before a row is entered (the save events apply them again): area and name are identifiers (16 / 30 characters), description at most 60, owner
 team at most 30 characters; the section 2 rules per value type; rows sorted by area and name;
-value rows only for defined names, kind P with one row `NUMB` 1, `I` / `EQ`. Values in
+value rows only for defined names, context values only for declared dimensions and in upper
+case, kind P with one row per context (`NUMB` 1, `I` / `EQ`). Values in
 `param_values.csv` are examples to confirm per landscape - production values are maintained
 in the development client and transported, never loaded from a seed. A consumer can generate its in-memory test
 data (for example a seed class `ZCL_XX_PARAM_SEED`) from these files and check them against

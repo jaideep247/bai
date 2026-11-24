@@ -2,10 +2,10 @@
 *& Artifact: zcl_ca_param_validator.clas.abap
 *& Purpose:
 *& Validation rules of the parameter framework, used by the runtime
-*& (ZCL_CA_PARAM, on every read) and by the maintenance app (on save), so
+*& (ZCL_CA_PARAM, on every read) and by the SM30 save events (on save), so
 *& both apply exactly the same rules. Checks names, definitions (kind,
-*& value type, min / max, default, allowed PCRE, interface), value rows
-*& (sign / option / high per kind) and values (type, min / max, allowed
+*& value type, min / max, default, allowed PCRE, interface, context
+*& dimensions), value rows (context, sign / option / high per kind) and values (type, min / max, allowed
 *& PCRE matched to the whole value ignoring case, DDIC type existence and
 *& class existence + interface via RTTI). Returns messages of class
 *& ZCA_PARAM (initial = valid); it never raises and never reads tables.
@@ -13,6 +13,7 @@
 *& acceptable is decided by the caller (mandatory, typed getters).
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-24 | Context: DIM1-4 of a definition (026-029), CTX1-4 of a row.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - validation rules</p>
 CLASS zcl_ca_param_validator DEFINITION
@@ -73,6 +74,21 @@ CLASS zcl_ca_param_validator DEFINITION
         iv_v3             TYPE csequence OPTIONAL
         iv_v4             TYPE csequence OPTIONAL
         iv_field          TYPE zif_ca_param_types=>ty_field OPTIONAL
+      RETURNING
+        VALUE(rs_message) TYPE zif_ca_param_types=>ty_message.
+
+    "! Definition check of DIM1-4: identifiers, no gap, no repeat
+    METHODS check_dimensions
+      IMPORTING
+        is_definition      TYPE zif_ca_param_types=>ty_definition
+      RETURNING
+        VALUE(rt_messages) TYPE zif_ca_param_types=>tt_message.
+
+    "! Row check of CTX1-4: only declared dimensions, upper case
+    METHODS check_context
+      IMPORTING
+        is_definition     TYPE zif_ca_param_types=>ty_definition
+        is_row            TYPE zif_ca_param_types=>ty_value_row
       RETURNING
         VALUE(rs_message) TYPE zif_ca_param_types=>ty_message.
 
@@ -193,6 +209,7 @@ CLASS zcl_ca_param_validator IMPLEMENTATION.
                       iv_v3         = is_definition-name
                       iv_field      = zif_ca_param_types=>gc_field-name ) INTO TABLE rt_messages.
     ENDIF.
+    INSERT LINES OF check_dimensions( is_definition ) INTO TABLE rt_messages.
     IF is_definition-kind <> zif_ca_param_types=>gc_kind-single
        AND is_definition-kind <> zif_ca_param_types=>gc_kind-select.
       INSERT message( is_definition = is_definition
@@ -314,7 +331,73 @@ CLASS zcl_ca_param_validator IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD check_dimensions.
+    DATA lt_seen TYPE STANDARD TABLE OF zif_ca_param_types=>ty_dimension WITH EMPTY KEY.
+    DATA lv_gap  TYPE abap_bool.
+
+    DO zif_ca_param_types=>gc_max_dims TIMES.
+      DATA(lv_position) = sy-index.
+      ASSIGN COMPONENT |DIM{ lv_position }| OF STRUCTURE is_definition TO FIELD-SYMBOL(<lv_dimension>).
+      IF sy-subrc <> 0.
+        RETURN.
+      ENDIF.
+      IF <lv_dimension> IS INITIAL.
+        lv_gap = abap_true.
+        CONTINUE.
+      ENDIF.
+      IF is_identifier( <lv_dimension> ) = abap_false.
+        INSERT message( is_definition = is_definition
+                        iv_msgno      = zif_ca_param_types=>gc_msg-dim_invalid
+                        iv_v3         = <lv_dimension>
+                        iv_field      = zif_ca_param_types=>gc_field-dim ) INTO TABLE rt_messages.
+      ELSEIF lv_gap = abap_true OR line_exists( lt_seen[ table_line = <lv_dimension> ] ).
+        " DIM2 needs DIM1 (the access sequence counts dimensions from 1); a name only once
+        INSERT message( is_definition = is_definition
+                        iv_msgno      = zif_ca_param_types=>gc_msg-dim_sequence
+                        iv_v3         = |DIM{ lv_position }|
+                        iv_field      = zif_ca_param_types=>gc_field-dim ) INTO TABLE rt_messages.
+      ENDIF.
+      INSERT <lv_dimension> INTO TABLE lt_seen.
+    ENDDO.
+  ENDMETHOD.
+
+
+  METHOD check_context.
+    DO zif_ca_param_types=>gc_max_dims TIMES.
+      DATA(lv_position) = sy-index.
+      ASSIGN COMPONENT |CTX{ lv_position }| OF STRUCTURE is_row TO FIELD-SYMBOL(<lv_value>).
+      ASSIGN COMPONENT |DIM{ lv_position }| OF STRUCTURE is_definition TO FIELD-SYMBOL(<lv_dimension>).
+      IF <lv_value> IS NOT ASSIGNED OR <lv_dimension> IS NOT ASSIGNED.
+        RETURN.
+      ENDIF.
+      IF <lv_value> IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      IF <lv_dimension> IS INITIAL.
+        rs_message = message( is_definition = is_definition
+                              iv_msgno      = zif_ca_param_types=>gc_msg-ctx_not_declared
+                              iv_v3         = is_row-numb
+                              iv_v4         = |CTX{ lv_position }|
+                              iv_field      = zif_ca_param_types=>gc_field-ctx ).
+        RETURN.
+      ENDIF.
+      IF <lv_value> <> to_upper( <lv_value> ).
+        rs_message = message( is_definition = is_definition
+                              iv_msgno      = zif_ca_param_types=>gc_msg-ctx_lower_case
+                              iv_v3         = <lv_value>
+                              iv_field      = zif_ca_param_types=>gc_field-ctx ).
+        RETURN.
+      ENDIF.
+    ENDDO.
+  ENDMETHOD.
+
+
   METHOD check_row.
+    rs_message = check_context( is_definition = is_definition
+                                is_row        = is_row ).
+    IF rs_message IS NOT INITIAL.
+      RETURN.
+    ENDIF.
     DATA(lv_row_text) = |{ is_row-sign } { is_row-opti } { is_row-high }|.
     CASE is_definition-kind.
       WHEN zif_ca_param_types=>gc_kind-single.

@@ -6,7 +6,7 @@ with the constants `ZIF_CA_PARAM_TYPES=>GC_MSG` (every constant has a row, every
 text is at most 73 characters).
 
 Placeholders: `&1` area, `&2` parameter name, `&3` value / row / field,
-`&4` type / limit / interface (unless the text says otherwise).
+`&4` type / limit / interface / dimension (unless the text says otherwise).
 
 ## Runtime (001-039)
 
@@ -37,3 +37,7 @@ Placeholders: `&1` area, `&2` parameter name, `&3` value / row / field,
 | 023 | min_above_max | Minimum &3 is greater than maximum &4 (parameter &1 / &2) |
 | 024 | intf_unknown | Interface &3 of parameter &1 / &2 does not exist |
 | 025 | list_needs_single | Value type LIST needs kind P (parameter &1 / &2) |
+| 026 | ctx_not_declared | Row &3 of parameter &1 / &2 has a value for undeclared context &4 |
+| 027 | ctx_lower_case | Context value '&3' of parameter &1 / &2 must be upper case |
+| 028 | dim_invalid | Context dimension '&3' of parameter &1 / &2 is not a valid name |
+| 029 | dim_sequence | Context dimensions of parameter &1 / &2: gap or repeat at &3 |

@@ -7,9 +7,12 @@
 *& list and range in NUMB order, typed conversion with min / max, allowed
 *& PCRE, DDIC and class checks, unknown / inactive area, unknown name,
 *& buffer and refresh. Tests of an exception catch ZCX_CA_PARAM and assert
-*& the message number. Does not prove live SAP runtime behavior.
+*& the message number. LTC_CONTEXT: values per context (access sequence,
+*& fallback, one context per read, validation of every context).
+*& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-24 | LTC_CONTEXT added.
 *&---------------------------------------------------------------------*
 CLASS ltc_param DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -566,6 +569,267 @@ CLASS ltc_param IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lo_builder->dao( )->read_count( )
                                             exp = 2
                                             msg = `Refresh causes exactly one new read` ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Values per context: a parameter LOG with dimensions SOURCE (1) and TRANS_TYPE (2)
+CLASS ltc_context DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_area TYPE zif_ca_param_types=>ty_area VALUE 'ZTEST'.
+    CONSTANTS gc_name TYPE zif_ca_param_types=>ty_name VALUE 'LOG'.
+
+    "! LOG: default D; general E; SRC_A A; SRC_A + CANC S; any source + REIS N
+    METHODS log_param
+      RETURNING
+        VALUE(ro_param) TYPE REF TO zif_ca_param.
+
+    "! Read context SOURCE / TRANS_TYPE (a blank value is not passed)
+    METHODS ctx
+      IMPORTING
+        iv_source         TYPE zif_ca_param_types=>ty_ctx_value OPTIONAL
+        iv_type           TYPE zif_ca_param_types=>ty_ctx_value OPTIONAL
+      RETURNING
+        VALUE(rt_context) TYPE zif_ca_param_types=>tt_context.
+
+    "! Value of LOG for a context; the message number as text when the read raises
+    METHODS log_for
+      IMPORTING
+        io_param        TYPE REF TO zif_ca_param
+        it_context      TYPE zif_ca_param_types=>tt_context
+      RETURNING
+        VALUE(rv_value) TYPE string.
+
+    METHODS exact_context_wins FOR TESTING.
+    METHODS partial_context_falls_back FOR TESTING.
+    METHODS dimension_1_most_significant FOR TESTING.
+    METHODS second_dimension_alone FOR TESTING.
+    METHODS no_context_gives_general FOR TESTING.
+    METHODS unknown_context_gives_general FOR TESTING.
+    METHODS no_general_row_gives_default FOR TESTING.
+    METHODS undeclared_facts_ignored FOR TESTING.
+    METHODS context_case_insensitive FOR TESTING.
+    METHODS range_from_one_context_only FOR TESTING.
+    METHODS single_two_rows_in_one_context FOR TESTING.
+    METHODS row_of_undeclared_dim_raises FOR TESTING.
+    METHODS is_set_by_context FOR TESTING.
+    METHODS effective_context_explained FOR TESTING.
+    METHODS no_dims_reads_as_before FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_context IMPLEMENTATION.
+
+  METHOD log_param.
+    ro_param = NEW zcl_ca_param_builder( )->area( gc_area
+      )->param( iv_name    = gc_name
+                iv_default = 'D'
+                iv_dim1    = 'SOURCE'
+                iv_dim2    = 'TRANS_TYPE' )->row( 'E'
+      )->context( iv_ctx1 = 'SRC_A' )->row( 'A'
+      )->context( iv_ctx1 = 'SRC_A' iv_ctx2 = 'CANC' )->row( 'S'
+      )->context( iv_ctx2 = 'REIS' )->row( 'N' )->build( ).
+  ENDMETHOD.
+
+
+  METHOD ctx.
+    IF iv_source IS NOT INITIAL.
+      INSERT VALUE #( dim = 'SOURCE' value = iv_source ) INTO TABLE rt_context.
+    ENDIF.
+    IF iv_type IS NOT INITIAL.
+      INSERT VALUE #( dim = 'TRANS_TYPE' value = iv_type ) INTO TABLE rt_context.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD log_for.
+    TRY.
+        rv_value = io_param->get_value( iv_area    = gc_area
+                                        iv_name    = gc_name
+                                        it_context = it_context ).
+      CATCH zcx_ca_param INTO DATA(lx_error).
+        rv_value = |MSG { lx_error->if_t100_message~t100key-msgno }|.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD exact_context_wins.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = ctx( iv_source = 'SRC_A' iv_type = 'CANC' ) )
+                                        exp = `S`
+                                        msg = `Rows for SRC_A + CANC win over every less specific row` ).
+  ENDMETHOD.
+
+
+  METHOD partial_context_falls_back.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = ctx( iv_source = 'SRC_A' iv_type = 'VOID' ) )
+                                        exp = `A`
+                                        msg = `No SRC_A + VOID rows: the SRC_A rows (any type)` ).
+  ENDMETHOD.
+
+
+  METHOD dimension_1_most_significant.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = ctx( iv_source = 'SRC_A' iv_type = 'REIS' ) )
+                                        exp = `A`
+                                        msg = `SRC_A (any type) wins over any source + REIS: DIM1 decides first` ).
+  ENDMETHOD.
+
+
+  METHOD second_dimension_alone.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = ctx( iv_source = 'SRC_B' iv_type = 'REIS' ) )
+                                        exp = `N`
+                                        msg = `No SRC_B rows: the rows for any source + REIS` ).
+  ENDMETHOD.
+
+
+  METHOD no_context_gives_general.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = VALUE #( ) )
+                                        exp = `E`
+                                        msg = `A read without context uses the general rows, as before` ).
+  ENDMETHOD.
+
+
+  METHOD unknown_context_gives_general.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = ctx( iv_source = 'SRC_B' iv_type = 'CANC' ) )
+                                        exp = `E`
+                                        msg = `No rows for SRC_B or for CANC alone: the general rows` ).
+  ENDMETHOD.
+
+
+  METHOD no_general_row_gives_default.
+    TRY.
+        DATA(lo_param) = NEW zcl_ca_param_builder( )->area( gc_area
+          )->param( iv_name = gc_name iv_default = 'D' iv_dim1 = 'SOURCE'
+          )->context( iv_ctx1 = 'SRC_A' )->row( 'A' )->build( ).
+        cl_abap_unit_assert=>assert_equals( act = lo_param->get_value( iv_area    = gc_area
+                                                                       iv_name    = gc_name
+                                                                       it_context = ctx( iv_source = 'SRC_B' ) )
+                                            exp = `D`
+                                            msg = `No matching context and no general row: the default` ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD undeclared_facts_ignored.
+    DATA(lt_context) = ctx( iv_source = 'SRC_A' ).
+    INSERT VALUE #( dim = 'BUKRS' value = '1000' ) INTO TABLE lt_context.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = lt_context )
+                                        exp = `A`
+                                        msg = `A fact for a dimension LOG does not declare (BUKRS) changes nothing` ).
+  ENDMETHOD.
+
+
+  METHOD context_case_insensitive.
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = log_param( )
+                                                       it_context = VALUE #( ( dim = 'source' value = 'src_a' ) ) )
+                                        exp = `A`
+                                        msg = `Dimension names and values of a read are compared in upper case` ).
+  ENDMETHOD.
+
+
+  METHOD range_from_one_context_only.
+    DATA lt_exp TYPE zif_ca_param_types=>tt_range.
+
+    TRY.
+        DATA(lo_param) = NEW zcl_ca_param_builder( )->area( gc_area
+          )->param( iv_name = gc_name iv_kind = zif_ca_param_types=>gc_kind-select iv_dim1 = 'SOURCE'
+          )->row( 'X' )->row( 'Y'
+          )->context( iv_ctx1 = 'SRC_A' )->row( 'Z' )->build( ).
+        lt_exp = VALUE #( ( sign   = zif_ca_param_types=>gc_sign-include
+                            option = zif_ca_param_types=>gc_option-eq
+                            low    = 'Z' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lo_param->get_range( iv_area    = gc_area
+                                                                       iv_name    = gc_name
+                                                                       it_context = ctx( iv_source = 'SRC_A' ) )
+                                            exp = lt_exp
+                                            msg = `The SRC_A rows replace the general rows - never a mix` ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD single_two_rows_in_one_context.
+    DATA(lo_param) = NEW zcl_ca_param_builder( )->area( gc_area
+      )->param( iv_name = gc_name iv_dim1 = 'SOURCE'
+      )->row( 'E'
+      )->context( iv_ctx1 = 'SRC_A' )->row( 'A' )->row( 'B' )->build( ).
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = lo_param
+                                                       it_context = ctx( iv_source = 'SRC_B' ) )
+                                        exp = |MSG { zif_ca_param_types=>gc_msg-single_multiple }|
+                                        msg = `Two SRC_A rows of a single value fail every read, also an SRC_B read` ).
+  ENDMETHOD.
+
+
+  METHOD row_of_undeclared_dim_raises.
+    DATA(lo_param) = NEW zcl_ca_param_builder( )->area( gc_area
+      )->param( iv_name = gc_name
+      )->row( 'E'
+      )->context( iv_ctx1 = 'SRC_A' )->row( 'A' )->build( ).
+    cl_abap_unit_assert=>assert_equals( act = log_for( io_param   = lo_param
+                                                       it_context = VALUE #( ) )
+                                        exp = |MSG { zif_ca_param_types=>gc_msg-ctx_not_declared }|
+                                        msg = `A context row on a parameter without dimensions is an error, not ignored` ).
+  ENDMETHOD.
+
+
+  METHOD is_set_by_context.
+    TRY.
+        DATA(lo_param) = NEW zcl_ca_param_builder( )->area( gc_area
+          )->param( iv_name = gc_name iv_default = 'D' iv_dim1 = 'SOURCE'
+          )->context( iv_ctx1 = 'SRC_A' )->row( 'A' )->build( ).
+        cl_abap_unit_assert=>assert_true( act = lo_param->is_set( iv_area    = gc_area
+                                                                  iv_name    = gc_name
+                                                                  it_context = ctx( iv_source = 'SRC_A' ) )
+                                          msg = `SRC_A has a row` ).
+        cl_abap_unit_assert=>assert_false( act = lo_param->is_set( iv_area    = gc_area
+                                                                   iv_name    = gc_name
+                                                                   it_context = ctx( iv_source = 'SRC_B' ) )
+                                           msg = `SRC_B has no row (the default does not count)` ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD effective_context_explained.
+    TRY.
+        DATA(lo_param) = log_param( ).
+        DATA(ls_effective) = lo_param->get_effective_context( iv_area    = gc_area
+                                                              iv_name    = gc_name
+                                                              it_context = ctx( iv_source = 'SRC_A' iv_type = 'VOID' ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_effective
+                                            exp = VALUE zif_ca_param_types=>ty_effective( context = VALUE #( ctx1 = 'SRC_A' )
+                                                                                          rows    = 1 )
+                                            msg = `The read uses the SRC_A rows (any type): one row` ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD no_dims_reads_as_before.
+    TRY.
+        DATA(lo_param) = NEW zcl_ca_param_builder( )->area( gc_area
+          )->param( iv_name = gc_name )->row( 'E' )->build( ).
+        cl_abap_unit_assert=>assert_equals( act = lo_param->get_value( iv_area    = gc_area
+                                                                       iv_name    = gc_name
+                                                                       it_context = ctx( iv_source = 'SRC_A' ) )
+                                            exp = `E`
+                                            msg = `Without dimensions a context is ignored: the read is unchanged` ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -21,5 +21,11 @@ define table zca_param_def {
   allowed_pcre          : zca_param_value;
   interface_name        : seoclsname;
   mandatory             : zca_param_mandatory;
+  // context dimensions (e.g. SOURCE, TRANS_TYPE): value rows may be maintained per context;
+  // dimension 1 is the most significant in the access sequence (docs/DESIGN.md section 3a)
+  dim1                  : zca_param_dim1;
+  dim2                  : zca_param_dim2;
+  dim3                  : zca_param_dim3;
+  dim4                  : zca_param_dim4;
   description           : zca_param_descr;
 }

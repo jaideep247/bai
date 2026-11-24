@@ -41,6 +41,8 @@ Modification log:
            | components allowed in the definitions (EXTRA_AREAS_CSV); DEFAULTS kind 'definition'.
 2026-11-10 | Moved to the shared tools (tools/abaptools): the engine only; the framework's profile is
            | ops-framework/tools/param_definitions.py, every consumer has its own wrapper.
+2026-11-24 | ZCA_PARAM 2.0.0: PROD_EDITABLE, DEVELOPER_OWNED, OWNER removed; context DIM1-4 on definitions,
+           | CTX1-4 on value rows (kind P: one row per context).
 """
 import csv
 import io
@@ -75,10 +77,12 @@ TYPES_FILE = None
 GEN_HEADER = None
 GEN_FOOTER = None
 
-AREA_COLS = ['AREA', 'DESCRIPTION', 'OWNER_TEAM', 'PROD_EDITABLE', 'ACTIVE']
+AREA_COLS = ['AREA', 'DESCRIPTION', 'OWNER_TEAM', 'ACTIVE']
 DEF_COLS = ['AREA', 'NAME', 'KIND', 'VALUE_TYPE', 'MIN_VALUE', 'MAX_VALUE', 'DEFAULT_VALUE', 'ALLOWED_PCRE',
-            'INTERFACE_NAME', 'MANDATORY', 'DEVELOPER_OWNED', 'DESCRIPTION', 'OWNER']
-VALUE_COLS = ['AREA', 'NAME', 'NUMB', 'SIGN', 'OPTI', 'LOW', 'HIGH']
+            'INTERFACE_NAME', 'MANDATORY', 'DIM1', 'DIM2', 'DIM3', 'DIM4', 'DESCRIPTION']
+VALUE_COLS = ['AREA', 'NAME', 'CTX1', 'CTX2', 'CTX3', 'CTX4', 'NUMB', 'SIGN', 'OPTI', 'LOW', 'HIGH']
+DIMS = ('DIM1', 'DIM2', 'DIM3', 'DIM4')
+CTXS = ('CTX1', 'CTX2', 'CTX3', 'CTX4')
 KINDS = ('P', 'S')
 VTYPES = ('INT', 'DEC', 'CHAR', 'BOOL', 'DATE', 'TIME', 'LIST', 'PCRE', 'DDIC', 'CLASS')
 IDENT = re.compile(r'^[A-Z][A-Z0-9_]*$')
@@ -317,8 +321,8 @@ def format_failures(areas, defs, values, extra_areas=(), extra_defs=()):
             fails.append(f"{AREAS_CSV}: area {a['AREA']} is not an identifier of at most 16 characters")
         if len(a['DESCRIPTION']) > 60 or len(a['OWNER_TEAM']) > 30:
             fails.append(f"{AREAS_CSV}: {a['AREA']} description > 60 or owner team > 30 characters")
-        if a['PROD_EDITABLE'] not in ('', 'X') or a['ACTIVE'] not in ('', 'X'):
-            fails.append(f"{AREAS_CSV}: {a['AREA']} flags must be X or blank")
+        if a['ACTIVE'] not in ('', 'X'):
+            fails.append(f"{AREAS_CSV}: {a['AREA']} ACTIVE must be X or blank")
     seen = set()
     keys = []
     for d in defs:
@@ -351,12 +355,16 @@ def format_failures(areas, defs, values, extra_areas=(), extra_defs=()):
                 fails.append(f'{where}: MIN above MAX')
         if vt == 'BOOL' and d['DEFAULT_VALUE'] not in ('', 'X'):
             fails.append(f'{where}: BOOL default must be X or blank')
-        if vt in ('CLASS', 'DDIC') and d['DEVELOPER_OWNED'] != 'X':
-            fails.append(f'{where}: {vt} values are developer-owned')
-        if d['MANDATORY'] not in ('', 'X') or d['DEVELOPER_OWNED'] not in ('', 'X'):
-            fails.append(f'{where}: MANDATORY / DEVELOPER_OWNED must be X or blank')
-        if len(d['DESCRIPTION']) > 60 or len(d['OWNER']) > 30 or not d['DESCRIPTION']:
-            fails.append(f'{where}: description (1-60) or owner (30) length')
+        if d['MANDATORY'] not in ('', 'X'):
+            fails.append(f'{where}: MANDATORY must be X or blank')
+        dims = [d[c] for c in DIMS]
+        declared = [x for x in dims if x]
+        if any(x and not (IDENT.match(x) and len(x) <= 20) for x in dims):
+            fails.append(f'{where}: a context dimension is not an identifier of at most 20 characters')
+        if dims[:len(declared)] != declared or len(set(declared)) != len(declared):
+            fails.append(f'{where}: context dimensions from DIM1 on, without gap or repeat')
+        if len(d['DESCRIPTION']) > 60 or not d['DESCRIPTION']:
+            fails.append(f'{where}: description length 1-60')
         if d['ALLOWED_PCRE']:
             try:
                 re.compile(d['ALLOWED_PCRE'])
@@ -370,14 +378,20 @@ def format_failures(areas, defs, values, extra_areas=(), extra_defs=()):
         fails.append(f'{DEFS_CSV}: rows must be sorted by area (order of {AREAS_CSV}) and name')
     by_key = {(d['AREA'], d['NAME']): d for d in list(extra_defs) + list(defs)}
     for v in values or []:
-        where = f"{VALUES_CSV}: {v['AREA']} / {v['NAME']} / {v['NUMB']}"
+        ctx = '/'.join(v[c] for c in CTXS).rstrip('/')
+        where = f"{VALUES_CSV}: {v['AREA']} / {v['NAME']} / {ctx + ' / ' if ctx else ''}{v['NUMB']}"
         d = by_key.get((v['AREA'], v['NAME']))
         if not d:
             fails.append(f'{where}: no definition')
             continue
+        for dim, col in zip(DIMS, CTXS):
+            if v[col] and not d.get(dim):
+                fails.append(f'{where}: {col} filled but the definition declares no {dim}')
+            if v[col] != v[col].upper():
+                fails.append(f'{where}: {col} must be upper case')
         if d['KIND'] == 'P' and (v['NUMB'] != '1' or v['SIGN'] not in ('', 'I') or v['OPTI'] not in ('', 'EQ')
                                  or v['HIGH']):
-            fails.append(f'{where}: kind P has one row NUMB 1, I / EQ, no HIGH')
+            fails.append(f'{where}: kind P has one row per context: NUMB 1, I / EQ, no HIGH')
         if d['VALUE_TYPE'] == 'INT' and v['LOW'] and not INT.match(v['LOW']):
             fails.append(f'{where}: {v["LOW"]} is not an integer')
         if d['VALUE_TYPE'] == 'BOOL' and v['LOW'] not in ('', 'X'):
@@ -453,7 +467,6 @@ def render(areas, defs):
                    f"        area          TYPE zif_ca_param_types=>ty_area VALUE {_abap(a['AREA'])},\n"
                    f"        description   TYPE zif_ca_param_types=>ty_description VALUE {_abap(a['DESCRIPTION'])},\n"
                    f"        owner_team    TYPE zif_ca_param_types=>ty_owner VALUE {_abap(a['OWNER_TEAM'])},\n"
-                   f"        prod_editable TYPE abap_bool VALUE {_abap(a['PROD_EDITABLE'])},\n"
                    f"        active        TYPE abap_bool VALUE {_abap(a['ACTIVE'])},\n"
                    f'      END OF {n}.\n')
         a_lines.append(f'    INSERT CORRESPONDING #( {n} ) INTO TABLE rt_areas.\n')
@@ -467,9 +480,10 @@ def render(areas, defs):
                 ('default_value', 'zif_ca_param_types=>ty_value', 'DEFAULT_VALUE'),
                 ('allowed_pcre', 'zif_ca_param_types=>ty_value', 'ALLOWED_PCRE'),
                 ('interface_name', 'zif_ca_param_types=>ty_interface', 'INTERFACE_NAME'),
-                ('mandatory', 'abap_bool', 'MANDATORY'), ('developer_owned', 'abap_bool', 'DEVELOPER_OWNED'),
-                ('description', 'zif_ca_param_types=>ty_description', 'DESCRIPTION'),
-                ('owner', 'zif_ca_param_types=>ty_owner', 'OWNER')]
+                ('mandatory', 'abap_bool', 'MANDATORY'),
+                ('dim1', 'zif_ca_param_types=>ty_dimension', 'DIM1'), ('dim2', 'zif_ca_param_types=>ty_dimension', 'DIM2'),
+                ('dim3', 'zif_ca_param_types=>ty_dimension', 'DIM3'), ('dim4', 'zif_ca_param_types=>ty_dimension', 'DIM4'),
+                ('description', 'zif_ca_param_types=>ty_description', 'DESCRIPTION')]
         out.append(f'    CONSTANTS:\n      BEGIN OF {n},\n')
         for comp, typ, col in rows:
             out.append(f'        {comp:<15} TYPE {typ} VALUE {_abap(d[col])},\n')

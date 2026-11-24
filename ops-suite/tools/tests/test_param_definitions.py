@@ -55,12 +55,12 @@ READER = """CLASS zcl_cd_fix IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 """
-AREAS = "AREA,DESCRIPTION,OWNER_TEAM,PROD_EDITABLE,ACTIVE\nCD_OPS,Fixture,TEAM,X,X\n"
+AREAS = "AREA,DESCRIPTION,OWNER_TEAM,ACTIVE\nCD_OPS,Fixture,TEAM,X\n"
 HEADER = ",".join(pd.DEF_COLS) + "\n"
 ROWS = {
-    'ALERT_MORNING': "CD_OPS,ALERT_MORNING,P,LIST,,,,,,,,Recipients,TEAM\n",
-    'FIX_FLAG': "CD_OPS,FIX_FLAG,P,BOOL,,,,,,,,A flag,TEAM\n",
-    'FIX_LIMIT': "CD_OPS,FIX_LIMIT,P,INT,1,,10,,,,,A limit,TEAM\n",
+    'ALERT_MORNING': "CD_OPS,ALERT_MORNING,P,LIST,,,,,,,,,,,Recipients\n",
+    'FIX_FLAG': "CD_OPS,FIX_FLAG,P,BOOL,,,,,,,,,,,A flag\n",
+    'FIX_LIMIT': "CD_OPS,FIX_LIMIT,P,INT,1,,10,,,,,,,,A limit\n",
 }
 SCOPE_DEF = {'NAME': 'FIX_SCOPE', 'VALUE_TYPE': 'CHAR', 'ALLOWED_PCRE': '[AC]'}
 LIST_DEF = {'NAME': 'FIX_FIELDS', 'VALUE_TYPE': 'LIST', 'ALLOWED_PCRE': '[A-Z][A-Z0-9_]*'}
@@ -100,15 +100,15 @@ class ParamDefinitionsTest(unittest.TestCase):
         self.assertTrue(any('ALERT_MORNING' in f and 'run time' in f for f in self._failures(rows)))
 
     def test_definition_read_by_no_code(self):
-        rows = dict(ROWS, FIX_UNUSED="CD_OPS,FIX_UNUSED,P,INT,,,,,,,,Not read,TEAM\n")
+        rows = dict(ROWS, FIX_UNUSED="CD_OPS,FIX_UNUSED,P,INT,,,,,,,,,,,Not read\n")
         self.assertTrue(any('FIX_UNUSED' in f and 'read by no code' in f for f in self._failures(rows)))
 
     def test_default_differs_from_code(self):
-        rows = dict(ROWS, FIX_LIMIT="CD_OPS,FIX_LIMIT,P,INT,1,,12,,,,,A limit,TEAM\n")
+        rows = dict(ROWS, FIX_LIMIT="CD_OPS,FIX_LIMIT,P,INT,1,,12,,,,,,,,A limit\n")
         self.assertTrue(any('FIX_LIMIT' in f and 'code default' in f for f in self._failures(rows)))
 
     def test_flag_must_be_bool(self):
-        rows = dict(ROWS, FIX_FLAG="CD_OPS,FIX_FLAG,P,CHAR,,,,,,,,A flag,TEAM\n")
+        rows = dict(ROWS, FIX_FLAG="CD_OPS,FIX_FLAG,P,CHAR,,,,,,,,,,,A flag\n")
         self.assertTrue(any('FIX_FLAG' in f and 'BOOL' in f for f in self._failures(rows)))
 
     def test_off_token_is_reported(self):
@@ -116,7 +116,7 @@ class ParamDefinitionsTest(unittest.TestCase):
         self.assertTrue(any("'N'" in f for f in self._failures(reader=reader)))
 
     def test_area_must_follow_prefix(self):
-        areas = "AREA,DESCRIPTION,OWNER_TEAM,PROD_EDITABLE,ACTIVE\nCD_OPS,Fixture,TEAM,X,X\nCD_HCK,Other,TEAM,X,X\n"
+        areas = "AREA,DESCRIPTION,OWNER_TEAM,ACTIVE\nCD_OPS,Fixture,TEAM,X\nCD_HCK,Other,TEAM,X\n"
         rows = dict(ROWS)
         rows['FIX_LIMIT'] = rows['FIX_LIMIT'].replace('CD_OPS', 'CD_HCK', 1)
         fails = self._failures(rows, extra={pd.AREAS_CSV: areas})
@@ -126,11 +126,11 @@ class ParamDefinitionsTest(unittest.TestCase):
         self.assertTrue(any('not generated' in f for f in self._failures(seed_stale=True)))
 
     def test_list_needs_kind_p(self):
-        rows = dict(ROWS, ALERT_MORNING="CD_OPS,ALERT_MORNING,S,LIST,,,,,,,,Recipients,TEAM\n")
+        rows = dict(ROWS, ALERT_MORNING="CD_OPS,ALERT_MORNING,S,LIST,,,,,,,,,,,Recipients\n")
         self.assertTrue(any('LIST needs kind P' in f for f in self._failures(rows)))
 
     def test_bool_default_must_be_x_or_blank(self):
-        rows = dict(ROWS, FIX_FLAG="CD_OPS,FIX_FLAG,P,BOOL,,,N,,,,,A flag,TEAM\n")
+        rows = dict(ROWS, FIX_FLAG="CD_OPS,FIX_FLAG,P,BOOL,,,N,,,,,,,,A flag\n")
         self.assertTrue(any('BOOL default' in f for f in self._failures(rows)))
 
     def test_allowed_pattern_whole_value(self):
@@ -143,7 +143,7 @@ class ParamDefinitionsTest(unittest.TestCase):
         self.assertEqual(pd.pattern_mismatch(LIST_DEF, 'VB1OK,1X'), '1X')
 
     def test_default_outside_pattern_is_reported(self):
-        rows = dict(ROWS, FIX_LIMIT="CD_OPS,FIX_LIMIT,P,INT,1,,10,[1-9],,,,A limit,TEAM\n")
+        rows = dict(ROWS, FIX_LIMIT="CD_OPS,FIX_LIMIT,P,INT,1,,10,[1-9],,,,,,,A limit\n")
         self.assertTrue(any('FIX_LIMIT' in f and 'allowed pattern' in f for f in self._failures(rows)))
 
     def test_delivered_queue_scope_is_c(self):
@@ -166,8 +166,8 @@ class ConsolidationTest(unittest.TestCase):
 
     def test_definitions_in_parts(self):
         row = dict(AREA='CD_OPS', KIND='P', VALUE_TYPE='INT', MIN_VALUE='', MAX_VALUE='', DEFAULT_VALUE='',
-                   ALLOWED_PCRE='', INTERFACE_NAME='', MANDATORY='', DEVELOPER_OWNED='', DESCRIPTION='d',
-                   OWNER='o')
+                   ALLOWED_PCRE='', INTERFACE_NAME='', MANDATORY='', DIM1='', DIM2='', DIM3='', DIM4='',
+                   DESCRIPTION='d')
         defs = [dict(row, NAME=f'FIX_{i:03d}') for i in range(pd.PART_ROWS + 1)]
         text = pd.render([], defs)
         self.assertIn('INSERT LINES OF definitions_part_1( ) INTO TABLE rt_definitions.', text)

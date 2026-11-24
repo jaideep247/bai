@@ -3,8 +3,8 @@
 *& Purpose:
 *& Named types and constants of the parameter framework: keys, values,
 *& definitions, value rows, area snapshot, messages, kinds, value types,
-*& range signs / options, PCRE patterns of the validator and the
-*& authorization object.
+*& range signs / options, context of a read, PCRE patterns of the validator
+*& and the authorization object.
 *& No logic. The message numbers here and the rows in
 *& config/zca_param_messages.md are compared by tools/checks.py.
 *& Modification log:
@@ -12,6 +12,8 @@
 *& 2026-11-10 | GC_VERSION: release of the framework, read by consumers that need a minimum release.
 *& 2026-11-24 | 2.0.0: RAP app removed (maintenance in SM30 / SPRO). PROD_EDITABLE, DEVELOPER_OWNED,
 *&            | OWNER, the client / request types and constants and messages 040-048 removed.
+*& 2026-11-24 | Context: dimensions DIM1-4 on the definition, CTX1-4 on value rows, TT_CONTEXT of a read,
+*&            | messages 026-029.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - types and constants</p>
 INTERFACE zif_ca_param_types
@@ -32,6 +34,8 @@ INTERFACE zif_ca_param_types
   TYPES ty_description TYPE zca_param_descr.
   TYPES ty_owner       TYPE zca_param_owner.
   TYPES ty_interface   TYPE seoclsname.
+  TYPES ty_dimension   TYPE zca_param_dim.
+  TYPES ty_ctx_value   TYPE zca_param_ctx.
   TYPES ty_decimal     TYPE decfloat34.
   TYPES ty_actvt       TYPE c LENGTH 2.
   TYPES ty_field       TYPE c LENGTH 30.
@@ -65,22 +69,56 @@ INTERFACE zif_ca_param_types
       allowed_pcre    TYPE ty_value,
       interface_name  TYPE ty_interface,
       mandatory       TYPE abap_bool,
+      "! Context dimensions; DIM1 is the most significant in the access sequence
+      dim1            TYPE ty_dimension,
+      dim2            TYPE ty_dimension,
+      dim3            TYPE ty_dimension,
+      dim4            TYPE ty_dimension,
       description     TYPE ty_description,
     END OF ty_definition.
   TYPES tt_definition TYPE SORTED TABLE OF ty_definition WITH UNIQUE KEY area name.
 
-  "! One value row (ZCA_PARAM_VAL); rows of a parameter are ordered by NUMB
+  "! Context of a value row: values of DIM1-4 of the definition (blank = any)
+  TYPES:
+    BEGIN OF ty_ctx,
+      ctx1 TYPE ty_ctx_value,
+      ctx2 TYPE ty_ctx_value,
+      ctx3 TYPE ty_ctx_value,
+      ctx4 TYPE ty_ctx_value,
+    END OF ty_ctx.
+
+  "! One value row (ZCA_PARAM_VAL); rows of a parameter and context are ordered by NUMB
   TYPES:
     BEGIN OF ty_value_row,
       area TYPE ty_area,
       name TYPE ty_name,
+      ctx1 TYPE ty_ctx_value,
+      ctx2 TYPE ty_ctx_value,
+      ctx3 TYPE ty_ctx_value,
+      ctx4 TYPE ty_ctx_value,
       numb TYPE ty_numb,
       sign TYPE ty_sign,
       opti TYPE ty_option,
       low  TYPE ty_value,
       high TYPE ty_value,
     END OF ty_value_row.
-  TYPES tt_value_row TYPE SORTED TABLE OF ty_value_row WITH UNIQUE KEY area name numb.
+  TYPES tt_value_row TYPE SORTED TABLE OF ty_value_row WITH UNIQUE KEY area name ctx1 ctx2 ctx3 ctx4 numb.
+
+  "! Context of a read: the caller's facts by dimension name (e.g. SOURCE = SRC_A). A caller
+  "! passes every fact it knows; each definition uses only the dimensions it declares.
+  TYPES:
+    BEGIN OF ty_context_line,
+      dim   TYPE ty_dimension,
+      value TYPE ty_ctx_value,
+    END OF ty_context_line.
+  TYPES tt_context TYPE STANDARD TABLE OF ty_context_line WITH EMPTY KEY.
+
+  "! Context a read uses (initial = general rows or default) and its number of value rows
+  TYPES:
+    BEGIN OF ty_effective,
+      context TYPE ty_ctx,
+      rows    TYPE i,
+    END OF ty_effective.
 
   "! Everything of one area, read in one go by the DAO
   TYPES:
@@ -134,6 +172,10 @@ INTERFACE zif_ca_param_types
       min_above_max      TYPE symsgno VALUE '023',
       intf_unknown       TYPE symsgno VALUE '024',
       list_needs_single  TYPE symsgno VALUE '025',
+      ctx_not_declared   TYPE symsgno VALUE '026',
+      ctx_lower_case     TYPE symsgno VALUE '027',
+      dim_invalid        TYPE symsgno VALUE '028',
+      dim_sequence       TYPE symsgno VALUE '029',
     END OF gc_msg.
 
   "! Parameter kinds (domain ZCA_PARAM_KIND)
@@ -201,6 +243,9 @@ INTERFACE zif_ca_param_types
       separator  TYPE string VALUE `[,;]`,
     END OF gc_pcre.
 
+  "! Number of context dimensions of a definition (DIM1-4 / CTX1-4)
+  CONSTANTS gc_max_dims TYPE i VALUE 4.
+
   "! Bounds of value type INT (ABAP type i)
   CONSTANTS gc_int_min TYPE ty_decimal VALUE '-2147483648'.
   CONSTANTS gc_int_max TYPE ty_decimal VALUE '2147483647'.
@@ -221,6 +266,8 @@ INTERFACE zif_ca_param_types
       opti           TYPE ty_field VALUE 'OPTI',
       low            TYPE ty_field VALUE 'LOW',
       high           TYPE ty_field VALUE 'HIGH',
+      dim            TYPE ty_field VALUE 'DIM',
+      ctx            TYPE ty_field VALUE 'CTX',
     END OF gc_field.
 
   "! Authorization object ZCA_PARAM (optional, for a maintenance check per area; runtime reads are not checked)

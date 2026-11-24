@@ -74,7 +74,6 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         area          TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         description   TYPE zif_ca_param_types=>ty_description VALUE 'Operations framework: alerting / SLA / retention',
         owner_team    TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-        prod_editable TYPE abap_bool VALUE 'X',
         active        TYPE abap_bool VALUE 'X',
       END OF gc_a01.
     CONSTANTS:
@@ -89,9 +88,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SO23 shared lists when ALERT_<route> is blank (comma list)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d001.
     CONSTANTS:
       BEGIN OF gc_d002,
@@ -105,9 +106,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Escalation look-back window of an alert rule (hours)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d002.
     CONSTANTS:
       BEGIN OF gc_d003,
@@ -121,9 +124,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Exceptions app link in the alert e-mail (blank = app name)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d003.
     CONSTANTS:
       BEGIN OF gc_d004,
@@ -137,9 +142,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE 'SMTG|BUILTIN',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Alert e-mail renderer: SMTG (built-in fallback) or BUILTIN',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d004.
     CONSTANTS:
       BEGIN OF gc_d005,
@@ -153,9 +160,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE 'ZIF_CA_OPS_ALERT_SECTION',
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE 'X',
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Consumer section of the alert message (blank = none)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d005.
     CONSTANTS:
       BEGIN OF gc_d006,
@@ -169,9 +178,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z/][A-Z0-9_/]{0,29}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE 'X',
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Generic alert e-mail template (rule and channel name none)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d006.
     CONSTANTS:
       BEGIN OF gc_d007,
@@ -185,9 +196,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,6}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone of the times in the alert e-mail (TTZZ)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d007.
     CONSTANTS:
       BEGIN OF gc_d008,
@@ -201,9 +214,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Bank transaction codes of a paid / stopped cheque (list)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d008.
     CONSTANTS:
       BEGIN OF gc_d009,
@@ -217,9 +232,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Bank transaction codes the bank sends as cumulated amounts',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d009.
     CONSTANTS:
       BEGIN OF gc_d010,
@@ -233,9 +250,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'New or unmapped bank transaction codes (list)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d010.
     CONSTANTS:
       BEGIN OF gc_d011,
@@ -249,9 +268,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Bank transaction codes of a redeposit (list)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d011.
     CONSTANTS:
       BEGIN OF gc_d012,
@@ -265,9 +286,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Document types of a retrieval that clears a break group',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d012.
     CONSTANTS:
       BEGIN OF gc_d013,
@@ -281,9 +304,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Document types of a return that clears a break group',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d013.
     CONSTANTS:
       BEGIN OF gc_d014,
@@ -297,9 +322,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days after the key date whose lines may clear a break group',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d014.
     CONSTANTS:
       BEGIN OF gc_d015,
@@ -313,9 +340,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Break analysis without key date: today minus these days',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d015.
     CONSTANTS:
       BEGIN OF gc_d016,
@@ -329,9 +358,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9]{2}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Ledger of the journal lines of the break analysis',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d016.
     CONSTANTS:
       BEGIN OF gc_d017,
@@ -345,9 +376,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Rows one linked-object read of the break analysis returns',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d017.
     CONSTANTS:
       BEGIN OF gc_d018,
@@ -361,9 +394,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days of journal lines before the key date (break analysis)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d018.
     CONSTANTS:
       BEGIN OF gc_d019,
@@ -377,9 +412,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Unexplained-break findings of one account at most',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d019.
     CONSTANTS:
       BEGIN OF gc_d020,
@@ -393,9 +430,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Break groups of one account read at most (oldest first)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d020.
     CONSTANTS:
       BEGIN OF gc_d021,
@@ -409,9 +448,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Journal lines of one account read at most (break analysis)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d021.
     CONSTANTS:
       BEGIN OF gc_d022,
@@ -425,9 +466,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Assignments per journal-line read of the break analysis',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d022.
     CONSTANTS:
       BEGIN OF gc_d023,
@@ -441,9 +484,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days after which a break snapshot of an account is stale',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d023.
     CONSTANTS:
       BEGIN OF gc_d024,
@@ -457,9 +502,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Last days of a month / days to clear that count as timing',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d024.
     CONSTANTS:
       BEGIN OF gc_d025,
@@ -473,9 +520,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days after which an unexplained break is an exception',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d025.
     CONSTANTS:
       BEGIN OF gc_d026,
@@ -489,9 +538,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days back the outage check evaluates ended downtime windows',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d026.
     CONSTANTS:
       BEGIN OF gc_d027,
@@ -505,9 +556,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days after a downtime window rows without a time field cover',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d027.
     CONSTANTS:
       BEGIN OF gc_d028,
@@ -521,9 +574,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Area dashboard: a run older than this is stale (minutes)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d028.
     CONSTANTS:
       BEGIN OF gc_d029,
@@ -537,9 +592,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Teams a control may name (control register; comma list)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d029.
     CONSTANTS:
       BEGIN OF gc_d030,
@@ -553,9 +610,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,6}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone of business date and review cut-off (TTZZ)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d030.
     CONSTANTS:
       BEGIN OF gc_d031,
@@ -569,9 +628,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Longest planned downtime window (hours)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d031.
     CONSTANTS:
       BEGIN OF gc_d032,
@@ -585,9 +646,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes a downtime window may start in the past on save',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d032.
     CONSTANTS:
       BEGIN OF gc_d033,
@@ -601,9 +664,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of ended downtime windows (days; >= 30)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d033.
     CONSTANTS:
       BEGIN OF gc_d034,
@@ -617,9 +682,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,6}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone in which downtime windows are entered (TTZZ)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d034.
     CONSTANTS:
       BEGIN OF gc_d035,
@@ -633,9 +700,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Escalations of one exception when the rule names none',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d035.
     CONSTANTS:
       BEGIN OF gc_d036,
@@ -649,9 +718,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Reason codes of an open exception (classification)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d036.
     CONSTANTS:
       BEGIN OF gc_d037,
@@ -665,9 +736,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job log messages naming a released job (MSGID/MSGNO list)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d037.
     CONSTANTS:
       BEGIN OF gc_d038,
@@ -681,9 +754,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'PCRE of such a line: group 1 job name, group 2 job count',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d038.
     CONSTANTS:
       BEGIN OF gc_d039,
@@ -697,9 +772,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Claim classes of other monitors (ZIF_CA_OPS_JOB_CLAIM)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d039.
     CONSTANTS:
       BEGIN OF gc_d040,
@@ -713,9 +790,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Enricher classes in order (ZIF_CA_OPS_JOB_ENRICHER)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d040.
     CONSTANTS:
       BEGIN OF gc_d041,
@@ -729,9 +808,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Events whose parameter names the predecessor job',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d041.
     CONSTANTS:
       BEGIN OF gc_d042,
@@ -745,9 +826,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job names never reported (PCRE list, complete name)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d042.
     CONSTANTS:
       BEGIN OF gc_d043,
@@ -761,9 +844,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job log message types that count as an error',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d043.
     CONSTANTS:
       BEGIN OF gc_d044,
@@ -777,9 +862,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Programs whose finished jobs get their job log checked',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d044.
     CONSTANTS:
       BEGIN OF gc_d045,
@@ -793,9 +880,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes active before a job is long-running',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d045.
     CONSTANTS:
       BEGIN OF gc_d046,
@@ -809,9 +898,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes read back by the first run (no watermark)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d046.
     CONSTANTS:
       BEGIN OF gc_d047,
@@ -825,9 +916,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Application logs linked per failed job',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d047.
     CONSTANTS:
       BEGIN OF gc_d048,
@@ -841,9 +934,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Children of a failing job''s parent kept as context',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d048.
     CONSTANTS:
       BEGIN OF gc_d049,
@@ -857,9 +952,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Ancestors followed upwards from a failed job',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d049.
     CONSTANTS:
       BEGIN OF gc_d050,
@@ -873,9 +970,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Jobs read per run and kind (cap)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d050.
     CONSTANTS:
       BEGIN OF gc_d051,
@@ -889,9 +988,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job logs read per run (detection, links, evidence)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d051.
     CONSTANTS:
       BEGIN OF gc_d052,
@@ -905,9 +1006,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Error lines of a job log kept per job',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d052.
     CONSTANTS:
       BEGIN OF gc_d053,
@@ -921,9 +1024,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes after the planned start a released job may wait',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d053.
     CONSTANTS:
       BEGIN OF gc_d054,
@@ -937,9 +1042,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Minutes re-read before the watermark',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d054.
     CONSTANTS:
       BEGIN OF gc_d055,
@@ -953,9 +1060,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE 'X',
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'TBTCO fields of parent job name and count (two names)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d055.
     CONSTANTS:
       BEGIN OF gc_d056,
@@ -969,9 +1078,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Programs of jobs that may start children (blank = any)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d056.
     CONSTANTS:
       BEGIN OF gc_d057,
@@ -985,9 +1096,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Parent / child resolvers in order (ZIF_CA_OPS_JOB_RESOLVER)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d057.
     CONSTANTS:
       BEGIN OF gc_d058,
@@ -1001,9 +1114,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Job statuses of a job waiting to start',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d058.
     CONSTANTS:
       BEGIN OF gc_d059,
@@ -1017,9 +1132,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Levels a link registry walk follows from its start object',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d059.
     CONSTANTS:
       BEGIN OF gc_d060,
@@ -1033,9 +1150,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Objects one link registry walk returns at most',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d060.
     CONSTANTS:
       BEGIN OF gc_d061,
@@ -1049,9 +1168,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Rows one read of a link returns at most (per level)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d061.
     CONSTANTS:
       BEGIN OF gc_d062,
@@ -1065,9 +1186,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Source rows per database read of a link (IN list or OR)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d062.
     CONSTANTS:
       BEGIN OF gc_d063,
@@ -1081,9 +1204,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,6}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone of month / week of the response-time metrics',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d063.
     CONSTANTS:
       BEGIN OF gc_d064,
@@ -1097,9 +1222,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_/]{0,60}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Logical file name of the pilot export (transaction FILE)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d064.
     CONSTANTS:
       BEGIN OF gc_d065,
@@ -1113,9 +1240,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_/]{0,60}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Logical path of the pilot export (transaction FILE)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d065.
     CONSTANTS:
       BEGIN OF gc_d066,
@@ -1129,9 +1258,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,12}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Reason code that marks a resolved exception a false positive',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d066.
     CONSTANTS:
       BEGIN OF gc_d067,
@@ -1145,9 +1276,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days the pilot export covers when no date is entered',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d067.
     CONSTANTS:
       BEGIN OF gc_d068,
@@ -1161,9 +1294,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Rows deleted per purge package',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d068.
     CONSTANTS:
       BEGIN OF gc_d069,
@@ -1177,9 +1312,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of alert log rows (days; at least 30 applied)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d069.
     CONSTANTS:
       BEGIN OF gc_d070,
@@ -1193,9 +1330,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of the break analysis snapshots (days; >= 30)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d070.
     CONSTANTS:
       BEGIN OF gc_d071,
@@ -1209,9 +1348,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of SAP job evidence (days; >= 30)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d071.
     CONSTANTS:
       BEGIN OF gc_d072,
@@ -1225,9 +1366,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of daily control sign-offs (days; >= 30)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d072.
     CONSTANTS:
       BEGIN OF gc_d073,
@@ -1241,9 +1384,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of runs and findings (days; >= 30)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d073.
     CONSTANTS:
       BEGIN OF gc_d074,
@@ -1257,9 +1402,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Shift start times (HHMMSS rows) of teams without own times',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d074.
     CONSTANTS:
       BEGIN OF gc_d075,
@@ -1273,9 +1420,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,6}',
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE 'X',
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone of the shift start times (TTZZ)',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d075.
     CONSTANTS:
       BEGIN OF gc_d076,
@@ -1289,9 +1438,11 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
-        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        dim1            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim2            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim3            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
+        dim4            TYPE zif_ca_param_types=>ty_dimension VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of an exception when SLA_DAYS_<area>_<sev> blank',
-        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
       END OF gc_d076.
     "! Delivered definitions 1-76 (at most 100 per method)
     CLASS-METHODS definitions_part_1

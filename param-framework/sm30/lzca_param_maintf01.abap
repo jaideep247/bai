@@ -14,6 +14,7 @@
 *&   ZCA_PARAM_VAL   event 01  ZCA_VAL_BEFORE_SAVE
 *& Modification log:
 *& 2026-11-24 | Initial version (replaces the save checks of the RAP app).
+*& 2026-11-24 | Context: rows checked against DIM1-4; one row per context for a single value.
 *&---------------------------------------------------------------------*
 
 *----------------------------------------------------------------------*
@@ -56,11 +57,11 @@ FORM zca_def_before_save.
       RETURN.
     ENDIF.
 
-    SELECT area, name, numb, sign, opti, low, high
+    SELECT area, name, ctx1, ctx2, ctx3, ctx4, numb, sign, opti, low, high
       FROM zca_param_val
       WHERE area = @ls_def-area
         AND name = @ls_def-name
-      ORDER BY area, name, numb
+      ORDER BY area, name, ctx1, ctx2, ctx3, ctx4, numb
       INTO CORRESPONDING FIELDS OF TABLE @lt_rows.
     LOOP AT lt_rows INTO DATA(ls_row).
       DATA(ls_message) = lo_validator->check_row( is_definition = ls_definition
@@ -74,8 +75,8 @@ FORM zca_def_before_save.
 ENDFORM.
 
 *----------------------------------------------------------------------*
-* Value rows: row rules against the stored definition; a single value
-* (kind P) keeps at most one row
+* Value rows: row rules (context, sign / option, value) against the stored
+* definition; a single value (kind P) keeps at most one row per context
 *----------------------------------------------------------------------*
 FORM zca_val_before_save.
   DATA ls_val        TYPE zca_param_val.
@@ -90,7 +91,7 @@ FORM zca_val_before_save.
 
     CLEAR ls_definition.
     SELECT SINGLE area, name, kind, value_type, min_value, max_value, default_value,
-                  allowed_pcre, interface_name, mandatory, description
+                  allowed_pcre, interface_name, mandatory, dim1, dim2, dim3, dim4, description
       FROM zca_param_def
       WHERE area = @ls_val-area
         AND name = @ls_val-name
@@ -113,7 +114,9 @@ FORM zca_val_before_save.
       LOOP AT total.
         CHECK <action> <> geloescht AND <action> <> neuer_geloescht AND <action> <> update_geloescht.
         ls_other = <vim_total_struc>.
-        IF ls_other-area = ls_val-area AND ls_other-name = ls_val-name.
+        IF ls_other-area = ls_val-area AND ls_other-name = ls_val-name
+           AND ls_other-ctx1 = ls_val-ctx1 AND ls_other-ctx2 = ls_val-ctx2
+           AND ls_other-ctx3 = ls_val-ctx3 AND ls_other-ctx4 = ls_val-ctx4.
           lv_rows = lv_rows + 1.
         ENDIF.
       ENDLOOP.

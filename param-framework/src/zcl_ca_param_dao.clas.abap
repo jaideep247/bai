@@ -10,6 +10,7 @@
 *& Modification log:
 *& 2026-11-07 | Initial version.
 *& 2026-11-24 | PROD_EDITABLE, DEVELOPER_OWNED and OWNER removed from the field lists.
+*& 2026-11-24 | Context: DIM1-4 and CTX1-4 read; values ordered by context, then NUMB.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - database access</p>
 CLASS zcl_ca_param_dao DEFINITION
@@ -37,16 +38,16 @@ CLASS zcl_ca_param_dao IMPLEMENTATION.
     rs_data-found = abap_true.
 
     SELECT area, name, kind, value_type, min_value, max_value, default_value, allowed_pcre,
-           interface_name, mandatory, description
+           interface_name, mandatory, dim1, dim2, dim3, dim4, description
       FROM zca_param_def
       WHERE area = @iv_area
       ORDER BY area, name
       INTO CORRESPONDING FIELDS OF TABLE @rs_data-definitions.
 
-    SELECT area, name, numb, sign, opti, low, high
+    SELECT area, name, ctx1, ctx2, ctx3, ctx4, numb, sign, opti, low, high
       FROM zca_param_val
       WHERE area = @iv_area
-      ORDER BY area, name, numb
+      ORDER BY area, name, ctx1, ctx2, ctx3, ctx4, numb
       INTO CORRESPONDING FIELDS OF TABLE @rs_data-values.
   ENDMETHOD.
 

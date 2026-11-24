@@ -10,6 +10,7 @@
 *& Fill it directly (add_*) or with ZCL_CA_PARAM_BUILDER.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-24 | Context: value rows keyed by context; COUNT_VALUES per context.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - in-memory data access</p>
 CLASS zcl_ca_param_dao_mem DEFINITION
@@ -34,24 +35,25 @@ CLASS zcl_ca_param_dao_mem DEFINITION
       RETURNING
         VALUE(ro_self) TYPE REF TO zcl_ca_param_dao_mem.
 
-    "! Add or replace a value row (key area, name, numb)
+    "! Add or replace a value row (key area, name, context, numb)
     METHODS add_value
       IMPORTING
         is_value       TYPE zif_ca_param_types=>ty_value_row
       RETURNING
         VALUE(ro_self) TYPE REF TO zcl_ca_param_dao_mem.
 
-    "! Remove every value row of a parameter (as if deleted in the maintenance app)
+    "! Remove every value row of a parameter, in every context (as if deleted in SM30)
     METHODS remove_values
       IMPORTING
         iv_area TYPE zif_ca_param_types=>ty_area
         iv_name TYPE zif_ca_param_types=>ty_name.
 
-    "! Number of value rows of a parameter (next NUMB = count + 1)
+    "! Number of value rows of a parameter in one context (next NUMB = count + 1)
     METHODS count_values
       IMPORTING
         iv_area         TYPE zif_ca_param_types=>ty_area
         iv_name         TYPE zif_ca_param_types=>ty_name
+        is_context      TYPE zif_ca_param_types=>ty_ctx OPTIONAL
       RETURNING
         VALUE(rv_count) TYPE i.
 
@@ -106,6 +108,10 @@ CLASS zcl_ca_param_dao_mem IMPLEMENTATION.
   METHOD add_value.
     DELETE TABLE mt_values WITH TABLE KEY area = is_value-area
                                           name = is_value-name
+                                          ctx1 = is_value-ctx1
+                                          ctx2 = is_value-ctx2
+                                          ctx3 = is_value-ctx3
+                                          ctx4 = is_value-ctx4
                                           numb = is_value-numb.
     INSERT is_value INTO TABLE mt_values.
     ro_self = me.
@@ -118,7 +124,13 @@ CLASS zcl_ca_param_dao_mem IMPLEMENTATION.
 
 
   METHOD count_values.
-    LOOP AT mt_values TRANSPORTING NO FIELDS WHERE area = iv_area AND name = iv_name.
+    LOOP AT mt_values TRANSPORTING NO FIELDS
+         WHERE area = iv_area
+           AND name = iv_name
+           AND ctx1 = is_context-ctx1
+           AND ctx2 = is_context-ctx2
+           AND ctx3 = is_context-ctx3
+           AND ctx4 = is_context-ctx4.
       rv_count = rv_count + 1.
     ENDLOOP.
   ENDMETHOD.

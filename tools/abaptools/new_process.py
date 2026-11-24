@@ -78,7 +78,7 @@ COLUMNS = {
                         'MAX_ITEMS', 'THROTTLE_MIN', 'QUIET_FROM', 'QUIET_TO', 'ESCALATE_AFTER', 'ESCALATION_DEST',
                         'ESC_OVERRIDE', 'ACTIVE', 'TEMPLATE_ID', 'SHOW_AMOUNTS'],
     'purge_targets.csv': ['TARGET', 'CLASS_NAME', 'PARAM_AREA', 'PARAM_NAME', 'ACTIVE'],
-    'param_areas.csv': ['AREA', 'DESCRIPTION', 'OWNER_TEAM', 'PROD_EDITABLE', 'ACTIVE'],
+    'param_areas.csv': ['AREA', 'DESCRIPTION', 'OWNER_TEAM', 'ACTIVE'],
 }
 KEYS = {
     'process_register.csv': ['AREA', 'PROCESS_ID'],
@@ -213,7 +213,7 @@ def rows_of(spec):
     if spec.get('new_area') and spec.get('active', True):
         out['param_areas.csv'].append({'AREA': area, 'DESCRIPTION': spec['new_area'].get('description', spec['name']),
                                        'OWNER_TEAM': spec['new_area'].get('owner_team', spec.get('owner_team', '')),
-                                       'PROD_EDITABLE': YES, 'ACTIVE': on})
+                                       'ACTIVE': on})
     for name, lines in out.items():
         for row in lines:
             for column, value in row.items():

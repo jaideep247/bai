@@ -161,50 +161,26 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>040</MSGNR>
-     <TEXT>Enter an open customizing request for the changes to area &amp;1</TEXT>
+     <MSGNR>026</MSGNR>
+     <TEXT>Row &amp;3 of parameter &amp;1 / &amp;2 has a value for undeclared context &amp;4</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>041</MSGNR>
-     <TEXT>Request &amp;1 does not exist</TEXT>
+     <MSGNR>027</MSGNR>
+     <TEXT>Context value '&amp;3' of parameter &amp;1 / &amp;2 must be upper case</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>042</MSGNR>
-     <TEXT>Request &amp;1 is not a customizing request or task</TEXT>
+     <MSGNR>028</MSGNR>
+     <TEXT>Context dimension '&amp;3' of parameter &amp;1 / &amp;2 is not a valid name</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>043</MSGNR>
-     <TEXT>Request &amp;1 is not modifiable (released or locked)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>044</MSGNR>
-     <TEXT>Area &amp;1: areas and definitions are maintained only by transport</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>045</MSGNR>
-     <TEXT>Values of parameter &amp;1 / &amp;2 cannot be changed in this client</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>047</MSGNR>
-     <TEXT>Changes could not be recorded on request &amp;1</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>048</MSGNR>
-     <TEXT>Area &amp;1: client check failed, customizing not editable: &amp;2</TEXT>
+     <MSGNR>029</MSGNR>
+     <TEXT>Context dimensions of parameter &amp;1 / &amp;2: gap or repeat at &amp;3</TEXT>
     </T100>
    </T100>
   </asx:values>

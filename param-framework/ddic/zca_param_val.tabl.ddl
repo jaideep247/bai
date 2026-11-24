@@ -14,6 +14,11 @@ define table zca_param_val {
       where client = zca_param_val.client
         and area = zca_param_val.area
         and name = zca_param_val.name;
+  // context of the rows (blank = any); only dimensions declared on the definition may be filled
+  key ctx1              : zca_param_ctx1 not null;
+  key ctx2              : zca_param_ctx2 not null;
+  key ctx3              : zca_param_ctx3 not null;
+  key ctx4              : zca_param_ctx4 not null;
   key numb              : zca_param_numb not null;
   sign                  : zca_param_sign;
   opti                  : zca_param_option;

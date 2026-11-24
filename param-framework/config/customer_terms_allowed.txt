@@ -1,0 +1,5 @@
+# Lines that may name a word of config/customer_terms.txt: file | fragment | reason
+README.md | S_TABU_DIS | SAP standard authorization object S_TABU_DIS (table maintenance), not the consumer term DIS
+docs/DESIGN.md | S_TABU_DIS | SAP standard authorization object S_TABU_DIS (table maintenance), not the consumer term DIS
+docs/ONBOARDING.md | S_TABU_DIS | SAP standard authorization object S_TABU_DIS (table maintenance), not the consumer term DIS
+docs/OPERATIONS.md | S_TABU_DIS | SAP standard authorization object S_TABU_DIS (table maintenance), not the consumer term DIS

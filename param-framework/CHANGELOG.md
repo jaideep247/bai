@@ -2,6 +2,35 @@
 
 All notable changes of the parameter framework (`param-framework/` in jaideep247/bai).
 
+## [2.0.0] - 2026-11-24 (SM30 maintenance, context)
+
+Release constant `GC_VERSION` 2.0.0. Not compatible for maintenance (the RAP app is gone) and for
+callers of removed fields; read calls without context are unchanged.
+
+### Added
+- **Context:** `ZCA_PARAM_DEF-DIM1`-`DIM4` (dimensions, most significant first), `ZCA_PARAM_VAL-CTX1`-`CTX4`
+  (key, blank = any). Every getter and `is_set` take an optional `IT_CONTEXT` (facts by dimension name);
+  the most specific context with value rows wins, all rows from that one context (`docs/DESIGN.md` 3a).
+- `ZIF_CA_PARAM~GET_EFFECTIVE_CONTEXT`: the context a read uses and its number of rows.
+- Messages 026-029 (context value without dimension, lower case, dimension name, gap / repeat).
+- Builder `CONTEXT( )` and `PARAM( iv_dim1 .. iv_dim4 )`; DAO_MEM counts rows per context.
+- `sm30/lzca_param_maintf01.abap`: save events of the SM30 / SM34 maintenance (validator, one row per
+  context for a single value, re-check of the stored rows of a changed definition).
+- `docs/DESIGN.md` section 13: what belongs in a parameter, what in a process rule table.
+- Unit tests: `ltc_context` (15), validator context rules (7).
+
+### Removed
+- RAP maintenance app (package `ZCA_PARAM_UI`: CDS, BDEF, behaviour pool, service, draft tables,
+  `ZCL_CA_PARAM_MAINT`, `_MAINT_POLICY`, `_SYSTEM`, `ZIF_CA_PARAM_SYSTEM`).
+- Fields `TRANSPORT_REQUEST`, admin fields, `PROD_EDITABLE`, `DEVELOPER_OWNED`, `OWNER` (history in SCU3
+  and the customizing requests; only the app enforced the flags); builder `IV_PROD_EDITABLE`.
+- Client / request types and constants of the app; messages 040-048.
+
+### Changed
+- Tables: data maintenance allowed (SM30 / view cluster `ZCA_PARAM_VC`).
+- Shared seed tools (`tools/abaptools/param_definitions.py`, `new_process.py`) and the seed files and
+  generated seed classes of the operations framework and suite: new columns, removed columns.
+
 ## [Unreleased] - 2026-11-11 (SAP component names)
 
 Release constant unchanged: no ABAP object changed.

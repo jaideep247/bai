@@ -7,6 +7,7 @@
 *& methods need no TRY wrapper. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-24 | Context: dimensions of a definition, context values of a row.
 *&---------------------------------------------------------------------*
 CLASS ltc_validator DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -80,6 +81,13 @@ CLASS ltc_validator DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SH
     METHODS def_default_is_validated FOR TESTING.
     METHODS area_name_invalid FOR TESTING.
     METHODS split_list_drops_blanks FOR TESTING.
+    METHODS dims_valid_no_message FOR TESTING.
+    METHODS dim_gap_rejected FOR TESTING.
+    METHODS dim_repeat_rejected FOR TESTING.
+    METHODS dim_name_invalid FOR TESTING.
+    METHODS ctx_needs_declared_dim FOR TESTING.
+    METHODS ctx_must_be_upper_case FOR TESTING.
+    METHODS ctx_declared_is_valid FOR TESTING.
 ENDCLASS.
 
 
@@ -535,6 +543,84 @@ CLASS ltc_validator IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = mo_cut->split_list( ` A, B;; C ,` )
                                         exp = VALUE string_table( ( `A` ) ( `B` ) ( `C` ) )
                                         msg = `Comma and semicolon split, elements condensed, blanks dropped` ).
+  ENDMETHOD.
+
+
+  METHOD dims_valid_no_message.
+    DATA(ls_definition) = definition( zif_ca_param_types=>gc_value_type-char ).
+    ls_definition-dim1 = 'SOURCE'.
+    ls_definition-dim2 = 'TRANS_TYPE'.
+    cl_abap_unit_assert=>assert_initial( act = definition_msgnos( ls_definition )
+                                         msg = `Two dimensions from DIM1 on, distinct identifiers: valid` ).
+  ENDMETHOD.
+
+
+  METHOD dim_gap_rejected.
+    DATA(ls_definition) = definition( zif_ca_param_types=>gc_value_type-char ).
+    ls_definition-dim2 = 'SOURCE'.
+    cl_abap_unit_assert=>assert_equals( act = definition_msgnos( ls_definition )
+                                        exp = VALUE string_table( ( CONV string( zif_ca_param_types=>gc_msg-dim_sequence ) ) )
+                                        msg = `DIM2 without DIM1: the access sequence counts from DIM1` ).
+  ENDMETHOD.
+
+
+  METHOD dim_repeat_rejected.
+    DATA(ls_definition) = definition( zif_ca_param_types=>gc_value_type-char ).
+    ls_definition-dim1 = 'SOURCE'.
+    ls_definition-dim2 = 'SOURCE'.
+    cl_abap_unit_assert=>assert_equals( act = definition_msgnos( ls_definition )
+                                        exp = VALUE string_table( ( CONV string( zif_ca_param_types=>gc_msg-dim_sequence ) ) )
+                                        msg = `A dimension is declared once` ).
+  ENDMETHOD.
+
+
+  METHOD dim_name_invalid.
+    DATA(ls_definition) = definition( zif_ca_param_types=>gc_value_type-char ).
+    ls_definition-dim1 = '1SOURCE'.
+    cl_abap_unit_assert=>assert_equals( act = definition_msgnos( ls_definition )
+                                        exp = VALUE string_table( ( CONV string( zif_ca_param_types=>gc_msg-dim_invalid ) ) )
+                                        msg = `A dimension name is an identifier` ).
+  ENDMETHOD.
+
+
+  METHOD ctx_needs_declared_dim.
+    DATA ls_row TYPE zif_ca_param_types=>ty_value_row.
+
+    ls_row-numb = '0001'.
+    ls_row-ctx1 = 'SRC_A'.
+    ls_row-low  = 'A'.
+    cl_abap_unit_assert=>assert_equals(
+      act = mo_cut->check_row( is_definition = definition( zif_ca_param_types=>gc_value_type-char ) is_row = ls_row )-msgno
+      exp = zif_ca_param_types=>gc_msg-ctx_not_declared
+      msg = `A context value needs the dimension on the definition` ).
+  ENDMETHOD.
+
+
+  METHOD ctx_must_be_upper_case.
+    DATA ls_row TYPE zif_ca_param_types=>ty_value_row.
+
+    DATA(ls_definition) = definition( zif_ca_param_types=>gc_value_type-char ).
+    ls_definition-dim1 = 'SOURCE'.
+    ls_row-numb = '0001'.
+    ls_row-ctx1 = 'Src_a'.
+    ls_row-low  = 'A'.
+    cl_abap_unit_assert=>assert_equals( act = mo_cut->check_row( is_definition = ls_definition is_row = ls_row )-msgno
+                                        exp = zif_ca_param_types=>gc_msg-ctx_lower_case
+                                        msg = `Context values are upper case, as the reads compare them` ).
+  ENDMETHOD.
+
+
+  METHOD ctx_declared_is_valid.
+    DATA ls_row TYPE zif_ca_param_types=>ty_value_row.
+
+    DATA(ls_definition) = definition( zif_ca_param_types=>gc_value_type-char ).
+    ls_definition-dim1 = 'SOURCE'.
+    ls_definition-dim2 = 'TRANS_TYPE'.
+    ls_row-numb = '0001'.
+    ls_row-ctx2 = 'CANC'.
+    ls_row-low  = 'A'.
+    cl_abap_unit_assert=>assert_initial( act = mo_cut->check_row( is_definition = ls_definition is_row = ls_row )
+                                         msg = `Any declared dimension may be filled, the others stay blank (= any)` ).
   ENDMETHOD.
 
 ENDCLASS.
